@@ -46,7 +46,7 @@ wait_time = 1.0
 autostart = true
 
 [node name="Camera2D" type="Camera2D" parent="."]
-zoom = Vector2(3.0, 2.4)
+zoom = Vector2(3.0, 3.0)
 position_smoothing_enabled = true
 position_smoothing_speed = 8.0
 

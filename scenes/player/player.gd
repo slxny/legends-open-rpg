@@ -201,7 +201,6 @@ func _deselect_enemy() -> void:
 			enemy_sprite.modulate = Color.WHITE
 	_selected_enemy = null
 	_destroy_selection_circle()
-	_destroy_target_line()
 
 func _create_selection_circle() -> void:
 	_destroy_selection_circle()
@@ -269,14 +268,6 @@ func _spawn_select_pop(enemy: Node2D) -> void:
 		spark_tween.set_parallel(false)
 		spark_tween.tween_callback(spark.queue_free)
 
-# Targeting line drawn between player and selected enemy
-var _target_line: Line2D = null
-
-func _destroy_target_line() -> void:
-	if _target_line and is_instance_valid(_target_line):
-		_target_line.queue_free()
-	_target_line = null
-
 func _update_selection_circle() -> void:
 	# Clean up if enemy is dead/invalid
 	if is_instance_valid(_selected_enemy) and _selected_enemy.get("_is_dead"):
@@ -285,28 +276,11 @@ func _update_selection_circle() -> void:
 
 	if not is_instance_valid(_selected_enemy):
 		_destroy_selection_circle()
-		_destroy_target_line()
 		return
 
-	# Update selection circle position
+	# Update selection circle position under the targeted enemy
 	if _selection_circle and is_instance_valid(_selection_circle):
 		_selection_circle.global_position = _selected_enemy.global_position
-
-	# Update or create targeting line
-	if not _target_line or not is_instance_valid(_target_line):
-		_target_line = Line2D.new()
-		_target_line.width = 1.0
-		_target_line.default_color = Color(1.0, 0.3, 0.2, 0.3)
-		_target_line.z_index = -1
-		# Dashed look via gradient
-		var grad = Gradient.new()
-		grad.set_color(0, Color(1.0, 0.3, 0.2, 0.4))
-		grad.set_color(1, Color(1.0, 0.3, 0.2, 0.4))
-		_target_line.gradient = grad
-		get_tree().current_scene.add_child(_target_line)
-	_target_line.clear_points()
-	_target_line.add_point(global_position)
-	_target_line.add_point(_selected_enemy.global_position)
 
 func _get_clickable_at_mouse() -> Node2D:
 	var mouse_pos = get_global_mouse_position()

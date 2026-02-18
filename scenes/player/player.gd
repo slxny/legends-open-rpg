@@ -405,9 +405,11 @@ func _anim_swing_horizontal(tween: Tween, frames: Array, base_pos: Vector2,
 	tween.tween_callback(func():
 		if is_instance_valid(target):
 			target.take_damage(result["damage"], result["is_crit"])
+			target.apply_knockback(dir, 40.0)
 			_spawn_slash_vfx(dir.rotated(side * 0.3), 35.0, 1.0)
-			_spawn_impact_vfx(target.global_position)
+			_spawn_impact_vfx(target.global_position, result["is_crit"])
 			_do_screen_shake(2.5 if not result["is_crit"] else 5.0)
+			_do_hit_freeze(result["is_crit"])
 	)
 	# Return to idle
 	tween.tween_interval(0.05)
@@ -433,9 +435,11 @@ func _anim_overhead_chop(tween: Tween, frames: Array, base_pos: Vector2,
 	tween.tween_callback(func():
 		if is_instance_valid(target):
 			target.take_damage(result["damage"], result["is_crit"])
+			target.apply_knockback(dir, 55.0)
 			_spawn_slash_vfx(dir, 40.0, 1.4)
-			_spawn_impact_vfx(target.global_position)
+			_spawn_impact_vfx(target.global_position, result["is_crit"])
 			_do_screen_shake(4.0 if not result["is_crit"] else 7.0)
+			_do_hit_freeze(result["is_crit"])
 	)
 	tween.tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.06)
 	tween.tween_interval(0.04)
@@ -460,9 +464,11 @@ func _anim_upward_thrust(tween: Tween, frames: Array, base_pos: Vector2,
 	tween.tween_callback(func():
 		if is_instance_valid(target):
 			target.take_damage(result["damage"], result["is_crit"])
+			target.apply_knockback(dir, 30.0)
 			_spawn_slash_vfx(dir.rotated(-0.4), 30.0, 1.0)
-			_spawn_impact_vfx(target.global_position)
+			_spawn_impact_vfx(target.global_position, result["is_crit"])
 			_do_screen_shake(3.0 if not result["is_crit"] else 6.0)
+			_do_hit_freeze(result["is_crit"])
 	)
 	tween.tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.06)
 	tween.tween_interval(0.04)
@@ -486,12 +492,14 @@ func _anim_spin_slash(tween: Tween, frames: Array, base_pos: Vector2,
 	tween.tween_callback(func():
 		if is_instance_valid(target):
 			target.take_damage(result["damage"], result["is_crit"])
+			target.apply_knockback(dir, 60.0)
 			# Wide slash VFX — hits in a circle
 			_spawn_slash_vfx(dir, 40.0, 1.6)
 			_spawn_slash_vfx(dir.rotated(PI * 0.5), 35.0, 1.2)
 			_spawn_slash_vfx(dir.rotated(-PI * 0.5), 35.0, 1.2)
-			_spawn_impact_vfx(target.global_position)
+			_spawn_impact_vfx(target.global_position, result["is_crit"])
 			_do_screen_shake(5.0 if not result["is_crit"] else 8.0)
+			_do_hit_freeze(result["is_crit"])
 	)
 	# Unwind rotation
 	tween.tween_property(sprite, "rotation", 0.0, 0.08)
@@ -527,13 +535,16 @@ func _do_ranged_attack(target: Node2D, result: Dictionary) -> void:
 		arrow.rotation = (target.global_position - global_position).angle()
 		get_tree().current_scene.add_child(arrow)
 
+		var arrow_dir = (target.global_position - global_position).normalized()
 		var arrow_tween = arrow.create_tween()
 		arrow_tween.tween_property(arrow, "global_position", target.global_position, 0.12)
 		arrow_tween.tween_callback(func():
 			if is_instance_valid(target):
 				target.take_damage(result["damage"], result["is_crit"])
-				_spawn_impact_vfx(target.global_position)
+				target.apply_knockback(arrow_dir, 20.0)
+				_spawn_impact_vfx(target.global_position, result["is_crit"])
 				_do_screen_shake(1.5 if not result["is_crit"] else 3.5)
+				_do_hit_freeze(result["is_crit"])
 			arrow.queue_free()
 		)
 	)
@@ -557,33 +568,64 @@ func _spawn_slash_vfx(direction: Vector2, radius: float, scale_mult: float) -> v
 	tween.set_parallel(false)
 	tween.tween_callback(slash.queue_free)
 
-func _spawn_impact_vfx(pos: Vector2) -> void:
-	# White flash burst at impact point
-	for i in range(4):
+func _spawn_impact_vfx(pos: Vector2, is_crit: bool = false) -> void:
+	var spark_count = 12 if is_crit else 8
+	var spread = 28.0 if is_crit else 18.0
+	for i in range(spark_count):
 		var spark = Sprite2D.new()
 		spark.texture = SpriteGenerator.get_texture("crystal_white")
 		spark.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		spark.global_position = pos
-		spark.scale = Vector2(0.4, 0.4)
-		spark.modulate = Color(1.0, 1.0, 0.8, 0.9)
+		var sc = randf_range(0.3, 0.7) if not is_crit else randf_range(0.5, 1.0)
+		spark.scale = Vector2(sc, sc)
+		# Orange-red sparks, brighter on crit
+		var r = randf_range(0.9, 1.0)
+		var g = randf_range(0.2, 0.5) if not is_crit else randf_range(0.6, 0.9)
+		spark.modulate = Color(r, g, 0.1, 1.0)
+		spark.z_index = 12
 		get_tree().current_scene.add_child(spark)
-
-		var dir = Vector2.from_angle(randf() * TAU) * randf_range(8, 16)
+		var dir = Vector2.from_angle(randf() * TAU) * randf_range(spread * 0.4, spread)
+		var dur = randf_range(0.12, 0.22)
 		var tween = spark.create_tween()
 		tween.set_parallel(true)
-		tween.tween_property(spark, "global_position", pos + dir, 0.15)
-		tween.tween_property(spark, "modulate:a", 0.0, 0.2)
-		tween.tween_property(spark, "scale", Vector2.ZERO, 0.2)
+		tween.tween_property(spark, "global_position", pos + dir, dur)
+		tween.tween_property(spark, "modulate:a", 0.0, dur)
+		tween.tween_property(spark, "scale", Vector2.ZERO, dur)
 		tween.set_parallel(false)
 		tween.tween_callback(spark.queue_free)
+
+	# White flash ring at impact centre
+	var flash = Sprite2D.new()
+	flash.texture = SpriteGenerator.get_texture("selection_red")
+	flash.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	flash.modulate = Color(1.0, 0.9, 0.5, 0.9) if not is_crit else Color(1.0, 0.3, 0.1, 1.0)
+	flash.scale = Vector2(0.2, 0.2)
+	flash.z_index = 13
+	flash.global_position = pos
+	get_tree().current_scene.add_child(flash)
+	var ft = flash.create_tween()
+	ft.set_parallel(true)
+	ft.tween_property(flash, "scale", Vector2(1.2, 1.2) if not is_crit else Vector2(2.0, 2.0), 0.1)
+	ft.tween_property(flash, "modulate:a", 0.0, 0.12)
+	ft.set_parallel(false)
+	ft.tween_callback(flash.queue_free)
+
+func _do_hit_freeze(is_crit: bool) -> void:
+	# Brief time-scale dip for punch impact feel
+	var freeze_dur = 0.06 if not is_crit else 0.12
+	Engine.time_scale = 0.05
+	await get_tree().create_timer(freeze_dur * 0.05).timeout
+	Engine.time_scale = 1.0
 
 func _do_screen_shake(intensity: float) -> void:
 	var original_offset = camera.offset
 	var tween = create_tween()
-	for i in range(4):
-		var shake = Vector2(randf_range(-intensity, intensity), randf_range(-intensity, intensity))
-		tween.tween_property(camera, "offset", original_offset + shake, 0.03)
-	tween.tween_property(camera, "offset", original_offset, 0.03)
+	# Fast burst of shakes then settle
+	for i in range(6):
+		var decay = 1.0 - float(i) / 6.0
+		var shake = Vector2(randf_range(-1, 1), randf_range(-1, 1)).normalized() * intensity * decay
+		tween.tween_property(camera, "offset", original_offset + shake, 0.025)
+	tween.tween_property(camera, "offset", original_offset, 0.04)
 
 func _spawn_auto_attack_projectile(target: Node2D) -> void:
 	pass  # Handled by _do_ranged_attack now

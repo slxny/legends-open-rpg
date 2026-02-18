@@ -28,6 +28,7 @@ var _attack_timer: float = 0.0
 var _is_dead: bool = false
 var _shadow: Sprite2D = null
 var _is_selected: bool = false
+var _knockback_velocity: Vector2 = Vector2.ZERO
 
 func _ready() -> void:
 	add_to_group("enemies")
@@ -88,6 +89,14 @@ func hide_selection() -> void:
 func _physics_process(delta: float) -> void:
 	if _is_dead:
 		return
+
+	# Apply knockback impulse — overrides state machine until it decays
+	if _knockback_velocity.length() > 2.0:
+		velocity = _knockback_velocity
+		_knockback_velocity = _knockback_velocity.lerp(Vector2.ZERO, delta * 14.0)
+		move_and_slide()
+		return
+	_knockback_velocity = Vector2.ZERO
 
 	match current_state:
 		State.IDLE:
@@ -214,23 +223,40 @@ func _die() -> void:
 		var item_id = ItemData.roll_drop(drop_table)
 		if not item_id.is_empty():
 			_spawn_item_drop(item_id)
-	# Death animation: fall over + fade
+	# Death animation: pop, fall, fade
 	hp_bar.visible = false
 	name_label.visible = false
 	if _shadow:
 		_shadow.visible = false
 	var tween = create_tween()
+	# Brief upward pop
+	tween.tween_property(sprite, "position", sprite.position + Vector2(0, -6), 0.05)
+	tween.tween_property(sprite, "scale", Vector2(1.2, 1.2), 0.05)
+	# Fall and fade simultaneously
 	tween.set_parallel(true)
-	tween.tween_property(sprite, "modulate:a", 0.0, 0.4)
-	tween.tween_property(sprite, "rotation", deg_to_rad(90), 0.3)
-	tween.tween_property(sprite, "position:y", sprite.position.y + 8, 0.3)
+	tween.tween_property(sprite, "modulate:a", 0.0, 0.35)
+	tween.tween_property(sprite, "rotation", deg_to_rad(85), 0.28).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tween.tween_property(sprite, "position", sprite.position + Vector2(0, 10), 0.28).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tween.tween_property(sprite, "scale", Vector2(0.8, 0.8), 0.35)
 	tween.set_parallel(false)
 	tween.tween_callback(queue_free)
 
+func apply_knockback(dir: Vector2, force: float) -> void:
+	if _is_dead:
+		return
+	_knockback_velocity = dir * force
+
 func _do_hit_flash() -> void:
-	sprite.modulate = Color(1, 0.6, 0.6)
+	# Bright white flash + squash on hit
+	sprite.modulate = Color(1.5, 1.5, 1.5)
 	var tween = create_tween()
-	tween.tween_property(sprite, "modulate", Color.WHITE, 0.15)
+	tween.set_parallel(true)
+	tween.tween_property(sprite, "modulate", Color.WHITE, 0.18)
+	# Squash: squeeze horizontally, stretch vertically, then bounce back
+	tween.tween_property(sprite, "scale", Vector2(1.3, 0.7), 0.05)
+	tween.set_parallel(false)
+	tween.tween_property(sprite, "scale", Vector2(0.85, 1.2), 0.06)
+	tween.tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.08)
 
 func _do_attack_lunge() -> void:
 	if not is_instance_valid(target):
@@ -321,17 +347,29 @@ func _spawn_item_drop(item_id: String) -> void:
 func _spawn_damage_number(amount: int, is_crit: bool) -> void:
 	var label = Label.new()
 	label.text = str(amount) + ("!" if is_crit else "")
-	label.position = Vector2(randf_range(-12, 12), -30)
+	label.position = Vector2(randf_range(-10, 10) if not is_crit else randf_range(-6, 6), -30)
 	var settings = LabelSettings.new()
-	settings.font_size = 14 if not is_crit else 22
-	settings.font_color = Color.YELLOW if is_crit else Color.WHITE
-	settings.outline_size = 2
+	settings.font_size = 14 if not is_crit else 28
+	settings.font_color = Color.WHITE if not is_crit else Color(1.0, 0.95, 0.1)
+	settings.outline_size = 2 if not is_crit else 3
 	settings.outline_color = Color.BLACK
 	label.label_settings = settings
 	add_child(label)
 	var tween = create_tween()
-	tween.tween_property(label, "position:y", label.position.y - 30, 0.6)
-	tween.parallel().tween_property(label, "modulate:a", 0.0, 0.6)
+	if is_crit:
+		# Pop scale in, then float up and fade
+		label.scale = Vector2(0.4, 0.4)
+		tween.tween_property(label, "scale", Vector2(1.3, 1.3), 0.08).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		tween.tween_property(label, "scale", Vector2(1.0, 1.0), 0.05)
+		tween.set_parallel(true)
+		tween.tween_property(label, "position:y", label.position.y - 40, 0.7)
+		tween.tween_property(label, "modulate:a", 0.0, 0.7).set_delay(0.2)
+		tween.set_parallel(false)
+	else:
+		tween.set_parallel(true)
+		tween.tween_property(label, "position:y", label.position.y - 28, 0.55)
+		tween.tween_property(label, "modulate:a", 0.0, 0.55).set_delay(0.15)
+		tween.set_parallel(false)
 	tween.tween_callback(label.queue_free)
 
 func _update_hp_bar() -> void:

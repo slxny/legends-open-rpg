@@ -165,31 +165,35 @@ func _try_manual_attack() -> void:
 	if _is_attack_animating or _attack_cooldown > 0.0:
 		return
 
+	_attack_cooldown = 1.0 / stats.attack_speed
 	_enemies_in_range = _enemies_in_range.filter(func(e): return is_instance_valid(e) and not e.get("_is_dead"))
 
-	# Priority 1: enemy directly under the mouse cursor
+	# Find the best target to hit, if any — attack swings regardless
+	var hit_target: Node2D = null
+
+	# Priority 1: enemy directly under the mouse cursor and in range
 	var mouse_target = _get_enemy_at_mouse()
 	if mouse_target and mouse_target in _enemies_in_range:
-		_attack_cooldown = 1.0 / stats.attack_speed
-		_perform_attack(mouse_target)
-		return
+		hit_target = mouse_target
+	else:
+		# Priority 2: closest enemy in the direction the hero is facing
+		var facing = Vector2.RIGHT if not sprite.flip_h else Vector2.LEFT
+		var best_score := -INF
+		for enemy in _enemies_in_range:
+			var to_enemy = (enemy.global_position - global_position)
+			var dot = facing.dot(to_enemy.normalized())
+			if dot > 0.3:  # Within ~72° cone in front
+				var score = dot - to_enemy.length() * 0.001
+				if score > best_score:
+					best_score = score
+					hit_target = enemy
 
-	# Priority 2: closest enemy in the direction the hero is facing
-	var facing = Vector2.RIGHT if not sprite.flip_h else Vector2.LEFT
-	var best: Node2D = null
-	var best_score := -INF
-	for enemy in _enemies_in_range:
-		var to_enemy = (enemy.global_position - global_position)
-		var dot = facing.dot(to_enemy.normalized())
-		if dot > 0.3:  # Within ~72° cone in front
-			var score = dot - to_enemy.length() * 0.001
-			if score > best_score:
-				best_score = score
-				best = enemy
-
-	if best:
-		_attack_cooldown = 1.0 / stats.attack_speed
-		_perform_attack(best)
+	# Always swing — pass null target for an empty swing with just VFX
+	var facing_dir = Vector2.RIGHT if not sprite.flip_h else Vector2.LEFT
+	if hit_target:
+		_perform_attack(hit_target)
+	else:
+		_perform_swing_no_target(facing_dir)
 
 func _get_world_mouse_pos() -> Vector2:
 	# Use the viewport's canvas transform so the result matches what is
@@ -326,6 +330,30 @@ func _perform_attack(target: Node2D) -> void:
 	else:
 		# Melee attack: lunge + slash
 		_do_melee_attack(target, result)
+
+func _perform_swing_no_target(dir: Vector2) -> void:
+	# Full swing animation with VFX but no target — empty swing in facing direction
+	_is_attack_animating = true
+	var swing_idx = COMBO_SEQUENCE[_combo_index % COMBO_SEQUENCE.size()]
+	var frames = _combo_swings[swing_idx] if swing_idx < _combo_swings.size() else []
+	_combo_index += 1
+	_combo_timer = 0.0
+	var base_pos = sprite.position
+	var perp = Vector2(-dir.y, dir.x)
+	var tween = create_tween()
+	# Simple whiff: lunge forward, play slash VFX, return
+	if frames.size() >= 3:
+		tween.tween_callback(func(): sprite.texture = frames[0])
+	tween.tween_property(sprite, "position", base_pos - dir * 3.0, 0.07)
+	if frames.size() >= 3:
+		tween.tween_callback(func(): sprite.texture = frames[1])
+	tween.tween_property(sprite, "position", base_pos + dir * 10.0, 0.06)
+	if frames.size() >= 3:
+		tween.tween_callback(func(): sprite.texture = frames[2])
+	tween.tween_property(sprite, "position", base_pos + dir * 12.0, 0.04)
+	tween.tween_callback(func(): _spawn_slash_vfx(dir, 30.0, 1.0))
+	tween.tween_interval(0.05)
+	_anim_return_to_idle(tween, base_pos)
 
 func _do_melee_attack(target: Node2D, result: Dictionary) -> void:
 	if not is_instance_valid(target):

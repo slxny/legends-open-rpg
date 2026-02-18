@@ -17,19 +17,13 @@ var _enemies_in_range: Array[Node2D] = []
 # Click-to-move
 var _move_target: Vector2 = Vector2.ZERO
 var _is_moving_to_target: bool = false
-var _attack_target: Node2D = null
-var _is_attacking_target: bool = false
-
-# Selection
-var _selected_enemy: Node2D = null
-var _selection_circle: Sprite2D = null
-var _player_selection: Sprite2D = null
 
 # Isometric shadow
 var _shadow: Sprite2D = null
 
-# Attack animation state
+# Attack state
 var _is_attack_animating: bool = false
+var _attack_cooldown: float = 0.0
 
 # Melee combo system
 # 5 swing types: a=left-to-right, b=right-to-left backhand, c=overhead chop,
@@ -62,9 +56,6 @@ func _ready() -> void:
 		if f1 and f2 and f3:
 			_combo_swings.append([f1, f2, f3])
 
-	attack_timer.wait_time = 1.0 / stats.attack_speed
-	attack_timer.start()
-
 	var shape = attack_area.get_node("CollisionShape2D")
 	if shape and shape.shape is CircleShape2D:
 		shape.shape.radius = stats.attack_range
@@ -76,13 +67,6 @@ func _ready() -> void:
 	_shadow.z_index = -1
 	add_child(_shadow)
 
-	# Green selection circle under player (always visible)
-	_player_selection = Sprite2D.new()
-	_player_selection.texture = SpriteGenerator.get_texture("selection_green")
-	_player_selection.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	_player_selection.z_index = -1
-	add_child(_player_selection)
-
 func _physics_process(delta: float) -> void:
 	# WASD movement overrides click-to-move
 	var input_dir = Vector2.ZERO
@@ -91,15 +75,7 @@ func _physics_process(delta: float) -> void:
 
 	if input_dir.length() > 0:
 		_is_moving_to_target = false
-		_is_attacking_target = false
 		velocity = input_dir.normalized() * stats.get_total_move_speed()
-	elif _is_attacking_target and is_instance_valid(_attack_target):
-		var dist = global_position.distance_to(_attack_target.global_position)
-		if dist <= stats.attack_range:
-			velocity = Vector2.ZERO
-		else:
-			var dir = (_attack_target.global_position - global_position).normalized()
-			velocity = dir * stats.get_total_move_speed()
 	elif _is_moving_to_target:
 		var dist = global_position.distance_to(_move_target)
 		if dist < 5.0:
@@ -114,6 +90,9 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 	stats.process_regen(delta)
 
+	if _attack_cooldown > 0.0:
+		_attack_cooldown -= delta
+
 	# Combo timer — reset combo if no attack within window
 	if _combo_index > 0:
 		_combo_timer += delta
@@ -126,9 +105,6 @@ func _physics_process(delta: float) -> void:
 		sprite.flip_h = true
 	elif velocity.x > 5:
 		sprite.flip_h = false
-
-	# Update selection circle on selected enemy
-	_update_selection_circle()
 
 const ZOOM_MIN := Vector2(1.5, 1.5)
 const ZOOM_MAX := Vector2(5.0, 5.0)
@@ -149,36 +125,15 @@ func _unhandled_input(event: InputEvent) -> void:
 			camera.zoom = (camera.zoom - Vector2(ZOOM_STEP, ZOOM_STEP)).clamp(ZOOM_MIN, ZOOM_MAX)
 			return
 
-		if event.button_index == MOUSE_BUTTON_LEFT:
-			# Left-click: select enemy and attack-move, OR move to position
-			var target = _get_clickable_at_mouse()
-			if target and target.is_in_group("enemies") and not target.get("_is_dead"):
-				_select_enemy(target)
-				_attack_target = target
-				_is_attacking_target = true
-				_is_moving_to_target = false
-			else:
-				_deselect_enemy()
-				_move_target = _get_world_mouse_pos()
-				_is_moving_to_target = true
-				_is_attacking_target = false
-				_attack_target = null
-				_spawn_move_indicator(_move_target)
-
-		elif event.button_index == MOUSE_BUTTON_RIGHT:
-			# Right-click: attack-move to target or position
-			var target = _get_clickable_at_mouse()
-			if target and target.is_in_group("enemies") and not target.get("_is_dead"):
-				_select_enemy(target)
-				_attack_target = target
-				_is_attacking_target = true
-				_is_moving_to_target = false
-			elif target and target.has_method("interact"):
-				_move_target = target.global_position
-				_is_moving_to_target = true
+		if event.button_index == MOUSE_BUTTON_LEFT or event.button_index == MOUSE_BUTTON_RIGHT:
+			# Both mouse buttons move to clicked position
+			var clicked = _get_clickable_at_mouse()
+			if clicked and clicked.has_method("interact"):
+				_move_target = clicked.global_position
 			else:
 				_move_target = _get_world_mouse_pos()
-				_is_moving_to_target = true
+			_is_moving_to_target = true
+			_spawn_move_indicator(_move_target)
 
 	# Window controls
 	if event.is_action_pressed("ui_cancel"):
@@ -189,6 +144,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 		else:
 			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+
+	# Attack — Space bar
+	if event.is_action_pressed("attack"):
+		_try_manual_attack()
 
 	# Abilities (Q and E)
 	if event.is_action_pressed("ability_1"):
@@ -203,124 +162,60 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_3: inventory.use_consumable(2)
 			KEY_4: inventory.use_consumable(3)
 
-func _select_enemy(enemy: Node2D) -> void:
-	if _selected_enemy == enemy:
-		return  # Already selected
-	_deselect_enemy()
-	_selected_enemy = enemy
-	if enemy.has_method("show_selection"):
-		enemy.show_selection()
-	# Juicy click feedback
-	_spawn_select_pop(enemy)
-	_create_selection_circle()
-	# Highlight enemy sprite
-	if enemy.has_node("Sprite"):
-		var enemy_sprite = enemy.get_node("Sprite")
-		enemy_sprite.modulate = Color(1.3, 1.1, 1.1)
-
-func _deselect_enemy() -> void:
-	if is_instance_valid(_selected_enemy):
-		if _selected_enemy.has_method("hide_selection"):
-			_selected_enemy.hide_selection()
-		# Remove highlight
-		if _selected_enemy.has_node("Sprite"):
-			var enemy_sprite = _selected_enemy.get_node("Sprite")
-			enemy_sprite.modulate = Color.WHITE
-	_selected_enemy = null
-	_destroy_selection_circle()
-
-func _create_selection_circle() -> void:
-	_destroy_selection_circle()
-	_selection_circle = Sprite2D.new()
-	_selection_circle.texture = SpriteGenerator.get_texture("selection_red")
-	_selection_circle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	_selection_circle.z_index = 1
-	_selection_circle.scale = Vector2(2.0, 2.0)
-	get_tree().current_scene.add_child(_selection_circle)
-	# Pop in then pulse — chained so they don't fight over scale
-	var tween = _selection_circle.create_tween()
-	tween.tween_property(_selection_circle, "scale", Vector2(2.6, 2.6), 0.08).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	tween.tween_property(_selection_circle, "scale", Vector2(2.0, 2.0), 0.06)
-	tween.tween_callback(func():
-		if not is_instance_valid(_selection_circle):
-			return
-		var pulse = _selection_circle.create_tween().set_loops()
-		pulse.tween_property(_selection_circle, "scale", Vector2(2.2, 2.2), 0.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-		pulse.tween_property(_selection_circle, "scale", Vector2(1.9, 1.9), 0.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	)
-
-func _destroy_selection_circle() -> void:
-	if _selection_circle and is_instance_valid(_selection_circle):
-		_selection_circle.queue_free()
-	_selection_circle = null
-
-func _spawn_select_pop(enemy: Node2D) -> void:
-	# Ring burst expanding outward from enemy
-	var ring = Sprite2D.new()
-	ring.texture = SpriteGenerator.get_texture("selection_red")
-	ring.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	ring.global_position = enemy.global_position
-	ring.scale = Vector2(0.5, 0.5)
-	ring.z_index = 10
-	get_tree().current_scene.add_child(ring)
-	var ring_tween = ring.create_tween()
-	ring_tween.set_parallel(true)
-	ring_tween.tween_property(ring, "scale", Vector2(2.5, 2.5), 0.25).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	ring_tween.tween_property(ring, "modulate:a", 0.0, 0.25)
-	ring_tween.set_parallel(false)
-	ring_tween.tween_callback(ring.queue_free)
-
-	# Enemy sprite punch (quick scale bounce)
-	if enemy.has_node("Sprite"):
-		var enemy_sprite = enemy.get_node("Sprite")
-		var punch_tween = enemy_sprite.create_tween()
-		punch_tween.tween_property(enemy_sprite, "scale", Vector2(1.25, 0.85), 0.06)
-		punch_tween.tween_property(enemy_sprite, "scale", Vector2(0.9, 1.15), 0.06)
-		punch_tween.tween_property(enemy_sprite, "scale", Vector2(1.0, 1.0), 0.08).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
-
-	# Quick crosshair flash at click point
-	for i in range(4):
-		var spark = Sprite2D.new()
-		spark.texture = SpriteGenerator.get_texture("crystal_white")
-		spark.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		spark.global_position = enemy.global_position
-		spark.scale = Vector2(0.3, 0.3)
-		spark.modulate = Color(1.0, 0.4, 0.3, 0.9)
-		spark.z_index = 11
-		get_tree().current_scene.add_child(spark)
-		# Cardinal directions burst
-		var burst_dir = Vector2.from_angle(i * PI * 0.5) * 14.0
-		var spark_tween = spark.create_tween()
-		spark_tween.set_parallel(true)
-		spark_tween.tween_property(spark, "global_position", enemy.global_position + burst_dir, 0.15)
-		spark_tween.tween_property(spark, "modulate:a", 0.0, 0.2)
-		spark_tween.tween_property(spark, "scale", Vector2(0.1, 0.1), 0.2)
-		spark_tween.set_parallel(false)
-		spark_tween.tween_callback(spark.queue_free)
-
-func _update_selection_circle() -> void:
-	# Clean up if enemy is dead/invalid
-	if is_instance_valid(_selected_enemy) and _selected_enemy.get("_is_dead"):
-		_deselect_enemy()
+func _try_manual_attack() -> void:
+	if _is_attack_animating or _attack_cooldown > 0.0:
 		return
 
-	if not is_instance_valid(_selected_enemy):
-		_destroy_selection_circle()
+	_enemies_in_range = _enemies_in_range.filter(func(e): return is_instance_valid(e) and not e.get("_is_dead"))
+
+	# Priority 1: enemy directly under the mouse cursor
+	var mouse_target = _get_enemy_at_mouse()
+	if mouse_target and mouse_target in _enemies_in_range:
+		_attack_cooldown = 1.0 / stats.attack_speed
+		_perform_attack(mouse_target)
 		return
 
-	# Update selection circle position under the targeted enemy
-	if _selection_circle and is_instance_valid(_selection_circle):
-		_selection_circle.global_position = _selected_enemy.global_position
+	# Priority 2: closest enemy in the direction the hero is facing
+	var facing = Vector2.RIGHT if not sprite.flip_h else Vector2.LEFT
+	var best: Node2D = null
+	var best_score := -INF
+	for enemy in _enemies_in_range:
+		var to_enemy = (enemy.global_position - global_position)
+		var dot = facing.dot(to_enemy.normalized())
+		if dot > 0.3:  # Within ~72° cone in front
+			var score = dot - to_enemy.length() * 0.001
+			if score > best_score:
+				best_score = score
+				best = enemy
+
+	if best:
+		_attack_cooldown = 1.0 / stats.attack_speed
+		_perform_attack(best)
 
 func _get_world_mouse_pos() -> Vector2:
-	return get_global_mouse_position()
+	# Use the viewport's canvas transform so the result matches what is
+	# visually on screen, even when camera position_smoothing is active.
+	return get_viewport().get_canvas_transform().affine_inverse() * get_viewport().get_mouse_position()
+
+func _get_enemy_at_mouse() -> Node2D:
+	var mouse_pos = _get_world_mouse_pos()
+	var space = get_world_2d().direct_space_state
+	var params = PhysicsPointQueryParameters2D.new()
+	params.position = mouse_pos
+	params.collision_mask = 2  # Enemies only
+	var results = space.intersect_point(params, 1)
+	if results.size() > 0:
+		var col = results[0]["collider"]
+		if col.is_in_group("enemies") and not col.get("_is_dead"):
+			return col
+	return null
 
 func _get_clickable_at_mouse() -> Node2D:
 	var mouse_pos = _get_world_mouse_pos()
 	var space = get_world_2d().direct_space_state
 	var params = PhysicsPointQueryParameters2D.new()
 	params.position = mouse_pos
-	params.collision_mask = 2 | 4  # Enemies + NPCs
+	params.collision_mask = 4  # NPCs only for movement interaction
 	var results = space.intersect_point(params, 1)
 	if results.size() > 0:
 		return results[0]["collider"]
@@ -413,20 +308,6 @@ func _spawn_projectile(direction: Vector2, speed: float, max_range: float, dmg_m
 			projectile.queue_free()
 	)
 
-# Auto-attack: only attack the explicitly selected enemy
-func _on_attack_timer_timeout() -> void:
-	if _is_attack_animating:
-		return
-	_enemies_in_range = _enemies_in_range.filter(func(e): return is_instance_valid(e) and not e.get("_is_dead"))
-
-	# Only attack if player has selected an enemy
-	if not is_instance_valid(_selected_enemy):
-		return
-	if _selected_enemy not in _enemies_in_range:
-		return
-
-	if _selected_enemy.has_method("take_damage"):
-		_perform_attack(_selected_enemy)
 
 func _perform_attack(target: Node2D) -> void:
 	_is_attack_animating = true

@@ -174,6 +174,16 @@ func _unhandled_input(event: InputEvent) -> void:
 				_move_target = _get_world_mouse_pos()
 				_is_moving_to_target = true
 
+	# Window controls
+	if event.is_action_pressed("ui_cancel"):
+		get_tree().quit()
+	elif event is InputEventKey and event.pressed and event.keycode == KEY_F11:
+		var mode = DisplayServer.window_get_mode()
+		if mode == DisplayServer.WINDOW_MODE_FULLSCREEN:
+			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+		else:
+			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+
 	# Abilities (Q and E)
 	if event.is_action_pressed("ability_1"):
 		_use_ability("ability_1")

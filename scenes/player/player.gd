@@ -135,6 +135,12 @@ const ZOOM_MAX := Vector2(5.0, 5.0)
 const ZOOM_STEP := 0.25
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventMagnifyGesture:
+		# Trackpad pinch: factor > 1 = pinch out (zoom in), < 1 = pinch in (zoom out)
+		var new_zoom = (camera.zoom * event.factor).clamp(ZOOM_MIN, ZOOM_MAX)
+		camera.zoom = new_zoom
+		return
+
 	if event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
 			camera.zoom = (camera.zoom + Vector2(ZOOM_STEP, ZOOM_STEP)).clamp(ZOOM_MIN, ZOOM_MAX)

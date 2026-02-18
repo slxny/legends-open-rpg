@@ -193,6 +193,7 @@ func _die() -> void:
 	collision_mask = 0
 	died.emit(self, xp_reward, gold_reward)
 	_spawn_gold_drop(gold_reward)
+	_spawn_blood_splatter()
 	if not drop_table.is_empty():
 		var item_id = ItemData.roll_drop(drop_table)
 		if not item_id.is_empty():
@@ -223,6 +224,27 @@ func _do_attack_lunge() -> void:
 	var tween = create_tween()
 	tween.tween_property(sprite, "position", base_pos + dir * 6.0, 0.06)
 	tween.tween_property(sprite, "position", base_pos, 0.08)
+
+func _spawn_blood_splatter() -> void:
+	var blood_tex = SpriteGenerator.get_texture("blood_splatter")
+	if not blood_tex:
+		return
+	# Spawn 2-4 blood splatters around the death position
+	for _i in range(randi_range(2, 4)):
+		var blood = Sprite2D.new()
+		blood.texture = blood_tex
+		blood.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		blood.global_position = global_position + Vector2(randf_range(-12, 12), randf_range(-8, 8))
+		blood.rotation = randf() * TAU
+		blood.scale = Vector2(randf_range(0.8, 1.5), randf_range(0.8, 1.5))
+		blood.z_index = -2
+		blood.modulate.a = randf_range(0.6, 0.9)
+		get_tree().current_scene.add_child(blood)
+		# Fade out after 8-12 seconds
+		var fade_tween = blood.create_tween()
+		fade_tween.tween_interval(randf_range(8.0, 12.0))
+		fade_tween.tween_property(blood, "modulate:a", 0.0, 2.0)
+		fade_tween.tween_callback(blood.queue_free)
 
 func _spawn_gold_drop(amount: int) -> void:
 	var drop = Area2D.new()

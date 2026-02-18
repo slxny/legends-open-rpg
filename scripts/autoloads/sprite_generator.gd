@@ -32,8 +32,9 @@ func _try_load_external(sprite_name: String) -> bool:
 	return false
 
 func _init_asset_dirs() -> void:
-	# Heroes
-	for n in ["blade_knight", "shadow_ranger"]:
+	# Heroes (includes attack animation frames)
+	for n in ["blade_knight", "shadow_ranger",
+			"blade_knight_atk1", "blade_knight_atk2", "blade_knight_atk3"]:
 		_asset_dirs[n] = "heroes"
 	# Enemies
 	for n in ["goblin", "wolf", "bandit"]:
@@ -67,8 +68,11 @@ func _init_asset_dirs() -> void:
 		_asset_dirs[n] = "vfx"
 
 func _generate_all() -> void:
-	# Heroes
+	# Heroes (+ attack animation frames)
 	_gen_or_load("blade_knight")
+	_gen_or_load("blade_knight_atk1")
+	_gen_or_load("blade_knight_atk2")
+	_gen_or_load("blade_knight_atk3")
 	_gen_or_load("shadow_ranger")
 	# Enemies
 	_gen_or_load("goblin")
@@ -194,6 +198,101 @@ func _gen_blade_knight() -> void:
 	_fill_rect(img, 2, 20, 2, 10, c["shield_rim"])
 
 	textures["blade_knight"] = ImageTexture.create_from_image(img)
+
+# Shared color palette for blade knight frames
+func _bk_colors() -> Dictionary:
+	return {
+		"armor_dark": Color(0.15, 0.25, 0.55),
+		"armor_mid": Color(0.25, 0.4, 0.75),
+		"armor_light": Color(0.4, 0.55, 0.9),
+		"helm": Color(0.3, 0.35, 0.5),
+		"visor": Color(0.1, 0.8, 0.9),
+		"skin": Color(0.85, 0.7, 0.55),
+		"sword": Color(0.75, 0.8, 0.85),
+		"sword_glow": Color(0.5, 0.7, 1.0),
+		"sword_trail": Color(0.6, 0.8, 1.0, 0.5),
+		"shield": Color(0.2, 0.3, 0.6),
+		"shield_rim": Color(0.6, 0.65, 0.8),
+		"boot": Color(0.2, 0.2, 0.35),
+		"shadow": Color(0, 0, 0, 0.3),
+	}
+
+func _bk_draw_body(img: Image, c: Dictionary, lean: int = 0) -> void:
+	# Shared body parts (boots, legs, torso, helm) with optional lean offset
+	_fill_rect(img, 8, 44, 16, 4, c["shadow"])
+	_fill_rect(img, 10 + lean, 40, 5, 6, c["boot"])
+	_fill_rect(img, 17 + lean, 40, 5, 6, c["boot"])
+	_fill_rect(img, 11 + lean, 32, 4, 9, c["armor_dark"])
+	_fill_rect(img, 17 + lean, 32, 4, 9, c["armor_dark"])
+	_fill_rect(img, 9 + lean, 18, 14, 15, c["armor_mid"])
+	_fill_rect(img, 10 + lean, 19, 12, 13, c["armor_light"])
+	_fill_rect(img, 9 + lean, 30, 14, 3, c["armor_dark"])
+	_fill_rect(img, 5 + lean, 18, 6, 5, c["armor_mid"])
+	_fill_rect(img, 21 + lean, 18, 6, 5, c["armor_mid"])
+	_fill_rect(img, 11 + lean, 6, 10, 13, c["helm"])
+	_fill_rect(img, 12 + lean, 7, 8, 11, c["armor_mid"])
+	_fill_rect(img, 13 + lean, 11, 6, 3, c["visor"])
+	_fill_rect(img, 14 + lean, 4, 4, 4, c["armor_light"])
+	# Shield (left hand)
+	_fill_rect(img, 2 + lean, 20, 7, 10, c["shield"])
+	_fill_rect(img, 2 + lean, 20, 7, 2, c["shield_rim"])
+	_fill_rect(img, 2 + lean, 28, 7, 2, c["shield_rim"])
+	_fill_rect(img, 2 + lean, 20, 2, 10, c["shield_rim"])
+
+func _gen_blade_knight_atk1() -> void:
+	# Frame 1: Wind-up — sword raised above head
+	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = _bk_colors()
+	_bk_draw_body(img, c, -1)  # Slight lean back
+	# Sword raised above head
+	_fill_rect(img, 12, 0, 3, 10, c["sword"])
+	_fill_rect(img, 13, 0, 2, 3, c["sword_glow"])
+	_fill_rect(img, 11, 9, 5, 3, c["armor_dark"])  # Hilt
+	# Right arm raised
+	_fill_rect(img, 20, 12, 4, 8, c["armor_mid"])
+	textures["blade_knight_atk1"] = ImageTexture.create_from_image(img)
+
+func _gen_blade_knight_atk2() -> void:
+	# Frame 2: Mid-swing — sword diagonal, slashing down-right
+	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = _bk_colors()
+	_bk_draw_body(img, c, 1)  # Lean forward
+	# Sword mid-swing diagonal (top-left to bottom-right)
+	# Draw diagonal sword blade
+	for i in range(14):
+		var px = 18 + i
+		var py = 6 + i
+		if px < 32 and py < 48:
+			_fill_rect(img, px, py, 3, 2, c["sword"])
+	# Sword glow trail
+	for i in range(10):
+		var px = 19 + i
+		var py = 8 + i
+		if px < 32 and py < 48:
+			img.set_pixel(px, py, c["sword_trail"])
+	# Hilt at top of swing
+	_fill_rect(img, 17, 8, 4, 4, c["armor_dark"])
+	# Right arm extended
+	_fill_rect(img, 22, 14, 5, 6, c["armor_mid"])
+	textures["blade_knight_atk2"] = ImageTexture.create_from_image(img)
+
+func _gen_blade_knight_atk3() -> void:
+	# Frame 3: Follow-through — sword low, extended forward
+	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = _bk_colors()
+	_bk_draw_body(img, c, 2)  # Max lean forward
+	# Sword extended forward-low (horizontal)
+	_fill_rect(img, 20, 26, 12, 3, c["sword"])
+	_fill_rect(img, 28, 25, 4, 2, c["sword_glow"])
+	_fill_rect(img, 18, 25, 4, 4, c["armor_dark"])  # Hilt
+	# Sword glow trail behind
+	_fill_rect(img, 22, 24, 8, 1, c["sword_trail"])
+	# Right arm forward
+	_fill_rect(img, 23, 18, 4, 8, c["armor_mid"])
+	textures["blade_knight_atk3"] = ImageTexture.create_from_image(img)
 
 func _gen_shadow_ranger() -> void:
 	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)

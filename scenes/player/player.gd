@@ -31,6 +31,10 @@ var _shadow: Sprite2D = null
 # Attack animation state
 var _is_attack_animating: bool = false
 
+# Melee attack frame textures (cached on ready for melee heroes)
+var _atk_frames: Array = []  # [atk1, atk2, atk3]
+var _idle_texture: Texture2D = null
+
 func _ready() -> void:
 	add_to_group("player")
 	hero_class = GameManager.current_hero_class
@@ -41,6 +45,14 @@ func _ready() -> void:
 	var tex = SpriteGenerator.get_texture(hero_class)
 	if tex:
 		sprite.texture = tex
+		_idle_texture = tex
+
+	# Cache melee attack frames if available
+	var atk1 = SpriteGenerator.get_texture(hero_class + "_atk1")
+	var atk2 = SpriteGenerator.get_texture(hero_class + "_atk2")
+	var atk3 = SpriteGenerator.get_texture(hero_class + "_atk3")
+	if atk1 and atk2 and atk3:
+		_atk_frames = [atk1, atk2, atk3]
 
 	attack_timer.wait_time = 1.0 / stats.attack_speed
 	attack_timer.start()
@@ -106,10 +118,13 @@ func _physics_process(delta: float) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_LEFT:
-			# Left-click: select enemy OR move
+			# Left-click: select enemy and attack-move, OR move to position
 			var target = _get_clickable_at_mouse()
 			if target and target.is_in_group("enemies") and not target.get("_is_dead"):
 				_select_enemy(target)
+				_attack_target = target
+				_is_attacking_target = true
+				_is_moving_to_target = false
 			else:
 				_deselect_enemy()
 				_move_target = get_global_mouse_position()
@@ -331,12 +346,24 @@ func _do_melee_attack(target: Node2D, result: Dictionary) -> void:
 
 	var dir = (target.global_position - global_position).normalized()
 	var base_pos = sprite.position
+	var has_frames = _atk_frames.size() >= 3
 
-	# Wind-up: pull back slightly
 	var tween = create_tween()
-	tween.tween_property(sprite, "position", base_pos - dir * 3.0, 0.06)
-	# Lunge forward
-	tween.tween_property(sprite, "position", base_pos + dir * 10.0, 0.08)
+
+	# Frame 1: Wind-up — sword raised, pull back
+	if has_frames:
+		tween.tween_callback(func(): sprite.texture = _atk_frames[0])
+	tween.tween_property(sprite, "position", base_pos - dir * 4.0, 0.08)
+
+	# Frame 2: Mid-swing — lunge forward
+	if has_frames:
+		tween.tween_callback(func(): sprite.texture = _atk_frames[1])
+	tween.tween_property(sprite, "position", base_pos + dir * 8.0, 0.06)
+
+	# Frame 3: Impact — sword extended, deal damage
+	if has_frames:
+		tween.tween_callback(func(): sprite.texture = _atk_frames[2])
+	tween.tween_property(sprite, "position", base_pos + dir * 12.0, 0.04)
 	tween.tween_callback(func():
 		if is_instance_valid(target):
 			target.take_damage(result["damage"], result["is_crit"])
@@ -344,7 +371,13 @@ func _do_melee_attack(target: Node2D, result: Dictionary) -> void:
 			_spawn_impact_vfx(target.global_position)
 			_do_screen_shake(2.5 if not result["is_crit"] else 5.0)
 	)
-	# Return
+
+	# Return to idle
+	tween.tween_interval(0.06)
+	tween.tween_callback(func():
+		if _idle_texture:
+			sprite.texture = _idle_texture
+	)
 	tween.tween_property(sprite, "position", base_pos, 0.1)
 	tween.tween_callback(func(): _is_attack_animating = false)
 

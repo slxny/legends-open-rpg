@@ -1323,23 +1323,22 @@ func _gen_selection_circle_red() -> void:
 	textures["selection_red"] = _make_selection_circle(Color(1.0, 0.2, 0.2))
 
 func _make_selection_circle(color: Color) -> ImageTexture:
-	var size = 32
+	var size = 48
 	var img = Image.create(size, size, false, Image.FORMAT_RGBA8)
 	img.fill(Color(0, 0, 0, 0))
 	var cx = size / 2
 	var cy = size / 2
 	# Isometric ellipse (wider than tall)
-	var rx = 14
-	var ry = 8
+	var rx = 22
+	var ry = 12
+	# Thick ring: outer boundary at d=1.0, inner at d=0.6 (40% thickness)
 	for py in range(size):
 		for px in range(size):
 			var dx = float(px - cx) / float(rx)
 			var dy = float(py - cy) / float(ry)
 			var d = dx * dx + dy * dy
-			if d <= 1.0 and d >= 0.65:
-				img.set_pixel(px, py, Color(color.r, color.g, color.b, 0.9))
-			elif d < 0.65 and d >= 0.5:
-				img.set_pixel(px, py, Color(color.r, color.g, color.b, 0.3))
+			if d <= 1.0 and d >= 0.6:
+				img.set_pixel(px, py, Color(color.r, color.g, color.b, 1.0))
 	return ImageTexture.create_from_image(img)
 
 func _gen_iso_shadow() -> void:

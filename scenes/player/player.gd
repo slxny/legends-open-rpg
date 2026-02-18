@@ -142,7 +142,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				_is_moving_to_target = false
 			else:
 				_deselect_enemy()
-				_move_target = get_global_mouse_position()
+				_move_target = _get_world_mouse_pos()
 				_is_moving_to_target = true
 				_is_attacking_target = false
 				_attack_target = null
@@ -160,7 +160,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				_move_target = target.global_position
 				_is_moving_to_target = true
 			else:
-				_move_target = get_global_mouse_position()
+				_move_target = _get_world_mouse_pos()
 				_is_moving_to_target = true
 
 	# Abilities (Q and E)
@@ -282,8 +282,20 @@ func _update_selection_circle() -> void:
 	if _selection_circle and is_instance_valid(_selection_circle):
 		_selection_circle.global_position = _selected_enemy.global_position
 
+func _get_world_mouse_pos() -> Vector2:
+	# get_global_mouse_position() is broken when camera position_smoothing is
+	# enabled because it uses the camera's lagged canvas transform, causing the
+	# computed world position to drift / "freeze" in the center.
+	# Instead, convert screen-space mouse coords using the camera's true
+	# (non-smoothed) position directly.
+	var screen_mouse: Vector2 = get_viewport().get_mouse_position()
+	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+	var screen_center: Vector2 = viewport_size * 0.5
+	var offset_from_center: Vector2 = screen_mouse - screen_center
+	return camera.global_position + offset_from_center / camera.zoom
+
 func _get_clickable_at_mouse() -> Node2D:
-	var mouse_pos = get_global_mouse_position()
+	var mouse_pos = _get_world_mouse_pos()
 	var space = get_world_2d().direct_space_state
 	var params = PhysicsPointQueryParameters2D.new()
 	params.position = mouse_pos
@@ -313,7 +325,7 @@ func _use_ability(ability_key: String) -> void:
 		GameManager.game_message.emit("Evasion! +%d%% Dodge" % int(ability_data["dodge_bonus"] * 100), Color(0.3, 1.0, 0.5))
 
 func _execute_aoe_ability(ability_data: Dictionary) -> void:
-	var mouse_dir = (get_global_mouse_position() - global_position).normalized()
+	var mouse_dir = (_get_world_mouse_pos() - global_position).normalized()
 	var radius = ability_data.get("radius", 80.0)
 	var arc = deg_to_rad(ability_data.get("arc_degrees", 120.0))
 
@@ -334,7 +346,7 @@ func _execute_aoe_ability(ability_data: Dictionary) -> void:
 	_do_screen_shake(4.0)
 
 func _execute_projectile_ability(ability_data: Dictionary) -> void:
-	var base_dir = (get_global_mouse_position() - global_position).normalized()
+	var base_dir = (_get_world_mouse_pos() - global_position).normalized()
 	var count = ability_data.get("projectile_count", 3)
 	var spread = deg_to_rad(ability_data.get("spread_degrees", 30.0))
 	var speed = ability_data.get("projectile_speed", 400.0)

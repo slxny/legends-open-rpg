@@ -24,6 +24,10 @@ var _shadow: Sprite2D = null
 var _is_attack_animating: bool = false
 var _attack_cooldown: float = 0.0
 
+# Directional attack tracking
+var _attack_dir: Vector2 = Vector2.RIGHT   # Direction used in the last attack
+var _last_dir_category: String = ""        # "horizontal" | "up" | "down" | "diagonal" | ""
+
 # Melee combo system
 # 5 swing types: a=left-to-right, b=right-to-left backhand, c=overhead chop,
 #                d=upward thrust, e=spin slash
@@ -33,7 +37,6 @@ var _idle_texture: Texture2D = null
 var _combo_index: int = 0       # Which swing we're on in the current combo
 var _combo_timer: float = 0.0   # Time since last hit — resets combo if too long
 const COMBO_WINDOW: float = 1.8 # Seconds before combo resets
-const COMBO_SEQUENCE: Array = [0, 1, 0, 1, 2, 3, 4]  # a,b,a,b,c,d,e then loop
 
 func _ready() -> void:
 	add_to_group("player")
@@ -98,6 +101,7 @@ func _physics_process(delta: float) -> void:
 		if _combo_timer >= COMBO_WINDOW:
 			_combo_index = 0
 			_combo_timer = 0.0
+			_last_dir_category = ""
 
 	# Flip sprite based on movement direction
 	if velocity.x < -5:
@@ -165,35 +169,47 @@ func _try_manual_attack() -> void:
 	if _is_attack_animating or _attack_cooldown > 0.0:
 		return
 
-	_attack_cooldown = 1.0 / stats.attack_speed
+	_attack_cooldown = 0.5 / stats.attack_speed  # 50% faster than base
+
+	# Determine attack direction from held movement input
+	var input_raw = Vector2(
+		Input.get_axis("move_left", "move_right"),
+		Input.get_axis("move_up", "move_down")
+	)
+	var attack_dir: Vector2
+	if input_raw.length() > 0.25:
+		attack_dir = input_raw.normalized()
+	else:
+		attack_dir = Vector2.RIGHT if not sprite.flip_h else Vector2.LEFT
+
+	# Update sprite facing based on attack direction (horizontal component)
+	if attack_dir.x < -0.1:
+		sprite.flip_h = true
+	elif attack_dir.x > 0.1:
+		sprite.flip_h = false
+
 	_enemies_in_range = _enemies_in_range.filter(func(e): return is_instance_valid(e) and not e.get("_is_dead"))
 
-	# Find the best target to hit, if any — attack swings regardless
+	# Find the best target in the attack direction
 	var hit_target: Node2D = null
-
-	# Priority 1: enemy directly under the mouse cursor and in range
 	var mouse_target = _get_enemy_at_mouse()
 	if mouse_target and mouse_target in _enemies_in_range:
 		hit_target = mouse_target
 	else:
-		# Priority 2: closest enemy in the direction the hero is facing
-		var facing = Vector2.RIGHT if not sprite.flip_h else Vector2.LEFT
 		var best_score := -INF
 		for enemy in _enemies_in_range:
 			var to_enemy = (enemy.global_position - global_position)
-			var dot = facing.dot(to_enemy.normalized())
-			if dot > 0.3:  # Within ~72° cone in front
+			var dot = attack_dir.dot(to_enemy.normalized())
+			if dot > 0.3:
 				var score = dot - to_enemy.length() * 0.001
 				if score > best_score:
 					best_score = score
 					hit_target = enemy
 
-	# Always swing — pass null target for an empty swing with just VFX
-	var facing_dir = Vector2.RIGHT if not sprite.flip_h else Vector2.LEFT
 	if hit_target:
-		_perform_attack(hit_target)
+		_perform_attack(hit_target, attack_dir)
 	else:
-		_perform_swing_no_target(facing_dir)
+		_perform_swing_no_target(attack_dir)
 
 func _get_world_mouse_pos() -> Vector2:
 	# Use the viewport's canvas transform so the result matches what is
@@ -312,30 +328,24 @@ func _spawn_projectile(direction: Vector2, speed: float, max_range: float, dmg_m
 	)
 
 
-func _perform_attack(target: Node2D) -> void:
+func _perform_attack(target: Node2D, attack_dir: Vector2 = Vector2.RIGHT) -> void:
 	_is_attack_animating = true
 	var result = CombatManager.calculate_damage(stats.get_stats_dict(), target.get_stats_dict())
 	attacked.emit(target)
 
-	# Face the target
-	if target.global_position.x < global_position.x:
-		sprite.flip_h = true
-	else:
-		sprite.flip_h = false
-
 	var hero_data = HeroData.get_hero(hero_class)
 	if hero_data.get("primary_stat") == "agility":
-		# Ranged attack: bow draw + arrow
 		_do_ranged_attack(target, result)
 	else:
-		# Melee attack: lunge + slash
-		_do_melee_attack(target, result)
+		_do_melee_attack(target, result, attack_dir)
 
 func _perform_swing_no_target(dir: Vector2) -> void:
-	# Full swing animation with VFX but no target — empty swing in facing direction
+	# Full swing animation with VFX but no target — empty swing in attack direction
 	_is_attack_animating = true
-	var swing_idx = COMBO_SEQUENCE[_combo_index % COMBO_SEQUENCE.size()]
+	var cur_cat = _get_dir_category(dir)
+	var swing_idx = _pick_combo_swing(cur_cat)
 	var frames = _combo_swings[swing_idx] if swing_idx < _combo_swings.size() else []
+	_last_dir_category = cur_cat
 	_combo_index += 1
 	_combo_timer = 0.0
 	var base_pos = sprite.position
@@ -355,36 +365,71 @@ func _perform_swing_no_target(dir: Vector2) -> void:
 	tween.tween_interval(0.05)
 	_anim_return_to_idle(tween, base_pos)
 
-func _do_melee_attack(target: Node2D, result: Dictionary) -> void:
+func _get_dir_category(dir: Vector2) -> String:
+	if abs(dir.x) > 0.4 and abs(dir.y) > 0.4:
+		return "diagonal"
+	if abs(dir.y) >= abs(dir.x):
+		return "up" if dir.y < 0.0 else "down"
+	return "horizontal"
+
+func _pick_combo_swing(cur_cat: String) -> int:
+	# Directional combo chart — prev direction category → current → swing type
+	match [_last_dir_category, cur_cat]:
+		# Diagonal input always triggers spin slash
+		[_, "diagonal"]:
+			return 4
+		# First attack in combo: pick based on direction
+		["", "up"]:
+			return 3   # Rising thrust
+		["", "down"]:
+			return 2   # Overhead chop
+		# horizontal → vertical transitions
+		["horizontal", "up"]:
+			return 3   # Rising thrust when swinging upward after horizontal
+		["horizontal", "down"]:
+			return 2   # Overhead slam downward after horizontal
+		# Opposite verticals — the signature big combos
+		["up", "down"]:
+			return 2   # Slam down after jumping up
+		["down", "up"]:
+			return 3   # Rising uppercut after crouching down
+		# Vertical → horizontal: spin out of the vertical
+		["up", "horizontal"], ["down", "horizontal"]:
+			return 4   # Spin slash when sweeping horizontal after vertical
+		# Same or fallback: alternate A/B horizontal swings
+		_:
+			return _combo_index % 2
+
+func _do_melee_attack(target: Node2D, result: Dictionary, attack_dir: Vector2 = Vector2.RIGHT) -> void:
 	if not is_instance_valid(target):
 		_is_attack_animating = false
 		return
 
-	var dir = (target.global_position - global_position).normalized()
-	var perp = Vector2(-dir.y, dir.x)  # Perpendicular for lateral swings
+	var dir = attack_dir  # Swing in the direction the player is pressing
+	var perp = Vector2(-dir.y, dir.x)
 	var base_pos = sprite.position
 
-	# Pick the current swing type from the combo sequence
-	var swing_idx = COMBO_SEQUENCE[_combo_index % COMBO_SEQUENCE.size()]
-	var has_frames = swing_idx < _combo_swings.size()
-	var frames = _combo_swings[swing_idx] if has_frames else []
-
-	# Advance combo for next attack
+	# Direction-based combo selection
+	var cur_cat = _get_dir_category(dir)
+	var swing_idx = _pick_combo_swing(cur_cat)
+	_last_dir_category = cur_cat
 	_combo_index += 1
 	_combo_timer = 0.0
 
-	# Each swing type has unique choreography
+	var has_frames = swing_idx < _combo_swings.size()
+	var frames = _combo_swings[swing_idx] if has_frames else []
+
 	var tween = create_tween()
 	match swing_idx:
-		0:  # Swing A: Left-to-right slash
+		0:  # A: left-to-right slash
 			_anim_swing_horizontal(tween, frames, base_pos, dir, perp, target, result, 1.0)
-		1:  # Swing B: Right-to-left backhand
+		1:  # B: right-to-left backhand
 			_anim_swing_horizontal(tween, frames, base_pos, dir, perp, target, result, -1.0)
-		2:  # Swing C: Overhead chop (finisher)
+		2:  # C: overhead chop
 			_anim_overhead_chop(tween, frames, base_pos, dir, target, result)
-		3:  # Swing D: Upward thrust
+		3:  # D: upward thrust
 			_anim_upward_thrust(tween, frames, base_pos, dir, target, result)
-		4:  # Swing E: Spin slash
+		4:  # E: spin slash
 			_anim_spin_slash(tween, frames, base_pos, dir, target, result)
 
 func _anim_swing_horizontal(tween: Tween, frames: Array, base_pos: Vector2,

@@ -39,7 +39,7 @@ func _ready() -> void:
 		visual.scale = Vector2(beacon_radius * 2.0 / tex_size.x, beacon_radius * 2.0 / tex_size.y)
 
 	# Counter-transform label so it stays readable under iso projection
-	label.transform = IsometricHelper.get_sprite_counter_transform()
+	IsometricHelper.apply_counter_transform(label)
 	if not beacon_label.is_empty():
 		label.text = beacon_label
 	else:

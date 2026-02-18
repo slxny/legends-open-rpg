@@ -21,7 +21,7 @@ func _ready() -> void:
 	# Counter-transform the TownLabel so it renders upright under iso projection
 	var town_label = get_node_or_null("TownLabel")
 	if town_label:
-		town_label.transform = IsometricHelper.get_sprite_counter_transform()
+		IsometricHelper.apply_counter_transform(town_label)
 
 	_generate_terrain()
 	_generate_town()
@@ -226,13 +226,12 @@ func _add_town_building(parent: Node2D, pos: Vector2, tex_name: String) -> void:
 func _add_building_label(parent: Node2D, pos: Vector2, text: String) -> void:
 	var label = Label.new()
 	label.text = text
-	label.position = pos + Vector2(-25, 0)
 	label.add_theme_font_size_override("font_size", 9)
 	label.add_theme_color_override("font_color", Color(0.8, 0.8, 0.7, 0.6))
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.custom_minimum_size = Vector2(50, 0)
-	label.transform = IsometricHelper.get_sprite_counter_transform()
-	parent.add_child(label)
+	var wrapper = IsometricHelper.counter_transform_wrap(label, pos + Vector2(-25, 0))
+	parent.add_child(wrapper)
 
 # ============================================================
 # DECORATIONS: Dense SC:BW jungle foliage
@@ -466,11 +465,10 @@ func _add_camp_marker(parent: Node2D, pos: Vector2, text: String) -> void:
 
 	var label = Label.new()
 	label.text = text
-	label.position = pos + Vector2(-30, -18)
 	label.add_theme_font_size_override("font_size", 9)
 	label.add_theme_color_override("font_color", Color(0.9, 0.5, 0.5, 0.7))
-	label.transform = IsometricHelper.get_sprite_counter_transform()
-	parent.add_child(label)
+	var label_wrap = IsometricHelper.counter_transform_wrap(label, pos + Vector2(-30, -18))
+	parent.add_child(label_wrap)
 
 func _add_flowers(parent: Node2D, pos: Vector2) -> void:
 	for i in range(randi_range(2, 4)):

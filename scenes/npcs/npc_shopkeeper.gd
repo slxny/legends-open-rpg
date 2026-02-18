@@ -21,7 +21,7 @@ func _ready() -> void:
 	# Counter-transform sprite and label for isometric projection
 	var ct = IsometricHelper.get_sprite_counter_transform()
 	shop_sprite.transform = ct
-	name_label.transform = ct
+	IsometricHelper.apply_counter_transform(name_label)
 
 func _on_beacon_activated(_b: Area2D) -> void:
 	# Find the shop dialog in the scene tree and open it

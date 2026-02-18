@@ -53,8 +53,8 @@ func _ready() -> void:
 	var ct = IsometricHelper.get_sprite_counter_transform()
 	sprite.transform = ct
 	_shadow.transform = ct
-	hp_bar.transform = ct
-	name_label.transform = ct
+	IsometricHelper.apply_counter_transform(hp_bar)
+	IsometricHelper.apply_counter_transform(name_label)
 
 func initialize(config: Dictionary) -> void:
 	enemy_name = config.get("name", "Enemy")
@@ -357,15 +357,15 @@ func _spawn_item_drop(item_id: String) -> void:
 func _spawn_damage_number(amount: int, is_crit: bool) -> void:
 	var label = Label.new()
 	label.text = str(amount) + ("!" if is_crit else "")
-	label.position = Vector2(randf_range(-10, 10) if not is_crit else randf_range(-6, 6), -30)
 	var settings = LabelSettings.new()
 	settings.font_size = 14 if not is_crit else 28
 	settings.font_color = Color.WHITE if not is_crit else Color(1.0, 0.95, 0.1)
 	settings.outline_size = 2 if not is_crit else 3
 	settings.outline_color = Color.BLACK
 	label.label_settings = settings
-	label.transform = IsometricHelper.get_sprite_counter_transform()
-	add_child(label)
+	var start_pos = Vector2(randf_range(-10, 10) if not is_crit else randf_range(-6, 6), -30)
+	var wrapper = IsometricHelper.counter_transform_wrap(label, start_pos)
+	add_child(wrapper)
 	var tween = create_tween()
 	if is_crit:
 		# Pop scale in, then float up and fade
@@ -373,15 +373,15 @@ func _spawn_damage_number(amount: int, is_crit: bool) -> void:
 		tween.tween_property(label, "scale", Vector2(1.3, 1.3), 0.08).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 		tween.tween_property(label, "scale", Vector2(1.0, 1.0), 0.05)
 		tween.set_parallel(true)
-		tween.tween_property(label, "position:y", label.position.y - 40, 0.7)
-		tween.tween_property(label, "modulate:a", 0.0, 0.7).set_delay(0.2)
+		tween.tween_property(wrapper, "position:y", wrapper.position.y - 40, 0.7)
+		tween.tween_property(wrapper, "modulate:a", 0.0, 0.7).set_delay(0.2)
 		tween.set_parallel(false)
 	else:
 		tween.set_parallel(true)
-		tween.tween_property(label, "position:y", label.position.y - 28, 0.55)
-		tween.tween_property(label, "modulate:a", 0.0, 0.55).set_delay(0.15)
+		tween.tween_property(wrapper, "position:y", wrapper.position.y - 28, 0.55)
+		tween.tween_property(wrapper, "modulate:a", 0.0, 0.55).set_delay(0.15)
 		tween.set_parallel(false)
-	tween.tween_callback(label.queue_free)
+	tween.tween_callback(wrapper.queue_free)
 
 func _update_hp_bar() -> void:
 	if hp_bar:

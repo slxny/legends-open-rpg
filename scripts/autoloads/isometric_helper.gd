@@ -38,3 +38,31 @@ static func get_sprite_counter_transform() -> Transform2D:
 	var inv := get_iso_transform().affine_inverse()
 	# Return just the basis (no origin offset)
 	return Transform2D(inv.x, inv.y, Vector2.ZERO)
+
+## Apply the counter-transform to a CanvasItem already in the scene tree.
+## Node2D nodes: sets .transform directly.
+## Control nodes: reparents under a Node2D wrapper carrying the transform,
+## since Control does not support direct .transform assignment.
+static func apply_counter_transform(node: CanvasItem) -> void:
+	var ct := get_sprite_counter_transform()
+	if node is Node2D:
+		node.transform = ct
+	else:
+		var parent := node.get_parent()
+		if parent:
+			var wrapper := Node2D.new()
+			wrapper.transform = ct
+			wrapper.position = node.position
+			parent.add_child(wrapper)
+			node.reparent(wrapper, false)
+			node.position = Vector2.ZERO
+
+## Wrap a CanvasItem (not yet in the tree) inside a Node2D carrying the
+## counter-transform. Returns the wrapper — add it to the tree instead of
+## the original node. `pos` sets the wrapper's position in its parent space.
+static func counter_transform_wrap(node: CanvasItem, pos: Vector2 = Vector2.ZERO) -> Node2D:
+	var wrapper := Node2D.new()
+	wrapper.transform = get_sprite_counter_transform()
+	wrapper.position = pos
+	wrapper.add_child(node)
+	return wrapper

@@ -752,19 +752,19 @@ func take_damage(amount: int, is_crit: bool = false) -> void:
 func _spawn_damage_number(amount: int, is_crit: bool) -> void:
 	var label = Label.new()
 	label.text = str(amount) + ("!" if is_crit else "")
-	label.position = Vector2(randf_range(-10, 10), -35)
 	var settings = LabelSettings.new()
 	settings.font_size = 14 if not is_crit else 22
 	settings.font_color = Color(1.0, 0.3, 0.3) if not is_crit else Color(1.0, 0.1, 0.1)
 	settings.outline_size = 2
 	settings.outline_color = Color.BLACK
 	label.label_settings = settings
-	label.transform = IsometricHelper.get_sprite_counter_transform()
-	add_child(label)
+	var start_pos = Vector2(randf_range(-10, 10), -35)
+	var wrapper = IsometricHelper.counter_transform_wrap(label, start_pos)
+	add_child(wrapper)
 	var tween = create_tween()
-	tween.tween_property(label, "position:y", label.position.y - 30, 0.6)
-	tween.parallel().tween_property(label, "modulate:a", 0.0, 0.6)
-	tween.tween_callback(label.queue_free)
+	tween.tween_property(wrapper, "position:y", wrapper.position.y - 30, 0.6)
+	tween.parallel().tween_property(wrapper, "modulate:a", 0.0, 0.6)
+	tween.tween_callback(wrapper.queue_free)
 
 func _do_hit_flash() -> void:
 	sprite.modulate = Color(1, 0.5, 0.5)

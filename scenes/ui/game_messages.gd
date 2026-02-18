@@ -31,4 +31,6 @@ func _on_game_message(text: String, color: Color = Color.WHITE) -> void:
 
 	# Keep max 5 messages visible
 	while message_container.get_child_count() > 5:
-		message_container.get_child(0).queue_free()
+		var old = message_container.get_child(0)
+		message_container.remove_child(old)
+		old.queue_free()

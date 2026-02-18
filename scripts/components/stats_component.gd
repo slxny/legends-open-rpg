@@ -28,6 +28,7 @@ var attack_damage: int = 10
 var attack_range: float = 40.0
 var attack_speed: float = 1.0
 var move_speed: float = 150.0
+var _armor_growth_accum: float = 0.0
 
 # Equipment bonuses (added on top of base)
 var weapon_damage: int = 0
@@ -143,7 +144,11 @@ func _level_up() -> void:
 	strength += int(growth.get("strength", 0))
 	agility += int(growth.get("agility", 0))
 	intelligence += int(growth.get("intelligence", 0))
-	armor += int(growth.get("armor", 0))
+	_armor_growth_accum += growth.get("armor", 0.0)
+	if _armor_growth_accum >= 1.0:
+		var gain = int(_armor_growth_accum)
+		armor += gain
+		_armor_growth_accum -= gain
 	attack_damage += int(growth.get("attack_damage", 0))
 	# Heal to full on level up
 	current_hp = get_total_max_hp()

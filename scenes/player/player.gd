@@ -413,29 +413,20 @@ func _spawn_projectile(direction: Vector2, speed: float, max_range: float, dmg_m
 			projectile.queue_free()
 	)
 
-# Auto-attack: prioritize selected enemy, then nearest in range
+# Auto-attack: only attack the explicitly selected enemy
 func _on_attack_timer_timeout() -> void:
 	if _is_attack_animating:
 		return
 	_enemies_in_range = _enemies_in_range.filter(func(e): return is_instance_valid(e) and not e.get("_is_dead"))
 
-	# Prioritize selected enemy if in range
-	var attack_target: Node2D = null
-	if is_instance_valid(_selected_enemy) and _selected_enemy in _enemies_in_range:
-		attack_target = _selected_enemy
-	elif is_instance_valid(_attack_target) and _attack_target in _enemies_in_range:
-		attack_target = _attack_target
-	else:
-		# Find nearest
-		var nearest_dist = INF
-		for enemy in _enemies_in_range:
-			var dist = global_position.distance_to(enemy.global_position)
-			if dist < nearest_dist:
-				nearest_dist = dist
-				attack_target = enemy
+	# Only attack if player has selected an enemy
+	if not is_instance_valid(_selected_enemy):
+		return
+	if _selected_enemy not in _enemies_in_range:
+		return
 
-	if attack_target and attack_target.has_method("take_damage"):
-		_perform_attack(attack_target)
+	if _selected_enemy.has_method("take_damage"):
+		_perform_attack(_selected_enemy)
 
 func _perform_attack(target: Node2D) -> void:
 	_is_attack_animating = true

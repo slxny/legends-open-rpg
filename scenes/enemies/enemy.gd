@@ -106,6 +106,14 @@ func _process_idle() -> void:
 		current_state = State.CHASE
 		name_label.visible = true
 
+func _get_separation_push() -> Vector2:
+	var push = Vector2.ZERO
+	for slide_idx in range(get_slide_collision_count()):
+		var col = get_slide_collision(slide_idx)
+		if col and col.get_collider() and col.get_collider().is_in_group("enemies"):
+			push -= col.get_normal() * 60.0
+	return push
+
 func _process_chase(delta: float) -> void:
 	if not is_instance_valid(target):
 		current_state = State.RETURN
@@ -124,7 +132,7 @@ func _process_chase(delta: float) -> void:
 		return
 
 	var dir = (target.global_position - global_position).normalized()
-	velocity = dir * stats.move_speed
+	velocity = dir * stats.move_speed + _get_separation_push()
 	# Flip sprite based on movement
 	if dir.x < -0.1:
 		sprite.flip_h = true
@@ -141,6 +149,14 @@ func _process_attack(delta: float) -> void:
 	if dist > stats.attack_range * 1.5:
 		current_state = State.CHASE
 		return
+
+	# Keep enemies spread apart even while attacking
+	var sep = _get_separation_push()
+	if sep != Vector2.ZERO:
+		velocity = sep
+		move_and_slide()
+	else:
+		velocity = Vector2.ZERO
 
 	_attack_timer -= delta
 	if _attack_timer <= 0:

@@ -1,71 +1,143 @@
 extends Node
 
-## Generates all pixel art sprites at runtime using Godot's Image API.
+## Hybrid sprite system: loads external PNGs from res://assets/sprites/ first,
+## falls back to procedural generation via Godot's Image API.
 ## SC:BW jungle tileset aesthetic with chunky readable pixel art.
 
 # Cache generated textures
 var textures: Dictionary = {}
 
+# Maps sprite names to asset subdirectories for external file lookup
+var _asset_dirs: Dictionary = {}
+
 func _ready() -> void:
+	_init_asset_dirs()
 	_generate_all()
 
 func get_texture(name: String) -> ImageTexture:
 	return textures.get(name, null)
 
+## Try loading a PNG from res://assets/sprites/<subdir>/<name>.png
+## Returns true if loaded successfully, false to fall back to procedural.
+func _try_load_external(sprite_name: String) -> bool:
+	var subdir: String = _asset_dirs.get(sprite_name, "")
+	if subdir.is_empty():
+		return false
+	var path = "res://assets/sprites/%s/%s.png" % [subdir, sprite_name]
+	if ResourceLoader.exists(path):
+		var tex = load(path) as Texture2D
+		if tex:
+			textures[sprite_name] = tex
+			return true
+	return false
+
+func _init_asset_dirs() -> void:
+	# Heroes
+	for n in ["blade_knight", "shadow_ranger"]:
+		_asset_dirs[n] = "heroes"
+	# Enemies
+	for n in ["goblin", "wolf", "bandit"]:
+		_asset_dirs[n] = "enemies"
+	# Environment
+	for n in ["tree_jungle", "tree_small", "tree_dead", "rock", "rock_large",
+			"bush", "flowers", "grass_tuft", "grass_tuft_tall",
+			"mushroom_cluster", "fallen_log", "vines", "ground_debris",
+			"dirt_patch", "cliff_face", "icicles"]:
+		_asset_dirs[n] = "environment"
+	# Buildings
+	for n in ["shop_building", "town_hall", "landing_pad", "hatchery"]:
+		_asset_dirs[n] = "buildings"
+	# Beacons
+	for n in ["beacon_green", "beacon_yellow", "beacon_blue", "beacon_red", "beacon_cyan"]:
+		_asset_dirs[n] = "beacons"
+	# Items
+	for n in ["crystal_blue", "crystal_white", "crystal_teal"]:
+		_asset_dirs[n] = "items"
+	# Terrain
+	for n in ["grass_dark", "grass_light", "dirt", "dirt_path", "water",
+			"stone_floor", "snow", "ice", "ground_jungle", "ground_creep",
+			"ground_stone", "ground_snow", "ground_dirt"]:
+		_asset_dirs[n] = "terrain"
+	# UI
+	for n in ["skull_icon", "portrait_frame", "hud_frame"]:
+		_asset_dirs[n] = "ui"
+	# VFX
+	for n in ["selection_green", "selection_red", "iso_shadow", "slash_arc",
+			"arrow_projectile", "blood_splatter"]:
+		_asset_dirs[n] = "vfx"
+
 func _generate_all() -> void:
 	# Heroes
-	_gen_blade_knight()
-	_gen_shadow_ranger()
+	_gen_or_load("blade_knight")
+	_gen_or_load("shadow_ranger")
 	# Enemies
-	_gen_goblin()
-	_gen_wolf()
-	_gen_bandit()
+	_gen_or_load("goblin")
+	_gen_or_load("wolf")
+	_gen_or_load("bandit")
 	# Environment
-	_gen_tree_jungle()
-	_gen_tree_small()
-	_gen_rock()
-	_gen_rock_large()
-	_gen_bush()
-	_gen_flowers()
+	_gen_or_load("tree_jungle")
+	_gen_or_load("tree_small")
+	_gen_or_load("tree_dead")
+	_gen_or_load("rock")
+	_gen_or_load("rock_large")
+	_gen_or_load("bush")
+	_gen_or_load("flowers")
+	_gen_or_load("cliff_face")
+	_gen_or_load("icicles")
 	# Buildings
-	_gen_shop_building()
-	_gen_town_hall()
+	_gen_or_load("shop_building")
+	_gen_or_load("town_hall")
+	_gen_or_load("landing_pad")
 	# Beacons
-	_gen_beacon_green()
-	_gen_beacon_yellow()
-	_gen_beacon_blue()
-	_gen_beacon_red()
+	_gen_or_load("beacon_green")
+	_gen_or_load("beacon_yellow")
+	_gen_or_load("beacon_blue")
+	_gen_or_load("beacon_red")
+	_gen_or_load("beacon_cyan")
 	# Items
-	_gen_crystal_blue()
-	_gen_crystal_white()
-	_gen_crystal_teal()
+	_gen_or_load("crystal_blue")
+	_gen_or_load("crystal_white")
+	_gen_or_load("crystal_teal")
 	# Terrain tiles
-	_gen_grass_dark()
-	_gen_grass_light()
-	_gen_dirt()
-	_gen_dirt_path()
-	_gen_water()
-	_gen_stone_floor()
+	_gen_or_load("grass_dark")
+	_gen_or_load("grass_light")
+	_gen_or_load("dirt")
+	_gen_or_load("dirt_path")
+	_gen_or_load("water")
+	_gen_or_load("stone_floor")
+	_gen_or_load("snow")
+	_gen_or_load("ice")
 	# Rich ground tiles (SC:BW style)
-	_gen_ground_jungle()
-	_gen_ground_creep()
-	_gen_ground_stone()
+	_gen_or_load("ground_jungle")
+	_gen_or_load("ground_creep")
+	_gen_or_load("ground_stone")
+	_gen_or_load("ground_snow")
+	_gen_or_load("ground_dirt")
 	# Atmospheric decorations
-	_gen_grass_tuft()
-	_gen_grass_tuft_tall()
-	_gen_mushroom_cluster()
-	_gen_fallen_log()
-	_gen_vines()
-	_gen_ground_debris()
-	_gen_dirt_patch()
+	_gen_or_load("grass_tuft")
+	_gen_or_load("grass_tuft_tall")
+	_gen_or_load("mushroom_cluster")
+	_gen_or_load("fallen_log")
+	_gen_or_load("vines")
+	_gen_or_load("ground_debris")
+	_gen_or_load("dirt_patch")
 	# UI
-	_gen_skull_icon()
+	_gen_or_load("skull_icon")
 	# Selection / VFX
-	_gen_selection_circle_green()
-	_gen_selection_circle_red()
-	_gen_iso_shadow()
-	_gen_slash_arc()
-	_gen_arrow_projectile()
+	_gen_or_load("selection_green")
+	_gen_or_load("selection_red")
+	_gen_or_load("iso_shadow")
+	_gen_or_load("slash_arc")
+	_gen_or_load("arrow_projectile")
+	_gen_or_load("blood_splatter")
+
+## Try external PNG first; if not found, call the procedural generator.
+func _gen_or_load(sprite_name: String) -> void:
+	if _try_load_external(sprite_name):
+		return
+	var method_name = "_gen_" + sprite_name
+	if has_method(method_name):
+		call(method_name)
 
 # ============================================================
 # HERO SPRITES (32x48 — SC:BW unit proportions)
@@ -472,17 +544,66 @@ func _gen_beacon_blue() -> void:
 func _gen_beacon_red() -> void:
 	textures["beacon_red"] = _make_beacon(Color(0.9, 0.2, 0.2))
 
+func _gen_beacon_cyan() -> void:
+	textures["beacon_cyan"] = _make_beacon(Color(0.0, 0.8, 1.0))
+
 func _make_beacon(color: Color) -> ImageTexture:
-	var img = Image.create(32, 32, false, Image.FORMAT_RGBA8)
+	# Large ornate beacon pad (96x48) matching SC:BW landing pads from screenshots
+	var w = 96
+	var h = 48
+	var img = Image.create(w, h, false, Image.FORMAT_RGBA8)
 	img.fill(Color(0, 0, 0, 0))
-	# Outer glow
-	_fill_ellipse(img, 16, 16, 15, 15, Color(color.r, color.g, color.b, 0.15))
-	# Mid ring
-	_fill_ellipse(img, 16, 16, 12, 12, Color(color.r, color.g, color.b, 0.25))
-	# Inner bright
-	_fill_ellipse(img, 16, 16, 8, 8, Color(color.r, color.g, color.b, 0.4))
-	# Center
-	_fill_ellipse(img, 16, 16, 4, 4, Color(color.r, color.g, color.b, 0.7))
+	var cx = w / 2
+	var cy = h / 2
+	var rx = 46
+	var ry = 22
+
+	# Dark metallic base (bronze/brown)
+	_fill_ellipse(img, cx, cy, rx, ry, Color(0.18, 0.14, 0.08))
+	_fill_ellipse(img, cx, cy, rx - 2, ry - 1, Color(0.22, 0.18, 0.1))
+
+	# Inner ring groove
+	_fill_ellipse(img, cx, cy, rx - 6, ry - 3, Color(0.12, 0.1, 0.06))
+	_fill_ellipse(img, cx, cy, rx - 8, ry - 4, Color(0.15, 0.12, 0.07))
+
+	# Glowing energy cross pattern in center
+	var glow = Color(color.r, color.g, color.b, 0.6)
+	var glow_bright = Color(color.r, color.g, color.b, 0.85)
+	# Horizontal energy line
+	_fill_rect(img, cx - 20, cy - 1, 40, 3, glow)
+	_fill_rect(img, cx - 14, cy, 28, 1, glow_bright)
+	# Vertical energy line (compressed for isometric)
+	_fill_rect(img, cx - 1, cy - 10, 3, 20, glow)
+	_fill_rect(img, cx, cy - 7, 1, 14, glow_bright)
+	# Diamond energy pattern
+	for i in range(8):
+		var px = cx + int(cos(i * TAU / 8.0) * 16)
+		var py = cy + int(sin(i * TAU / 8.0) * 8)
+		_fill_rect(img, px - 1, py - 1, 3, 3, glow)
+
+	# Center glow spot
+	_fill_ellipse(img, cx, cy, 6, 3, glow_bright)
+	_fill_ellipse(img, cx, cy, 3, 2, Color(color.r * 0.5 + 0.5, color.g * 0.5 + 0.5, color.b * 0.5 + 0.5, 0.9))
+
+	# Four metallic corner nodes (N/S/E/W)
+	var node_color = Color(0.3, 0.25, 0.15)
+	var node_glow = Color(color.r, color.g, color.b, 0.7)
+	# East
+	_fill_ellipse(img, cx + rx - 6, cy, 4, 3, node_color)
+	_fill_ellipse(img, cx + rx - 6, cy, 2, 2, node_glow)
+	# West
+	_fill_ellipse(img, cx - rx + 6, cy, 4, 3, node_color)
+	_fill_ellipse(img, cx - rx + 6, cy, 2, 2, node_glow)
+	# North
+	_fill_ellipse(img, cx, cy - ry + 4, 4, 3, node_color)
+	_fill_ellipse(img, cx, cy - ry + 4, 2, 2, node_glow)
+	# South
+	_fill_ellipse(img, cx, cy + ry - 4, 4, 3, node_color)
+	_fill_ellipse(img, cx, cy + ry - 4, 2, 2, node_glow)
+
+	# Outer glow aura
+	_fill_ellipse(img, cx, cy, rx + 1, ry + 1, Color(color.r, color.g, color.b, 0.08))
+
 	return ImageTexture.create_from_image(img)
 
 # ============================================================
@@ -990,6 +1111,289 @@ func _gen_arrow_projectile() -> void:
 	_fill_rect(img, 0, 0, 3, 2, Color(0.8, 0.8, 0.8))
 	_fill_rect(img, 0, 4, 3, 2, Color(0.8, 0.8, 0.8))
 	textures["arrow_projectile"] = ImageTexture.create_from_image(img)
+
+# ============================================================
+# NEW SPRITE TYPES — from SC:BW screenshots
+# ============================================================
+
+func _gen_snow() -> void:
+	var img = Image.create(16, 16, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0.85, 0.88, 0.92))
+	var rng = RandomNumberGenerator.new()
+	rng.seed = 201
+	for _i in range(10):
+		var x = rng.randi_range(0, 15)
+		var y = rng.randi_range(0, 15)
+		img.set_pixel(x, y, Color(0.9, 0.92, 0.95))
+	for _i in range(6):
+		var x = rng.randi_range(0, 15)
+		var y = rng.randi_range(0, 15)
+		img.set_pixel(x, y, Color(0.78, 0.82, 0.88))
+	textures["snow"] = ImageTexture.create_from_image(img)
+
+func _gen_ice() -> void:
+	var img = Image.create(16, 16, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0.55, 0.72, 0.82))
+	var rng = RandomNumberGenerator.new()
+	rng.seed = 202
+	for _i in range(8):
+		var x = rng.randi_range(0, 15)
+		var y = rng.randi_range(0, 15)
+		img.set_pixel(x, y, Color(0.65, 0.8, 0.9))
+	for _i in range(5):
+		var x = rng.randi_range(0, 14)
+		var y = rng.randi_range(0, 15)
+		img.set_pixel(x, y, Color(0.4, 0.6, 0.75))
+		img.set_pixel(x + 1, y, Color(0.45, 0.65, 0.78))
+	textures["ice"] = ImageTexture.create_from_image(img)
+
+func _gen_ground_snow() -> void:
+	var size = 128
+	var img = Image.create(size, size, false, Image.FORMAT_RGBA8)
+	# White/light gray snow base — matches screenshot 1 & 3
+	img.fill(Color(0.82, 0.85, 0.9))
+	var rng = RandomNumberGenerator.new()
+	rng.seed = 210
+
+	# Large snow drift patches (lighter and darker areas)
+	for _i in range(16):
+		var cx = rng.randi_range(0, size - 1)
+		var cy = rng.randi_range(0, size - 1)
+		var rx = rng.randi_range(10, 30)
+		var ry = rng.randi_range(8, 22)
+		var shade = rng.randf_range(0.0, 1.0)
+		var patch_color: Color
+		if shade < 0.4:
+			# Lighter snow highlight
+			patch_color = Color(
+				rng.randf_range(0.88, 0.94),
+				rng.randf_range(0.9, 0.95),
+				rng.randf_range(0.92, 0.97))
+		elif shade < 0.7:
+			# Shadow/compressed snow
+			patch_color = Color(
+				rng.randf_range(0.72, 0.8),
+				rng.randf_range(0.76, 0.84),
+				rng.randf_range(0.82, 0.9))
+		else:
+			# Slight blue-gray tinge
+			patch_color = Color(
+				rng.randf_range(0.68, 0.78),
+				rng.randf_range(0.72, 0.82),
+				rng.randf_range(0.8, 0.88))
+		_fill_ellipse(img, cx, cy, rx, ry, patch_color)
+
+	# Medium bumps for texture
+	for _i in range(35):
+		var cx = rng.randi_range(0, size - 1)
+		var cy = rng.randi_range(0, size - 1)
+		var rx = rng.randi_range(3, 8)
+		var ry = rng.randi_range(2, 6)
+		var c = Color(
+			rng.randf_range(0.78, 0.92),
+			rng.randf_range(0.82, 0.94),
+			rng.randf_range(0.86, 0.96))
+		_fill_ellipse(img, cx, cy, rx, ry, c)
+
+	# Fine pixel noise for snow grain
+	for _i in range(500):
+		var x = rng.randi_range(0, size - 1)
+		var y = rng.randi_range(0, size - 1)
+		var existing = img.get_pixel(x, y)
+		var v = rng.randf_range(-0.03, 0.03)
+		img.set_pixel(x, y, Color(
+			clampf(existing.r + v, 0.65, 0.98),
+			clampf(existing.g + v, 0.7, 0.98),
+			clampf(existing.b + v, 0.75, 1.0)))
+
+	# Sparse tiny dark spots (pebbles poking through)
+	for _i in range(15):
+		var x = rng.randi_range(0, size - 1)
+		var y = rng.randi_range(0, size - 1)
+		img.set_pixel(x, y, Color(0.5, 0.48, 0.45))
+
+	textures["ground_snow"] = ImageTexture.create_from_image(img)
+
+func _gen_ground_dirt() -> void:
+	var size = 128
+	var img = Image.create(size, size, false, Image.FORMAT_RGBA8)
+	# Brown dirt/badlands base — matches screenshot 2
+	img.fill(Color(0.42, 0.35, 0.23))
+	var rng = RandomNumberGenerator.new()
+	rng.seed = 220
+
+	# Large terrain variation patches
+	for _i in range(20):
+		var cx = rng.randi_range(0, size - 1)
+		var cy = rng.randi_range(0, size - 1)
+		var rx = rng.randi_range(8, 28)
+		var ry = rng.randi_range(6, 22)
+		var shade = rng.randf_range(0.0, 1.0)
+		var patch_color: Color
+		if shade < 0.35:
+			# Lighter sandy dirt
+			patch_color = Color(
+				rng.randf_range(0.5, 0.58),
+				rng.randf_range(0.42, 0.5),
+				rng.randf_range(0.28, 0.36))
+		elif shade < 0.65:
+			# Darker mud
+			patch_color = Color(
+				rng.randf_range(0.3, 0.4),
+				rng.randf_range(0.25, 0.33),
+				rng.randf_range(0.15, 0.22))
+		else:
+			# Red-brown clay
+			patch_color = Color(
+				rng.randf_range(0.45, 0.55),
+				rng.randf_range(0.3, 0.38),
+				rng.randf_range(0.18, 0.25))
+		_fill_ellipse(img, cx, cy, rx, ry, patch_color)
+
+	# Small grass tufts scattered on dirt
+	for _i in range(25):
+		var cx = rng.randi_range(0, size - 1)
+		var cy = rng.randi_range(0, size - 1)
+		var rx = rng.randi_range(2, 5)
+		var ry = rng.randi_range(1, 4)
+		_fill_ellipse(img, cx, cy, rx, ry, Color(
+			rng.randf_range(0.22, 0.35),
+			rng.randf_range(0.35, 0.48),
+			rng.randf_range(0.15, 0.22)))
+
+	# Fine pixel noise for cracks/pebbles
+	for _i in range(500):
+		var x = rng.randi_range(0, size - 1)
+		var y = rng.randi_range(0, size - 1)
+		var existing = img.get_pixel(x, y)
+		var v = rng.randf_range(-0.04, 0.04)
+		img.set_pixel(x, y, Color(
+			clampf(existing.r + v, 0.2, 0.65),
+			clampf(existing.g + v, 0.15, 0.55),
+			clampf(existing.b + v, 0.08, 0.4)))
+
+	textures["ground_dirt"] = ImageTexture.create_from_image(img)
+
+func _gen_tree_dead() -> void:
+	# Bare black/dark tree trunks visible in screenshot 3 (snow areas)
+	var img = Image.create(24, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	# Shadow
+	_fill_ellipse(img, 12, 45, 10, 3, Color(0, 0, 0, 0.2))
+	# Main trunk
+	_fill_rect(img, 10, 16, 4, 30, Color(0.15, 0.12, 0.08))
+	_fill_rect(img, 11, 18, 2, 26, Color(0.2, 0.16, 0.1))
+	# Left branch
+	_fill_rect(img, 4, 14, 7, 2, Color(0.15, 0.12, 0.08))
+	_fill_rect(img, 2, 10, 3, 5, Color(0.13, 0.1, 0.07))
+	_fill_rect(img, 1, 8, 2, 3, Color(0.12, 0.09, 0.06))
+	# Right branch
+	_fill_rect(img, 13, 20, 6, 2, Color(0.15, 0.12, 0.08))
+	_fill_rect(img, 18, 16, 3, 5, Color(0.13, 0.1, 0.07))
+	_fill_rect(img, 20, 14, 2, 3, Color(0.12, 0.09, 0.06))
+	# Upper branch
+	_fill_rect(img, 8, 8, 3, 2, Color(0.14, 0.11, 0.07))
+	_fill_rect(img, 6, 4, 2, 5, Color(0.12, 0.09, 0.06))
+	# Small broken stubs
+	_fill_rect(img, 14, 26, 3, 2, Color(0.16, 0.13, 0.09))
+	_fill_rect(img, 7, 22, 3, 2, Color(0.14, 0.11, 0.07))
+	textures["tree_dead"] = ImageTexture.create_from_image(img)
+
+func _gen_cliff_face() -> void:
+	# Vertical rock cliff face — dark charcoal stone as in screenshots 1 & 3
+	var img = Image.create(64, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	# Main cliff body (dark gray stone)
+	_fill_rect(img, 0, 8, 64, 40, Color(0.22, 0.2, 0.18))
+	_fill_rect(img, 2, 10, 60, 36, Color(0.28, 0.26, 0.23))
+	# Horizontal rock layers
+	_fill_rect(img, 0, 16, 64, 2, Color(0.18, 0.16, 0.14))
+	_fill_rect(img, 0, 26, 64, 2, Color(0.2, 0.18, 0.15))
+	_fill_rect(img, 0, 35, 64, 2, Color(0.17, 0.15, 0.13))
+	# Lighter face highlights
+	_fill_rect(img, 5, 11, 12, 4, Color(0.35, 0.33, 0.3))
+	_fill_rect(img, 30, 19, 10, 5, Color(0.32, 0.3, 0.27))
+	_fill_rect(img, 45, 28, 14, 4, Color(0.33, 0.31, 0.28))
+	# Dark crevices
+	_fill_rect(img, 20, 12, 2, 12, Color(0.1, 0.09, 0.07))
+	_fill_rect(img, 42, 18, 2, 10, Color(0.1, 0.09, 0.07))
+	# Top edge (snow on cliff top in ice biome)
+	_fill_rect(img, 0, 6, 64, 4, Color(0.8, 0.83, 0.88))
+	_fill_rect(img, 3, 8, 8, 2, Color(0.85, 0.88, 0.92))
+	_fill_rect(img, 25, 8, 12, 2, Color(0.82, 0.85, 0.9))
+	_fill_rect(img, 50, 8, 10, 2, Color(0.84, 0.87, 0.91))
+	# Shadow at base
+	_fill_rect(img, 0, 44, 64, 4, Color(0.08, 0.07, 0.06, 0.5))
+	textures["cliff_face"] = ImageTexture.create_from_image(img)
+
+func _gen_icicles() -> void:
+	# Hanging icicles from cliff edges — visible in screenshot 3
+	var img = Image.create(32, 16, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	# Several icicle points hanging down
+	var ice_light = Color(0.75, 0.88, 0.95)
+	var ice_mid = Color(0.6, 0.78, 0.9)
+	var ice_dark = Color(0.45, 0.65, 0.8)
+	# Icicle 1
+	_fill_rect(img, 3, 0, 2, 10, ice_mid)
+	_fill_rect(img, 4, 0, 1, 8, ice_light)
+	img.set_pixel(3, 10, ice_dark)
+	# Icicle 2 (taller)
+	_fill_rect(img, 9, 0, 3, 14, ice_mid)
+	_fill_rect(img, 10, 0, 1, 12, ice_light)
+	img.set_pixel(10, 14, ice_dark)
+	# Icicle 3
+	_fill_rect(img, 16, 0, 2, 8, ice_mid)
+	_fill_rect(img, 17, 0, 1, 6, ice_light)
+	# Icicle 4 (tallest)
+	_fill_rect(img, 21, 0, 3, 15, ice_mid)
+	_fill_rect(img, 22, 0, 1, 13, ice_light)
+	img.set_pixel(22, 15, ice_dark)
+	# Icicle 5
+	_fill_rect(img, 27, 0, 2, 11, ice_mid)
+	_fill_rect(img, 28, 0, 1, 9, ice_light)
+	textures["icicles"] = ImageTexture.create_from_image(img)
+
+func _gen_landing_pad() -> void:
+	# SC:BW-style landing pad structure — visible in screenshot 1
+	var img = Image.create(64, 32, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	# Base platform (dark metallic)
+	_fill_ellipse(img, 32, 16, 30, 14, Color(0.25, 0.23, 0.2))
+	_fill_ellipse(img, 32, 16, 28, 13, Color(0.3, 0.28, 0.25))
+	# Inner platform (lighter)
+	_fill_ellipse(img, 32, 16, 22, 10, Color(0.35, 0.33, 0.3))
+	# Landing markings (cross pattern)
+	_fill_rect(img, 14, 15, 36, 2, Color(0.6, 0.55, 0.2))
+	_fill_rect(img, 31, 6, 2, 20, Color(0.6, 0.55, 0.2))
+	# Corner lights
+	_fill_rect(img, 8, 14, 3, 3, Color(0.2, 0.8, 0.2))
+	_fill_rect(img, 53, 14, 3, 3, Color(0.2, 0.8, 0.2))
+	_fill_rect(img, 30, 4, 3, 3, Color(0.8, 0.2, 0.2))
+	_fill_rect(img, 30, 25, 3, 3, Color(0.8, 0.2, 0.2))
+	# Shadow underneath
+	_fill_ellipse(img, 32, 28, 28, 4, Color(0, 0, 0, 0.2))
+	textures["landing_pad"] = ImageTexture.create_from_image(img)
+
+func _gen_blood_splatter() -> void:
+	# Red blood on ground where enemies die — visible in screenshot 3
+	var img = Image.create(16, 16, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var blood = Color(0.55, 0.05, 0.02)
+	var blood_dark = Color(0.35, 0.02, 0.01)
+	var blood_light = Color(0.7, 0.1, 0.05)
+	# Main splatter (organic blob shape)
+	_fill_ellipse(img, 8, 8, 6, 5, blood)
+	_fill_ellipse(img, 6, 7, 4, 3, blood_dark)
+	_fill_ellipse(img, 10, 9, 4, 3, blood_light)
+	# Splatter droplets
+	_fill_rect(img, 2, 4, 2, 2, blood)
+	_fill_rect(img, 12, 3, 2, 2, blood_dark)
+	_fill_rect(img, 13, 11, 2, 2, blood)
+	_fill_rect(img, 3, 11, 2, 2, blood_dark)
+	img.set_pixel(1, 8, blood)
+	img.set_pixel(14, 7, blood)
+	textures["blood_splatter"] = ImageTexture.create_from_image(img)
 
 # ============================================================
 # DRAWING HELPERS

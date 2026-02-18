@@ -304,16 +304,7 @@ func _update_selection_circle() -> void:
 		_selection_circle.global_position = _selected_enemy.global_position
 
 func _get_world_mouse_pos() -> Vector2:
-	# get_global_mouse_position() is broken when camera position_smoothing is
-	# enabled because it uses the camera's lagged canvas transform, causing the
-	# computed world position to drift / "freeze" in the center.
-	# Instead, convert screen-space mouse coords using the camera's true
-	# (non-smoothed) position directly.
-	var screen_mouse: Vector2 = get_viewport().get_mouse_position()
-	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
-	var screen_center: Vector2 = viewport_size * 0.5
-	var offset_from_center: Vector2 = screen_mouse - screen_center
-	return camera.global_position + offset_from_center / camera.zoom
+	return get_global_mouse_position()
 
 func _get_clickable_at_mouse() -> Node2D:
 	var mouse_pos = _get_world_mouse_pos()

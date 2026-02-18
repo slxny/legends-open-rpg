@@ -13,6 +13,10 @@ func _ready() -> void:
 	var tex = SpriteGenerator.get_texture("armory_building")
 	if tex:
 		armory_sprite.texture = tex
+	# Counter-transform sprite and label for isometric projection
+	var ct = IsometricHelper.get_sprite_counter_transform()
+	armory_sprite.transform = ct
+	name_label.transform = ct
 
 func _on_beacon_activated(_b: Area2D) -> void:
 	var dialogs = get_tree().get_nodes_in_group("armory_dialog")

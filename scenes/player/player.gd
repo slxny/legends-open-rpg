@@ -69,15 +69,27 @@ func _ready() -> void:
 	_shadow.z_index = -1
 	add_child(_shadow)
 
+	# Counter-transform sprite and shadow so they render upright despite the
+	# isometric projection applied to the World node.
+	var ct = IsometricHelper.get_sprite_counter_transform()
+	sprite.transform = ct
+	_shadow.transform = ct
+
 func _physics_process(delta: float) -> void:
-	# WASD movement overrides click-to-move
+	# WASD movement overrides click-to-move.
+	# Screen directions need to be converted to world-space through the
+	# inverse isometric transform so W=up-on-screen, D=right-on-screen, etc.
+	var screen_dir = Vector2.ZERO
+	screen_dir.x = Input.get_axis("move_left", "move_right")
+	screen_dir.y = Input.get_axis("move_up", "move_down")
+
 	var input_dir = Vector2.ZERO
-	input_dir.x = Input.get_axis("move_left", "move_right")
-	input_dir.y = Input.get_axis("move_up", "move_down")
+	if screen_dir.length() > 0:
+		input_dir = IsometricHelper.get_iso_inverse().basis_xform(screen_dir).normalized()
 
 	if input_dir.length() > 0:
 		_is_moving_to_target = false
-		velocity = input_dir.normalized() * stats.get_total_move_speed()
+		velocity = input_dir * stats.get_total_move_speed()
 	elif _is_moving_to_target:
 		var dist = global_position.distance_to(_move_target)
 		if dist < 5.0:
@@ -103,10 +115,12 @@ func _physics_process(delta: float) -> void:
 			_combo_timer = 0.0
 			_last_dir_category = ""
 
-	# Flip sprite based on movement direction
-	if velocity.x < -5:
+	# Flip sprite based on screen-space movement direction.
+	# Convert world velocity to screen space via the iso transform basis.
+	var screen_vel = IsometricHelper.get_iso_transform().basis_xform(velocity)
+	if screen_vel.x < -5:
 		sprite.flip_h = true
-	elif velocity.x > 5:
+	elif screen_vel.x > 5:
 		sprite.flip_h = false
 
 const ZOOM_MIN := Vector2(1.5, 1.5)
@@ -171,21 +185,22 @@ func _try_manual_attack() -> void:
 
 	_attack_cooldown = 0.5 / stats.attack_speed  # 50% faster than base
 
-	# Determine attack direction from held movement input
+	# Determine attack direction from held movement input (screen → world)
 	var input_raw = Vector2(
 		Input.get_axis("move_left", "move_right"),
 		Input.get_axis("move_up", "move_down")
 	)
 	var attack_dir: Vector2
 	if input_raw.length() > 0.25:
-		attack_dir = input_raw.normalized()
+		attack_dir = IsometricHelper.get_iso_inverse().basis_xform(input_raw).normalized()
 	else:
 		attack_dir = Vector2.RIGHT if not sprite.flip_h else Vector2.LEFT
 
-	# Update sprite facing based on attack direction (horizontal component)
-	if attack_dir.x < -0.1:
+	# Update sprite facing based on screen-space attack direction
+	var screen_attack = IsometricHelper.get_iso_transform().basis_xform(attack_dir)
+	if screen_attack.x < -0.1:
 		sprite.flip_h = true
-	elif attack_dir.x > 0.1:
+	elif screen_attack.x > 0.1:
 		sprite.flip_h = false
 
 	_enemies_in_range = _enemies_in_range.filter(func(e): return is_instance_valid(e) and not e.get("_is_dead"))
@@ -311,7 +326,7 @@ func _spawn_projectile(direction: Vector2, speed: float, max_range: float, dmg_m
 	projectile.add_child(visual)
 
 	projectile.rotation = direction.angle()
-	get_tree().current_scene.add_child(projectile)
+	_get_world_node().add_child(projectile)
 
 	var tween = create_tween()
 	var end_pos = global_position + direction * max_range
@@ -578,7 +593,7 @@ func _do_ranged_attack(target: Node2D, result: Dictionary) -> void:
 		arrow.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		arrow.global_position = global_position + Vector2(0, -10)
 		arrow.rotation = (target.global_position - global_position).angle()
-		get_tree().current_scene.add_child(arrow)
+		_get_world_node().add_child(arrow)
 
 		var arrow_dir = (target.global_position - global_position).normalized()
 		var arrow_tween = arrow.create_tween()
@@ -604,7 +619,7 @@ func _spawn_slash_vfx(direction: Vector2, radius: float, scale_mult: float) -> v
 	slash.rotation = direction.angle()
 	slash.scale = Vector2(scale_mult, scale_mult)
 	slash.modulate = Color(1.0, 0.9, 0.6, 0.9)
-	get_tree().current_scene.add_child(slash)
+	_get_world_node().add_child(slash)
 
 	var tween = slash.create_tween()
 	tween.set_parallel(true)
@@ -628,7 +643,7 @@ func _spawn_impact_vfx(pos: Vector2, is_crit: bool = false) -> void:
 		var g = randf_range(0.2, 0.5) if not is_crit else randf_range(0.6, 0.9)
 		spark.modulate = Color(r, g, 0.1, 1.0)
 		spark.z_index = 12
-		get_tree().current_scene.add_child(spark)
+		_get_world_node().add_child(spark)
 		var dir = Vector2.from_angle(randf() * TAU) * randf_range(spread * 0.4, spread)
 		var dur = randf_range(0.12, 0.22)
 		var tween = spark.create_tween()
@@ -647,7 +662,7 @@ func _spawn_impact_vfx(pos: Vector2, is_crit: bool = false) -> void:
 	flash.scale = Vector2(0.2, 0.2)
 	flash.z_index = 13
 	flash.global_position = pos
-	get_tree().current_scene.add_child(flash)
+	_get_world_node().add_child(flash)
 	var ft = flash.create_tween()
 	ft.set_parallel(true)
 	ft.tween_property(flash, "scale", Vector2(1.2, 1.2) if not is_crit else Vector2(2.0, 2.0), 0.1)
@@ -715,10 +730,16 @@ func _spawn_move_indicator(pos: Vector2) -> void:
 	indicator.scale = Vector2(0.3, 0.3)
 	indicator.global_position = pos
 	indicator.modulate.a = 0.7
-	get_tree().current_scene.add_child(indicator)
+	_get_world_node().add_child(indicator)
 	var tween = indicator.create_tween()
 	tween.tween_property(indicator, "modulate:a", 0.0, 0.4)
 	tween.tween_callback(indicator.queue_free)
+
+func _get_world_node() -> Node:
+	var world = get_tree().get_nodes_in_group("world")
+	if world.size() > 0:
+		return world[0]
+	return get_tree().current_scene
 
 func get_stats_dict() -> Dictionary:
 	return stats.get_stats_dict()
@@ -738,6 +759,7 @@ func _spawn_damage_number(amount: int, is_crit: bool) -> void:
 	settings.outline_size = 2
 	settings.outline_color = Color.BLACK
 	label.label_settings = settings
+	label.transform = IsometricHelper.get_sprite_counter_transform()
 	add_child(label)
 	var tween = create_tween()
 	tween.tween_property(label, "position:y", label.position.y - 30, 0.6)

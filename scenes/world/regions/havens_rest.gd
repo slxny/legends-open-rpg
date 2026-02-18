@@ -18,6 +18,11 @@ func _ready() -> void:
 	heal_beacon.activated.connect(_on_heal_beacon)
 	info_beacon.activated.connect(_on_info_beacon)
 
+	# Counter-transform the TownLabel so it renders upright under iso projection
+	var town_label = get_node_or_null("TownLabel")
+	if town_label:
+		town_label.transform = IsometricHelper.get_sprite_counter_transform()
+
 	_generate_terrain()
 	_generate_town()
 	_generate_decorations()
@@ -214,6 +219,7 @@ func _add_town_building(parent: Node2D, pos: Vector2, tex_name: String) -> void:
 	spr.position = pos
 	spr.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	spr.texture = SpriteGenerator.get_texture(tex_name)
+	spr.transform = IsometricHelper.get_sprite_counter_transform()
 	spr.z_index = 0
 	parent.add_child(spr)
 
@@ -225,6 +231,7 @@ func _add_building_label(parent: Node2D, pos: Vector2, text: String) -> void:
 	label.add_theme_color_override("font_color", Color(0.8, 0.8, 0.7, 0.6))
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.custom_minimum_size = Vector2(50, 0)
+	label.transform = IsometricHelper.get_sprite_counter_transform()
 	parent.add_child(label)
 
 # ============================================================
@@ -414,7 +421,9 @@ func _add_tree(parent: Node2D, pos: Vector2) -> void:
 		tree_sprite.texture = SpriteGenerator.get_texture("tree_small")
 		tree_sprite.offset = Vector2(0, -14)
 	var s = randf_range(0.8, 1.4)
-	tree_sprite.scale = Vector2(s, s)
+	# Apply counter-transform first, then scale on top of it
+	var ct = IsometricHelper.get_sprite_counter_transform()
+	tree_sprite.transform = Transform2D(ct.x * s, ct.y * s, Vector2.ZERO)
 	# Slight color variation for depth
 	var v = randf_range(-0.05, 0.05)
 	tree_sprite.modulate = Color(1.0 + v, 1.0 + v * 0.5, 1.0 + v)
@@ -430,7 +439,8 @@ func _add_rock(parent: Node2D, pos: Vector2) -> void:
 	else:
 		rock_sprite.texture = SpriteGenerator.get_texture("rock")
 	var s = randf_range(0.8, 1.3)
-	rock_sprite.scale = Vector2(s, s)
+	var ct = IsometricHelper.get_sprite_counter_transform()
+	rock_sprite.transform = Transform2D(ct.x * s, ct.y * s, Vector2.ZERO)
 	parent.add_child(rock_sprite)
 
 func _add_path_segment(parent: Node2D, pos: Vector2) -> void:
@@ -450,6 +460,7 @@ func _add_camp_marker(parent: Node2D, pos: Vector2, text: String) -> void:
 	skull.position = pos
 	skull.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	skull.texture = SpriteGenerator.get_texture("skull_icon")
+	skull.transform = IsometricHelper.get_sprite_counter_transform()
 	skull.modulate = Color(0.9, 0.3, 0.3, 0.8)
 	parent.add_child(skull)
 
@@ -458,6 +469,7 @@ func _add_camp_marker(parent: Node2D, pos: Vector2, text: String) -> void:
 	label.position = pos + Vector2(-30, -18)
 	label.add_theme_font_size_override("font_size", 9)
 	label.add_theme_color_override("font_color", Color(0.9, 0.5, 0.5, 0.7))
+	label.transform = IsometricHelper.get_sprite_counter_transform()
 	parent.add_child(label)
 
 func _add_flowers(parent: Node2D, pos: Vector2) -> void:
@@ -467,6 +479,7 @@ func _add_flowers(parent: Node2D, pos: Vector2) -> void:
 		flower.texture = SpriteGenerator.get_texture("flowers")
 		var offset = Vector2(randf_range(-10, 10), randf_range(-10, 10))
 		flower.position = pos + offset
+		flower.transform = IsometricHelper.get_sprite_counter_transform()
 		flower.z_index = -1
 		parent.add_child(flower)
 
@@ -476,7 +489,8 @@ func _add_bush(parent: Node2D, pos: Vector2) -> void:
 	bush.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	bush.texture = SpriteGenerator.get_texture("bush")
 	var s = randf_range(0.8, 1.5)
-	bush.scale = Vector2(s, s)
+	var ct = IsometricHelper.get_sprite_counter_transform()
+	bush.transform = Transform2D(ct.x * s, ct.y * s, Vector2.ZERO)
 	parent.add_child(bush)
 
 func _add_grass_tuft(parent: Node2D, pos: Vector2) -> void:
@@ -488,7 +502,8 @@ func _add_grass_tuft(parent: Node2D, pos: Vector2) -> void:
 	else:
 		grass.texture = SpriteGenerator.get_texture("grass_tuft_tall")
 	var s = randf_range(0.8, 1.5)
-	grass.scale = Vector2(s, s)
+	var ct = IsometricHelper.get_sprite_counter_transform()
+	grass.transform = Transform2D(ct.x * s, ct.y * s, Vector2.ZERO)
 	grass.z_index = -1
 	parent.add_child(grass)
 
@@ -497,9 +512,9 @@ func _add_fallen_log(parent: Node2D, pos: Vector2) -> void:
 	log_sprite.position = pos
 	log_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	log_sprite.texture = SpriteGenerator.get_texture("fallen_log")
-	log_sprite.rotation = randf_range(-0.3, 0.3)
 	var s = randf_range(0.9, 1.3)
-	log_sprite.scale = Vector2(s, s)
+	var ct = IsometricHelper.get_sprite_counter_transform()
+	log_sprite.transform = Transform2D(ct.x * s, ct.y * s, Vector2.ZERO)
 	parent.add_child(log_sprite)
 
 func _add_ground_debris(parent: Node2D, pos: Vector2) -> void:
@@ -518,7 +533,8 @@ func _add_mushrooms(parent: Node2D, pos: Vector2) -> void:
 	shroom.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	shroom.texture = SpriteGenerator.get_texture("mushroom_cluster")
 	var s = randf_range(0.8, 1.3)
-	shroom.scale = Vector2(s, s)
+	var ct = IsometricHelper.get_sprite_counter_transform()
+	shroom.transform = Transform2D(ct.x * s, ct.y * s, Vector2.ZERO)
 	shroom.z_index = -1
 	parent.add_child(shroom)
 
@@ -527,9 +543,9 @@ func _add_vines(parent: Node2D, pos: Vector2) -> void:
 	vine.position = pos
 	vine.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	vine.texture = SpriteGenerator.get_texture("vines")
-	vine.rotation = randf_range(-0.2, 0.2)
 	var s = randf_range(0.8, 1.2)
-	vine.scale = Vector2(s, s)
+	var ct = IsometricHelper.get_sprite_counter_transform()
+	vine.transform = Transform2D(ct.x * s, ct.y * s, Vector2.ZERO)
 	vine.modulate.a = randf_range(0.6, 0.9)
 	vine.z_index = -1
 	parent.add_child(vine)

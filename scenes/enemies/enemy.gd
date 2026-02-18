@@ -48,6 +48,14 @@ func _ready() -> void:
 	_shadow.move_to_front()
 	move_child(_shadow, 0)
 
+	# Counter-transform sprite, shadow, HP bar, and label so they render
+	# upright despite the isometric projection on the World node.
+	var ct = IsometricHelper.get_sprite_counter_transform()
+	sprite.transform = ct
+	_shadow.transform = ct
+	hp_bar.transform = ct
+	name_label.transform = ct
+
 func initialize(config: Dictionary) -> void:
 	enemy_name = config.get("name", "Enemy")
 	enemy_level = config.get("level", 1)
@@ -142,10 +150,11 @@ func _process_chase(delta: float) -> void:
 
 	var dir = (target.global_position - global_position).normalized()
 	velocity = dir * stats.move_speed + _get_separation_push()
-	# Flip sprite based on movement
-	if dir.x < -0.1:
+	# Flip sprite based on screen-space movement direction
+	var screen_dir = IsometricHelper.get_iso_transform().basis_xform(dir)
+	if screen_dir.x < -0.1:
 		sprite.flip_h = true
-	elif dir.x > 0.1:
+	elif screen_dir.x > 0.1:
 		sprite.flip_h = false
 	move_and_slide()
 
@@ -187,9 +196,10 @@ func _process_return(delta: float) -> void:
 		return
 
 	var dir = (home_position - global_position).normalized()
-	if dir.x < -0.1:
+	var screen_dir = IsometricHelper.get_iso_transform().basis_xform(dir)
+	if screen_dir.x < -0.1:
 		sprite.flip_h = true
-	elif dir.x > 0.1:
+	elif screen_dir.x > 0.1:
 		sprite.flip_h = false
 	velocity = dir * stats.move_speed * 1.5
 	move_and_slide()
@@ -281,7 +291,7 @@ func _spawn_blood_splatter() -> void:
 		blood.scale = Vector2(randf_range(0.8, 1.5), randf_range(0.8, 1.5))
 		blood.z_index = -2
 		blood.modulate.a = randf_range(0.6, 0.9)
-		get_tree().current_scene.add_child(blood)
+		_get_world_node().add_child(blood)
 		# Fade out after 8-12 seconds
 		var fade_tween = blood.create_tween()
 		fade_tween.tween_interval(randf_range(8.0, 12.0))
@@ -311,7 +321,7 @@ func _spawn_gold_drop(amount: int) -> void:
 	float_tween.tween_property(visual, "position:y", -2.0, 0.6).set_trans(Tween.TRANS_SINE)
 	float_tween.tween_property(visual, "position:y", 0.0, 0.6).set_trans(Tween.TRANS_SINE)
 
-	get_tree().current_scene.add_child(drop)
+	_get_world_node().add_child(drop)
 
 func _spawn_item_drop(item_id: String) -> void:
 	var item = ItemData.get_item(item_id)
@@ -342,7 +352,7 @@ func _spawn_item_drop(item_id: String) -> void:
 	float_tween.tween_property(visual, "position:y", -2.0, 0.6).set_trans(Tween.TRANS_SINE)
 	float_tween.tween_property(visual, "position:y", 0.0, 0.6).set_trans(Tween.TRANS_SINE)
 
-	get_tree().current_scene.add_child(drop)
+	_get_world_node().add_child(drop)
 
 func _spawn_damage_number(amount: int, is_crit: bool) -> void:
 	var label = Label.new()
@@ -354,6 +364,7 @@ func _spawn_damage_number(amount: int, is_crit: bool) -> void:
 	settings.outline_size = 2 if not is_crit else 3
 	settings.outline_color = Color.BLACK
 	label.label_settings = settings
+	label.transform = IsometricHelper.get_sprite_counter_transform()
 	add_child(label)
 	var tween = create_tween()
 	if is_crit:
@@ -386,3 +397,11 @@ func _get_player() -> Node2D:
 	if players.size() > 0:
 		return players[0]
 	return null
+
+func _get_world_node() -> Node:
+	# Return the World node (holds the iso transform) so spawned objects
+	# appear at the correct isometric position.
+	var world = get_tree().get_nodes_in_group("world")
+	if world.size() > 0:
+		return world[0]
+	return get_tree().current_scene

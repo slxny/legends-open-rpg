@@ -177,34 +177,136 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_4: inventory.use_consumable(3)
 
 func _select_enemy(enemy: Node2D) -> void:
+	if _selected_enemy == enemy:
+		return  # Already selected
+	_deselect_enemy()
 	_selected_enemy = enemy
-	# Show enemy info
 	if enemy.has_method("show_selection"):
 		enemy.show_selection()
+	# Juicy click feedback
+	_spawn_select_pop(enemy)
+	_create_selection_circle()
+	# Highlight enemy sprite
+	if enemy.has_node("Sprite"):
+		var enemy_sprite = enemy.get_node("Sprite")
+		enemy_sprite.modulate = Color(1.3, 1.1, 1.1)
 
 func _deselect_enemy() -> void:
-	if is_instance_valid(_selected_enemy) and _selected_enemy.has_method("hide_selection"):
-		_selected_enemy.hide_selection()
+	if is_instance_valid(_selected_enemy):
+		if _selected_enemy.has_method("hide_selection"):
+			_selected_enemy.hide_selection()
+		# Remove highlight
+		if _selected_enemy.has_node("Sprite"):
+			var enemy_sprite = _selected_enemy.get_node("Sprite")
+			enemy_sprite.modulate = Color.WHITE
 	_selected_enemy = null
+	_destroy_selection_circle()
+	_destroy_target_line()
+
+func _create_selection_circle() -> void:
+	_destroy_selection_circle()
+	_selection_circle = Sprite2D.new()
+	_selection_circle.texture = SpriteGenerator.get_texture("selection_red")
+	_selection_circle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_selection_circle.z_index = -1
+	get_tree().current_scene.add_child(_selection_circle)
+	# Animate in: scale pop from 0
+	_selection_circle.scale = Vector2.ZERO
+	var pop_tween = _selection_circle.create_tween()
+	pop_tween.tween_property(_selection_circle, "scale", Vector2(1.3, 1.3), 0.08).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	pop_tween.tween_property(_selection_circle, "scale", Vector2(1.0, 1.0), 0.06)
+	# Start pulsing
+	var pulse = _selection_circle.create_tween().set_loops()
+	pulse.tween_property(_selection_circle, "scale", Vector2(1.12, 1.12), 0.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	pulse.tween_property(_selection_circle, "scale", Vector2(0.95, 0.95), 0.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+func _destroy_selection_circle() -> void:
+	if _selection_circle and is_instance_valid(_selection_circle):
+		_selection_circle.queue_free()
+	_selection_circle = null
+
+func _spawn_select_pop(enemy: Node2D) -> void:
+	# Ring burst expanding outward from enemy
+	var ring = Sprite2D.new()
+	ring.texture = SpriteGenerator.get_texture("selection_red")
+	ring.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	ring.global_position = enemy.global_position
+	ring.scale = Vector2(0.5, 0.5)
+	ring.z_index = 10
+	get_tree().current_scene.add_child(ring)
+	var ring_tween = ring.create_tween()
+	ring_tween.set_parallel(true)
+	ring_tween.tween_property(ring, "scale", Vector2(2.5, 2.5), 0.25).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	ring_tween.tween_property(ring, "modulate:a", 0.0, 0.25)
+	ring_tween.set_parallel(false)
+	ring_tween.tween_callback(ring.queue_free)
+
+	# Enemy sprite punch (quick scale bounce)
+	if enemy.has_node("Sprite"):
+		var enemy_sprite = enemy.get_node("Sprite")
+		var punch_tween = enemy_sprite.create_tween()
+		punch_tween.tween_property(enemy_sprite, "scale", Vector2(1.25, 0.85), 0.06)
+		punch_tween.tween_property(enemy_sprite, "scale", Vector2(0.9, 1.15), 0.06)
+		punch_tween.tween_property(enemy_sprite, "scale", Vector2(1.0, 1.0), 0.08).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+
+	# Quick crosshair flash at click point
+	for i in range(4):
+		var spark = Sprite2D.new()
+		spark.texture = SpriteGenerator.get_texture("crystal_white")
+		spark.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		spark.global_position = enemy.global_position
+		spark.scale = Vector2(0.3, 0.3)
+		spark.modulate = Color(1.0, 0.4, 0.3, 0.9)
+		spark.z_index = 11
+		get_tree().current_scene.add_child(spark)
+		# Cardinal directions burst
+		var burst_dir = Vector2.from_angle(i * PI * 0.5) * 14.0
+		var spark_tween = spark.create_tween()
+		spark_tween.set_parallel(true)
+		spark_tween.tween_property(spark, "global_position", enemy.global_position + burst_dir, 0.15)
+		spark_tween.tween_property(spark, "modulate:a", 0.0, 0.2)
+		spark_tween.tween_property(spark, "scale", Vector2(0.1, 0.1), 0.2)
+		spark_tween.set_parallel(false)
+		spark_tween.tween_callback(spark.queue_free)
+
+# Targeting line drawn between player and selected enemy
+var _target_line: Line2D = null
+
+func _destroy_target_line() -> void:
+	if _target_line and is_instance_valid(_target_line):
+		_target_line.queue_free()
+	_target_line = null
 
 func _update_selection_circle() -> void:
 	# Clean up if enemy is dead/invalid
 	if is_instance_valid(_selected_enemy) and _selected_enemy.get("_is_dead"):
 		_deselect_enemy()
-
-	if _selection_circle and not is_instance_valid(_selected_enemy):
-		_selection_circle.queue_free()
-		_selection_circle = null
 		return
 
-	if is_instance_valid(_selected_enemy):
-		if not _selection_circle or not is_instance_valid(_selection_circle):
-			_selection_circle = Sprite2D.new()
-			_selection_circle.texture = SpriteGenerator.get_texture("selection_red")
-			_selection_circle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-			_selection_circle.z_index = -1
-			get_tree().current_scene.add_child(_selection_circle)
+	if not is_instance_valid(_selected_enemy):
+		_destroy_selection_circle()
+		_destroy_target_line()
+		return
+
+	# Update selection circle position
+	if _selection_circle and is_instance_valid(_selection_circle):
 		_selection_circle.global_position = _selected_enemy.global_position
+
+	# Update or create targeting line
+	if not _target_line or not is_instance_valid(_target_line):
+		_target_line = Line2D.new()
+		_target_line.width = 1.0
+		_target_line.default_color = Color(1.0, 0.3, 0.2, 0.3)
+		_target_line.z_index = -1
+		# Dashed look via gradient
+		var grad = Gradient.new()
+		grad.set_color(0, Color(1.0, 0.3, 0.2, 0.4))
+		grad.set_color(1, Color(1.0, 0.3, 0.2, 0.4))
+		_target_line.gradient = grad
+		get_tree().current_scene.add_child(_target_line)
+	_target_line.clear_points()
+	_target_line.add_point(global_position)
+	_target_line.add_point(_selected_enemy.global_position)
 
 func _get_clickable_at_mouse() -> Node2D:
 	var mouse_pos = get_global_mouse_position()

@@ -1,0 +1,7 @@
+[gd_scene format=3 uid="uid://bminimapscn"]
+
+[ext_resource type="Script" path="res://scenes/ui/minimap.gd" id="1_minimap"]
+
+[node name="Minimap" type="Control"]
+custom_minimum_size = Vector2(160, 120)
+script = ExtResource("1_minimap")

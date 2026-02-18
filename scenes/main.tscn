@@ -1,0 +1,9 @@
+[gd_scene load_steps=3 format=3 uid="uid://bmainscn"]
+
+[ext_resource type="Script" path="res://scenes/main.gd" id="1_main"]
+[ext_resource type="PackedScene" uid="uid://bheroslct" path="res://scenes/hero_select/hero_select.tscn" id="2_herosel"]
+
+[node name="Main" type="Node"]
+script = ExtResource("1_main")
+
+[node name="HeroSelect" parent="." instance=ExtResource("2_herosel")]

@@ -1,0 +1,29 @@
+[gd_scene load_steps=3 format=3 uid="uid://bbeaconscn"]
+
+[ext_resource type="Script" path="res://scenes/npcs/beacon.gd" id="1_beacon"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_beacon"]
+radius = 20.0
+
+[node name="Beacon" type="Area2D"]
+collision_layer = 0
+collision_mask = 1
+script = ExtResource("1_beacon")
+
+[node name="Visual" type="Sprite2D" parent="."]
+texture_filter = 0
+
+[node name="Label" type="Label" parent="."]
+offset_left = -40.0
+offset_top = -30.0
+offset_right = 40.0
+offset_bottom = -16.0
+text = ""
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 10
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_beacon")
+
+[connection signal="body_entered" from="." to="." method="_on_body_entered"]
+[connection signal="body_exited" from="." to="." method="_on_body_exited"]

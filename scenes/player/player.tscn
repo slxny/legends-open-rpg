@@ -1,0 +1,65 @@
+[gd_scene load_steps=8 format=3 uid="uid://bplayerscn"]
+
+[ext_resource type="Script" path="res://scenes/player/player.gd" id="1_player"]
+[ext_resource type="Script" path="res://scripts/components/stats_component.gd" id="2_stats"]
+[ext_resource type="Script" path="res://scripts/components/inventory_component.gd" id="3_inv"]
+[ext_resource type="Script" path="res://scripts/components/ability_manager.gd" id="4_ability"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_player"]
+radius = 10.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_attack"]
+radius = 40.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_pickup"]
+radius = 20.0
+
+[node name="Player" type="CharacterBody2D"]
+y_sort_enabled = true
+collision_layer = 1
+collision_mask = 6
+script = ExtResource("1_player")
+
+[node name="Sprite" type="Sprite2D" parent="."]
+texture_filter = 0
+offset = Vector2(0, -20)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_player")
+
+[node name="AttackArea" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="AttackArea"]
+shape = SubResource("CircleShape2D_attack")
+
+[node name="PickupArea" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 32
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="PickupArea"]
+shape = SubResource("CircleShape2D_pickup")
+
+[node name="AttackTimer" type="Timer" parent="."]
+wait_time = 1.0
+autostart = true
+
+[node name="Camera2D" type="Camera2D" parent="."]
+zoom = Vector2(3.0, 2.4)
+position_smoothing_enabled = true
+position_smoothing_speed = 8.0
+
+[node name="StatsComponent" type="Node" parent="."]
+script = ExtResource("2_stats")
+
+[node name="InventoryComponent" type="Node" parent="."]
+script = ExtResource("3_inv")
+
+[node name="AbilityManager" type="Node" parent="."]
+script = ExtResource("4_ability")
+
+[connection signal="timeout" from="AttackTimer" to="." method="_on_attack_timer_timeout"]
+[connection signal="body_entered" from="AttackArea" to="." method="_on_attack_area_body_entered"]
+[connection signal="body_exited" from="AttackArea" to="." method="_on_attack_area_body_exited"]
+[connection signal="area_entered" from="PickupArea" to="." method="_on_pickup_area_area_entered"]

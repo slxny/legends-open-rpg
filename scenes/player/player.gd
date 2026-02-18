@@ -17,7 +17,6 @@ var _enemies_in_range: Array[Node2D] = []
 var _move_target: Vector2 = Vector2.ZERO
 var _is_moving_to_target: bool = false
 
-# Isometric shadow
 var _shadow: Sprite2D = null
 
 # Attack state
@@ -62,30 +61,20 @@ func _ready() -> void:
 	if shape and shape.shape is CircleShape2D:
 		shape.shape.radius = stats.attack_range
 
-	# Isometric shadow under hero
+	# Shadow under hero
 	_shadow = Sprite2D.new()
 	_shadow.texture = SpriteGenerator.get_texture("iso_shadow")
 	_shadow.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	_shadow.z_index = -1
 	add_child(_shadow)
 
-	# Counter-transform sprite and shadow so they render upright despite the
-	# isometric projection applied to the World node.
-	var ct = IsometricHelper.get_sprite_counter_transform()
-	sprite.transform = ct
-	_shadow.transform = ct
 
 func _physics_process(delta: float) -> void:
-	# WASD movement overrides click-to-move.
-	# Screen directions need to be converted to world-space through the
-	# inverse isometric transform so W=up-on-screen, D=right-on-screen, etc.
-	var screen_dir = Vector2.ZERO
-	screen_dir.x = Input.get_axis("move_left", "move_right")
-	screen_dir.y = Input.get_axis("move_up", "move_down")
-
 	var input_dir = Vector2.ZERO
-	if screen_dir.length() > 0:
-		input_dir = IsometricHelper.get_iso_inverse().basis_xform(screen_dir).normalized()
+	input_dir.x = Input.get_axis("move_left", "move_right")
+	input_dir.y = Input.get_axis("move_up", "move_down")
+	if input_dir.length() > 0:
+		input_dir = input_dir.normalized()
 
 	if input_dir.length() > 0:
 		_is_moving_to_target = false
@@ -115,12 +104,10 @@ func _physics_process(delta: float) -> void:
 			_combo_timer = 0.0
 			_last_dir_category = ""
 
-	# Flip sprite based on screen-space movement direction.
-	# Convert world velocity to screen space via the iso transform basis.
-	var screen_vel = IsometricHelper.get_iso_transform().basis_xform(velocity)
-	if screen_vel.x < -5:
+	# Flip sprite based on movement direction
+	if velocity.x < -5:
 		sprite.flip_h = true
-	elif screen_vel.x > 5:
+	elif velocity.x > 5:
 		sprite.flip_h = false
 
 const ZOOM_MIN := Vector2(1.5, 1.5)
@@ -185,22 +172,21 @@ func _try_manual_attack() -> void:
 
 	_attack_cooldown = 0.5 / stats.attack_speed  # 50% faster than base
 
-	# Determine attack direction from held movement input (screen → world)
+	# Determine attack direction from held movement input
 	var input_raw = Vector2(
 		Input.get_axis("move_left", "move_right"),
 		Input.get_axis("move_up", "move_down")
 	)
 	var attack_dir: Vector2
 	if input_raw.length() > 0.25:
-		attack_dir = IsometricHelper.get_iso_inverse().basis_xform(input_raw).normalized()
+		attack_dir = input_raw.normalized()
 	else:
 		attack_dir = Vector2.RIGHT if not sprite.flip_h else Vector2.LEFT
 
-	# Update sprite facing based on screen-space attack direction
-	var screen_attack = IsometricHelper.get_iso_transform().basis_xform(attack_dir)
-	if screen_attack.x < -0.1:
+	# Update sprite facing based on attack direction
+	if attack_dir.x < -0.1:
 		sprite.flip_h = true
-	elif screen_attack.x > 0.1:
+	elif attack_dir.x > 0.1:
 		sprite.flip_h = false
 
 	_enemies_in_range = _enemies_in_range.filter(func(e): return is_instance_valid(e) and not e.get("_is_dead"))
@@ -752,19 +738,18 @@ func take_damage(amount: int, is_crit: bool = false) -> void:
 func _spawn_damage_number(amount: int, is_crit: bool) -> void:
 	var label = Label.new()
 	label.text = str(amount) + ("!" if is_crit else "")
+	label.position = Vector2(randf_range(-10, 10), -35)
 	var settings = LabelSettings.new()
 	settings.font_size = 14 if not is_crit else 22
 	settings.font_color = Color(1.0, 0.3, 0.3) if not is_crit else Color(1.0, 0.1, 0.1)
 	settings.outline_size = 2
 	settings.outline_color = Color.BLACK
 	label.label_settings = settings
-	var start_pos = Vector2(randf_range(-10, 10), -35)
-	var wrapper = IsometricHelper.counter_transform_wrap(label, start_pos)
-	add_child(wrapper)
+	add_child(label)
 	var tween = create_tween()
-	tween.tween_property(wrapper, "position:y", wrapper.position.y - 30, 0.6)
-	tween.parallel().tween_property(wrapper, "modulate:a", 0.0, 0.6)
-	tween.tween_callback(wrapper.queue_free)
+	tween.tween_property(label, "position:y", label.position.y - 30, 0.6)
+	tween.parallel().tween_property(label, "modulate:a", 0.0, 0.6)
+	tween.tween_callback(label.queue_free)
 
 func _do_hit_flash() -> void:
 	sprite.modulate = Color(1, 0.5, 0.5)

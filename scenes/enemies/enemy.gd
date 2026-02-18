@@ -39,7 +39,7 @@ func _ready() -> void:
 	hp_bar.visible = false
 	name_label.visible = false
 
-	# Isometric shadow
+	# Shadow
 	_shadow = Sprite2D.new()
 	_shadow.texture = SpriteGenerator.get_texture("iso_shadow")
 	_shadow.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -48,13 +48,6 @@ func _ready() -> void:
 	_shadow.move_to_front()
 	move_child(_shadow, 0)
 
-	# Counter-transform sprite, shadow, HP bar, and label so they render
-	# upright despite the isometric projection on the World node.
-	var ct = IsometricHelper.get_sprite_counter_transform()
-	sprite.transform = ct
-	_shadow.transform = ct
-	IsometricHelper.apply_counter_transform(hp_bar)
-	IsometricHelper.apply_counter_transform(name_label)
 
 func initialize(config: Dictionary) -> void:
 	enemy_name = config.get("name", "Enemy")
@@ -150,11 +143,10 @@ func _process_chase(delta: float) -> void:
 
 	var dir = (target.global_position - global_position).normalized()
 	velocity = dir * stats.move_speed + _get_separation_push()
-	# Flip sprite based on screen-space movement direction
-	var screen_dir = IsometricHelper.get_iso_transform().basis_xform(dir)
-	if screen_dir.x < -0.1:
+	# Flip sprite based on movement direction
+	if dir.x < -0.1:
 		sprite.flip_h = true
-	elif screen_dir.x > 0.1:
+	elif dir.x > 0.1:
 		sprite.flip_h = false
 	move_and_slide()
 
@@ -196,10 +188,9 @@ func _process_return(delta: float) -> void:
 		return
 
 	var dir = (home_position - global_position).normalized()
-	var screen_dir = IsometricHelper.get_iso_transform().basis_xform(dir)
-	if screen_dir.x < -0.1:
+	if dir.x < -0.1:
 		sprite.flip_h = true
-	elif screen_dir.x > 0.1:
+	elif dir.x > 0.1:
 		sprite.flip_h = false
 	velocity = dir * stats.move_speed * 1.5
 	move_and_slide()
@@ -357,15 +348,14 @@ func _spawn_item_drop(item_id: String) -> void:
 func _spawn_damage_number(amount: int, is_crit: bool) -> void:
 	var label = Label.new()
 	label.text = str(amount) + ("!" if is_crit else "")
+	label.position = Vector2(randf_range(-10, 10) if not is_crit else randf_range(-6, 6), -30)
 	var settings = LabelSettings.new()
 	settings.font_size = 14 if not is_crit else 28
 	settings.font_color = Color.WHITE if not is_crit else Color(1.0, 0.95, 0.1)
 	settings.outline_size = 2 if not is_crit else 3
 	settings.outline_color = Color.BLACK
 	label.label_settings = settings
-	var start_pos = Vector2(randf_range(-10, 10) if not is_crit else randf_range(-6, 6), -30)
-	var wrapper = IsometricHelper.counter_transform_wrap(label, start_pos)
-	add_child(wrapper)
+	add_child(label)
 	var tween = create_tween()
 	if is_crit:
 		# Pop scale in, then float up and fade
@@ -373,15 +363,15 @@ func _spawn_damage_number(amount: int, is_crit: bool) -> void:
 		tween.tween_property(label, "scale", Vector2(1.3, 1.3), 0.08).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 		tween.tween_property(label, "scale", Vector2(1.0, 1.0), 0.05)
 		tween.set_parallel(true)
-		tween.tween_property(wrapper, "position:y", wrapper.position.y - 40, 0.7)
-		tween.tween_property(wrapper, "modulate:a", 0.0, 0.7).set_delay(0.2)
+		tween.tween_property(label, "position:y", label.position.y - 40, 0.7)
+		tween.tween_property(label, "modulate:a", 0.0, 0.7).set_delay(0.2)
 		tween.set_parallel(false)
 	else:
 		tween.set_parallel(true)
-		tween.tween_property(wrapper, "position:y", wrapper.position.y - 28, 0.55)
-		tween.tween_property(wrapper, "modulate:a", 0.0, 0.55).set_delay(0.15)
+		tween.tween_property(label, "position:y", label.position.y - 28, 0.55)
+		tween.tween_property(label, "modulate:a", 0.0, 0.55).set_delay(0.15)
 		tween.set_parallel(false)
-	tween.tween_callback(wrapper.queue_free)
+	tween.tween_callback(label.queue_free)
 
 func _update_hp_bar() -> void:
 	if hp_bar:
@@ -399,8 +389,6 @@ func _get_player() -> Node2D:
 	return null
 
 func _get_world_node() -> Node:
-	# Return the World node (holds the iso transform) so spawned objects
-	# appear at the correct isometric position.
 	var world = get_tree().get_nodes_in_group("world")
 	if world.size() > 0:
 		return world[0]

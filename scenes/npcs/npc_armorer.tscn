@@ -1,4 +1,4 @@
-[gd_scene load_steps=4 format=3 uid="uid://barmornpc"]
+[gd_scene format=3 uid="uid://barmornpc"]
 
 [ext_resource type="Script" path="res://scenes/npcs/npc_armorer.gd" id="1_armorer"]
 [ext_resource type="Script" path="res://scenes/npcs/beacon.gd" id="2_beacon"]

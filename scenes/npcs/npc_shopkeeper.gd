@@ -18,10 +18,6 @@ func _ready() -> void:
 	var tex = SpriteGenerator.get_texture("shop_building")
 	if tex:
 		shop_sprite.texture = tex
-	# Counter-transform sprite and label for isometric projection
-	var ct = IsometricHelper.get_sprite_counter_transform()
-	shop_sprite.transform = ct
-	IsometricHelper.apply_counter_transform(name_label)
 
 func _on_beacon_activated(_b: Area2D) -> void:
 	# Find the shop dialog in the scene tree and open it

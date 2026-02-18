@@ -7,7 +7,6 @@ signal attacked(target: Node2D)
 @onready var ability_mgr: AbilityManager = $AbilityManager
 @onready var sprite: Sprite2D = $Sprite
 @onready var attack_area: Area2D = $AttackArea
-@onready var attack_timer: Timer = $AttackTimer
 @onready var camera: Camera2D = $Camera2D
 @onready var pickup_area: Area2D = $PickupArea
 

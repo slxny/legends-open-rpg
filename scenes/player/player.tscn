@@ -41,10 +41,6 @@ collision_mask = 32
 [node name="CollisionShape2D" type="CollisionShape2D" parent="PickupArea"]
 shape = SubResource("CircleShape2D_pickup")
 
-[node name="AttackTimer" type="Timer" parent="."]
-wait_time = 1.0
-autostart = true
-
 [node name="Camera2D" type="Camera2D" parent="."]
 zoom = Vector2(3.0, 3.0)
 position_smoothing_enabled = true
@@ -59,7 +55,6 @@ script = ExtResource("3_inv")
 [node name="AbilityManager" type="Node" parent="."]
 script = ExtResource("4_ability")
 
-[connection signal="timeout" from="AttackTimer" to="." method="_on_attack_timer_timeout"]
 [connection signal="body_entered" from="AttackArea" to="." method="_on_attack_area_body_entered"]
 [connection signal="body_exited" from="AttackArea" to="." method="_on_attack_area_body_exited"]
 [connection signal="area_entered" from="PickupArea" to="." method="_on_pickup_area_area_entered"]

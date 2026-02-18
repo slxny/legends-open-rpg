@@ -31,9 +31,16 @@ var _shadow: Sprite2D = null
 # Attack animation state
 var _is_attack_animating: bool = false
 
-# Melee attack frame textures (cached on ready for melee heroes)
-var _atk_frames: Array = []  # [atk1, atk2, atk3]
+# Melee combo system
+# 5 swing types: a=left-to-right, b=right-to-left backhand, c=overhead chop,
+#                d=upward thrust, e=spin slash
+# Each swing has 3 frames [wind-up, mid-swing, follow-through]
+var _combo_swings: Array = []  # Array of Arrays: [[f1,f2,f3], [f1,f2,f3], ...]
 var _idle_texture: Texture2D = null
+var _combo_index: int = 0       # Which swing we're on in the current combo
+var _combo_timer: float = 0.0   # Time since last hit — resets combo if too long
+const COMBO_WINDOW: float = 1.8 # Seconds before combo resets
+const COMBO_SEQUENCE: Array = [0, 1, 0, 1, 2, 3, 4]  # a,b,a,b,c,d,e then loop
 
 func _ready() -> void:
 	add_to_group("player")
@@ -47,12 +54,13 @@ func _ready() -> void:
 		sprite.texture = tex
 		_idle_texture = tex
 
-	# Cache melee attack frames if available
-	var atk1 = SpriteGenerator.get_texture(hero_class + "_atk1")
-	var atk2 = SpriteGenerator.get_texture(hero_class + "_atk2")
-	var atk3 = SpriteGenerator.get_texture(hero_class + "_atk3")
-	if atk1 and atk2 and atk3:
-		_atk_frames = [atk1, atk2, atk3]
+	# Cache melee combo swing frames (5 swing types x 3 frames each)
+	for swing_key in ["a", "b", "c", "d", "e"]:
+		var f1 = SpriteGenerator.get_texture(hero_class + "_atk" + swing_key + "1")
+		var f2 = SpriteGenerator.get_texture(hero_class + "_atk" + swing_key + "2")
+		var f3 = SpriteGenerator.get_texture(hero_class + "_atk" + swing_key + "3")
+		if f1 and f2 and f3:
+			_combo_swings.append([f1, f2, f3])
 
 	attack_timer.wait_time = 1.0 / stats.attack_speed
 	attack_timer.start()
@@ -105,6 +113,13 @@ func _physics_process(delta: float) -> void:
 
 	move_and_slide()
 	stats.process_regen(delta)
+
+	# Combo timer — reset combo if no attack within window
+	if _combo_index > 0:
+		_combo_timer += delta
+		if _combo_timer >= COMBO_WINDOW:
+			_combo_index = 0
+			_combo_timer = 0.0
 
 	# Flip sprite based on movement direction
 	if velocity.x < -5:
@@ -338,40 +353,149 @@ func _do_melee_attack(target: Node2D, result: Dictionary) -> void:
 		return
 
 	var dir = (target.global_position - global_position).normalized()
+	var perp = Vector2(-dir.y, dir.x)  # Perpendicular for lateral swings
 	var base_pos = sprite.position
-	var has_frames = _atk_frames.size() >= 3
 
+	# Pick the current swing type from the combo sequence
+	var swing_idx = COMBO_SEQUENCE[_combo_index % COMBO_SEQUENCE.size()]
+	var has_frames = swing_idx < _combo_swings.size()
+	var frames = _combo_swings[swing_idx] if has_frames else []
+
+	# Advance combo for next attack
+	_combo_index += 1
+	_combo_timer = 0.0
+
+	# Each swing type has unique choreography
 	var tween = create_tween()
+	match swing_idx:
+		0:  # Swing A: Left-to-right slash
+			_anim_swing_horizontal(tween, frames, base_pos, dir, perp, target, result, 1.0)
+		1:  # Swing B: Right-to-left backhand
+			_anim_swing_horizontal(tween, frames, base_pos, dir, perp, target, result, -1.0)
+		2:  # Swing C: Overhead chop (finisher)
+			_anim_overhead_chop(tween, frames, base_pos, dir, target, result)
+		3:  # Swing D: Upward thrust
+			_anim_upward_thrust(tween, frames, base_pos, dir, target, result)
+		4:  # Swing E: Spin slash
+			_anim_spin_slash(tween, frames, base_pos, dir, target, result)
 
-	# Frame 1: Wind-up — sword raised, pull back
-	if has_frames:
-		tween.tween_callback(func(): sprite.texture = _atk_frames[0])
-	tween.tween_property(sprite, "position", base_pos - dir * 4.0, 0.08)
-
-	# Frame 2: Mid-swing — lunge forward
-	if has_frames:
-		tween.tween_callback(func(): sprite.texture = _atk_frames[1])
-	tween.tween_property(sprite, "position", base_pos + dir * 8.0, 0.06)
-
-	# Frame 3: Impact — sword extended, deal damage
-	if has_frames:
-		tween.tween_callback(func(): sprite.texture = _atk_frames[2])
-	tween.tween_property(sprite, "position", base_pos + dir * 12.0, 0.04)
+func _anim_swing_horizontal(tween: Tween, frames: Array, base_pos: Vector2,
+		dir: Vector2, perp: Vector2, target: Node2D, result: Dictionary, side: float) -> void:
+	# side=1.0 for left-to-right, -1.0 for right-to-left backhand
+	if frames.size() >= 3:
+		tween.tween_callback(func(): sprite.texture = frames[0])
+	# Wind-up: shift to the opposite side
+	tween.tween_property(sprite, "position", base_pos - dir * 3.0 + perp * side * -4.0, 0.07)
+	if frames.size() >= 3:
+		tween.tween_callback(func(): sprite.texture = frames[1])
+	# Slash across: sweep through with lunge
+	tween.tween_property(sprite, "position", base_pos + dir * 10.0 + perp * side * 4.0, 0.06)
+	if frames.size() >= 3:
+		tween.tween_callback(func(): sprite.texture = frames[2])
+	# Follow-through
+	tween.tween_property(sprite, "position", base_pos + dir * 12.0 + perp * side * 6.0, 0.04)
 	tween.tween_callback(func():
 		if is_instance_valid(target):
 			target.take_damage(result["damage"], result["is_crit"])
-			_spawn_slash_vfx(dir, 35.0, 1.0)
+			_spawn_slash_vfx(dir.rotated(side * 0.3), 35.0, 1.0)
 			_spawn_impact_vfx(target.global_position)
 			_do_screen_shake(2.5 if not result["is_crit"] else 5.0)
 	)
-
 	# Return to idle
-	tween.tween_interval(0.06)
+	tween.tween_interval(0.05)
+	_anim_return_to_idle(tween, base_pos)
+
+func _anim_overhead_chop(tween: Tween, frames: Array, base_pos: Vector2,
+		dir: Vector2, target: Node2D, result: Dictionary) -> void:
+	if frames.size() >= 3:
+		tween.tween_callback(func(): sprite.texture = frames[0])
+	# Big wind-up: pull back and lift
+	tween.tween_property(sprite, "position", base_pos - dir * 5.0 + Vector2(0, -4), 0.10)
+	# Squash anticipation
+	tween.tween_property(sprite, "scale", Vector2(1.15, 0.9), 0.04)
+	if frames.size() >= 3:
+		tween.tween_callback(func(): sprite.texture = frames[1])
+	# Slam down
+	tween.tween_property(sprite, "position", base_pos + dir * 8.0 + Vector2(0, 2), 0.05)
+	tween.tween_property(sprite, "scale", Vector2(0.9, 1.15), 0.03)
+	if frames.size() >= 3:
+		tween.tween_callback(func(): sprite.texture = frames[2])
+	# Impact — lunge and stretch
+	tween.tween_property(sprite, "position", base_pos + dir * 14.0, 0.04)
+	tween.tween_callback(func():
+		if is_instance_valid(target):
+			target.take_damage(result["damage"], result["is_crit"])
+			_spawn_slash_vfx(dir, 40.0, 1.4)
+			_spawn_impact_vfx(target.global_position)
+			_do_screen_shake(4.0 if not result["is_crit"] else 7.0)
+	)
+	tween.tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.06)
+	tween.tween_interval(0.04)
+	_anim_return_to_idle(tween, base_pos)
+
+func _anim_upward_thrust(tween: Tween, frames: Array, base_pos: Vector2,
+		dir: Vector2, target: Node2D, result: Dictionary) -> void:
+	if frames.size() >= 3:
+		tween.tween_callback(func(): sprite.texture = frames[0])
+	# Crouch down
+	tween.tween_property(sprite, "position", base_pos + Vector2(0, 3), 0.06)
+	tween.tween_property(sprite, "scale", Vector2(1.1, 0.85), 0.04)
+	if frames.size() >= 3:
+		tween.tween_callback(func(): sprite.texture = frames[1])
+	# Thrust upward and forward
+	tween.tween_property(sprite, "position", base_pos + dir * 10.0 + Vector2(0, -6), 0.06)
+	tween.tween_property(sprite, "scale", Vector2(0.9, 1.15), 0.04)
+	if frames.size() >= 3:
+		tween.tween_callback(func(): sprite.texture = frames[2])
+	# Full extension
+	tween.tween_property(sprite, "position", base_pos + dir * 12.0 + Vector2(0, -8), 0.03)
+	tween.tween_callback(func():
+		if is_instance_valid(target):
+			target.take_damage(result["damage"], result["is_crit"])
+			_spawn_slash_vfx(dir.rotated(-0.4), 30.0, 1.0)
+			_spawn_impact_vfx(target.global_position)
+			_do_screen_shake(3.0 if not result["is_crit"] else 6.0)
+	)
+	tween.tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.06)
+	tween.tween_interval(0.04)
+	_anim_return_to_idle(tween, base_pos)
+
+func _anim_spin_slash(tween: Tween, frames: Array, base_pos: Vector2,
+		dir: Vector2, target: Node2D, result: Dictionary) -> void:
+	if frames.size() >= 3:
+		tween.tween_callback(func(): sprite.texture = frames[0])
+	# Coil
+	tween.tween_property(sprite, "position", base_pos - dir * 3.0, 0.06)
+	if frames.size() >= 3:
+		tween.tween_callback(func(): sprite.texture = frames[1])
+	# Spin (360 rotation + lunge)
+	tween.set_parallel(true)
+	tween.tween_property(sprite, "rotation", TAU, 0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.tween_property(sprite, "position", base_pos + dir * 12.0, 0.18)
+	tween.set_parallel(false)
+	if frames.size() >= 3:
+		tween.tween_callback(func(): sprite.texture = frames[2])
+	tween.tween_callback(func():
+		if is_instance_valid(target):
+			target.take_damage(result["damage"], result["is_crit"])
+			# Wide slash VFX — hits in a circle
+			_spawn_slash_vfx(dir, 40.0, 1.6)
+			_spawn_slash_vfx(dir.rotated(PI * 0.5), 35.0, 1.2)
+			_spawn_slash_vfx(dir.rotated(-PI * 0.5), 35.0, 1.2)
+			_spawn_impact_vfx(target.global_position)
+			_do_screen_shake(5.0 if not result["is_crit"] else 8.0)
+	)
+	# Unwind rotation
+	tween.tween_property(sprite, "rotation", 0.0, 0.08)
+	tween.tween_interval(0.04)
+	_anim_return_to_idle(tween, base_pos)
+
+func _anim_return_to_idle(tween: Tween, base_pos: Vector2) -> void:
 	tween.tween_callback(func():
 		if _idle_texture:
 			sprite.texture = _idle_texture
 	)
-	tween.tween_property(sprite, "position", base_pos, 0.1)
+	tween.tween_property(sprite, "position", base_pos, 0.08)
 	tween.tween_callback(func(): _is_attack_animating = false)
 
 func _do_ranged_attack(target: Node2D, result: Dictionary) -> void:

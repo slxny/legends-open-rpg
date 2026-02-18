@@ -32,9 +32,12 @@ func _try_load_external(sprite_name: String) -> bool:
 	return false
 
 func _init_asset_dirs() -> void:
-	# Heroes (includes attack animation frames)
-	for n in ["blade_knight", "shadow_ranger",
-			"blade_knight_atk1", "blade_knight_atk2", "blade_knight_atk3"]:
+	# Heroes (includes attack animation frames — 5 swing types x 3 frames each)
+	var hero_names = ["blade_knight", "shadow_ranger"]
+	for swing in ["a", "b", "c", "d", "e"]:
+		for frame in [1, 2, 3]:
+			hero_names.append("blade_knight_atk%s%d" % [swing, frame])
+	for n in hero_names:
 		_asset_dirs[n] = "heroes"
 	# Enemies
 	for n in ["goblin", "wolf", "bandit"]:
@@ -68,11 +71,11 @@ func _init_asset_dirs() -> void:
 		_asset_dirs[n] = "vfx"
 
 func _generate_all() -> void:
-	# Heroes (+ attack animation frames)
+	# Heroes (+ attack combo frames: 5 swing types x 3 frames)
 	_gen_or_load("blade_knight")
-	_gen_or_load("blade_knight_atk1")
-	_gen_or_load("blade_knight_atk2")
-	_gen_or_load("blade_knight_atk3")
+	for swing in ["a", "b", "c", "d", "e"]:
+		for frame in [1, 2, 3]:
+			_gen_or_load("blade_knight_atk%s%d" % [swing, frame])
 	_gen_or_load("shadow_ranger")
 	# Enemies
 	_gen_or_load("goblin")
@@ -239,60 +242,228 @@ func _bk_draw_body(img: Image, c: Dictionary, lean: int = 0) -> void:
 	_fill_rect(img, 2 + lean, 28, 7, 2, c["shield_rim"])
 	_fill_rect(img, 2 + lean, 20, 2, 10, c["shield_rim"])
 
-func _gen_blade_knight_atk1() -> void:
-	# Frame 1: Wind-up — sword raised above head
+# ---- Swing A: Left-to-right horizontal slash ----
+func _gen_blade_knight_atka1() -> void:
 	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
 	img.fill(Color(0, 0, 0, 0))
 	var c = _bk_colors()
-	_bk_draw_body(img, c, -1)  # Slight lean back
-	# Sword raised above head
-	_fill_rect(img, 12, 0, 3, 10, c["sword"])
-	_fill_rect(img, 13, 0, 2, 3, c["sword_glow"])
-	_fill_rect(img, 11, 9, 5, 3, c["armor_dark"])  # Hilt
-	# Right arm raised
-	_fill_rect(img, 20, 12, 4, 8, c["armor_mid"])
-	textures["blade_knight_atk1"] = ImageTexture.create_from_image(img)
+	_bk_draw_body(img, c, -1)
+	# Sword pulled back to left, arm cocked
+	_fill_rect(img, 0, 14, 10, 3, c["sword"])
+	_fill_rect(img, 0, 13, 3, 2, c["sword_glow"])
+	_fill_rect(img, 9, 13, 4, 4, c["armor_dark"])
+	_fill_rect(img, 13, 14, 5, 6, c["armor_mid"])
+	textures["blade_knight_atka1"] = ImageTexture.create_from_image(img)
 
-func _gen_blade_knight_atk2() -> void:
-	# Frame 2: Mid-swing — sword diagonal, slashing down-right
+func _gen_blade_knight_atka2() -> void:
 	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
 	img.fill(Color(0, 0, 0, 0))
 	var c = _bk_colors()
-	_bk_draw_body(img, c, 1)  # Lean forward
-	# Sword mid-swing diagonal (top-left to bottom-right)
-	# Draw diagonal sword blade
-	for i in range(14):
-		var px = 18 + i
-		var py = 6 + i
-		if px < 32 and py < 48:
-			_fill_rect(img, px, py, 3, 2, c["sword"])
-	# Sword glow trail
-	for i in range(10):
-		var px = 19 + i
-		var py = 8 + i
-		if px < 32 and py < 48:
-			img.set_pixel(px, py, c["sword_trail"])
-	# Hilt at top of swing
-	_fill_rect(img, 17, 8, 4, 4, c["armor_dark"])
-	# Right arm extended
+	_bk_draw_body(img, c, 1)
+	# Sword sweeping across (horizontal mid)
+	_fill_rect(img, 8, 18, 24, 3, c["sword"])
+	_fill_rect(img, 28, 17, 4, 2, c["sword_glow"])
+	_fill_rect(img, 6, 17, 4, 4, c["armor_dark"])
+	# Swing trail
+	_fill_rect(img, 10, 16, 18, 1, c["sword_trail"])
 	_fill_rect(img, 22, 14, 5, 6, c["armor_mid"])
-	textures["blade_knight_atk2"] = ImageTexture.create_from_image(img)
+	textures["blade_knight_atka2"] = ImageTexture.create_from_image(img)
 
-func _gen_blade_knight_atk3() -> void:
-	# Frame 3: Follow-through — sword low, extended forward
+func _gen_blade_knight_atka3() -> void:
 	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
 	img.fill(Color(0, 0, 0, 0))
 	var c = _bk_colors()
-	_bk_draw_body(img, c, 2)  # Max lean forward
-	# Sword extended forward-low (horizontal)
+	_bk_draw_body(img, c, 2)
+	# Sword follow-through to right, extended low
 	_fill_rect(img, 20, 26, 12, 3, c["sword"])
 	_fill_rect(img, 28, 25, 4, 2, c["sword_glow"])
-	_fill_rect(img, 18, 25, 4, 4, c["armor_dark"])  # Hilt
-	# Sword glow trail behind
+	_fill_rect(img, 18, 25, 4, 4, c["armor_dark"])
 	_fill_rect(img, 22, 24, 8, 1, c["sword_trail"])
-	# Right arm forward
 	_fill_rect(img, 23, 18, 4, 8, c["armor_mid"])
-	textures["blade_knight_atk3"] = ImageTexture.create_from_image(img)
+	textures["blade_knight_atka3"] = ImageTexture.create_from_image(img)
+
+# ---- Swing B: Right-to-left backhand slash ----
+func _gen_blade_knight_atkb1() -> void:
+	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = _bk_colors()
+	_bk_draw_body(img, c, 1)
+	# Sword pulled back to right (follow-through position of swing A becomes wind-up)
+	_fill_rect(img, 22, 14, 10, 3, c["sword"])
+	_fill_rect(img, 29, 13, 3, 2, c["sword_glow"])
+	_fill_rect(img, 20, 13, 4, 4, c["armor_dark"])
+	_fill_rect(img, 22, 16, 5, 6, c["armor_mid"])
+	textures["blade_knight_atkb1"] = ImageTexture.create_from_image(img)
+
+func _gen_blade_knight_atkb2() -> void:
+	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = _bk_colors()
+	_bk_draw_body(img, c, 0)
+	# Sword sweeping back across left (backhand)
+	_fill_rect(img, 0, 20, 24, 3, c["sword"])
+	_fill_rect(img, 0, 19, 4, 2, c["sword_glow"])
+	_fill_rect(img, 22, 19, 4, 4, c["armor_dark"])
+	_fill_rect(img, 4, 18, 18, 1, c["sword_trail"])
+	_fill_rect(img, 18, 16, 5, 6, c["armor_mid"])
+	textures["blade_knight_atkb2"] = ImageTexture.create_from_image(img)
+
+func _gen_blade_knight_atkb3() -> void:
+	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = _bk_colors()
+	_bk_draw_body(img, c, -1)
+	# Sword ends on left side, low
+	_fill_rect(img, 0, 28, 12, 3, c["sword"])
+	_fill_rect(img, 0, 27, 3, 2, c["sword_glow"])
+	_fill_rect(img, 10, 27, 4, 4, c["armor_dark"])
+	_fill_rect(img, 2, 26, 8, 1, c["sword_trail"])
+	_fill_rect(img, 12, 20, 4, 8, c["armor_mid"])
+	textures["blade_knight_atkb3"] = ImageTexture.create_from_image(img)
+
+# ---- Swing C: Overhead chop (finisher) ----
+func _gen_blade_knight_atkc1() -> void:
+	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = _bk_colors()
+	_bk_draw_body(img, c, -1)
+	# Sword raised high above head (two-handed grip feel)
+	_fill_rect(img, 14, 0, 4, 12, c["sword"])
+	_fill_rect(img, 15, 0, 3, 4, c["sword_glow"])
+	_fill_rect(img, 13, 11, 6, 4, c["armor_dark"])
+	_fill_rect(img, 19, 10, 5, 8, c["armor_mid"])
+	_fill_rect(img, 12, 12, 4, 6, c["armor_mid"])
+	textures["blade_knight_atkc1"] = ImageTexture.create_from_image(img)
+
+func _gen_blade_knight_atkc2() -> void:
+	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = _bk_colors()
+	_bk_draw_body(img, c, 2)
+	# Sword mid-chop — vertical blade coming down
+	_fill_rect(img, 22, 4, 4, 16, c["sword"])
+	_fill_rect(img, 23, 4, 3, 5, c["sword_glow"])
+	_fill_rect(img, 21, 18, 6, 4, c["armor_dark"])
+	# Vertical trail
+	_fill_rect(img, 24, 2, 1, 14, c["sword_trail"])
+	_fill_rect(img, 22, 16, 5, 6, c["armor_mid"])
+	textures["blade_knight_atkc2"] = ImageTexture.create_from_image(img)
+
+func _gen_blade_knight_atkc3() -> void:
+	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = _bk_colors()
+	_bk_draw_body(img, c, 3)
+	# Sword slammed into ground — blade pointing down at angle
+	_fill_rect(img, 24, 24, 4, 18, c["sword"])
+	_fill_rect(img, 25, 38, 3, 4, c["sword_glow"])
+	_fill_rect(img, 22, 22, 6, 4, c["armor_dark"])
+	_fill_rect(img, 25, 20, 1, 16, c["sword_trail"])
+	_fill_rect(img, 22, 16, 5, 8, c["armor_mid"])
+	textures["blade_knight_atkc3"] = ImageTexture.create_from_image(img)
+
+# ---- Swing D: Upward thrust / uppercut ----
+func _gen_blade_knight_atkd1() -> void:
+	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = _bk_colors()
+	_bk_draw_body(img, c, 0)
+	# Sword low, pulled back — about to thrust upward
+	_fill_rect(img, 18, 32, 4, 12, c["sword"])
+	_fill_rect(img, 19, 40, 3, 4, c["sword_glow"])
+	_fill_rect(img, 17, 30, 5, 4, c["armor_dark"])
+	_fill_rect(img, 20, 24, 4, 7, c["armor_mid"])
+	textures["blade_knight_atkd1"] = ImageTexture.create_from_image(img)
+
+func _gen_blade_knight_atkd2() -> void:
+	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = _bk_colors()
+	_bk_draw_body(img, c, 1)
+	# Sword thrusting upward diagonally
+	for i in range(14):
+		var px = 20 + i
+		var py = 28 - i
+		if px >= 0 and px < 32 and py >= 0 and py < 48:
+			_fill_rect(img, px, py, 3, 2, c["sword"])
+	_fill_rect(img, 30, 16, 2, 3, c["sword_glow"])
+	_fill_rect(img, 18, 27, 4, 4, c["armor_dark"])
+	# Upward trail
+	for i in range(10):
+		var px = 22 + i
+		var py = 26 - i
+		if px >= 0 and px < 32 and py >= 0 and py < 48:
+			img.set_pixel(px, py, c["sword_trail"])
+	_fill_rect(img, 20, 18, 5, 8, c["armor_mid"])
+	textures["blade_knight_atkd2"] = ImageTexture.create_from_image(img)
+
+func _gen_blade_knight_atkd3() -> void:
+	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = _bk_colors()
+	_bk_draw_body(img, c, 0)
+	# Sword fully extended upward
+	_fill_rect(img, 24, 0, 4, 16, c["sword"])
+	_fill_rect(img, 25, 0, 3, 5, c["sword_glow"])
+	_fill_rect(img, 22, 14, 6, 4, c["armor_dark"])
+	_fill_rect(img, 25, 2, 1, 10, c["sword_trail"])
+	_fill_rect(img, 22, 12, 5, 8, c["armor_mid"])
+	textures["blade_knight_atkd3"] = ImageTexture.create_from_image(img)
+
+# ---- Swing E: Spin slash (360 sweep) ----
+func _gen_blade_knight_atke1() -> void:
+	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = _bk_colors()
+	_bk_draw_body(img, c, 0)
+	# Body coiled, sword behind — about to spin
+	_fill_rect(img, 0, 16, 10, 3, c["sword"])
+	_fill_rect(img, 0, 15, 3, 2, c["sword_glow"])
+	_fill_rect(img, 8, 15, 5, 4, c["armor_dark"])
+	_fill_rect(img, 12, 16, 5, 6, c["armor_mid"])
+	# Coil indicator — slight body tilt
+	_fill_rect(img, 8, 22, 3, 3, c["armor_light"])
+	textures["blade_knight_atke1"] = ImageTexture.create_from_image(img)
+
+func _gen_blade_knight_atke2() -> void:
+	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = _bk_colors()
+	_bk_draw_body(img, c, 0)
+	# Mid-spin — sword making a full arc, draw circular trail
+	# Sword at top-right
+	_fill_rect(img, 22, 6, 8, 3, c["sword"])
+	_fill_rect(img, 28, 5, 4, 2, c["sword_glow"])
+	_fill_rect(img, 20, 8, 4, 4, c["armor_dark"])
+	# Circular trail around the body
+	for angle_i in range(12):
+		var angle = float(angle_i) / 12.0 * TAU
+		var tx = int(16 + cos(angle) * 14)
+		var ty = int(24 + sin(angle) * 12)
+		if tx >= 0 and tx < 31 and ty >= 0 and ty < 47:
+			img.set_pixel(tx, ty, c["sword_trail"])
+			img.set_pixel(tx + 1, ty, c["sword_trail"])
+	_fill_rect(img, 20, 14, 5, 6, c["armor_mid"])
+	textures["blade_knight_atke2"] = ImageTexture.create_from_image(img)
+
+func _gen_blade_knight_atke3() -> void:
+	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = _bk_colors()
+	_bk_draw_body(img, c, 1)
+	# Spin complete — sword extended right at mid-height
+	_fill_rect(img, 20, 20, 12, 3, c["sword"])
+	_fill_rect(img, 28, 19, 4, 2, c["sword_glow"])
+	_fill_rect(img, 18, 19, 4, 4, c["armor_dark"])
+	# Full circle trail fading
+	for angle_i in range(16):
+		var angle = float(angle_i) / 16.0 * TAU
+		var tx = int(16 + cos(angle) * 14)
+		var ty = int(24 + sin(angle) * 12)
+		if tx >= 0 and tx < 31 and ty >= 0 and ty < 47:
+			img.set_pixel(tx, ty, c["sword_trail"])
+	_fill_rect(img, 22, 16, 5, 6, c["armor_mid"])
+	textures["blade_knight_atke3"] = ImageTexture.create_from_image(img)
 
 func _gen_shadow_ranger() -> void:
 	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)

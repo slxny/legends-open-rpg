@@ -3,11 +3,12 @@ extends Node2D
 @onready var heal_beacon: Area2D = $HealBeacon
 @onready var info_beacon: Area2D = $InfoBeacon
 
-# Creep camp positions for ground darkening
+# Creep camp positions for ground darkening (matches .tscn camp positions)
 var _camp_positions := [
-	Vector2(-700, -500), Vector2(600, -700), Vector2(-300, -900),
-	Vector2(-900, 600), Vector2(400, 800),
-	Vector2(1000, 700), Vector2(-1200, -200), Vector2(1300, -500),
+	Vector2(-900, -700), Vector2(800, -900), Vector2(-500, -1300),
+	Vector2(-1400, 800), Vector2(600, 1200), Vector2(1600, -400),
+	Vector2(1800, 1000), Vector2(-2200, -400), Vector2(2400, -900),
+	Vector2(-1800, 1400),
 ]
 
 func _ready() -> void:
@@ -38,27 +39,27 @@ func _on_info_beacon(_b: Area2D) -> void:
 # ============================================================
 
 func _generate_terrain() -> void:
-	# Main jungle ground — single Sprite2D with texture repeat covering the map
+	# Main jungle ground — single Sprite2D with texture repeat covering the expanded map
 	var ground_sprite = Sprite2D.new()
 	ground_sprite.texture = SpriteGenerator.get_texture("ground_jungle")
 	ground_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	ground_sprite.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
 	ground_sprite.region_enabled = true
-	ground_sprite.region_rect = Rect2(-2000, -1500, 4000, 3000)
+	ground_sprite.region_rect = Rect2(-3500, -2500, 7000, 5000)
 	ground_sprite.z_index = -10
-	ground_sprite.position = Vector2(-2000, -1500)
+	ground_sprite.position = Vector2(-3500, -2500)
 	ground_sprite.centered = false
 	add_child(ground_sprite)
 	move_child(ground_sprite, 0)
 
-	# Town stone floor overlay
+	# Town stone floor overlay — much larger town square
 	var town_stone = Sprite2D.new()
 	town_stone.texture = SpriteGenerator.get_texture("ground_stone")
 	town_stone.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	town_stone.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
 	town_stone.region_enabled = true
-	town_stone.region_rect = Rect2(0, 0, 360, 300)
-	town_stone.position = Vector2(-180, -150)
+	town_stone.region_rect = Rect2(0, 0, 700, 500)
+	town_stone.position = Vector2(-350, -250)
 	town_stone.centered = false
 	town_stone.z_index = -9
 	add_child(town_stone)
@@ -67,12 +68,12 @@ func _generate_terrain() -> void:
 	for camp_pos in _camp_positions:
 		_add_creep_ground(camp_pos, randf_range(140, 200))
 
-	# Scattered dirt patches across the map for variety
+	# Scattered dirt patches across the expanded map
 	var rng = RandomNumberGenerator.new()
 	rng.seed = 555
-	for _i in range(40):
-		var pos = Vector2(rng.randf_range(-1800, 1800), rng.randf_range(-1400, 1400))
-		if pos.length() > 250:  # Avoid town center
+	for _i in range(70):
+		var pos = Vector2(rng.randf_range(-3200, 3200), rng.randf_range(-2200, 2200))
+		if pos.length() > 400:  # Avoid expanded town center
 			_add_dirt_ground_patch(pos)
 
 func _add_creep_ground(center: Vector2, radius: float) -> void:
@@ -108,43 +109,49 @@ func _generate_decorations() -> void:
 	var deco_layer = $Decorations
 
 	# ---- Border trees: dense double-row along all 4 walls ----
-	for x in range(-1950, 1951, 55):
-		_add_tree(deco_layer, Vector2(x + randf_range(-12, 12), -1420 + randf_range(-25, 25)))
-		_add_tree(deco_layer, Vector2(x + randf_range(-12, 12), -1350 + randf_range(-20, 20)))
-	for x in range(-1950, 1951, 55):
-		_add_tree(deco_layer, Vector2(x + randf_range(-12, 12), 1420 + randf_range(-25, 25)))
-		_add_tree(deco_layer, Vector2(x + randf_range(-12, 12), 1350 + randf_range(-20, 20)))
-	for y in range(-1400, 1401, 55):
-		_add_tree(deco_layer, Vector2(-1920 + randf_range(-15, 15), y + randf_range(-12, 12)))
-		_add_tree(deco_layer, Vector2(-1850 + randf_range(-15, 15), y + randf_range(-12, 12)))
-	for y in range(-1400, 1401, 55):
-		_add_tree(deco_layer, Vector2(1920 + randf_range(-15, 15), y + randf_range(-12, 12)))
-		_add_tree(deco_layer, Vector2(1850 + randf_range(-15, 15), y + randf_range(-12, 12)))
+	for x in range(-3450, 3451, 55):
+		_add_tree(deco_layer, Vector2(x + randf_range(-12, 12), -2420 + randf_range(-25, 25)))
+		_add_tree(deco_layer, Vector2(x + randf_range(-12, 12), -2350 + randf_range(-20, 20)))
+	for x in range(-3450, 3451, 55):
+		_add_tree(deco_layer, Vector2(x + randf_range(-12, 12), 2420 + randf_range(-25, 25)))
+		_add_tree(deco_layer, Vector2(x + randf_range(-12, 12), 2350 + randf_range(-20, 20)))
+	for y in range(-2400, 2401, 55):
+		_add_tree(deco_layer, Vector2(-3420 + randf_range(-15, 15), y + randf_range(-12, 12)))
+		_add_tree(deco_layer, Vector2(-3350 + randf_range(-15, 15), y + randf_range(-12, 12)))
+	for y in range(-2400, 2401, 55):
+		_add_tree(deco_layer, Vector2(3420 + randf_range(-15, 15), y + randf_range(-12, 12)))
+		_add_tree(deco_layer, Vector2(3350 + randf_range(-15, 15), y + randf_range(-12, 12)))
 
-	# ---- Interior tree clusters (more and denser) ----
+	# ---- Interior tree clusters (expanded across larger map) ----
 	var cluster_centers = [
-		Vector2(-400, -700), Vector2(200, -400), Vector2(-1000, 100),
-		Vector2(800, -300), Vector2(-600, 400), Vector2(500, 200),
-		Vector2(-300, 900), Vector2(700, 600), Vector2(-1400, -700),
-		Vector2(1400, -200), Vector2(-1300, 800), Vector2(1200, 900),
-		Vector2(0, -1100), Vector2(0, 1100), Vector2(-800, -300),
-		Vector2(1000, -800), Vector2(-500, -100), Vector2(300, 500),
-		# Additional clusters for density
-		Vector2(-200, -500), Vector2(900, 400), Vector2(-1100, -400),
-		Vector2(1600, 300), Vector2(-1600, -900), Vector2(1500, -700),
-		Vector2(-700, 700), Vector2(100, 900), Vector2(-1500, 500),
-		Vector2(600, -1000), Vector2(-400, 1200), Vector2(1100, -100),
+		# Inner ring (near town)
+		Vector2(-500, -700), Vector2(300, -500), Vector2(-700, 400),
+		Vector2(500, 300), Vector2(-300, 600), Vector2(600, -300),
+		# Mid ring
+		Vector2(-1000, -900), Vector2(1000, -800), Vector2(-1200, 500),
+		Vector2(1100, 600), Vector2(-800, -400), Vector2(800, 400),
+		Vector2(0, -1200), Vector2(0, 1200), Vector2(-600, 900),
+		Vector2(700, -600), Vector2(-400, -200), Vector2(400, 800),
+		# Outer ring (far from town, filling expanded map)
+		Vector2(-2000, -600), Vector2(2000, -400), Vector2(-1800, 1000),
+		Vector2(1900, 800), Vector2(-2500, -1200), Vector2(2500, -1100),
+		Vector2(-2300, 1600), Vector2(2200, 1500), Vector2(-1500, -1500),
+		Vector2(1600, -1400), Vector2(-2800, 0), Vector2(2800, -200),
+		Vector2(0, -2000), Vector2(0, 2000), Vector2(-1000, 1600),
+		Vector2(1200, 1800), Vector2(-2600, 800), Vector2(2600, 600),
+		Vector2(-1600, -800), Vector2(1500, -700), Vector2(-900, 1300),
+		Vector2(1300, -1600), Vector2(-2000, 1800), Vector2(2100, -1700),
+		Vector2(-3000, -500), Vector2(3000, 400), Vector2(-700, -1800),
+		Vector2(800, 1600), Vector2(-2400, -1600), Vector2(2300, 1200),
 	]
 	for center in cluster_centers:
 		var count = randi_range(4, 9)
 		for i in range(count):
 			var offset = Vector2(randf_range(-70, 70), randf_range(-70, 70))
 			_add_tree(deco_layer, center + offset)
-		# Add undergrowth near tree clusters
 		for i in range(randi_range(2, 5)):
 			var offset = Vector2(randf_range(-50, 50), randf_range(-50, 50))
 			_add_bush(deco_layer, center + offset)
-		# Vines and mushrooms near tree bases
 		if randf() > 0.5:
 			_add_vines(deco_layer, center + Vector2(randf_range(-30, 30), randf_range(-20, 20)))
 		if randf() > 0.6:
@@ -152,103 +159,115 @@ func _generate_decorations() -> void:
 
 	# ---- Rock formations ----
 	var rock_positions = [
-		Vector2(-500, -300), Vector2(-510, -290), Vector2(-490, -310),
-		Vector2(800, -500), Vector2(810, -490), Vector2(790, -510),
-		Vector2(-700, 400), Vector2(350, 700), Vector2(360, 690),
-		Vector2(1200, 200), Vector2(-1100, -600), Vector2(-1090, -610),
-		Vector2(0, -700), Vector2(-200, 500), Vector2(-210, 490),
-		Vector2(900, -100), Vector2(-400, 1000), Vector2(-410, 990),
-		Vector2(600, -900), Vector2(-800, -800), Vector2(-810, -790),
-		Vector2(1500, 500), Vector2(-1500, 300), Vector2(-1490, 310),
-		Vector2(200, 1200), Vector2(-600, -1100), Vector2(-590, -1090),
+		Vector2(-600, -400), Vector2(-610, -390), Vector2(-590, -410),
+		Vector2(900, -600), Vector2(910, -590), Vector2(890, -610),
+		Vector2(-800, 500), Vector2(450, 800), Vector2(460, 790),
+		Vector2(1400, 300), Vector2(-1300, -700), Vector2(-1290, -710),
+		Vector2(0, -800), Vector2(-300, 600), Vector2(-310, 590),
+		Vector2(1100, -200), Vector2(-500, 1100), Vector2(-510, 1090),
+		Vector2(700, -1000), Vector2(-900, -900), Vector2(-910, -890),
+		Vector2(1800, 600), Vector2(-1800, 400), Vector2(-1790, 410),
+		Vector2(300, 1400), Vector2(-700, -1300), Vector2(-690, -1290),
+		# Outer rocks for expanded map
+		Vector2(-2400, -800), Vector2(2500, -600), Vector2(-2100, 1200),
+		Vector2(2200, 1000), Vector2(-1600, -1400), Vector2(1700, 1600),
+		Vector2(-2800, 200), Vector2(2900, -300),
 	]
 	for pos in rock_positions:
 		_add_rock(deco_layer, pos)
 
-	# ---- Dirt paths radiating from town center (wider and longer) ----
+	# ---- Dirt paths radiating from town center (longer for bigger map) ----
 	var path_points = [
-		# Path north (wider)
-		Vector2(0, -180), Vector2(20, -230), Vector2(-10, -280), Vector2(0, -380),
-		Vector2(-50, -480), Vector2(-30, -530), Vector2(-100, -580), Vector2(-200, -700),
-		Vector2(-250, -800), Vector2(-300, -900), Vector2(-320, -1000),
+		# Path north
+		Vector2(0, -280), Vector2(20, -380), Vector2(-10, -480), Vector2(0, -600),
+		Vector2(-50, -750), Vector2(-30, -900), Vector2(-100, -1050), Vector2(-200, -1200),
+		Vector2(-250, -1400), Vector2(-300, -1600), Vector2(-350, -1800),
 		# Path east
-		Vector2(180, 0), Vector2(230, -15), Vector2(300, 0), Vector2(380, 10),
-		Vector2(420, -30), Vector2(500, -20), Vector2(550, -60), Vector2(700, -100),
-		Vector2(900, -200), Vector2(1100, -300), Vector2(1300, -400),
+		Vector2(280, 0), Vector2(400, -15), Vector2(520, 0), Vector2(650, 10),
+		Vector2(800, -30), Vector2(1000, -20), Vector2(1200, -60), Vector2(1500, -100),
+		Vector2(1800, -200), Vector2(2100, -300), Vector2(2400, -400),
 		# Path south
-		Vector2(0, 180), Vector2(-15, 240), Vector2(0, 300), Vector2(-40, 420),
-		Vector2(-60, 500), Vector2(-80, 560), Vector2(-100, 700), Vector2(0, 750),
-		Vector2(100, 800), Vector2(250, 900), Vector2(400, 1000),
+		Vector2(0, 280), Vector2(-15, 400), Vector2(0, 520), Vector2(-40, 700),
+		Vector2(-60, 850), Vector2(-80, 1000), Vector2(-100, 1200), Vector2(0, 1400),
+		Vector2(100, 1600), Vector2(250, 1800), Vector2(400, 2000),
 		# Path west
-		Vector2(-180, 0), Vector2(-240, 15), Vector2(-320, 30), Vector2(-400, 40),
-		Vector2(-480, 60), Vector2(-600, 80), Vector2(-640, 100), Vector2(-800, 150),
-		Vector2(-1000, 200), Vector2(-1100, 300), Vector2(-1200, 400),
+		Vector2(-280, 0), Vector2(-400, 15), Vector2(-520, 30), Vector2(-650, 40),
+		Vector2(-800, 60), Vector2(-1000, 80), Vector2(-1200, 100), Vector2(-1500, 150),
+		Vector2(-1800, 200), Vector2(-2100, 300), Vector2(-2400, 400),
 		# Path NE
-		Vector2(150, -200), Vector2(250, -350), Vector2(300, -400), Vector2(450, -550),
-		Vector2(550, -650), Vector2(650, -750),
+		Vector2(200, -300), Vector2(400, -500), Vector2(600, -700), Vector2(800, -900),
+		Vector2(1000, -1100), Vector2(1200, -1300),
 		# Path SW
-		Vector2(-200, 250), Vector2(-300, 380), Vector2(-400, 450), Vector2(-600, 550),
-		Vector2(-800, 600), Vector2(-900, 650),
+		Vector2(-300, 350), Vector2(-500, 550), Vector2(-700, 750), Vector2(-1000, 1000),
+		Vector2(-1300, 1200), Vector2(-1600, 1400),
+		# Path NW
+		Vector2(-200, -300), Vector2(-400, -500), Vector2(-600, -700), Vector2(-900, -900),
+		Vector2(-1200, -1100), Vector2(-1500, -1300),
+		# Path SE
+		Vector2(200, 350), Vector2(400, 550), Vector2(600, 750), Vector2(900, 1000),
+		Vector2(1200, 1200), Vector2(1500, 1400),
 	]
 	for pos in path_points:
 		_add_path_segment(deco_layer, pos)
 
-	# ---- Camp skull markers ----
-	_add_camp_marker(deco_layer, Vector2(-700, -460), "Goblins Lv1-2")
-	_add_camp_marker(deco_layer, Vector2(600, -660), "Goblins Lv1-2")
-	_add_camp_marker(deco_layer, Vector2(-300, -860), "Goblins Lv1-2")
-	_add_camp_marker(deco_layer, Vector2(-900, 560), "Wolves Lv2-3")
-	_add_camp_marker(deco_layer, Vector2(400, 760), "Wolves Lv2-3")
-	_add_camp_marker(deco_layer, Vector2(1000, 660), "Bandits Lv3-5")
-	_add_camp_marker(deco_layer, Vector2(-1200, -160), "Bandits Lv3-5")
-	_add_camp_marker(deco_layer, Vector2(1300, -460), "Bandits Lv3-5")
+	# ---- Camp skull markers (match new camp positions) ----
+	_add_camp_marker(deco_layer, Vector2(-900, -660), "Goblins Lv1-2")
+	_add_camp_marker(deco_layer, Vector2(800, -860), "Goblins Lv1-2")
+	_add_camp_marker(deco_layer, Vector2(-500, -1260), "Goblins Lv1-2")
+	_add_camp_marker(deco_layer, Vector2(-1400, 760), "Wolves Lv2-3")
+	_add_camp_marker(deco_layer, Vector2(600, 1160), "Wolves Lv2-3")
+	_add_camp_marker(deco_layer, Vector2(1600, -360), "Wolves Lv2-3")
+	_add_camp_marker(deco_layer, Vector2(1800, 960), "Bandits Lv3-5")
+	_add_camp_marker(deco_layer, Vector2(-2200, -360), "Bandits Lv3-5")
+	_add_camp_marker(deco_layer, Vector2(2400, -860), "Bandits Lv3-5")
+	_add_camp_marker(deco_layer, Vector2(-1800, 1360), "Bandits Lv3-5")
 
 	# ---- Dense grass tufts scattered everywhere ----
-	for i in range(120):
-		var gx = randf_range(-1800, 1800)
-		var gy = randf_range(-1400, 1400)
-		if Vector2(gx, gy).length() > 180:
+	for i in range(200):
+		var gx = randf_range(-3200, 3200)
+		var gy = randf_range(-2200, 2200)
+		if Vector2(gx, gy).length() > 400:
 			_add_grass_tuft(deco_layer, Vector2(gx, gy))
 
 	# ---- Bush clusters ----
-	for i in range(50):
-		var bx = randf_range(-1700, 1700)
-		var by = randf_range(-1300, 1300)
-		if Vector2(bx, by).length() > 200:
+	for i in range(90):
+		var bx = randf_range(-3100, 3100)
+		var by = randf_range(-2100, 2100)
+		if Vector2(bx, by).length() > 400:
 			_add_bush(deco_layer, Vector2(bx, by))
 
-	# ---- Flower patches (fewer, SC:BW is dark) ----
-	for i in range(8):
-		var fx = randf_range(-1500, 1500)
-		var fy = randf_range(-1200, 1200)
-		if Vector2(fx, fy).length() > 300:
+	# ---- Flower patches ----
+	for i in range(14):
+		var fx = randf_range(-2800, 2800)
+		var fy = randf_range(-2000, 2000)
+		if Vector2(fx, fy).length() > 500:
 			_add_flowers(deco_layer, Vector2(fx, fy))
 
 	# ---- Fallen logs scattered around ----
-	for i in range(12):
-		var lx = randf_range(-1600, 1600)
-		var ly = randf_range(-1200, 1200)
-		if Vector2(lx, ly).length() > 250:
+	for i in range(22):
+		var lx = randf_range(-3000, 3000)
+		var ly = randf_range(-2000, 2000)
+		if Vector2(lx, ly).length() > 400:
 			_add_fallen_log(deco_layer, Vector2(lx, ly))
 
 	# ---- Ground debris everywhere ----
-	for i in range(80):
-		var dx = randf_range(-1800, 1800)
-		var dy = randf_range(-1400, 1400)
+	for i in range(140):
+		var dx = randf_range(-3200, 3200)
+		var dy = randf_range(-2200, 2200)
 		_add_ground_debris(deco_layer, Vector2(dx, dy))
 
 	# ---- Mushroom clusters near moist areas ----
-	for i in range(20):
-		var mx = randf_range(-1600, 1600)
-		var my = randf_range(-1200, 1200)
-		if Vector2(mx, my).length() > 200:
+	for i in range(35):
+		var mx = randf_range(-3000, 3000)
+		var my = randf_range(-2000, 2000)
+		if Vector2(mx, my).length() > 400:
 			_add_mushrooms(deco_layer, Vector2(mx, my))
 
-	# ---- Vine decorations draped over rocks/trees ----
-	for i in range(15):
-		var vx = randf_range(-1500, 1500)
-		var vy = randf_range(-1100, 1100)
-		if Vector2(vx, vy).length() > 300:
+	# ---- Vine decorations ----
+	for i in range(25):
+		var vx = randf_range(-2800, 2800)
+		var vy = randf_range(-2000, 2000)
+		if Vector2(vx, vy).length() > 500:
 			_add_vines(deco_layer, Vector2(vx, vy))
 
 	# ---- Ambient floating particles (dust/pollen) ----
@@ -401,7 +420,7 @@ func _spawn_ambient_particles() -> void:
 	particles.lifetime = 8.0
 	particles.emitting = true
 	particles.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
-	particles.emission_rect_extents = Vector2(500, 350)
+	particles.emission_rect_extents = Vector2(800, 600)
 	particles.direction = Vector2(1, -0.3)
 	particles.spread = 40.0
 	particles.initial_velocity_min = 2.0

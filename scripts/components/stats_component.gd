@@ -39,6 +39,11 @@ var bonus_strength: int = 0
 var bonus_agility: int = 0
 var bonus_intelligence: int = 0
 
+# Armory upgrade bonuses
+var armory_weapon_bonus: int = 0
+var armory_armor_bonus: int = 0
+var armory_hp_bonus: int = 0
+
 # Temporary buffs
 var temp_armor: int = 0
 var temp_dodge: float = 0.0
@@ -65,20 +70,20 @@ func initialize_from_hero(hero_class_key: String) -> void:
 	_emit_all()
 
 func get_total_armor() -> int:
-	return armor + bonus_armor + temp_armor
+	return armor + bonus_armor + temp_armor + armory_armor_bonus
 
 func get_total_move_speed() -> float:
 	return move_speed + bonus_move_speed
 
 func get_total_max_hp() -> int:
-	return max_hp + bonus_max_hp
+	return max_hp + bonus_max_hp + armory_hp_bonus
 
 func get_total_max_mana() -> int:
 	return max_mana + bonus_max_mana
 
 func get_stats_dict() -> Dictionary:
 	return {
-		"attack_damage": attack_damage + weapon_damage,
+		"attack_damage": attack_damage + weapon_damage + armory_weapon_bonus,
 		"weapon_damage": weapon_damage,
 		"armor": get_total_armor(),
 		"strength": strength + bonus_strength,

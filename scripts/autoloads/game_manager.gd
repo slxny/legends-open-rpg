@@ -18,6 +18,14 @@ var total_kills: int = 0
 var killed_bosses: Array[String] = []
 var found_artifacts: Array[String] = []
 
+# Armory upgrade levels (0 = no upgrades, 100 = max)
+var weapon_upgrade_level: int = 0
+var armor_upgrade_level: int = 0
+
+func get_upgrade_cost(current_level: int) -> int:
+	# Escalating cost: 10g for first, ~10,000g for last
+	return int(10 * pow(current_level + 1, 1.5))
+
 func select_hero(hero_class: String) -> void:
 	current_hero_class = hero_class
 	hero_selected.emit(hero_class)

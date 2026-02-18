@@ -1,0 +1,60 @@
+[gd_scene load_steps=4 format=3 uid="uid://barmornpc"]
+
+[ext_resource type="Script" path="res://scenes/npcs/npc_armorer.gd" id="1_armorer"]
+[ext_resource type="Script" path="res://scenes/npcs/beacon.gd" id="2_beacon"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_armorer"]
+size = Vector2(28, 28)
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_armbeacon"]
+radius = 26.0
+
+[node name="Armorer" type="StaticBody2D"]
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("1_armorer")
+
+[node name="Sprite" type="Sprite2D" parent="."]
+texture_filter = 0
+offset = Vector2(0, -22)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_armorer")
+
+[node name="NameLabel" type="Label" parent="."]
+offset_left = -40.0
+offset_top = -30.0
+offset_right = 40.0
+offset_bottom = -16.0
+text = "Armory"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 11
+theme_override_colors/font_color = Color(1, 0.7, 0.3, 1)
+
+[node name="Beacon" type="Area2D" parent="."]
+position = Vector2(0, 32)
+collision_layer = 0
+collision_mask = 1
+script = ExtResource("2_beacon")
+beacon_color = Color(1, 1, 0, 1)
+beacon_label = "Armory"
+beacon_radius = 26.0
+
+[node name="Visual" type="Sprite2D" parent="Beacon"]
+texture_filter = 0
+
+[node name="Label" type="Label" parent="Beacon"]
+offset_left = -30.0
+offset_top = -16.0
+offset_right = 30.0
+offset_bottom = -2.0
+text = "Armory"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 10
+theme_override_colors/font_color = Color(1, 0.7, 0.3, 1)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Beacon"]
+shape = SubResource("CircleShape2D_armbeacon")
+
+[connection signal="body_entered" from="Beacon" to="Beacon" method="_on_body_entered"]
+[connection signal="body_exited" from="Beacon" to="Beacon" method="_on_body_exited"]

@@ -49,7 +49,7 @@ func _init_asset_dirs() -> void:
 			"dirt_patch", "cliff_face", "icicles"]:
 		_asset_dirs[n] = "environment"
 	# Buildings
-	for n in ["shop_building", "town_hall", "landing_pad", "hatchery"]:
+	for n in ["shop_building", "armory_building", "town_hall", "landing_pad", "hatchery"]:
 		_asset_dirs[n] = "buildings"
 	# Beacons
 	for n in ["beacon_green", "beacon_yellow", "beacon_blue", "beacon_red", "beacon_cyan"]:
@@ -93,6 +93,7 @@ func _generate_all() -> void:
 	_gen_or_load("icicles")
 	# Buildings
 	_gen_or_load("shop_building")
+	_gen_or_load("armory_building")
 	_gen_or_load("town_hall")
 	_gen_or_load("landing_pad")
 	# Beacons
@@ -775,6 +776,38 @@ func _gen_shop_building() -> void:
 	_fill_rect(img, 34, 18, 5, 8, Color(0.5, 0.4, 0.2))
 
 	textures["shop_building"] = ImageTexture.create_from_image(img)
+
+func _gen_armory_building() -> void:
+	var img = Image.create(44, 44, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	# Shadow
+	_fill_rect(img, 4, 38, 36, 5, Color(0, 0, 0, 0.2))
+	# Base — dark stone forge
+	_fill_rect(img, 4, 18, 36, 22, Color(0.35, 0.3, 0.28))
+	_fill_rect(img, 5, 19, 34, 20, Color(0.42, 0.38, 0.35))
+	# Roof — iron grey
+	_fill_rect(img, 2, 12, 40, 8, Color(0.25, 0.25, 0.3))
+	_fill_rect(img, 4, 10, 36, 4, Color(0.3, 0.3, 0.35))
+	_fill_rect(img, 8, 8, 28, 4, Color(0.35, 0.33, 0.38))
+	# Chimney
+	_fill_rect(img, 32, 2, 6, 10, Color(0.3, 0.25, 0.25))
+	_fill_rect(img, 33, 0, 4, 3, Color(0.25, 0.2, 0.2))
+	# Door — wide workshop entrance
+	_fill_rect(img, 14, 24, 12, 16, Color(0.25, 0.18, 0.1))
+	_fill_rect(img, 15, 25, 10, 14, Color(0.2, 0.14, 0.07))
+	# Forge glow through door
+	_fill_rect(img, 17, 30, 6, 8, Color(0.8, 0.4, 0.1, 0.3))
+	# Windows with orange forge glow
+	_fill_rect(img, 6, 21, 6, 5, Color(0.8, 0.5, 0.2))
+	_fill_rect(img, 32, 21, 6, 5, Color(0.8, 0.5, 0.2))
+	# Window frames
+	_fill_rect(img, 6, 23, 6, 1, Color(0.3, 0.25, 0.2))
+	_fill_rect(img, 9, 21, 1, 5, Color(0.3, 0.25, 0.2))
+	_fill_rect(img, 32, 23, 6, 1, Color(0.3, 0.25, 0.2))
+	_fill_rect(img, 35, 21, 1, 5, Color(0.3, 0.25, 0.2))
+	# Anvil sign
+	_fill_rect(img, 0, 20, 4, 6, Color(0.5, 0.5, 0.55))
+	textures["armory_building"] = ImageTexture.create_from_image(img)
 
 func _gen_town_hall() -> void:
 	var img = Image.create(48, 48, false, Image.FORMAT_RGBA8)

@@ -53,8 +53,8 @@ func _ready() -> void:
 	var ct = IsometricHelper.get_sprite_counter_transform()
 	sprite.transform = ct
 	_shadow.transform = ct
-	hp_bar.transform = ct
-	name_label.transform = ct
+	IsometricHelper.apply_counter_transform_to_control(hp_bar)
+	IsometricHelper.apply_counter_transform_to_control(name_label)
 
 func initialize(config: Dictionary) -> void:
 	enemy_name = config.get("name", "Enemy")
@@ -364,7 +364,7 @@ func _spawn_damage_number(amount: int, is_crit: bool) -> void:
 	settings.outline_size = 2 if not is_crit else 3
 	settings.outline_color = Color.BLACK
 	label.label_settings = settings
-	label.transform = IsometricHelper.get_sprite_counter_transform()
+	IsometricHelper.apply_counter_transform_to_control(label)
 	add_child(label)
 	var tween = create_tween()
 	if is_crit:

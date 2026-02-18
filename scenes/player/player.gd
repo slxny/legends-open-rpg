@@ -759,7 +759,7 @@ func _spawn_damage_number(amount: int, is_crit: bool) -> void:
 	settings.outline_size = 2
 	settings.outline_color = Color.BLACK
 	label.label_settings = settings
-	label.transform = IsometricHelper.get_sprite_counter_transform()
+	IsometricHelper.apply_counter_transform_to_control(label)
 	add_child(label)
 	var tween = create_tween()
 	tween.tween_property(label, "position:y", label.position.y - 30, 0.6)

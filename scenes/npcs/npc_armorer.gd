@@ -16,7 +16,7 @@ func _ready() -> void:
 	# Counter-transform sprite and label for isometric projection
 	var ct = IsometricHelper.get_sprite_counter_transform()
 	armory_sprite.transform = ct
-	name_label.transform = ct
+	IsometricHelper.apply_counter_transform_to_control(name_label)
 
 func _on_beacon_activated(_b: Area2D) -> void:
 	var dialogs = get_tree().get_nodes_in_group("armory_dialog")

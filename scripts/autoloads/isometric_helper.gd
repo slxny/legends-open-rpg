@@ -38,3 +38,10 @@ static func get_sprite_counter_transform() -> Transform2D:
 	var inv := get_iso_transform().affine_inverse()
 	# Return just the basis (no origin offset)
 	return Transform2D(inv.x, inv.y, Vector2.ZERO)
+
+## Apply the counter-transform to a Control node (Label, SCBar, etc.).
+## Control nodes don't support direct .transform assignment in Godot 4,
+## so we decompose into rotation + scale instead.
+static func apply_counter_transform_to_control(ctrl: Control) -> void:
+	ctrl.rotation = -PI / 4.0
+	ctrl.scale = Vector2(sqrt(0.5), sqrt(2.0))

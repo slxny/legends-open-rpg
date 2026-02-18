@@ -49,7 +49,10 @@ func _init_asset_dirs() -> void:
 			"dirt_patch", "cliff_face", "icicles"]:
 		_asset_dirs[n] = "environment"
 	# Buildings
-	for n in ["shop_building", "armory_building", "town_hall", "landing_pad", "hatchery"]:
+	for n in ["shop_building", "armory_building", "town_hall", "landing_pad", "hatchery",
+			"barracks_building", "inn_building", "watch_tower", "town_fountain",
+			"stable_building", "chapel_building",
+			"crate_stack", "barrel", "well", "lamp_post", "town_wall_h"]:
 		_asset_dirs[n] = "buildings"
 	# Beacons
 	for n in ["beacon_green", "beacon_yellow", "beacon_blue", "beacon_red", "beacon_cyan"]:
@@ -60,7 +63,7 @@ func _init_asset_dirs() -> void:
 	# Terrain
 	for n in ["grass_dark", "grass_light", "dirt", "dirt_path", "water",
 			"stone_floor", "snow", "ice", "ground_jungle", "ground_creep",
-			"ground_stone", "ground_snow", "ground_dirt"]:
+			"ground_stone", "ground_snow", "ground_dirt", "town_grass"]:
 		_asset_dirs[n] = "terrain"
 	# UI
 	for n in ["skull_icon", "portrait_frame", "hud_frame"]:
@@ -95,6 +98,18 @@ func _generate_all() -> void:
 	_gen_or_load("shop_building")
 	_gen_or_load("armory_building")
 	_gen_or_load("town_hall")
+	_gen_or_load("barracks_building")
+	_gen_or_load("inn_building")
+	_gen_or_load("watch_tower")
+	_gen_or_load("town_fountain")
+	_gen_or_load("stable_building")
+	_gen_or_load("chapel_building")
+	_gen_or_load("crate_stack")
+	_gen_or_load("barrel")
+	_gen_or_load("well")
+	_gen_or_load("lamp_post")
+	_gen_or_load("town_wall_h")
+	_gen_or_load("town_grass")
 	_gen_or_load("landing_pad")
 	# Beacons
 	_gen_or_load("beacon_green")
@@ -808,6 +823,231 @@ func _gen_armory_building() -> void:
 	# Anvil sign
 	_fill_rect(img, 0, 20, 4, 6, Color(0.5, 0.5, 0.55))
 	textures["armory_building"] = ImageTexture.create_from_image(img)
+
+func _gen_barracks_building() -> void:
+	var img = Image.create(48, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	_fill_rect(img, 4, 42, 40, 5, Color(0, 0, 0, 0.2))
+	# Base — grey stone military
+	_fill_rect(img, 3, 18, 42, 26, Color(0.4, 0.38, 0.35))
+	_fill_rect(img, 4, 19, 40, 24, Color(0.48, 0.45, 0.4))
+	# Roof — dark slate
+	_fill_rect(img, 1, 12, 46, 8, Color(0.28, 0.26, 0.24))
+	_fill_rect(img, 4, 8, 40, 6, Color(0.32, 0.3, 0.28))
+	_fill_rect(img, 10, 5, 28, 5, Color(0.36, 0.33, 0.3))
+	# Crenellations on roof
+	for cx in range(2, 44, 6):
+		_fill_rect(img, cx, 10, 3, 3, Color(0.36, 0.33, 0.3))
+	# Double doors
+	_fill_rect(img, 16, 28, 16, 16, Color(0.3, 0.2, 0.12))
+	_fill_rect(img, 17, 29, 6, 14, Color(0.25, 0.16, 0.08))
+	_fill_rect(img, 25, 29, 6, 14, Color(0.25, 0.16, 0.08))
+	# Arrow slits
+	_fill_rect(img, 7, 22, 2, 6, Color(0.15, 0.12, 0.1))
+	_fill_rect(img, 39, 22, 2, 6, Color(0.15, 0.12, 0.1))
+	# Banner pole + red banner
+	_fill_rect(img, 23, 0, 2, 8, Color(0.45, 0.35, 0.25))
+	_fill_rect(img, 25, 0, 6, 5, Color(0.7, 0.15, 0.1))
+	_fill_rect(img, 25, 5, 4, 2, Color(0.6, 0.12, 0.08))
+	textures["barracks_building"] = ImageTexture.create_from_image(img)
+
+func _gen_inn_building() -> void:
+	var img = Image.create(42, 42, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	_fill_rect(img, 4, 36, 34, 5, Color(0, 0, 0, 0.2))
+	# Base — warm wood
+	_fill_rect(img, 4, 16, 34, 22, Color(0.5, 0.35, 0.2))
+	_fill_rect(img, 5, 17, 32, 20, Color(0.58, 0.42, 0.25))
+	# Roof — warm brown
+	_fill_rect(img, 2, 10, 38, 8, Color(0.4, 0.22, 0.12))
+	_fill_rect(img, 5, 7, 32, 5, Color(0.45, 0.25, 0.14))
+	_fill_rect(img, 10, 4, 22, 5, Color(0.5, 0.28, 0.15))
+	# Chimney with smoke
+	_fill_rect(img, 30, 0, 5, 8, Color(0.4, 0.3, 0.25))
+	_fill_rect(img, 31, 0, 1, 1, Color(0.6, 0.6, 0.6, 0.3))
+	# Door
+	_fill_rect(img, 16, 24, 10, 14, Color(0.35, 0.2, 0.1))
+	_fill_rect(img, 17, 25, 8, 12, Color(0.3, 0.17, 0.08))
+	# Warm lit windows (yellow glow)
+	_fill_rect(img, 6, 20, 7, 6, Color(0.9, 0.75, 0.3))
+	_fill_rect(img, 29, 20, 7, 6, Color(0.9, 0.75, 0.3))
+	_fill_rect(img, 9, 20, 1, 6, Color(0.45, 0.3, 0.15))
+	_fill_rect(img, 6, 23, 7, 1, Color(0.45, 0.3, 0.15))
+	_fill_rect(img, 32, 20, 1, 6, Color(0.45, 0.3, 0.15))
+	_fill_rect(img, 29, 23, 7, 1, Color(0.45, 0.3, 0.15))
+	# Hanging sign
+	_fill_rect(img, 0, 18, 3, 2, Color(0.4, 0.3, 0.2))
+	_fill_rect(img, 0, 20, 5, 6, Color(0.5, 0.4, 0.2))
+	textures["inn_building"] = ImageTexture.create_from_image(img)
+
+func _gen_watch_tower() -> void:
+	var img = Image.create(24, 44, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	_fill_rect(img, 4, 40, 16, 3, Color(0, 0, 0, 0.2))
+	# Base — stone
+	_fill_rect(img, 6, 12, 12, 30, Color(0.42, 0.4, 0.36))
+	_fill_rect(img, 7, 13, 10, 28, Color(0.5, 0.47, 0.42))
+	# Top platform (wider than tower)
+	_fill_rect(img, 3, 6, 18, 8, Color(0.38, 0.36, 0.32))
+	_fill_rect(img, 4, 7, 16, 6, Color(0.45, 0.42, 0.38))
+	# Crenellations
+	_fill_rect(img, 3, 4, 3, 3, Color(0.42, 0.4, 0.36))
+	_fill_rect(img, 9, 4, 3, 3, Color(0.42, 0.4, 0.36))
+	_fill_rect(img, 15, 4, 3, 3, Color(0.42, 0.4, 0.36))
+	# Window slit
+	_fill_rect(img, 10, 20, 2, 5, Color(0.2, 0.15, 0.12))
+	# Torch glow at top
+	_fill_rect(img, 11, 2, 2, 3, Color(1.0, 0.7, 0.2, 0.8))
+	_fill_rect(img, 10, 1, 4, 2, Color(1.0, 0.6, 0.1, 0.4))
+	textures["watch_tower"] = ImageTexture.create_from_image(img)
+
+func _gen_town_fountain() -> void:
+	var img = Image.create(32, 32, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	# Outer basin — stone ring
+	_fill_rect(img, 4, 10, 24, 18, Color(0.45, 0.42, 0.38))
+	_fill_rect(img, 6, 12, 20, 14, Color(0.5, 0.47, 0.42))
+	# Water — blue pool
+	_fill_rect(img, 7, 13, 18, 12, Color(0.2, 0.45, 0.7))
+	_fill_rect(img, 8, 14, 16, 10, Color(0.25, 0.5, 0.75))
+	# Central pillar
+	_fill_rect(img, 13, 6, 6, 16, Color(0.55, 0.52, 0.48))
+	_fill_rect(img, 14, 4, 4, 4, Color(0.6, 0.57, 0.52))
+	# Water spray highlights
+	_fill_rect(img, 11, 8, 2, 2, Color(0.5, 0.7, 0.9, 0.6))
+	_fill_rect(img, 19, 8, 2, 2, Color(0.5, 0.7, 0.9, 0.6))
+	_fill_rect(img, 15, 3, 2, 2, Color(0.6, 0.8, 1.0, 0.5))
+	# Basin rim highlight
+	_fill_rect(img, 4, 10, 24, 1, Color(0.55, 0.52, 0.48))
+	textures["town_fountain"] = ImageTexture.create_from_image(img)
+
+func _gen_stable_building() -> void:
+	var img = Image.create(44, 38, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	_fill_rect(img, 3, 32, 38, 5, Color(0, 0, 0, 0.2))
+	# Base — wood barn
+	_fill_rect(img, 3, 14, 38, 20, Color(0.45, 0.3, 0.15))
+	_fill_rect(img, 4, 15, 36, 18, Color(0.52, 0.35, 0.18))
+	# Roof — thatch/straw
+	_fill_rect(img, 1, 8, 42, 8, Color(0.55, 0.5, 0.25))
+	_fill_rect(img, 4, 5, 36, 5, Color(0.6, 0.55, 0.3))
+	_fill_rect(img, 10, 3, 24, 4, Color(0.65, 0.58, 0.32))
+	# Wide open front
+	_fill_rect(img, 10, 20, 24, 14, Color(0.2, 0.14, 0.08))
+	# Hay bales inside
+	_fill_rect(img, 12, 28, 8, 5, Color(0.65, 0.6, 0.3))
+	_fill_rect(img, 24, 26, 8, 7, Color(0.6, 0.55, 0.28))
+	# Fence posts
+	_fill_rect(img, 0, 18, 2, 14, Color(0.4, 0.28, 0.14))
+	_fill_rect(img, 42, 18, 2, 14, Color(0.4, 0.28, 0.14))
+	textures["stable_building"] = ImageTexture.create_from_image(img)
+
+func _gen_chapel_building() -> void:
+	var img = Image.create(36, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	_fill_rect(img, 4, 42, 28, 5, Color(0, 0, 0, 0.2))
+	# Base — white stone
+	_fill_rect(img, 4, 20, 28, 24, Color(0.6, 0.58, 0.55))
+	_fill_rect(img, 5, 21, 26, 22, Color(0.68, 0.65, 0.62))
+	# Roof — dark blue/grey
+	_fill_rect(img, 2, 14, 32, 8, Color(0.25, 0.28, 0.38))
+	_fill_rect(img, 6, 10, 24, 6, Color(0.3, 0.32, 0.42))
+	_fill_rect(img, 10, 7, 16, 5, Color(0.32, 0.35, 0.45))
+	# Steeple
+	_fill_rect(img, 14, 2, 8, 8, Color(0.6, 0.58, 0.55))
+	_fill_rect(img, 16, 0, 4, 4, Color(0.65, 0.62, 0.58))
+	# Cross on top
+	_fill_rect(img, 17, 0, 2, 1, Color(0.8, 0.75, 0.4))
+	# Arched door
+	_fill_rect(img, 13, 30, 10, 14, Color(0.35, 0.2, 0.12))
+	_fill_rect(img, 14, 28, 8, 2, Color(0.55, 0.52, 0.48))
+	# Stained glass window (colored)
+	_fill_rect(img, 8, 24, 4, 5, Color(0.3, 0.5, 0.8))
+	_fill_rect(img, 24, 24, 4, 5, Color(0.7, 0.3, 0.3))
+	textures["chapel_building"] = ImageTexture.create_from_image(img)
+
+func _gen_crate_stack() -> void:
+	var img = Image.create(14, 14, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	# Bottom crate
+	_fill_rect(img, 1, 6, 10, 8, Color(0.5, 0.38, 0.2))
+	_fill_rect(img, 2, 7, 8, 6, Color(0.58, 0.44, 0.25))
+	_fill_rect(img, 5, 6, 2, 8, Color(0.42, 0.32, 0.16))
+	# Top crate (smaller, offset)
+	_fill_rect(img, 4, 1, 9, 7, Color(0.52, 0.4, 0.22))
+	_fill_rect(img, 5, 2, 7, 5, Color(0.6, 0.46, 0.26))
+	_fill_rect(img, 8, 1, 1, 7, Color(0.44, 0.34, 0.18))
+	textures["crate_stack"] = ImageTexture.create_from_image(img)
+
+func _gen_barrel() -> void:
+	var img = Image.create(12, 14, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	# Barrel body
+	_fill_rect(img, 2, 2, 8, 11, Color(0.48, 0.34, 0.18))
+	_fill_rect(img, 3, 3, 6, 9, Color(0.55, 0.4, 0.22))
+	# Metal bands
+	_fill_rect(img, 1, 4, 10, 1, Color(0.4, 0.4, 0.42))
+	_fill_rect(img, 1, 9, 10, 1, Color(0.4, 0.4, 0.42))
+	# Top
+	_fill_rect(img, 3, 1, 6, 2, Color(0.5, 0.36, 0.2))
+	textures["barrel"] = ImageTexture.create_from_image(img)
+
+func _gen_well() -> void:
+	var img = Image.create(20, 22, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	# Stone base ring
+	_fill_rect(img, 3, 10, 14, 10, Color(0.45, 0.42, 0.38))
+	_fill_rect(img, 4, 11, 12, 8, Color(0.5, 0.47, 0.42))
+	# Dark center (water)
+	_fill_rect(img, 6, 13, 8, 5, Color(0.12, 0.18, 0.28))
+	# Support posts
+	_fill_rect(img, 4, 4, 2, 10, Color(0.4, 0.28, 0.14))
+	_fill_rect(img, 14, 4, 2, 10, Color(0.4, 0.28, 0.14))
+	# Crossbar
+	_fill_rect(img, 4, 3, 12, 2, Color(0.42, 0.3, 0.16))
+	# Rope
+	_fill_rect(img, 9, 5, 1, 8, Color(0.55, 0.45, 0.3))
+	# Bucket
+	_fill_rect(img, 8, 11, 3, 3, Color(0.4, 0.35, 0.25))
+	textures["well"] = ImageTexture.create_from_image(img)
+
+func _gen_lamp_post() -> void:
+	var img = Image.create(10, 24, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	# Post
+	_fill_rect(img, 4, 6, 2, 17, Color(0.3, 0.3, 0.32))
+	# Base
+	_fill_rect(img, 3, 21, 4, 2, Color(0.35, 0.33, 0.3))
+	# Lamp housing
+	_fill_rect(img, 2, 3, 6, 4, Color(0.35, 0.33, 0.3))
+	# Glow
+	_fill_rect(img, 3, 4, 4, 2, Color(1.0, 0.85, 0.4, 0.8))
+	# Top cap
+	_fill_rect(img, 3, 2, 4, 2, Color(0.38, 0.36, 0.33))
+	textures["lamp_post"] = ImageTexture.create_from_image(img)
+
+func _gen_town_wall_h() -> void:
+	var img = Image.create(40, 14, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	# Wall body
+	_fill_rect(img, 0, 4, 40, 10, Color(0.42, 0.4, 0.36))
+	_fill_rect(img, 0, 5, 40, 8, Color(0.48, 0.45, 0.4))
+	# Crenellations
+	for cx in range(0, 40, 8):
+		_fill_rect(img, cx, 0, 4, 5, Color(0.45, 0.42, 0.38))
+	# Mortar lines
+	_fill_rect(img, 0, 8, 40, 1, Color(0.38, 0.36, 0.32))
+	textures["town_wall_h"] = ImageTexture.create_from_image(img)
+
+func _gen_town_grass() -> void:
+	var img = Image.create(16, 16, false, Image.FORMAT_RGBA8)
+	# Maintained grass — brighter green with subtle variation
+	img.fill(Color(0.22, 0.45, 0.15))
+	for y in range(16):
+		for x in range(16):
+			var v = (hash(x * 17 + y * 31) % 100) / 1000.0 - 0.05
+			img.set_pixel(x, y, Color(0.22 + v, 0.45 + v * 1.5, 0.15 + v * 0.5))
+	textures["town_grass"] = ImageTexture.create_from_image(img)
 
 func _gen_town_hall() -> void:
 	var img = Image.create(48, 48, false, Image.FORMAT_RGBA8)

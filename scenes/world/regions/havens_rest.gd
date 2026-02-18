@@ -19,6 +19,7 @@ func _ready() -> void:
 	info_beacon.activated.connect(_on_info_beacon)
 
 	_generate_terrain()
+	_generate_town()
 	_generate_decorations()
 
 func _on_heal_beacon(_b: Area2D) -> void:
@@ -52,17 +53,27 @@ func _generate_terrain() -> void:
 	add_child(ground_sprite)
 	move_child(ground_sprite, 0)
 
-	# Town stone floor overlay — much larger town square
+	# Town stone floor overlay — large base for the structured town
 	var town_stone = Sprite2D.new()
 	town_stone.texture = SpriteGenerator.get_texture("ground_stone")
 	town_stone.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	town_stone.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
 	town_stone.region_enabled = true
-	town_stone.region_rect = Rect2(0, 0, 700, 500)
-	town_stone.position = Vector2(-350, -250)
+	town_stone.region_rect = Rect2(0, 0, 1000, 800)
+	town_stone.position = Vector2(-500, -400)
 	town_stone.centered = false
 	town_stone.z_index = -9
 	add_child(town_stone)
+
+	# Green grass quadrants overlaid on stone (the uncovered stone forms paths)
+	# NW quadrant
+	_add_grass_quad(Vector2(-460, -360), Vector2(380, 280))
+	# NE quadrant
+	_add_grass_quad(Vector2(80, -360), Vector2(380, 280))
+	# SW quadrant
+	_add_grass_quad(Vector2(-460, 80), Vector2(380, 280))
+	# SE quadrant
+	_add_grass_quad(Vector2(80, 80), Vector2(380, 280))
 
 	# Dark creep ground patches near each camp
 	for camp_pos in _camp_positions:
@@ -73,7 +84,7 @@ func _generate_terrain() -> void:
 	rng.seed = 555
 	for _i in range(70):
 		var pos = Vector2(rng.randf_range(-3200, 3200), rng.randf_range(-2200, 2200))
-		if pos.length() > 400:  # Avoid expanded town center
+		if pos.length() > 550:  # Avoid town area
 			_add_dirt_ground_patch(pos)
 
 func _add_creep_ground(center: Vector2, radius: float) -> void:
@@ -101,6 +112,121 @@ func _add_dirt_ground_patch(pos: Vector2) -> void:
 	patch.z_index = -9
 	add_child(patch)
 
+func _add_grass_quad(pos: Vector2, size: Vector2) -> void:
+	var grass = Sprite2D.new()
+	grass.texture = SpriteGenerator.get_texture("town_grass")
+	grass.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	grass.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
+	grass.region_enabled = true
+	grass.region_rect = Rect2(0, 0, size.x, size.y)
+	grass.position = pos
+	grass.centered = false
+	grass.z_index = -8
+	add_child(grass)
+
+# ============================================================
+# TOWN: Structured buildings, walls, and decorations
+# ============================================================
+
+func _generate_town() -> void:
+	var town = $Decorations  # Reuse deco layer for z-sorting
+
+	# ---- Town walls / ramparts around perimeter ----
+	# North wall
+	for wx in range(-460, 461, 42):
+		_add_town_building(town, Vector2(wx, -380), "town_wall_h")
+	# South wall
+	for wx in range(-460, 461, 42):
+		_add_town_building(town, Vector2(wx, 370), "town_wall_h")
+	# West wall segments (skip gate area around y=0)
+	for wy in range(-360, 361, 42):
+		if abs(wy) > 60:
+			_add_town_building(town, Vector2(-480, wy), "town_wall_h")
+	# East wall segments
+	for wy in range(-360, 361, 42):
+		if abs(wy) > 60:
+			_add_town_building(town, Vector2(460, wy), "town_wall_h")
+
+	# ---- Watch towers at 4 corners ----
+	_add_town_building(town, Vector2(-460, -370), "watch_tower")
+	_add_town_building(town, Vector2(450, -370), "watch_tower")
+	_add_town_building(town, Vector2(-460, 340), "watch_tower")
+	_add_town_building(town, Vector2(450, 340), "watch_tower")
+
+	# ---- Central fountain / monument ----
+	_add_town_building(town, Vector2(0, 10), "town_fountain")
+
+	# ---- Non-interactive buildings (visual only) ----
+	# NW quadrant: Inn
+	_add_town_building(town, Vector2(-260, -220), "inn_building")
+	_add_building_label(town, Vector2(-260, -190), "Inn")
+	# NE quadrant: (Shop is interactive, placed via .tscn)
+	# SE quadrant: Barracks
+	_add_town_building(town, Vector2(260, 160), "barracks_building")
+	_add_building_label(town, Vector2(260, 190), "Barracks")
+	# Additional buildings in quadrants
+	_add_town_building(town, Vector2(-300, 180), "stable_building")
+	_add_building_label(town, Vector2(-300, 200), "Stables")
+	_add_town_building(town, Vector2(280, -220), "chapel_building")
+	_add_building_label(town, Vector2(280, -190), "Chapel")
+
+	# ---- Lamp posts along the main roads ----
+	for lx in [-160, -80, 80, 160]:
+		_add_town_building(town, Vector2(lx, -5), "lamp_post")
+	for ly in [-160, -80, 80, 160]:
+		_add_town_building(town, Vector2(-5, ly), "lamp_post")
+
+	# ---- Crates, barrels, and wells scattered in town ----
+	# Near shop area
+	_add_town_building(town, Vector2(220, -100), "crate_stack")
+	_add_town_building(town, Vector2(230, -85), "barrel")
+	_add_town_building(town, Vector2(210, -85), "barrel")
+	# Near armory
+	_add_town_building(town, Vector2(-220, -100), "crate_stack")
+	_add_town_building(town, Vector2(-230, -85), "crate_stack")
+	_add_town_building(town, Vector2(-210, -85), "barrel")
+	# Near barracks
+	_add_town_building(town, Vector2(310, 130), "crate_stack")
+	_add_town_building(town, Vector2(320, 145), "barrel")
+	_add_town_building(town, Vector2(200, 140), "barrel")
+	# Near inn
+	_add_town_building(town, Vector2(-310, -200), "barrel")
+	_add_town_building(town, Vector2(-320, -190), "barrel")
+	# Near stables
+	_add_town_building(town, Vector2(-350, 160), "crate_stack")
+	_add_town_building(town, Vector2(-240, 160), "barrel")
+	# Well in town
+	_add_town_building(town, Vector2(120, 100), "well")
+	_add_town_building(town, Vector2(-120, -100), "well")
+
+	# ---- Extra grass tufts within town grass quadrants ----
+	var rng = RandomNumberGenerator.new()
+	rng.seed = 777
+	for _i in range(40):
+		var qx = rng.randf_range(-420, 420)
+		var qy = rng.randf_range(-320, 320)
+		# Only place on grass areas (not on paths)
+		if abs(qx) > 50 and abs(qy) > 50:
+			_add_grass_tuft($Decorations, Vector2(qx, qy))
+
+func _add_town_building(parent: Node2D, pos: Vector2, tex_name: String) -> void:
+	var spr = Sprite2D.new()
+	spr.position = pos
+	spr.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	spr.texture = SpriteGenerator.get_texture(tex_name)
+	spr.z_index = 0
+	parent.add_child(spr)
+
+func _add_building_label(parent: Node2D, pos: Vector2, text: String) -> void:
+	var label = Label.new()
+	label.text = text
+	label.position = pos + Vector2(-25, 0)
+	label.add_theme_font_size_override("font_size", 9)
+	label.add_theme_color_override("font_color", Color(0.8, 0.8, 0.7, 0.6))
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.custom_minimum_size = Vector2(50, 0)
+	parent.add_child(label)
+
 # ============================================================
 # DECORATIONS: Dense SC:BW jungle foliage
 # ============================================================
@@ -124,14 +250,14 @@ func _generate_decorations() -> void:
 
 	# ---- Interior tree clusters (expanded across larger map) ----
 	var cluster_centers = [
-		# Inner ring (near town)
-		Vector2(-500, -700), Vector2(300, -500), Vector2(-700, 400),
-		Vector2(500, 300), Vector2(-300, 600), Vector2(600, -300),
+		# Inner ring (just outside town walls)
+		Vector2(-600, -700), Vector2(400, -600), Vector2(-700, 500),
+		Vector2(600, 500), Vector2(-400, 700), Vector2(700, -500),
 		# Mid ring
 		Vector2(-1000, -900), Vector2(1000, -800), Vector2(-1200, 500),
-		Vector2(1100, 600), Vector2(-800, -400), Vector2(800, 400),
+		Vector2(1100, 600), Vector2(-800, -600), Vector2(800, 600),
 		Vector2(0, -1200), Vector2(0, 1200), Vector2(-600, 900),
-		Vector2(700, -600), Vector2(-400, -200), Vector2(400, 800),
+		Vector2(700, -700), Vector2(-700, -500), Vector2(500, 800),
 		# Outer ring (far from town, filling expanded map)
 		Vector2(-2000, -600), Vector2(2000, -400), Vector2(-1800, 1000),
 		Vector2(1900, 800), Vector2(-2500, -1200), Vector2(2500, -1100),
@@ -226,28 +352,28 @@ func _generate_decorations() -> void:
 	for i in range(200):
 		var gx = randf_range(-3200, 3200)
 		var gy = randf_range(-2200, 2200)
-		if Vector2(gx, gy).length() > 400:
+		if Vector2(gx, gy).length() > 550:
 			_add_grass_tuft(deco_layer, Vector2(gx, gy))
 
 	# ---- Bush clusters ----
 	for i in range(90):
 		var bx = randf_range(-3100, 3100)
 		var by = randf_range(-2100, 2100)
-		if Vector2(bx, by).length() > 400:
+		if Vector2(bx, by).length() > 550:
 			_add_bush(deco_layer, Vector2(bx, by))
 
 	# ---- Flower patches ----
 	for i in range(14):
 		var fx = randf_range(-2800, 2800)
 		var fy = randf_range(-2000, 2000)
-		if Vector2(fx, fy).length() > 500:
+		if Vector2(fx, fy).length() > 600:
 			_add_flowers(deco_layer, Vector2(fx, fy))
 
 	# ---- Fallen logs scattered around ----
 	for i in range(22):
 		var lx = randf_range(-3000, 3000)
 		var ly = randf_range(-2000, 2000)
-		if Vector2(lx, ly).length() > 400:
+		if Vector2(lx, ly).length() > 550:
 			_add_fallen_log(deco_layer, Vector2(lx, ly))
 
 	# ---- Ground debris everywhere ----
@@ -260,14 +386,14 @@ func _generate_decorations() -> void:
 	for i in range(35):
 		var mx = randf_range(-3000, 3000)
 		var my = randf_range(-2000, 2000)
-		if Vector2(mx, my).length() > 400:
+		if Vector2(mx, my).length() > 550:
 			_add_mushrooms(deco_layer, Vector2(mx, my))
 
 	# ---- Vine decorations ----
 	for i in range(25):
 		var vx = randf_range(-2800, 2800)
 		var vy = randf_range(-2000, 2000)
-		if Vector2(vx, vy).length() > 500:
+		if Vector2(vx, vy).length() > 600:
 			_add_vines(deco_layer, Vector2(vx, vy))
 
 	# ---- Ambient floating particles (dust/pollen) ----

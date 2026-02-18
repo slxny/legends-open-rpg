@@ -21,24 +21,24 @@ z_index = -5
 
 [node name="TownLabel" type="Label" parent="."]
 offset_left = -80.0
-offset_top = -260.0
+offset_top = -410.0
 offset_right = 80.0
-offset_bottom = -240.0
+offset_bottom = -390.0
 text = "Haven's Rest"
 horizontal_alignment = 1
-theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_size = 16
 theme_override_colors/font_color = Color(0.9, 0.85, 0.6, 1)
 
 [node name="HealBeacon" parent="." instance=ExtResource("4_beacon")]
-position = Vector2(0, 120)
+position = Vector2(0, 70)
 beacon_color = Color(0.2, 1, 0.2, 1)
 beacon_label = "Heal"
 
 [node name="Shopkeeper" parent="." instance=ExtResource("3_shop")]
-position = Vector2(180, -60)
+position = Vector2(260, -100)
 
 [node name="Armorer" parent="." instance=ExtResource("5_armorer")]
-position = Vector2(-180, -60)
+position = Vector2(-260, -100)
 
 [node name="GoblinCamp1" parent="." instance=ExtResource("2_camp")]
 position = Vector2(-900, -700)
@@ -153,6 +153,6 @@ offset_bottom = 2500.0
 color = Color(0.12, 0.1, 0.06, 1)
 
 [node name="InfoBeacon" parent="." instance=ExtResource("4_beacon")]
-position = Vector2(-120, -120)
+position = Vector2(0, -70)
 beacon_color = Color(0.3, 0.5, 1, 1)
 beacon_label = "Info"

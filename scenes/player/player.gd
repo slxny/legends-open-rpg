@@ -148,13 +148,6 @@ func _unhandled_input(event: InputEvent) -> void:
 				_move_target = get_global_mouse_position()
 				_is_moving_to_target = true
 
-	# Press A to attack-move selected enemy
-	if event is InputEventKey and event.pressed and event.keycode == KEY_A:
-		if is_instance_valid(_selected_enemy) and not _selected_enemy.get("_is_dead"):
-			_attack_target = _selected_enemy
-			_is_attacking_target = true
-			_is_moving_to_target = false
-
 	# Abilities (Q and E)
 	if event.is_action_pressed("ability_1"):
 		_use_ability("ability_1")

@@ -228,17 +228,20 @@ func _create_selection_circle() -> void:
 	_selection_circle = Sprite2D.new()
 	_selection_circle.texture = SpriteGenerator.get_texture("selection_red")
 	_selection_circle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	_selection_circle.z_index = -1
+	_selection_circle.z_index = 1
+	_selection_circle.scale = Vector2(2.0, 2.0)
 	get_tree().current_scene.add_child(_selection_circle)
-	# Animate in: scale pop from 0
-	_selection_circle.scale = Vector2.ZERO
-	var pop_tween = _selection_circle.create_tween()
-	pop_tween.tween_property(_selection_circle, "scale", Vector2(1.3, 1.3), 0.08).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	pop_tween.tween_property(_selection_circle, "scale", Vector2(1.0, 1.0), 0.06)
-	# Start pulsing
-	var pulse = _selection_circle.create_tween().set_loops()
-	pulse.tween_property(_selection_circle, "scale", Vector2(1.12, 1.12), 0.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	pulse.tween_property(_selection_circle, "scale", Vector2(0.95, 0.95), 0.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	# Pop in then pulse — chained so they don't fight over scale
+	var tween = _selection_circle.create_tween()
+	tween.tween_property(_selection_circle, "scale", Vector2(2.6, 2.6), 0.08).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_property(_selection_circle, "scale", Vector2(2.0, 2.0), 0.06)
+	tween.tween_callback(func():
+		if not is_instance_valid(_selection_circle):
+			return
+		var pulse = _selection_circle.create_tween().set_loops()
+		pulse.tween_property(_selection_circle, "scale", Vector2(2.2, 2.2), 0.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		pulse.tween_property(_selection_circle, "scale", Vector2(1.9, 1.9), 0.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	)
 
 func _destroy_selection_circle() -> void:
 	if _selection_circle and is_instance_valid(_selection_circle):

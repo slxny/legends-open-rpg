@@ -130,8 +130,19 @@ func _physics_process(delta: float) -> void:
 	# Update selection circle on selected enemy
 	_update_selection_circle()
 
+const ZOOM_MIN := Vector2(1.5, 1.5)
+const ZOOM_MAX := Vector2(5.0, 5.0)
+const ZOOM_STEP := 0.25
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed:
+		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
+			camera.zoom = (camera.zoom + Vector2(ZOOM_STEP, ZOOM_STEP)).clamp(ZOOM_MIN, ZOOM_MAX)
+			return
+		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			camera.zoom = (camera.zoom - Vector2(ZOOM_STEP, ZOOM_STEP)).clamp(ZOOM_MIN, ZOOM_MAX)
+			return
+
 		if event.button_index == MOUSE_BUTTON_LEFT:
 			# Left-click: select enemy and attack-move, OR move to position
 			var target = _get_clickable_at_mouse()

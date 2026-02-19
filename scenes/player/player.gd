@@ -253,16 +253,36 @@ func _get_clickable_at_mouse() -> Node2D:
 		return results[0]["collider"]
 	return null
 
+func _get_aim_direction() -> Vector2:
+	# Prefer held arrow/WASD keys, fall back to mouse direction
+	var input_raw = Vector2(
+		Input.get_axis("move_left", "move_right"),
+		Input.get_axis("move_up", "move_down")
+	)
+	if input_raw.length() > 0.25:
+		return input_raw.normalized()
+	return (_get_world_mouse_pos() - global_position).normalized()
+
 func _use_ability(ability_key: String) -> void:
 	var ability_data = ability_mgr.use_ability(ability_key, self)
 	if ability_data.is_empty():
 		return
+
+	# Capture aim direction NOW (before the delay), so held keys at cast time matter
+	var aim_dir = _get_aim_direction()
+
+	# Face the aim direction
+	if aim_dir.x < -0.1:
+		sprite.flip_h = true
+	elif aim_dir.x > 0.1:
+		sprite.flip_h = false
+
 	# SC:BW trigger delay feel
 	await get_tree().create_timer(0.3).timeout
 	if ability_data.has("damage_multiplier") and ability_data.has("radius"):
-		_execute_aoe_ability(ability_data)
+		_execute_aoe_ability(ability_data, aim_dir)
 	elif ability_data.has("projectile_count"):
-		_execute_projectile_ability(ability_data)
+		_execute_projectile_ability(ability_data, aim_dir)
 	elif ability_data.has("armor_bonus"):
 		ability_mgr.apply_buff("armor", ability_data["armor_bonus"], ability_data["duration"])
 		_spawn_buff_vfx(Color(0.4, 0.6, 1.0, 0.4), ability_data["duration"])
@@ -272,12 +292,11 @@ func _use_ability(ability_key: String) -> void:
 		_spawn_buff_vfx(Color(0.2, 1.0, 0.4, 0.3), ability_data["duration"])
 		GameManager.game_message.emit("Evasion! +%d%% Dodge" % int(ability_data["dodge_bonus"] * 100), Color(0.3, 1.0, 0.5))
 
-func _execute_aoe_ability(ability_data: Dictionary) -> void:
-	var mouse_dir = (_get_world_mouse_pos() - global_position).normalized()
+func _execute_aoe_ability(ability_data: Dictionary, aim_dir: Vector2) -> void:
 	var radius = ability_data.get("radius", 80.0)
 	var arc = deg_to_rad(ability_data.get("arc_degrees", 120.0))
 
-	_spawn_slash_vfx(mouse_dir, radius, 1.5)
+	_spawn_slash_vfx(aim_dir, radius, 1.5)
 
 	var enemies = get_tree().get_nodes_in_group("enemies")
 	for enemy in enemies:
@@ -286,15 +305,15 @@ func _execute_aoe_ability(ability_data: Dictionary) -> void:
 		var to_enemy = enemy.global_position - global_position
 		if to_enemy.length() > radius:
 			continue
-		var angle_diff = abs(mouse_dir.angle_to(to_enemy.normalized()))
+		var angle_diff = abs(aim_dir.angle_to(to_enemy.normalized()))
 		if angle_diff > arc / 2.0:
 			continue
 		var result = CombatManager.calculate_damage(stats.get_stats_dict(), enemy.get_stats_dict(), ability_data["damage_multiplier"])
 		enemy.take_damage(result["damage"], result["is_crit"])
 	_do_screen_shake(4.0)
 
-func _execute_projectile_ability(ability_data: Dictionary) -> void:
-	var base_dir = (_get_world_mouse_pos() - global_position).normalized()
+func _execute_projectile_ability(ability_data: Dictionary, aim_dir: Vector2) -> void:
+	var base_dir = aim_dir
 	var count = ability_data.get("projectile_count", 3)
 	var spread = deg_to_rad(ability_data.get("spread_degrees", 30.0))
 	var speed = ability_data.get("projectile_speed", 400.0)

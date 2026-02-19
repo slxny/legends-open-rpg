@@ -23,7 +23,6 @@ var weapon_upgrade_level: int = 0
 var armor_upgrade_level: int = 0
 
 func get_upgrade_cost(current_level: int) -> int:
-	# Escalating cost: 10g for first, ~10,000g for last
 	return int(10 * pow(current_level + 1, 1.5))
 
 func select_hero(hero_class: String) -> void:
@@ -32,13 +31,36 @@ func select_hero(hero_class: String) -> void:
 
 func add_gold(amount: int) -> void:
 	gold += amount
+	# Mirror to EconomyManager for multiplayer-readiness
+	EconomyManager.add_gold(amount, 0)
 
 func spend_gold(amount: int) -> bool:
 	if gold >= amount:
 		gold -= amount
+		EconomyManager.set_gold(gold, 0)
 		return true
 	return false
 
 func start_game() -> void:
 	gold = 50  # Starting gold
+	EconomyManager.set_gold(50, 0)
+	# Initialize death counters for game start
+	DeathCounterSystem.reset_all()
+	DeathCounterSystem.set_value("gold_p0", 50)
+	DeathCounterSystem.set_value("game_started", 1)
 	game_started.emit()
+
+func record_kill(enemy_name: String) -> void:
+	total_kills += 1
+	DeathCounterSystem.add_value("total_kills", 1)
+	DeathCounterSystem.add_value("kills_%s" % enemy_name, 1)
+
+func record_boss_kill(boss_id: String) -> void:
+	if boss_id not in killed_bosses:
+		killed_bosses.append(boss_id)
+	DeathCounterSystem.set_flag("boss_killed_%s" % boss_id)
+
+func record_artifact(artifact_id: String) -> void:
+	if artifact_id not in found_artifacts:
+		found_artifacts.append(artifact_id)
+	DeathCounterSystem.set_flag("artifact_%s" % artifact_id)

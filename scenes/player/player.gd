@@ -11,6 +11,7 @@ signal attacked(target: Node2D)
 @onready var pickup_area: Area2D = $PickupArea
 
 var hero_class: String = ""
+var player_id: int = 0
 var _enemies_in_range: Array[Node2D] = []
 
 # Click-to-move
@@ -22,6 +23,10 @@ var _shadow: Sprite2D = null
 # Attack state
 var _is_attack_animating: bool = false
 var _attack_cooldown: float = 0.0
+
+# Sprite upgrade milestones: level -> texture key suffix
+const SPRITE_UPGRADE_LEVELS: Array[int] = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50]
+var _current_sprite_tier: int = 0
 
 # Directional attack tracking
 var _attack_dir: Vector2 = Vector2.RIGHT   # Direction used in the last attack
@@ -67,6 +72,13 @@ func _ready() -> void:
 	_shadow.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	_shadow.z_index = -1
 	add_child(_shadow)
+
+	# Sync initial state to DeathCounterSystem
+	_sync_to_death_counters()
+	# Connect level-up for sprite upgrade and DC sync
+	stats.leveled_up.connect(_on_level_up_sprite_upgrade)
+	# Register fog of war update trigger
+	_register_fog_trigger()
 
 
 func _physics_process(delta: float) -> void:
@@ -755,3 +767,36 @@ func _do_hit_flash() -> void:
 	sprite.modulate = Color(1, 0.5, 0.5)
 	var tween = create_tween()
 	tween.tween_property(sprite, "modulate", Color.WHITE, 0.15)
+
+## Sprite upgrade at level milestones (5, 10, 15, ... 50)
+func _on_level_up_sprite_upgrade(new_level: int) -> void:
+	_sync_to_death_counters()
+	# Check if we hit a sprite upgrade tier
+	var tier = 0
+	for threshold in SPRITE_UPGRADE_LEVELS:
+		if new_level >= threshold:
+			tier += 1
+	if tier > _current_sprite_tier:
+		_current_sprite_tier = tier
+		_apply_sprite_upgrade(tier)
+		GameManager.game_message.emit("LEVEL UP!", Color(1.0, 0.9, 0.2))
+
+func _apply_sprite_upgrade(tier: int) -> void:
+	# Try to load tier-specific texture: e.g. blade_knight_t2
+	var tier_key = "%s_t%d" % [hero_class, tier]
+	var tex = SpriteGenerator.get_texture(tier_key)
+	if tex:
+		sprite.texture = tex
+		_idle_texture = tex
+
+func _sync_to_death_counters() -> void:
+	DeathCounterSystem.set_value("level_p%d" % player_id, stats.level)
+	DeathCounterSystem.set_value("xp_p%d" % player_id, stats.xp)
+	DeathCounterSystem.set_value("hp_p%d" % player_id, stats.current_hp)
+	DeathCounterSystem.set_value("max_hp_p%d" % player_id, stats.get_total_max_hp())
+
+func _register_fog_trigger() -> void:
+	var fog_trigger = TriggerEngine.Trigger.new()
+	fog_trigger.conditions = [func(): return is_instance_valid(self)]
+	fog_trigger.actions = [func(): FogOfWarManager.update_visibility([global_position])]
+	TriggerEngine.register(fog_trigger)

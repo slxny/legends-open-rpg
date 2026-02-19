@@ -7,6 +7,7 @@ var _inventory_scene: PackedScene = preload("res://scenes/ui/inventory_screen.ts
 var _shop_scene: PackedScene = preload("res://scenes/ui/shop_dialog.tscn")
 var _armory_scene: PackedScene = preload("res://scenes/ui/armory_dialog.tscn")
 var _messages_scene: PackedScene = preload("res://scenes/ui/game_messages.tscn")
+var _center_msg_scene: PackedScene = preload("res://scenes/ui/center_message_system.tscn")
 
 @onready var hero_select: Control = $HeroSelect
 
@@ -54,9 +55,16 @@ func _on_hero_chosen(hero_class: String) -> void:
 	var messages = _messages_scene.instantiate()
 	add_child(messages)
 
+	# Center message system for dramatic SC-style announcements
+	var center_msg = _center_msg_scene.instantiate()
+	add_child(center_msg)
+
 	# Connect level-up to dramatic message
 	_player.stats.leveled_up.connect(_on_player_leveled_up)
 	_player.stats.died.connect(_on_player_died)
+
+	# Register game-wide triggers
+	_register_triggers()
 
 func _on_player_leveled_up(new_level: int) -> void:
 	var tier = "Adventurer"
@@ -70,10 +78,23 @@ func _on_player_leveled_up(new_level: int) -> void:
 
 func _on_player_died() -> void:
 	GameManager.game_message.emit("You have fallen! Respawning...", Color(1.0, 0.2, 0.2))
-	# Respawn at world spawn with full HP
-	await get_tree().create_timer(2.0).timeout
-	if is_instance_valid(_player) and is_instance_valid(_world):
-		_player.position = _world.get_spawn_position()
-		_player.stats.current_hp = _player.stats.get_total_max_hp()
-		_player.stats.current_mana = _player.stats.get_total_max_mana()
-		_player.stats._emit_all()
+	# Route through RespawnManager for multiplayer-readiness
+	RespawnManager.request_respawn(0)
+
+func _register_triggers() -> void:
+	# XP/level sync trigger — keeps DC in sync with player stats every tick
+	var xp_sync = TriggerEngine.Trigger.new()
+	xp_sync.conditions = [func(): return is_instance_valid(_player)]
+	xp_sync.actions = [func():
+		DeathCounterSystem.set_value("level_p0", _player.stats.level)
+		DeathCounterSystem.set_value("xp_p0", _player.stats.xp)
+	]
+	TriggerEngine.register(xp_sync)
+
+	# Gold sync trigger
+	var gold_sync = TriggerEngine.Trigger.new()
+	gold_sync.conditions = [func(): return true]
+	gold_sync.actions = [func():
+		DeathCounterSystem.set_value("gold_p0", GameManager.gold)
+	]
+	TriggerEngine.register(gold_sync)

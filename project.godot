@@ -24,11 +24,21 @@ config/icon="res://icon.svg"
 SpriteGenerator="*res://scripts/autoloads/sprite_generator.gd"
 GameManager="*res://scripts/autoloads/game_manager.gd"
 CombatManager="*res://scripts/autoloads/combat_manager.gd"
+DeathCounterSystem="*res://scripts/autoloads/death_counter_system.gd"
+TriggerEngine="*res://scripts/autoloads/trigger_engine.gd"
+TimeManager="*res://scripts/autoloads/time_manager.gd"
+EconomyManager="*res://scripts/autoloads/economy_manager.gd"
+AlignmentManager="*res://scripts/autoloads/alignment_manager.gd"
+SettlementManager="*res://scripts/autoloads/settlement_manager.gd"
+BeaconManager="*res://scripts/autoloads/beacon_manager.gd"
+FogOfWarManager="*res://scripts/autoloads/fog_of_war_manager.gd"
+RespawnManager="*res://scripts/autoloads/respawn_manager.gd"
+SaveLoadManager="*res://scripts/autoloads/save_load_manager.gd"
 
 [display]
 
-window/size/viewport_width=1920
-window/size/viewport_height=1080
+window/size/viewport_width=1280
+window/size/viewport_height=960
 window/size/mode=3
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
@@ -90,7 +100,13 @@ attack={
 2d_physics/layer_5="projectiles"
 2d_physics/layer_6="pickups"
 
+[physics]
+
+common/physics_ticks_per_second=60
+
 [rendering]
 
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
+2d/snap/snap_2d_transforms_to_pixel=true
+2d/snap/snap_2d_vertices_to_pixel=true

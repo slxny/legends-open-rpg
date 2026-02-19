@@ -1,9 +1,213 @@
 extends Node
 
-## Placeholder for Phase 2 save/load system.
+## Save/Load system — JSON serialization of all game state.
+## Saves: level, xp, gold, alignment, owned_towns, artifacts,
+## explored_tiles, inventory, boss_flags, death_counters.
+
+const SAVE_PATH := "user://savegame.json"
+
+signal game_saved
+signal game_loaded
 
 func save_game() -> void:
-	pass
+	var player = _get_player()
+	if not player:
+		return
 
-func load_game() -> void:
-	pass
+	var data: Dictionary = {}
+
+	# Player stats
+	data["hero_class"] = player.hero_class
+	data["level"] = player.stats.level
+	data["xp"] = player.stats.xp
+	data["current_hp"] = player.stats.current_hp
+	data["current_mana"] = player.stats.current_mana
+	data["position_x"] = player.global_position.x
+	data["position_y"] = player.global_position.y
+
+	# Economy
+	data["gold"] = GameManager.gold
+
+	# Alignment
+	data["alignment"] = AlignmentManager.get_alignment(0)
+
+	# Owned towns
+	var owned_towns: Array = []
+	for sid in SettlementManager.SETTLEMENTS:
+		if SettlementManager.is_owned(sid, 0):
+			owned_towns.append(sid)
+	data["owned_towns"] = owned_towns
+
+	# Artifacts
+	data["artifacts"] = GameManager.found_artifacts.duplicate()
+
+	# Boss flags
+	data["killed_bosses"] = GameManager.killed_bosses.duplicate()
+
+	# Explored tiles
+	data["explored_tiles"] = FogOfWarManager.get_explored_data()
+
+	# Inventory — equipment and bag
+	data["equipment"] = _serialize_equipment(player.inventory)
+	data["bag"] = _serialize_bag(player.inventory)
+	data["consumables"] = _serialize_consumables(player.inventory)
+
+	# Total kills
+	data["total_kills"] = GameManager.total_kills
+
+	# All death counters (complete state)
+	data["death_counters"] = DeathCounterSystem.get_all()
+
+	# Armory upgrades
+	data["weapon_upgrade_level"] = GameManager.weapon_upgrade_level
+	data["armor_upgrade_level"] = GameManager.armor_upgrade_level
+
+	# Write to file
+	var json_string = JSON.stringify(data, "\t")
+	var file = FileAccess.open(SAVE_PATH, FileAccess.WRITE)
+	if file:
+		file.store_string(json_string)
+		file.close()
+		GameManager.game_message.emit("Game Saved!", Color(0.5, 1.0, 0.5))
+		game_saved.emit()
+
+func load_game() -> bool:
+	if not FileAccess.file_exists(SAVE_PATH):
+		return false
+
+	var file = FileAccess.open(SAVE_PATH, FileAccess.READ)
+	if not file:
+		return false
+
+	var json_string = file.get_as_text()
+	file.close()
+
+	var json = JSON.new()
+	var error = json.parse(json_string)
+	if error != OK:
+		return false
+
+	var data: Dictionary = json.data
+	if data.is_empty():
+		return false
+
+	# Restore death counters first (foundation for all other systems)
+	if data.has("death_counters"):
+		DeathCounterSystem.load_from(data["death_counters"])
+
+	# Restore economy
+	GameManager.gold = data.get("gold", 0)
+	EconomyManager.set_gold(data.get("gold", 0), 0)
+
+	# Restore alignment
+	AlignmentManager.set_alignment(data.get("alignment", 0), 0)
+
+	# Restore kills/artifacts/bosses
+	GameManager.total_kills = data.get("total_kills", 0)
+	GameManager.killed_bosses = Array(data.get("killed_bosses", []), TYPE_STRING, "", null)
+	GameManager.found_artifacts = Array(data.get("artifacts", []), TYPE_STRING, "", null)
+	GameManager.weapon_upgrade_level = data.get("weapon_upgrade_level", 0)
+	GameManager.armor_upgrade_level = data.get("armor_upgrade_level", 0)
+
+	# Restore explored tiles
+	if data.has("explored_tiles"):
+		FogOfWarManager.load_explored_data(data["explored_tiles"])
+
+	# Player state will be applied after player is instantiated
+	# Store loaded data for deferred application
+	_pending_load = data
+	game_loaded.emit()
+	GameManager.game_message.emit("Game Loaded!", Color(0.5, 1.0, 0.5))
+	return true
+
+var _pending_load: Dictionary = {}
+
+func apply_to_player(player: Node2D) -> void:
+	if _pending_load.is_empty():
+		return
+
+	var data = _pending_load
+
+	# Restore hero stats
+	if player.stats:
+		player.stats.level = data.get("level", 1)
+		player.stats.xp = data.get("xp", 0)
+		player.stats.current_hp = data.get("current_hp", player.stats.get_total_max_hp())
+		player.stats.current_mana = data.get("current_mana", player.stats.get_total_max_mana())
+		player.stats._emit_all()
+
+	# Restore position
+	player.global_position = Vector2(
+		data.get("position_x", 0),
+		data.get("position_y", 0)
+	)
+
+	# Restore inventory
+	if player.inventory:
+		_deserialize_equipment(player.inventory, data.get("equipment", {}))
+		_deserialize_bag(player.inventory, data.get("bag", []))
+		_deserialize_consumables(player.inventory, data.get("consumables", []))
+
+	_pending_load = {}
+
+func has_save() -> bool:
+	return FileAccess.file_exists(SAVE_PATH)
+
+func _get_player() -> Node2D:
+	var tree = Engine.get_main_loop()
+	if tree and tree is SceneTree:
+		var players = tree.root.get_tree().get_nodes_in_group("player")
+		if players.size() > 0:
+			return players[0]
+	return null
+
+func _serialize_equipment(inv: InventoryComponent) -> Dictionary:
+	var result: Dictionary = {}
+	for slot_name in inv.equipment:
+		var item = inv.equipment[slot_name]
+		if not item.is_empty():
+			result[slot_name] = item.get("id", "")
+	return result
+
+func _serialize_bag(inv: InventoryComponent) -> Array:
+	var result: Array = []
+	for item in inv.bag:
+		if not item.is_empty():
+			result.append(item.get("id", ""))
+	return result
+
+func _serialize_consumables(inv: InventoryComponent) -> Array:
+	var result: Array = []
+	for item in inv.consumables:
+		if not item.is_empty():
+			result.append(item.get("id", ""))
+		else:
+			result.append("")
+	return result
+
+func _deserialize_equipment(inv: InventoryComponent, data: Dictionary) -> void:
+	for slot_name in data:
+		var item_id = data[slot_name]
+		if not item_id.is_empty():
+			var item = ItemData.get_item(item_id)
+			if not item.is_empty():
+				inv.equipment[slot_name] = item
+	inv._apply_equipment_stats()
+
+func _deserialize_bag(inv: InventoryComponent, data: Array) -> void:
+	inv.bag.clear()
+	for item_id in data:
+		if not item_id.is_empty():
+			var item = ItemData.get_item(item_id)
+			if not item.is_empty():
+				inv.bag.append(item)
+
+func _deserialize_consumables(inv: InventoryComponent, data: Array) -> void:
+	for i in range(min(data.size(), inv.consumables.size())):
+		var item_id = data[i]
+		if item_id is String and not item_id.is_empty():
+			var item = ItemData.get_item(item_id)
+			if not item.is_empty():
+				inv.consumables[i] = item
+		else:
+			inv.consumables[i] = {}

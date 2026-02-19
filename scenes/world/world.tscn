@@ -1,7 +1,8 @@
-[gd_scene load_steps=3 format=3 uid="uid://bworldscn"]
+[gd_scene load_steps=4 format=3 uid="uid://bworldscn"]
 
 [ext_resource type="Script" path="res://scenes/world/world.gd" id="1_world"]
 [ext_resource type="PackedScene" uid="uid://bhavensrest" path="res://scenes/world/regions/havens_rest.tscn" id="2_region"]
+[ext_resource type="Script" path="res://scenes/world/fog_overlay.gd" id="3_fog"]
 
 [node name="World" type="Node2D"]
 y_sort_enabled = true
@@ -12,3 +13,6 @@ y_sort_enabled = true
 
 [node name="PlayerSpawn" type="Marker2D" parent="."]
 position = Vector2(0, 20)
+
+[node name="FogOverlay" type="Node2D" parent="."]
+script = ExtResource("3_fog")

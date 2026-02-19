@@ -2,12 +2,15 @@ extends Area2D
 
 ## Beacon — the core SC:BW UMS interaction system.
 ## Colored circles on the ground that trigger events when the hero walks onto them.
+## Routes all activations through BeaconManager for centralized dispatch.
 
 signal activated(beacon: Area2D)
 
 @export var beacon_color: Color = Color(1, 1, 0)  # Yellow default
 @export var beacon_label: String = ""
 @export var beacon_radius: float = 20.0
+@export var beacon_type: String = ""  # shop, heal, teleport, boss_spawn, town_purchase, alignment_choice
+@export var beacon_data: Dictionary = {}
 
 @onready var visual: Sprite2D = $Visual
 @onready var label: Label = $Label
@@ -52,6 +55,9 @@ func _on_body_entered(body: Node2D) -> void:
 	if body.is_in_group("player"):
 		_player_inside = true
 		activated.emit(self)
+		# Route through BeaconManager for centralized dispatch
+		if not beacon_type.is_empty():
+			BeaconManager.activate(beacon_type, beacon_data, body)
 
 func _on_body_exited(body: Node2D) -> void:
 	if body.is_in_group("player"):

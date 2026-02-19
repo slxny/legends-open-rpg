@@ -17,7 +17,7 @@ const SETTLEMENTS: Dictionary = {
 func is_owned(settlement_id: String, player_id: int = 0) -> bool:
 	return DeathCounterSystem.get_value("town_owned_%s_p%d" % [settlement_id, player_id]) == 1
 
-func get_owner(settlement_id: String) -> int:
+func get_settlement_owner(settlement_id: String) -> int:
 	## Returns the player_id that owns this settlement, or -1 if unowned.
 	for pid in range(8):  # Support up to 8 players
 		if DeathCounterSystem.get_value("town_owned_%s_p%d" % [settlement_id, pid]) == 1:

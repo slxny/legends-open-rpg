@@ -13,7 +13,7 @@ var _owned_by: int = -1  # Player ID, -1 = unowned
 func _ready() -> void:
 	add_to_group("settlements")
 	# Check if already owned via DeathCounterSystem
-	var owner = SettlementManager.get_owner(settlement_id)
+	var owner = SettlementManager.get_settlement_owner(settlement_id)
 	if owner >= 0:
 		_apply_ownership(owner)
 	# Listen for purchase events

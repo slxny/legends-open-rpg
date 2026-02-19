@@ -37,6 +37,10 @@ func _init_asset_dirs() -> void:
 	for swing in ["a", "b", "c", "d", "e"]:
 		for frame in [1, 2, 3]:
 			hero_names.append("blade_knight_atk%s%d" % [swing, frame])
+	# Directional idle sprites for each hero
+	for hero in ["blade_knight", "shadow_ranger"]:
+		for dir_key in ["down", "up", "side"]:
+			hero_names.append("%s_dir_%s" % [hero, dir_key])
 	for n in hero_names:
 		_asset_dirs[n] = "heroes"
 	# Enemies
@@ -80,6 +84,10 @@ func _generate_all() -> void:
 		for frame in [1, 2, 3]:
 			_gen_or_load("blade_knight_atk%s%d" % [swing, frame])
 	_gen_or_load("shadow_ranger")
+	# Directional idle sprites for heroes
+	for hero in ["blade_knight", "shadow_ranger"]:
+		for dir_key in ["down", "up", "side"]:
+			_gen_or_load("%s_dir_%s" % [hero, dir_key])
 	# Enemies
 	_gen_or_load("goblin")
 	_gen_or_load("wolf")
@@ -532,6 +540,224 @@ func _gen_shadow_ranger() -> void:
 	_fill_rect(img, 25, 12, 2, 3, c["bow_wood"])  # Arrow tips
 
 	textures["shadow_ranger"] = ImageTexture.create_from_image(img)
+
+# ============================================================
+# DIRECTIONAL IDLE SPRITES
+# "down" = facing camera (front), "up" = facing away (back),
+# "side" = profile view (flip_h handles left vs right)
+# ============================================================
+
+# ---- Blade Knight directional sprites ----
+
+func _gen_blade_knight_dir_down() -> void:
+	# Front-facing (same as base sprite — armor details, visor visible)
+	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = _bk_colors()
+	_fill_rect(img, 8, 44, 16, 4, c["shadow"])
+	_fill_rect(img, 10, 40, 5, 6, c["boot"])
+	_fill_rect(img, 17, 40, 5, 6, c["boot"])
+	_fill_rect(img, 11, 32, 4, 9, c["armor_dark"])
+	_fill_rect(img, 17, 32, 4, 9, c["armor_dark"])
+	_fill_rect(img, 9, 18, 14, 15, c["armor_mid"])
+	_fill_rect(img, 10, 19, 12, 13, c["armor_light"])
+	_fill_rect(img, 9, 30, 14, 3, c["armor_dark"])
+	_fill_rect(img, 5, 18, 6, 5, c["armor_mid"])
+	_fill_rect(img, 21, 18, 6, 5, c["armor_mid"])
+	_fill_rect(img, 11, 6, 10, 13, c["helm"])
+	_fill_rect(img, 12, 7, 8, 11, c["armor_mid"])
+	_fill_rect(img, 13, 11, 6, 3, c["visor"])
+	_fill_rect(img, 14, 4, 4, 4, c["armor_light"])
+	# Sword at side (resting)
+	_fill_rect(img, 26, 20, 3, 18, c["sword"])
+	_fill_rect(img, 25, 36, 5, 3, c["armor_dark"])
+	# Shield in front
+	_fill_rect(img, 2, 20, 7, 10, c["shield"])
+	_fill_rect(img, 2, 20, 7, 2, c["shield_rim"])
+	_fill_rect(img, 2, 28, 7, 2, c["shield_rim"])
+	_fill_rect(img, 2, 20, 2, 10, c["shield_rim"])
+	textures["blade_knight_dir_down"] = ImageTexture.create_from_image(img)
+
+func _gen_blade_knight_dir_up() -> void:
+	# Back-facing — no visor, cape/back detail visible, sword on back
+	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = _bk_colors()
+	_fill_rect(img, 8, 44, 16, 4, c["shadow"])
+	_fill_rect(img, 10, 40, 5, 6, c["boot"])
+	_fill_rect(img, 17, 40, 5, 6, c["boot"])
+	_fill_rect(img, 11, 32, 4, 9, c["armor_dark"])
+	_fill_rect(img, 17, 32, 4, 9, c["armor_dark"])
+	# Torso (back of armor — darker tones)
+	_fill_rect(img, 9, 18, 14, 15, c["armor_dark"])
+	_fill_rect(img, 10, 19, 12, 13, c["armor_mid"])
+	# Cape hanging down the back
+	_fill_rect(img, 10, 22, 12, 16, Color(0.15, 0.2, 0.5))
+	_fill_rect(img, 11, 23, 10, 14, Color(0.2, 0.25, 0.55))
+	_fill_rect(img, 9, 30, 14, 3, c["armor_dark"])
+	# Shoulders
+	_fill_rect(img, 5, 18, 6, 5, c["armor_mid"])
+	_fill_rect(img, 21, 18, 6, 5, c["armor_mid"])
+	# Helm (back — no visor)
+	_fill_rect(img, 11, 6, 10, 13, c["helm"])
+	_fill_rect(img, 12, 7, 8, 11, c["armor_dark"])
+	_fill_rect(img, 14, 4, 4, 4, c["armor_light"])
+	# Sword across back
+	_fill_rect(img, 13, 8, 3, 26, c["sword"])
+	_fill_rect(img, 12, 32, 5, 3, c["armor_dark"])
+	# Shield on back (smaller visible portion)
+	_fill_rect(img, 18, 14, 6, 8, c["shield"])
+	_fill_rect(img, 18, 14, 6, 2, c["shield_rim"])
+	textures["blade_knight_dir_up"] = ImageTexture.create_from_image(img)
+
+func _gen_blade_knight_dir_side() -> void:
+	# Side/profile — facing right (flip_h handles left)
+	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = _bk_colors()
+	_fill_rect(img, 8, 44, 16, 4, c["shadow"])
+	# Boots (side view — overlapping)
+	_fill_rect(img, 11, 40, 5, 6, c["boot"])
+	_fill_rect(img, 16, 41, 5, 5, c["boot"])
+	# Legs
+	_fill_rect(img, 12, 32, 4, 9, c["armor_dark"])
+	_fill_rect(img, 16, 33, 4, 8, c["armor_dark"])
+	# Torso
+	_fill_rect(img, 10, 18, 12, 15, c["armor_mid"])
+	_fill_rect(img, 11, 19, 10, 13, c["armor_light"])
+	_fill_rect(img, 10, 30, 12, 3, c["armor_dark"])
+	# One shoulder visible
+	_fill_rect(img, 20, 18, 5, 5, c["armor_mid"])
+	# Helm (profile)
+	_fill_rect(img, 12, 6, 10, 13, c["helm"])
+	_fill_rect(img, 13, 7, 8, 11, c["armor_mid"])
+	# Visor slot (side)
+	_fill_rect(img, 19, 11, 3, 3, c["visor"])
+	_fill_rect(img, 14, 4, 4, 4, c["armor_light"])
+	# Sword held forward
+	_fill_rect(img, 24, 12, 3, 20, c["sword"])
+	_fill_rect(img, 25, 10, 2, 4, c["sword_glow"])
+	_fill_rect(img, 23, 30, 5, 3, c["armor_dark"])
+	# Shield on left arm (behind body)
+	_fill_rect(img, 5, 22, 6, 9, c["shield"])
+	_fill_rect(img, 5, 22, 6, 2, c["shield_rim"])
+	_fill_rect(img, 5, 29, 6, 2, c["shield_rim"])
+	textures["blade_knight_dir_side"] = ImageTexture.create_from_image(img)
+
+# ---- Shadow Ranger directional sprites ----
+
+func _sr_colors() -> Dictionary:
+	return {
+		"cloak_dark": Color(0.12, 0.3, 0.15),
+		"cloak_mid": Color(0.2, 0.45, 0.25),
+		"cloak_light": Color(0.3, 0.6, 0.35),
+		"hood": Color(0.15, 0.35, 0.18),
+		"skin": Color(0.8, 0.65, 0.5),
+		"eyes": Color(0.9, 0.95, 0.4),
+		"bow_wood": Color(0.5, 0.35, 0.2),
+		"bow_string": Color(0.7, 0.7, 0.65),
+		"quiver": Color(0.4, 0.25, 0.15),
+		"boot": Color(0.25, 0.2, 0.12),
+		"shadow": Color(0, 0, 0, 0.3),
+	}
+
+func _gen_shadow_ranger_dir_down() -> void:
+	# Front-facing (same as base — face/eyes visible, bow at side)
+	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = _sr_colors()
+	_fill_rect(img, 8, 44, 16, 4, c["shadow"])
+	_fill_rect(img, 10, 40, 5, 6, c["boot"])
+	_fill_rect(img, 17, 40, 5, 6, c["boot"])
+	_fill_rect(img, 11, 33, 4, 8, c["cloak_dark"])
+	_fill_rect(img, 17, 33, 4, 8, c["cloak_dark"])
+	_fill_rect(img, 8, 16, 16, 18, c["cloak_mid"])
+	_fill_rect(img, 9, 17, 14, 16, c["cloak_light"])
+	_fill_rect(img, 6, 22, 3, 16, c["cloak_dark"])
+	_fill_rect(img, 23, 22, 3, 16, c["cloak_dark"])
+	_fill_rect(img, 8, 30, 16, 2, c["quiver"])
+	_fill_rect(img, 10, 6, 12, 11, c["hood"])
+	_fill_rect(img, 11, 7, 10, 9, c["cloak_dark"])
+	_fill_rect(img, 13, 10, 6, 5, c["skin"])
+	_fill_rect(img, 14, 11, 2, 2, c["eyes"])
+	_fill_rect(img, 18, 11, 2, 2, c["eyes"])
+	# Bow at side
+	_fill_rect(img, 2, 10, 2, 28, c["bow_wood"])
+	_fill_rect(img, 1, 8, 2, 3, c["bow_wood"])
+	_fill_rect(img, 1, 37, 2, 3, c["bow_wood"])
+	_fill_rect(img, 4, 10, 1, 28, c["bow_string"])
+	# Quiver on back
+	_fill_rect(img, 24, 14, 4, 14, c["quiver"])
+	_fill_rect(img, 25, 12, 2, 3, c["bow_wood"])
+	textures["shadow_ranger_dir_down"] = ImageTexture.create_from_image(img)
+
+func _gen_shadow_ranger_dir_up() -> void:
+	# Back-facing — hood from behind, quiver prominent, no face
+	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = _sr_colors()
+	_fill_rect(img, 8, 44, 16, 4, c["shadow"])
+	_fill_rect(img, 10, 40, 5, 6, c["boot"])
+	_fill_rect(img, 17, 40, 5, 6, c["boot"])
+	_fill_rect(img, 11, 33, 4, 8, c["cloak_dark"])
+	_fill_rect(img, 17, 33, 4, 8, c["cloak_dark"])
+	# Cloak back (darker)
+	_fill_rect(img, 8, 16, 16, 18, c["cloak_dark"])
+	_fill_rect(img, 9, 17, 14, 16, c["cloak_mid"])
+	# Cape trailing down
+	_fill_rect(img, 9, 28, 14, 12, c["cloak_dark"])
+	_fill_rect(img, 10, 29, 12, 10, Color(0.14, 0.32, 0.17))
+	_fill_rect(img, 6, 22, 3, 16, c["cloak_dark"])
+	_fill_rect(img, 23, 22, 3, 16, c["cloak_dark"])
+	_fill_rect(img, 8, 30, 16, 2, c["quiver"])
+	# Hood (back — solid)
+	_fill_rect(img, 10, 6, 12, 11, c["hood"])
+	_fill_rect(img, 11, 7, 10, 9, c["cloak_dark"])
+	# Quiver prominent on back
+	_fill_rect(img, 12, 12, 8, 16, c["quiver"])
+	_fill_rect(img, 13, 10, 2, 3, c["bow_wood"])
+	_fill_rect(img, 17, 10, 2, 3, c["bow_wood"])
+	_fill_rect(img, 15, 9, 2, 3, c["bow_wood"])
+	# Bow slung over shoulder
+	_fill_rect(img, 5, 14, 2, 22, c["bow_wood"])
+	_fill_rect(img, 4, 12, 2, 3, c["bow_wood"])
+	_fill_rect(img, 7, 14, 1, 22, c["bow_string"])
+	textures["shadow_ranger_dir_up"] = ImageTexture.create_from_image(img)
+
+func _gen_shadow_ranger_dir_side() -> void:
+	# Side/profile — facing right (flip_h for left)
+	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = _sr_colors()
+	_fill_rect(img, 8, 44, 16, 4, c["shadow"])
+	# Boots (side)
+	_fill_rect(img, 11, 40, 5, 6, c["boot"])
+	_fill_rect(img, 16, 41, 5, 5, c["boot"])
+	# Legs
+	_fill_rect(img, 12, 33, 4, 8, c["cloak_dark"])
+	_fill_rect(img, 16, 34, 4, 7, c["cloak_dark"])
+	# Cloak body
+	_fill_rect(img, 9, 16, 14, 18, c["cloak_mid"])
+	_fill_rect(img, 10, 17, 12, 16, c["cloak_light"])
+	# Cape flowing behind
+	_fill_rect(img, 4, 22, 6, 16, c["cloak_dark"])
+	_fill_rect(img, 5, 23, 4, 14, Color(0.14, 0.32, 0.17))
+	_fill_rect(img, 9, 30, 14, 2, c["quiver"])
+	# Hood (profile)
+	_fill_rect(img, 11, 6, 11, 11, c["hood"])
+	_fill_rect(img, 12, 7, 9, 9, c["cloak_dark"])
+	# Face peeking out
+	_fill_rect(img, 19, 10, 4, 5, c["skin"])
+	_fill_rect(img, 20, 11, 2, 2, c["eyes"])
+	# Bow held forward
+	_fill_rect(img, 24, 12, 2, 24, c["bow_wood"])
+	_fill_rect(img, 23, 10, 2, 3, c["bow_wood"])
+	_fill_rect(img, 23, 35, 2, 3, c["bow_wood"])
+	_fill_rect(img, 26, 12, 1, 24, c["bow_string"])
+	# Quiver on back
+	_fill_rect(img, 6, 14, 4, 12, c["quiver"])
+	_fill_rect(img, 7, 12, 2, 3, c["bow_wood"])
+	textures["shadow_ranger_dir_side"] = ImageTexture.create_from_image(img)
 
 # ============================================================
 # ENEMY SPRITES

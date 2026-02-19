@@ -28,6 +28,11 @@ var _attack_cooldown: float = 0.0
 const SPRITE_UPGRADE_LEVELS: Array[int] = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50]
 var _current_sprite_tier: int = 0
 
+# Persistent facing direction — updated by movement, attack, and ability input
+var _facing: Vector2 = Vector2.DOWN
+# Directional idle textures: "down", "up", "side" (flip_h handles left vs right)
+var _dir_textures: Dictionary = {}
+
 # Directional attack tracking
 var _attack_dir: Vector2 = Vector2.RIGHT   # Direction used in the last attack
 var _last_dir_category: String = ""        # "horizontal" | "up" | "down" | "diagonal" | ""
@@ -53,6 +58,15 @@ func _ready() -> void:
 	if tex:
 		sprite.texture = tex
 		_idle_texture = tex
+
+	# Cache directional idle textures
+	for dir_key in ["down", "up", "side"]:
+		var dtex = SpriteGenerator.get_texture(hero_class + "_dir_" + dir_key)
+		if dtex:
+			_dir_textures[dir_key] = dtex
+	# Default facing texture is the base sprite (facing down/front)
+	if not _dir_textures.has("down"):
+		_dir_textures["down"] = _idle_texture
 
 	# Cache melee combo swing frames (5 swing types x 3 frames each)
 	for swing_key in ["a", "b", "c", "d", "e"]:
@@ -120,11 +134,9 @@ func _physics_process(delta: float) -> void:
 	if Input.is_action_pressed("attack"):
 		_try_manual_attack()
 
-	# Flip sprite based on movement direction
-	if velocity.x < -5:
-		sprite.flip_h = true
-	elif velocity.x > 5:
-		sprite.flip_h = false
+	# Update facing direction from movement
+	if velocity.length() > 5 and not _is_attack_animating:
+		_set_facing(velocity.normalized())
 
 const ZOOM_MIN := Vector2(1.5, 1.5)
 const ZOOM_MAX := Vector2(5.0, 5.0)
@@ -184,7 +196,7 @@ func _try_manual_attack() -> void:
 
 	_attack_cooldown = 0.5 / stats.attack_speed  # 50% faster than base
 
-	# Determine attack direction from held movement input
+	# Determine attack direction from held movement input, fall back to last facing
 	var input_raw = Vector2(
 		Input.get_axis("move_left", "move_right"),
 		Input.get_axis("move_up", "move_down")
@@ -193,13 +205,10 @@ func _try_manual_attack() -> void:
 	if input_raw.length() > 0.25:
 		attack_dir = input_raw.normalized()
 	else:
-		attack_dir = Vector2.RIGHT if not sprite.flip_h else Vector2.LEFT
+		attack_dir = _facing
 
-	# Update sprite facing based on attack direction
-	if attack_dir.x < -0.1:
-		sprite.flip_h = true
-	elif attack_dir.x > 0.1:
-		sprite.flip_h = false
+	# Update facing to match attack direction
+	_set_facing(attack_dir)
 
 	_enemies_in_range = _enemies_in_range.filter(func(e): return is_instance_valid(e) and not e.get("_is_dead"))
 
@@ -253,15 +262,34 @@ func _get_clickable_at_mouse() -> Node2D:
 		return results[0]["collider"]
 	return null
 
+func _set_facing(dir: Vector2) -> void:
+	_facing = dir
+	# Update sprite flip and directional texture
+	if abs(dir.x) > abs(dir.y) * 0.6:
+		# Facing left or right — use side sprite
+		sprite.flip_h = dir.x < 0
+		_idle_texture = _dir_textures.get("side", _dir_textures.get("down"))
+	elif dir.y < -0.3:
+		# Facing up/away
+		sprite.flip_h = false
+		_idle_texture = _dir_textures.get("up", _dir_textures.get("down"))
+	else:
+		# Facing down/toward camera (default)
+		sprite.flip_h = false
+		_idle_texture = _dir_textures.get("down")
+	# Apply the directional idle texture if not mid-attack
+	if not _is_attack_animating and _idle_texture:
+		sprite.texture = _idle_texture
+
 func _get_aim_direction() -> Vector2:
-	# Prefer held arrow/WASD keys, fall back to mouse direction
+	# Prefer held arrow/WASD keys, fall back to last facing direction
 	var input_raw = Vector2(
 		Input.get_axis("move_left", "move_right"),
 		Input.get_axis("move_up", "move_down")
 	)
 	if input_raw.length() > 0.25:
 		return input_raw.normalized()
-	return (_get_world_mouse_pos() - global_position).normalized()
+	return _facing
 
 func _use_ability(ability_key: String) -> void:
 	var ability_data = ability_mgr.use_ability(ability_key, self)
@@ -272,10 +300,7 @@ func _use_ability(ability_key: String) -> void:
 	var aim_dir = _get_aim_direction()
 
 	# Face the aim direction
-	if aim_dir.x < -0.1:
-		sprite.flip_h = true
-	elif aim_dir.x > 0.1:
-		sprite.flip_h = false
+	_set_facing(aim_dir)
 
 	# SC:BW trigger delay feel
 	await get_tree().create_timer(0.3).timeout
@@ -807,6 +832,12 @@ func _apply_sprite_upgrade(tier: int) -> void:
 	if tex:
 		sprite.texture = tex
 		_idle_texture = tex
+		_dir_textures["down"] = tex
+	# Also try tier-specific directional sprites
+	for dir_key in ["down", "up", "side"]:
+		var dtex = SpriteGenerator.get_texture("%s_t%d_dir_%s" % [hero_class, tier, dir_key])
+		if dtex:
+			_dir_textures[dir_key] = dtex
 
 func _sync_to_death_counters() -> void:
 	DeathCounterSystem.set_value("level_p%d" % player_id, stats.level)

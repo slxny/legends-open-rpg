@@ -23,8 +23,8 @@ func clear() -> void:
 
 class Trigger:
 	## A single SC-style trigger: list of condition callables + list of action callables.
-	var conditions: Array[Callable] = []
-	var actions: Array[Callable] = []
+	var conditions: Array = []
+	var actions: Array = []
 	var enabled: bool = true
 	var once: bool = false  # If true, auto-disable after first firing
 	var _has_fired: bool = false

@@ -116,6 +116,10 @@ func _physics_process(delta: float) -> void:
 			_combo_timer = 0.0
 			_last_dir_category = ""
 
+	# Hold Space to keep attacking at normal cooldown rate
+	if Input.is_action_pressed("attack"):
+		_try_manual_attack()
+
 	# Flip sprite based on movement direction
 	if velocity.x < -5:
 		sprite.flip_h = true
@@ -160,10 +164,6 @@ func _unhandled_input(event: InputEvent) -> void:
 			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 		else:
 			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
-
-	# Attack — Space bar
-	if event.is_action_pressed("attack"):
-		_try_manual_attack()
 
 	# Abilities (Q and E)
 	if event.is_action_pressed("ability_1"):

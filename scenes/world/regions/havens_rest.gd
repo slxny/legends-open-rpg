@@ -5,10 +5,13 @@ extends Node2D
 
 # Creep camp positions for ground darkening (matches .tscn camp positions)
 var _camp_positions := [
-	Vector2(-900, -700), Vector2(800, -900), Vector2(-500, -1300),
-	Vector2(-1400, 800), Vector2(600, 1200), Vector2(1600, -400),
-	Vector2(1800, 1000), Vector2(-2200, -400), Vector2(2400, -900),
-	Vector2(-1800, 1400),
+	# Goblins (close to town)
+	Vector2(-1200, -900), Vector2(1100, -1100), Vector2(-700, -1600), Vector2(600, 800),
+	# Wolves (mid range)
+	Vector2(-2200, 1200), Vector2(900, 1800), Vector2(2400, -700), Vector2(-1800, -1800),
+	# Bandits (far out)
+	Vector2(3000, 1600), Vector2(-3500, -700), Vector2(3800, -1500),
+	Vector2(-2800, 2400), Vector2(-4200, -2500), Vector2(4400, 3000),
 ]
 
 func _ready() -> void:
@@ -47,9 +50,9 @@ func _generate_terrain() -> void:
 	ground_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	ground_sprite.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
 	ground_sprite.region_enabled = true
-	ground_sprite.region_rect = Rect2(-3500, -2500, 7000, 5000)
+	ground_sprite.region_rect = Rect2(-6000, -4500, 12000, 9000)
 	ground_sprite.z_index = -10
-	ground_sprite.position = Vector2(-3500, -2500)
+	ground_sprite.position = Vector2(-6000, -4500)
 	ground_sprite.centered = false
 	add_child(ground_sprite)
 	move_child(ground_sprite, 0)
@@ -83,8 +86,8 @@ func _generate_terrain() -> void:
 	# Scattered dirt patches across the expanded map
 	var rng = RandomNumberGenerator.new()
 	rng.seed = 555
-	for _i in range(70):
-		var pos = Vector2(rng.randf_range(-3200, 3200), rng.randf_range(-2200, 2200))
+	for _i in range(120):
+		var pos = Vector2(rng.randf_range(-5700, 5700), rng.randf_range(-4200, 4200))
 		if pos.length() > 550:  # Avoid town area
 			_add_dirt_ground_patch(pos)
 
@@ -236,18 +239,18 @@ func _generate_decorations() -> void:
 	var deco_layer = $Decorations
 
 	# ---- Border trees: dense double-row along all 4 walls ----
-	for x in range(-3450, 3451, 55):
-		_add_tree(deco_layer, Vector2(x + randf_range(-12, 12), -2420 + randf_range(-25, 25)))
-		_add_tree(deco_layer, Vector2(x + randf_range(-12, 12), -2350 + randf_range(-20, 20)))
-	for x in range(-3450, 3451, 55):
-		_add_tree(deco_layer, Vector2(x + randf_range(-12, 12), 2420 + randf_range(-25, 25)))
-		_add_tree(deco_layer, Vector2(x + randf_range(-12, 12), 2350 + randf_range(-20, 20)))
-	for y in range(-2400, 2401, 55):
-		_add_tree(deco_layer, Vector2(-3420 + randf_range(-15, 15), y + randf_range(-12, 12)))
-		_add_tree(deco_layer, Vector2(-3350 + randf_range(-15, 15), y + randf_range(-12, 12)))
-	for y in range(-2400, 2401, 55):
-		_add_tree(deco_layer, Vector2(3420 + randf_range(-15, 15), y + randf_range(-12, 12)))
-		_add_tree(deco_layer, Vector2(3350 + randf_range(-15, 15), y + randf_range(-12, 12)))
+	for x in range(-5950, 5951, 55):
+		_add_tree(deco_layer, Vector2(x + randf_range(-12, 12), -4420 + randf_range(-25, 25)))
+		_add_tree(deco_layer, Vector2(x + randf_range(-12, 12), -4350 + randf_range(-20, 20)))
+	for x in range(-5950, 5951, 55):
+		_add_tree(deco_layer, Vector2(x + randf_range(-12, 12), 4420 + randf_range(-25, 25)))
+		_add_tree(deco_layer, Vector2(x + randf_range(-12, 12), 4350 + randf_range(-20, 20)))
+	for y in range(-4400, 4401, 55):
+		_add_tree(deco_layer, Vector2(-5920 + randf_range(-15, 15), y + randf_range(-12, 12)))
+		_add_tree(deco_layer, Vector2(-5850 + randf_range(-15, 15), y + randf_range(-12, 12)))
+	for y in range(-4400, 4401, 55):
+		_add_tree(deco_layer, Vector2(5920 + randf_range(-15, 15), y + randf_range(-12, 12)))
+		_add_tree(deco_layer, Vector2(5850 + randf_range(-15, 15), y + randf_range(-12, 12)))
 
 	# ---- Interior tree clusters (expanded across larger map) ----
 	var cluster_centers = [
@@ -259,7 +262,7 @@ func _generate_decorations() -> void:
 		Vector2(1100, 600), Vector2(-800, -600), Vector2(800, 600),
 		Vector2(0, -1200), Vector2(0, 1200), Vector2(-600, 900),
 		Vector2(700, -700), Vector2(-700, -500), Vector2(500, 800),
-		# Outer ring (far from town, filling expanded map)
+		# Outer ring
 		Vector2(-2000, -600), Vector2(2000, -400), Vector2(-1800, 1000),
 		Vector2(1900, 800), Vector2(-2500, -1200), Vector2(2500, -1100),
 		Vector2(-2300, 1600), Vector2(2200, 1500), Vector2(-1500, -1500),
@@ -270,6 +273,19 @@ func _generate_decorations() -> void:
 		Vector2(1300, -1600), Vector2(-2000, 1800), Vector2(2100, -1700),
 		Vector2(-3000, -500), Vector2(3000, 400), Vector2(-700, -1800),
 		Vector2(800, 1600), Vector2(-2400, -1600), Vector2(2300, 1200),
+		# Far ring (new territory in expanded map)
+		Vector2(-3800, -1400), Vector2(3600, -1200), Vector2(-4200, 800),
+		Vector2(4000, 600), Vector2(-3500, 2000), Vector2(3800, 1800),
+		Vector2(-4500, -600), Vector2(4300, -400), Vector2(-3200, -2200),
+		Vector2(3400, -2000), Vector2(-2800, 2800), Vector2(3000, 2600),
+		Vector2(0, -3200), Vector2(0, 3200), Vector2(-1500, 2800),
+		Vector2(1800, 3000), Vector2(-4000, 1400), Vector2(4200, 1200),
+		Vector2(-3600, -2600), Vector2(3800, -2400), Vector2(-5000, -1000),
+		Vector2(5000, -800), Vector2(-4800, 2000), Vector2(4600, 2200),
+		Vector2(-1800, -3200), Vector2(2000, -3000), Vector2(-3200, 3200),
+		Vector2(3400, 3400), Vector2(-5200, 400), Vector2(5400, -600),
+		Vector2(-4400, -2000), Vector2(4200, -1800), Vector2(-2400, 3600),
+		Vector2(2600, 3800), Vector2(-5000, 1600), Vector2(5200, 1400),
 	]
 	for center in cluster_centers:
 		var count = randi_range(4, 9)
@@ -299,6 +315,13 @@ func _generate_decorations() -> void:
 		Vector2(-2400, -800), Vector2(2500, -600), Vector2(-2100, 1200),
 		Vector2(2200, 1000), Vector2(-1600, -1400), Vector2(1700, 1600),
 		Vector2(-2800, 200), Vector2(2900, -300),
+		# Far rocks for larger map
+		Vector2(-3600, -1000), Vector2(3700, -800), Vector2(-3200, 1800),
+		Vector2(3400, 1600), Vector2(-4000, -400), Vector2(4100, 200),
+		Vector2(-2600, 2600), Vector2(2800, 2800), Vector2(-4500, 1200),
+		Vector2(4600, -1400), Vector2(-3800, -2200), Vector2(4000, -2000),
+		Vector2(-1400, 3000), Vector2(1600, 3200), Vector2(-5000, 600),
+		Vector2(5200, -200),
 	]
 	for pos in rock_positions:
 		_add_rock(deco_layer, pos)
@@ -309,91 +332,107 @@ func _generate_decorations() -> void:
 		Vector2(0, -280), Vector2(20, -380), Vector2(-10, -480), Vector2(0, -600),
 		Vector2(-50, -750), Vector2(-30, -900), Vector2(-100, -1050), Vector2(-200, -1200),
 		Vector2(-250, -1400), Vector2(-300, -1600), Vector2(-350, -1800),
+		Vector2(-400, -2100), Vector2(-350, -2500), Vector2(-300, -2900),
+		Vector2(-250, -3300), Vector2(-200, -3700),
 		# Path east
 		Vector2(280, 0), Vector2(400, -15), Vector2(520, 0), Vector2(650, 10),
 		Vector2(800, -30), Vector2(1000, -20), Vector2(1200, -60), Vector2(1500, -100),
 		Vector2(1800, -200), Vector2(2100, -300), Vector2(2400, -400),
+		Vector2(2800, -500), Vector2(3200, -600), Vector2(3600, -700),
+		Vector2(4000, -800), Vector2(4500, -900),
 		# Path south
 		Vector2(0, 280), Vector2(-15, 400), Vector2(0, 520), Vector2(-40, 700),
 		Vector2(-60, 850), Vector2(-80, 1000), Vector2(-100, 1200), Vector2(0, 1400),
 		Vector2(100, 1600), Vector2(250, 1800), Vector2(400, 2000),
+		Vector2(500, 2400), Vector2(600, 2800), Vector2(700, 3200),
+		Vector2(800, 3600), Vector2(900, 4000),
 		# Path west
 		Vector2(-280, 0), Vector2(-400, 15), Vector2(-520, 30), Vector2(-650, 40),
 		Vector2(-800, 60), Vector2(-1000, 80), Vector2(-1200, 100), Vector2(-1500, 150),
 		Vector2(-1800, 200), Vector2(-2100, 300), Vector2(-2400, 400),
+		Vector2(-2800, 500), Vector2(-3200, 600), Vector2(-3600, 700),
+		Vector2(-4000, 800), Vector2(-4500, 900),
 		# Path NE
 		Vector2(200, -300), Vector2(400, -500), Vector2(600, -700), Vector2(800, -900),
 		Vector2(1000, -1100), Vector2(1200, -1300),
+		Vector2(1500, -1600), Vector2(1800, -1900), Vector2(2200, -2300),
 		# Path SW
 		Vector2(-300, 350), Vector2(-500, 550), Vector2(-700, 750), Vector2(-1000, 1000),
 		Vector2(-1300, 1200), Vector2(-1600, 1400),
+		Vector2(-1900, 1700), Vector2(-2200, 2000), Vector2(-2600, 2400),
 		# Path NW
 		Vector2(-200, -300), Vector2(-400, -500), Vector2(-600, -700), Vector2(-900, -900),
 		Vector2(-1200, -1100), Vector2(-1500, -1300),
+		Vector2(-1800, -1600), Vector2(-2200, -1900), Vector2(-2600, -2300),
 		# Path SE
 		Vector2(200, 350), Vector2(400, 550), Vector2(600, 750), Vector2(900, 1000),
 		Vector2(1200, 1200), Vector2(1500, 1400),
+		Vector2(1800, 1700), Vector2(2200, 2000), Vector2(2600, 2400),
 	]
 	for pos in path_points:
 		_add_path_segment(deco_layer, pos)
 
 	# ---- Camp skull markers (match new camp positions) ----
-	_add_camp_marker(deco_layer, Vector2(-900, -660), "Goblins Lv1-2")
-	_add_camp_marker(deco_layer, Vector2(800, -860), "Goblins Lv1-2")
-	_add_camp_marker(deco_layer, Vector2(-500, -1260), "Goblins Lv1-2")
-	_add_camp_marker(deco_layer, Vector2(-1400, 760), "Wolves Lv2-3")
-	_add_camp_marker(deco_layer, Vector2(600, 1160), "Wolves Lv2-3")
-	_add_camp_marker(deco_layer, Vector2(1600, -360), "Wolves Lv2-3")
-	_add_camp_marker(deco_layer, Vector2(1800, 960), "Bandits Lv3-5")
-	_add_camp_marker(deco_layer, Vector2(-2200, -360), "Bandits Lv3-5")
-	_add_camp_marker(deco_layer, Vector2(2400, -860), "Bandits Lv3-5")
-	_add_camp_marker(deco_layer, Vector2(-1800, 1360), "Bandits Lv3-5")
+	_add_camp_marker(deco_layer, Vector2(-1200, -860), "Goblins Lv1-2")
+	_add_camp_marker(deco_layer, Vector2(1100, -1060), "Goblins Lv1-2")
+	_add_camp_marker(deco_layer, Vector2(-700, -1560), "Goblins Lv1-2")
+	_add_camp_marker(deco_layer, Vector2(600, 760), "Goblins Lv1-2")
+	_add_camp_marker(deco_layer, Vector2(-2200, 1160), "Wolves Lv2-3")
+	_add_camp_marker(deco_layer, Vector2(900, 1760), "Wolves Lv2-3")
+	_add_camp_marker(deco_layer, Vector2(2400, -660), "Wolves Lv2-3")
+	_add_camp_marker(deco_layer, Vector2(-1800, -1760), "Wolves Lv2-3")
+	_add_camp_marker(deco_layer, Vector2(3000, 1560), "Bandits Lv3-5")
+	_add_camp_marker(deco_layer, Vector2(-3500, -660), "Bandits Lv3-5")
+	_add_camp_marker(deco_layer, Vector2(3800, -1460), "Bandits Lv3-5")
+	_add_camp_marker(deco_layer, Vector2(-2800, 2360), "Bandits Lv3-5")
+	_add_camp_marker(deco_layer, Vector2(-4200, -2460), "Bandits Lv3-5")
+	_add_camp_marker(deco_layer, Vector2(4400, 2960), "Bandits Lv3-5")
 
 	# ---- Dense grass tufts scattered everywhere ----
-	for i in range(200):
-		var gx = randf_range(-3200, 3200)
-		var gy = randf_range(-2200, 2200)
+	for i in range(400):
+		var gx = randf_range(-5700, 5700)
+		var gy = randf_range(-4200, 4200)
 		if Vector2(gx, gy).length() > 550:
 			_add_grass_tuft(deco_layer, Vector2(gx, gy))
 
 	# ---- Bush clusters ----
-	for i in range(90):
-		var bx = randf_range(-3100, 3100)
-		var by = randf_range(-2100, 2100)
+	for i in range(180):
+		var bx = randf_range(-5600, 5600)
+		var by = randf_range(-4100, 4100)
 		if Vector2(bx, by).length() > 550:
 			_add_bush(deco_layer, Vector2(bx, by))
 
 	# ---- Flower patches ----
-	for i in range(14):
-		var fx = randf_range(-2800, 2800)
-		var fy = randf_range(-2000, 2000)
+	for i in range(30):
+		var fx = randf_range(-5200, 5200)
+		var fy = randf_range(-3800, 3800)
 		if Vector2(fx, fy).length() > 600:
 			_add_flowers(deco_layer, Vector2(fx, fy))
 
 	# ---- Fallen logs scattered around ----
-	for i in range(22):
-		var lx = randf_range(-3000, 3000)
-		var ly = randf_range(-2000, 2000)
+	for i in range(45):
+		var lx = randf_range(-5400, 5400)
+		var ly = randf_range(-4000, 4000)
 		if Vector2(lx, ly).length() > 550:
 			_add_fallen_log(deco_layer, Vector2(lx, ly))
 
 	# ---- Ground debris everywhere ----
-	for i in range(140):
-		var dx = randf_range(-3200, 3200)
-		var dy = randf_range(-2200, 2200)
+	for i in range(280):
+		var dx = randf_range(-5700, 5700)
+		var dy = randf_range(-4200, 4200)
 		_add_ground_debris(deco_layer, Vector2(dx, dy))
 
 	# ---- Mushroom clusters near moist areas ----
-	for i in range(35):
-		var mx = randf_range(-3000, 3000)
-		var my = randf_range(-2000, 2000)
+	for i in range(70):
+		var mx = randf_range(-5400, 5400)
+		var my = randf_range(-4000, 4000)
 		if Vector2(mx, my).length() > 550:
 			_add_mushrooms(deco_layer, Vector2(mx, my))
 
 	# ---- Vine decorations ----
-	for i in range(25):
-		var vx = randf_range(-2800, 2800)
-		var vy = randf_range(-2000, 2000)
+	for i in range(50):
+		var vx = randf_range(-5200, 5200)
+		var vy = randf_range(-3800, 3800)
 		if Vector2(vx, vy).length() > 600:
 			_add_vines(deco_layer, Vector2(vx, vy))
 

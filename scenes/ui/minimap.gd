@@ -3,10 +3,10 @@ extends Control
 ## Minimap showing terrain, player dot, enemy dots, and fog of war overlay.
 
 const MINIMAP_SIZE = Vector2(180, 130)
-const WORLD_SIZE = Vector2(7000, 5000)  # Haven's Rest total area
+const WORLD_SIZE = Vector2(12000, 9000)  # Haven's Rest total area
 const FOG_CELL_SIZE_ON_MAP := Vector2(
-	180.0 / (7000.0 / 64.0),
-	130.0 / (5000.0 / 64.0)
+	180.0 / (12000.0 / 64.0),
+	130.0 / (9000.0 / 64.0)
 )
 
 var _player: Node2D = null
@@ -41,10 +41,13 @@ func _draw() -> void:
 
 	# Camp markers (red dots) — only if explored
 	var camp_positions = [
-		Vector2(-900, -700), Vector2(800, -900), Vector2(-500, -1300),
-		Vector2(-1400, 800), Vector2(600, 1200), Vector2(1600, -400),
-		Vector2(1800, 1000), Vector2(-2200, -400), Vector2(2400, -900),
-		Vector2(-1800, 1400),
+		# Goblins
+		Vector2(-1200, -900), Vector2(1100, -1100), Vector2(-700, -1600), Vector2(600, 800),
+		# Wolves
+		Vector2(-2200, 1200), Vector2(900, 1800), Vector2(2400, -700), Vector2(-1800, -1800),
+		# Bandits
+		Vector2(3000, 1600), Vector2(-3500, -700), Vector2(3800, -1500),
+		Vector2(-2800, 2400), Vector2(-4200, -2500), Vector2(4400, 3000),
 	]
 	for camp_pos in camp_positions:
 		if FogOfWarManager.is_explored(camp_pos):

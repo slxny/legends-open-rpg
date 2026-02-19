@@ -7,7 +7,7 @@ signal died(enemy: Node2D, xp_reward: int, gold_reward: int)
 @onready var stats: StatsComponent = $StatsComponent
 @onready var name_label: Label = $NameLabel
 
-enum State { IDLE, CHASE, ATTACK, RETURN }
+enum State { IDLE, PATROL, CHASE, ATTACK, RETURN }
 
 var current_state: State = State.IDLE
 var home_position: Vector2 = Vector2.ZERO
@@ -17,7 +17,7 @@ var target: Node2D = null
 var enemy_name: String = "Enemy"
 var enemy_level: int = 1
 var aggro_range: float = 120.0
-var chase_range: float = 250.0
+var chase_range: float = 400.0
 var attack_cooldown: float = 1.2
 var xp_reward: int = 15
 var gold_reward: int = 5
@@ -29,6 +29,12 @@ var _is_dead: bool = false
 var _shadow: Sprite2D = null
 var _is_selected: bool = false
 var _knockback_velocity: Vector2 = Vector2.ZERO
+
+# Patrol state
+var _patrol_target: Vector2 = Vector2.ZERO
+var _patrol_radius: float = 150.0
+var _patrol_wait_timer: float = 0.0
+var _patrol_speed_factor: float = 0.45  # Patrol at 45% of move speed
 
 func _ready() -> void:
 	add_to_group("enemies")
@@ -47,6 +53,9 @@ func _ready() -> void:
 	add_child(_shadow)
 	_shadow.move_to_front()
 	move_child(_shadow, 0)
+
+	# Start with a random idle delay before first patrol
+	_patrol_wait_timer = randf_range(1.0, 4.0)
 
 
 func initialize(config: Dictionary) -> void:
@@ -68,6 +77,10 @@ func initialize(config: Dictionary) -> void:
 	stats.attack_range = config.get("attack_range", 35.0)
 	stats.move_speed = config.get("move_speed", 80.0)
 	stats.primary_stat = "strength"
+
+	# Scale patrol radius with move speed — faster enemies roam further
+	_patrol_radius = 100.0 + stats.move_speed * 1.2
+	chase_range = _patrol_radius + 250.0
 
 	if is_inside_tree():
 		var tex = SpriteGenerator.get_texture(sprite_type)
@@ -101,7 +114,9 @@ func _physics_process(delta: float) -> void:
 
 	match current_state:
 		State.IDLE:
-			_process_idle()
+			_process_idle(delta)
+		State.PATROL:
+			_process_patrol(delta)
 		State.CHASE:
 			_process_chase(delta)
 		State.ATTACK:
@@ -109,12 +124,53 @@ func _physics_process(delta: float) -> void:
 		State.RETURN:
 			_process_return(delta)
 
-func _process_idle() -> void:
+func _process_idle(delta: float) -> void:
+	velocity = Vector2.ZERO
+	# Check for player aggro
 	var player = _get_player()
 	if player and global_position.distance_to(player.global_position) < aggro_range:
 		target = player
 		current_state = State.CHASE
 		name_label.visible = true
+		return
+
+	# Count down idle pause, then pick a patrol waypoint
+	_patrol_wait_timer -= delta
+	if _patrol_wait_timer <= 0:
+		_pick_patrol_target()
+		current_state = State.PATROL
+
+func _pick_patrol_target() -> void:
+	# Choose a random point within patrol radius of home
+	var angle = randf() * TAU
+	var dist = randf_range(_patrol_radius * 0.3, _patrol_radius)
+	_patrol_target = home_position + Vector2(cos(angle), sin(angle)) * dist
+
+func _process_patrol(delta: float) -> void:
+	# Check for player aggro even while patrolling
+	var player = _get_player()
+	if player and global_position.distance_to(player.global_position) < aggro_range:
+		target = player
+		current_state = State.CHASE
+		name_label.visible = true
+		return
+
+	var dist_to_target = global_position.distance_to(_patrol_target)
+	if dist_to_target < 8.0:
+		# Reached patrol waypoint — pause then go idle
+		velocity = Vector2.ZERO
+		current_state = State.IDLE
+		_patrol_wait_timer = randf_range(2.0, 5.0)
+		return
+
+	var dir = (_patrol_target - global_position).normalized()
+	velocity = dir * stats.move_speed * _patrol_speed_factor + _get_separation_push()
+	# Flip sprite based on movement direction
+	if dir.x < -0.1:
+		sprite.flip_h = true
+	elif dir.x > 0.1:
+		sprite.flip_h = false
+	move_and_slide()
 
 func _get_separation_push() -> Vector2:
 	var push = Vector2.ZERO
@@ -183,6 +239,7 @@ func _process_return(delta: float) -> void:
 		current_state = State.IDLE
 		stats.current_hp = stats.max_hp
 		_update_hp_bar()
+		_patrol_wait_timer = randf_range(1.0, 3.0)
 		if not _is_selected:
 			name_label.visible = false
 		return
@@ -207,7 +264,7 @@ func take_damage(amount: int, is_crit: bool = false) -> void:
 
 	if stats.current_hp <= 0:
 		_die()
-	elif current_state == State.IDLE:
+	elif current_state == State.IDLE or current_state == State.PATROL:
 		var player = _get_player()
 		if player:
 			target = player

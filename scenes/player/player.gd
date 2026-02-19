@@ -94,6 +94,12 @@ func _ready() -> void:
 	# Register fog of war update trigger
 	_register_fog_trigger()
 
+## Public API for external systems (e.g. minimap click) to move the player.
+func move_to(world_pos: Vector2) -> void:
+	_move_target = world_pos
+	_is_moving_to_target = true
+	_spawn_move_indicator(_move_target)
+
 
 func _physics_process(delta: float) -> void:
 	var input_dir = Vector2.ZERO

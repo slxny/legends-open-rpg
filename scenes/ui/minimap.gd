@@ -1,6 +1,7 @@
 extends Control
 
 ## Minimap showing terrain, player dot, enemy dots, and fog of war overlay.
+## Click anywhere on the minimap to move the player to that world position.
 
 const MINIMAP_SIZE = Vector2(180, 130)
 const WORLD_SIZE = Vector2(12000, 9000)  # Haven's Rest total area
@@ -13,9 +14,20 @@ var _player: Node2D = null
 
 func _ready() -> void:
 	custom_minimum_size = MINIMAP_SIZE
+	mouse_filter = Control.MOUSE_FILTER_STOP
 
 func setup(player: Node2D) -> void:
 	_player = player
+
+func _gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		var local_pos = event.position
+		# Clamp to minimap bounds
+		local_pos = local_pos.clamp(Vector2.ZERO, MINIMAP_SIZE)
+		var world_pos = _minimap_to_world(local_pos)
+		if _player and is_instance_valid(_player) and _player.has_method("move_to"):
+			_player.move_to(world_pos)
+		get_viewport().set_input_as_handled()
 
 func _process(_delta: float) -> void:
 	queue_redraw()
@@ -89,3 +101,7 @@ func _draw_fog_overlay() -> void:
 func _world_to_minimap(world_pos: Vector2) -> Vector2:
 	var normalized = (world_pos + WORLD_SIZE / 2.0) / WORLD_SIZE
 	return normalized * MINIMAP_SIZE
+
+func _minimap_to_world(minimap_pos: Vector2) -> Vector2:
+	var normalized = minimap_pos / MINIMAP_SIZE
+	return normalized * WORLD_SIZE - WORLD_SIZE / 2.0

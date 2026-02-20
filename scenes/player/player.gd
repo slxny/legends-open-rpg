@@ -209,12 +209,17 @@ func _physics_process(delta: float) -> void:
 			var taps = _tap_count
 			_tap_count = 0
 			_tap_resolved = true
+			var move_input = Vector2(
+				Input.get_axis("move_left", "move_right"),
+				Input.get_axis("move_up", "move_down")
+			)
 			if taps >= 3:
 				_try_special_attack(SpecialAttack.WHIRLWIND)
-			elif taps >= 2:
+			elif taps >= 2 and move_input.length() > 0.25:
+				# Double-tap + direction held = power strike
 				_try_special_attack(SpecialAttack.POWER_STRIKE)
 			else:
-				# Single tap — fire normal attack immediately
+				# Single tap, or double-tap without direction = normal attack
 				_try_manual_attack()
 
 	# --- Hold-to-attack: only after tap sequence resolved ---

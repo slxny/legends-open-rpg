@@ -49,6 +49,11 @@ var armory_hp_bonus: int = 0
 var temp_armor: int = 0
 var temp_dodge: float = 0.0
 
+# Timed buff/debuff system — each entry: { "id": String, "stat": String, "amount": int/float, "time_left": float, "is_debuff": bool }
+var _active_buffs: Array[Dictionary] = []
+signal buff_applied(buff_name: String, is_debuff: bool, duration: float)
+signal buff_expired(buff_name: String)
+
 func initialize_from_hero(hero_class_key: String) -> void:
 	hero_class = hero_class_key
 	var data = HeroData.get_hero(hero_class_key)
@@ -176,3 +181,70 @@ func process_regen(delta: float) -> void:
 		var mana_regen = max(1, int(get_total_max_mana() * 0.02 + (intelligence + bonus_intelligence) / 15.0))
 		if current_mana < get_total_max_mana():
 			restore_mana(mana_regen)
+
+	# Tick down active buffs/debuffs
+	_process_buffs(delta)
+
+func apply_timed_buff(buff_id: String, stat: String, amount, duration: float, is_debuff: bool = false) -> void:
+	# Remove existing buff with same id (no stacking)
+	remove_buff(buff_id)
+	var buff = {
+		"id": buff_id,
+		"stat": stat,
+		"amount": amount,
+		"time_left": duration,
+		"is_debuff": is_debuff,
+	}
+	_active_buffs.append(buff)
+	_apply_buff_stat(stat, amount)
+	buff_applied.emit(buff_id, is_debuff, duration)
+
+func remove_buff(buff_id: String) -> void:
+	for i in range(_active_buffs.size() - 1, -1, -1):
+		if _active_buffs[i]["id"] == buff_id:
+			_unapply_buff_stat(_active_buffs[i]["stat"], _active_buffs[i]["amount"])
+			buff_expired.emit(_active_buffs[i]["id"])
+			_active_buffs.remove_at(i)
+
+func has_buff(buff_id: String) -> bool:
+	for b in _active_buffs:
+		if b["id"] == buff_id:
+			return true
+	return false
+
+func get_active_buffs() -> Array[Dictionary]:
+	return _active_buffs
+
+func _process_buffs(delta: float) -> void:
+	for i in range(_active_buffs.size() - 1, -1, -1):
+		_active_buffs[i]["time_left"] -= delta
+		if _active_buffs[i]["time_left"] <= 0.0:
+			_unapply_buff_stat(_active_buffs[i]["stat"], _active_buffs[i]["amount"])
+			buff_expired.emit(_active_buffs[i]["id"])
+			_active_buffs.remove_at(i)
+
+func _apply_buff_stat(stat: String, amount) -> void:
+	match stat:
+		"strength": bonus_strength += int(amount)
+		"agility": bonus_agility += int(amount)
+		"intelligence": bonus_intelligence += int(amount)
+		"armor": temp_armor += int(amount)
+		"max_hp": bonus_max_hp += int(amount)
+		"max_mana": bonus_max_mana += int(amount)
+		"move_speed": bonus_move_speed += float(amount)
+		"attack_damage": weapon_damage += int(amount)
+		"dodge": temp_dodge += float(amount)
+	_emit_all()
+
+func _unapply_buff_stat(stat: String, amount) -> void:
+	match stat:
+		"strength": bonus_strength -= int(amount)
+		"agility": bonus_agility -= int(amount)
+		"intelligence": bonus_intelligence -= int(amount)
+		"armor": temp_armor -= int(amount)
+		"max_hp": bonus_max_hp -= int(amount)
+		"max_mana": bonus_max_mana -= int(amount)
+		"move_speed": bonus_move_speed -= float(amount)
+		"attack_damage": weapon_damage -= int(amount)
+		"dodge": temp_dodge -= float(amount)
+	_emit_all()

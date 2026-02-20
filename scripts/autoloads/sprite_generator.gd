@@ -60,7 +60,7 @@ func _init_asset_dirs() -> void:
 	# Buildings
 	for n in ["shop_building", "armory_building", "town_hall", "landing_pad", "hatchery",
 			"barracks_building", "inn_building", "watch_tower", "town_fountain",
-			"stable_building", "chapel_building",
+			"stable_building", "chapel_building", "tavern_building",
 			"crate_stack", "barrel", "well", "lamp_post", "town_wall_h"]:
 		_asset_dirs[n] = "buildings"
 	# Beacons
@@ -128,6 +128,7 @@ func _generate_all() -> void:
 	_gen_or_load("town_fountain")
 	_gen_or_load("stable_building")
 	_gen_or_load("chapel_building")
+	_gen_or_load("tavern_building")
 	_gen_or_load("crate_stack")
 	_gen_or_load("barrel")
 	_gen_or_load("well")
@@ -1765,6 +1766,35 @@ func _gen_chapel_building() -> void:
 	_fill_rect(img, 8, 24, 4, 5, Color(0.3, 0.5, 0.8))
 	_fill_rect(img, 24, 24, 4, 5, Color(0.7, 0.3, 0.3))
 	textures["chapel_building"] = ImageTexture.create_from_image(img)
+
+func _gen_tavern_building() -> void:
+	var img = Image.create(44, 44, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	_fill_rect(img, 4, 38, 36, 5, Color(0, 0, 0, 0.2))
+	# Base — warm reddish wood
+	_fill_rect(img, 4, 16, 36, 24, Color(0.55, 0.28, 0.22))
+	_fill_rect(img, 5, 17, 34, 22, Color(0.62, 0.32, 0.25))
+	# Roof — deep purple-red
+	_fill_rect(img, 2, 10, 40, 8, Color(0.4, 0.15, 0.2))
+	_fill_rect(img, 5, 7, 34, 5, Color(0.45, 0.18, 0.22))
+	_fill_rect(img, 10, 4, 24, 5, Color(0.5, 0.2, 0.25))
+	# Door — dark wood, wide entrance
+	_fill_rect(img, 14, 24, 16, 16, Color(0.35, 0.18, 0.1))
+	_fill_rect(img, 15, 25, 14, 14, Color(0.3, 0.15, 0.08))
+	# Red-pink glow windows (warm/inviting)
+	_fill_rect(img, 6, 20, 6, 6, Color(0.9, 0.4, 0.45))
+	_fill_rect(img, 32, 20, 6, 6, Color(0.9, 0.4, 0.45))
+	_fill_rect(img, 8, 20, 1, 6, Color(0.5, 0.2, 0.2))
+	_fill_rect(img, 6, 23, 6, 1, Color(0.5, 0.2, 0.2))
+	_fill_rect(img, 34, 20, 1, 6, Color(0.5, 0.2, 0.2))
+	_fill_rect(img, 32, 23, 6, 1, Color(0.5, 0.2, 0.2))
+	# Heart-shaped sign hanging left side
+	_fill_rect(img, 0, 17, 3, 2, Color(0.4, 0.2, 0.2))
+	_fill_rect(img, 0, 19, 5, 5, Color(0.8, 0.25, 0.3))
+	_fill_rect(img, 1, 20, 3, 3, Color(0.9, 0.35, 0.4))
+	# Doorway warm glow spill
+	_fill_rect(img, 16, 36, 12, 2, Color(0.9, 0.5, 0.3, 0.4))
+	textures["tavern_building"] = ImageTexture.create_from_image(img)
 
 func _gen_crate_stack() -> void:
 	var img = Image.create(14, 14, false, Image.FORMAT_RGBA8)

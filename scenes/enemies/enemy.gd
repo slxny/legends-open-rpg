@@ -45,6 +45,12 @@ var _patrol_radius: float = 150.0
 var _patrol_wait_timer: float = 0.0
 var _patrol_speed_factor: float = 0.65  # Patrol at 65% of move speed — more active roaming
 
+# Pre-computed squared distances to avoid sqrt in hot path
+var _aggro_range_sq: float = 14400.0   # aggro_range^2
+var _chase_range_sq: float = 160000.0  # chase_range^2
+var _attack_range_sq: float = 1225.0   # attack_range^2
+var _attack_disengage_sq: float = 2756.25  # (attack_range * 1.5)^2
+
 # Effect proc chances (rare — 8-12% per attack depending on type)
 var _effect_chance: float = 0.0  # Overall chance this unit has any effect
 var _effect_type: String = ""    # "knockback", "paralyze", or "slow"
@@ -52,6 +58,12 @@ var _effect_type: String = ""    # "knockback", "paralyze", or "slow"
 # Pre-allocated label settings for damage numbers (avoid LabelSettings.new() per hit)
 static var _dmg_settings_normal: LabelSettings = null
 static var _dmg_settings_crit: LabelSettings = null
+# Shared damage label pool (avoids Label.new() per hit across all enemies)
+static var _dmg_label_pool: Array[Label] = []
+const DMG_LABEL_POOL_MAX: int = 30
+# Shared drop node pool (avoids Area2D+CollisionShape2D+Sprite2D per drop)
+static var _drop_pool: Array[Area2D] = []
+const DROP_POOL_MAX: int = 20
 
 func _ready() -> void:
 	add_to_group("enemies")
@@ -114,6 +126,13 @@ func initialize(config: Dictionary) -> void:
 	# Scale patrol radius with move speed — faster enemies roam much further
 	_patrol_radius = 300.0 + stats.move_speed * 3.0
 	chase_range = _patrol_radius + 350.0
+
+	# Pre-compute squared distances (avoids sqrt every frame in hot path)
+	_aggro_range_sq = aggro_range * aggro_range
+	_chase_range_sq = chase_range * chase_range
+	_attack_range_sq = stats.attack_range * stats.attack_range
+	var disengage = stats.attack_range * 1.5
+	_attack_disengage_sq = disengage * disengage
 
 	# Randomly assign an effect to some units (~25% of enemies have an effect proc)
 	const EFFECT_TYPES = ["knockback", "paralyze", "slow"]
@@ -181,9 +200,9 @@ func _physics_process(delta: float) -> void:
 
 func _process_idle(delta: float) -> void:
 	velocity = Vector2.ZERO
-	# Check for player aggro
+	# Check for player aggro (squared distance avoids sqrt)
 	var player = _get_player()
-	if player and global_position.distance_to(player.global_position) < aggro_range:
+	if player and global_position.distance_squared_to(player.global_position) < _aggro_range_sq:
 		target = player
 		current_state = State.CHASE
 		name_label.visible = true
@@ -202,16 +221,16 @@ func _pick_patrol_target() -> void:
 	_patrol_target = home_position + Vector2(cos(angle), sin(angle)) * dist
 
 func _process_patrol(delta: float) -> void:
-	# Check for player aggro even while patrolling
+	# Check for player aggro even while patrolling (squared distance avoids sqrt)
 	var player = _get_player()
-	if player and global_position.distance_to(player.global_position) < aggro_range:
+	if player and global_position.distance_squared_to(player.global_position) < _aggro_range_sq:
 		target = player
 		current_state = State.CHASE
 		name_label.visible = true
 		return
 
-	var dist_to_target = global_position.distance_to(_patrol_target)
-	if dist_to_target < 8.0:
+	var dist_sq_to_target = global_position.distance_squared_to(_patrol_target)
+	if dist_sq_to_target < 64.0:  # 8^2
 		# Reached patrol waypoint — short pause then go idle
 		velocity = Vector2.ZERO
 		current_state = State.IDLE
@@ -240,15 +259,15 @@ func _process_chase(delta: float) -> void:
 		current_state = State.RETURN
 		return
 
-	var dist_to_target = global_position.distance_to(target.global_position)
-	var dist_from_home = global_position.distance_to(home_position)
+	var dist_sq_to_target = global_position.distance_squared_to(target.global_position)
+	var dist_sq_from_home = global_position.distance_squared_to(home_position)
 
-	if dist_from_home > chase_range:
+	if dist_sq_from_home > _chase_range_sq:
 		current_state = State.RETURN
 		target = null
 		return
 
-	if dist_to_target <= stats.attack_range:
+	if dist_sq_to_target <= _attack_range_sq:
 		current_state = State.ATTACK
 		return
 
@@ -266,8 +285,8 @@ func _process_attack(delta: float) -> void:
 		current_state = State.RETURN
 		return
 
-	var dist = global_position.distance_to(target.global_position)
-	if dist > stats.attack_range * 1.5:
+	var dist_sq = global_position.distance_squared_to(target.global_position)
+	if dist_sq > _attack_disengage_sq:
 		current_state = State.CHASE
 		return
 
@@ -291,8 +310,8 @@ func _process_attack(delta: float) -> void:
 				_apply_effect_to_target(target)
 
 func _process_return(delta: float) -> void:
-	var dist = global_position.distance_to(home_position)
-	if dist < 5.0:
+	var dist_sq = global_position.distance_squared_to(home_position)
+	if dist_sq < 25.0:  # 5^2
 		velocity = Vector2.ZERO
 		current_state = State.IDLE
 		stats.current_hp = stats.max_hp
@@ -411,47 +430,68 @@ func _spawn_blood_splatter() -> void:
 	var blood_tex = SpriteGenerator.get_texture("blood_splatter")
 	if not blood_tex:
 		return
-	# Spawn 1-2 blood splatters around the death position
-	for _i in range(randi_range(1, 2)):
-		var blood = Sprite2D.new()
-		blood.texture = blood_tex
-		blood.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		blood.global_position = global_position + Vector2(randf_range(-12, 12), randf_range(-8, 8))
-		blood.rotation = randf() * TAU
-		blood.scale = Vector2(randf_range(0.8, 1.5), randf_range(0.8, 1.5))
-		blood.z_index = -2
-		blood.modulate.a = randf_range(0.6, 0.9)
-		_get_world_node().add_child(blood)
-		# Fade out after 3-5 seconds (reduced from 8-12 for performance)
-		var fade_tween = blood.create_tween()
-		fade_tween.tween_interval(randf_range(3.0, 5.0))
-		fade_tween.tween_property(blood, "modulate:a", 0.0, 1.0)
-		fade_tween.tween_callback(blood.queue_free)
+	var blood = Sprite2D.new()
+	blood.texture = blood_tex
+	blood.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	blood.global_position = global_position + Vector2(randf_range(-12, 12), randf_range(-8, 8))
+	blood.rotation = randf() * TAU
+	blood.scale = Vector2(randf_range(0.8, 1.5), randf_range(0.8, 1.5))
+	blood.z_index = -2
+	blood.modulate.a = randf_range(0.6, 0.9)
+	_get_world_node().add_child(blood)
+	var fade_tween = blood.create_tween()
+	fade_tween.tween_interval(randf_range(3.0, 5.0))
+	fade_tween.tween_property(blood, "modulate:a", 0.0, 1.0)
+	fade_tween.tween_callback(blood.queue_free)
 
-func _spawn_gold_drop(amount: int) -> void:
+static func _get_pooled_drop() -> Area2D:
+	if _drop_pool.size() > 0:
+		var drop = _drop_pool.pop_back()
+		# Kill any leftover tweens
+		for child in drop.get_children():
+			if child is Sprite2D:
+				child.position = Vector2.ZERO
+				child.modulate = Color.WHITE
+		return drop
+	# Build a new drop: Area2D -> CollisionShape2D + Sprite2D
 	var drop = Area2D.new()
-	drop.position = global_position
 	drop.collision_layer = 32
 	drop.collision_mask = 0
-	drop.add_to_group("ground_items")
-	drop.set_meta("item_data", {"id": "_gold", "name": "%d Gold" % amount, "gold_amount": amount})
-
 	var shape_node = CollisionShape2D.new()
 	var circle = CircleShape2D.new()
 	circle.radius = 8.0
 	shape_node.shape = circle
 	drop.add_child(shape_node)
-
 	var visual = Sprite2D.new()
-	visual.texture = SpriteGenerator.get_texture("crystal_blue" if amount >= 10 else "crystal_white")
 	visual.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	visual.name = "Visual"
 	drop.add_child(visual)
+	return drop
 
+static func recycle_drop(drop: Area2D) -> void:
+	if is_instance_valid(drop):
+		drop.remove_from_group("ground_items")
+		drop.get_parent().remove_child(drop)
+		if _drop_pool.size() < DROP_POOL_MAX:
+			_drop_pool.append(drop)
+		else:
+			drop.queue_free()
+
+func _spawn_gold_drop(amount: int) -> void:
+	var drop = _get_pooled_drop()
+	drop.position = global_position
+	drop.add_to_group("ground_items")
+	drop.set_meta("item_data", {"id": "_gold", "name": "%d Gold" % amount, "gold_amount": amount})
+
+	var visual = drop.get_node("Visual") as Sprite2D
+	visual.texture = SpriteGenerator.get_texture("crystal_blue" if amount >= 10 else "crystal_white")
+	visual.modulate = Color.WHITE
+
+	_get_world_node().add_child(drop)
+	# Tween must be created after add_child (node needs to be in tree)
 	var float_tween = drop.create_tween().set_loops()
 	float_tween.tween_property(visual, "position:y", -2.0, 0.6).set_trans(Tween.TRANS_SINE)
 	float_tween.tween_property(visual, "position:y", 0.0, 0.6).set_trans(Tween.TRANS_SINE)
-
-	_get_world_node().add_child(drop)
 
 func _spawn_item_drop(item_id: String) -> void:
 	var item = ItemData.get_item(item_id)
@@ -460,31 +500,21 @@ func _spawn_item_drop(item_id: String) -> void:
 	_spawn_item_drop_dict(item)
 
 func _spawn_item_drop_dict(item: Dictionary) -> void:
-	var drop = Area2D.new()
+	var drop = _get_pooled_drop()
 	drop.position = global_position + Vector2(randf_range(-10, 10), randf_range(-10, 10))
-	drop.collision_layer = 32
-	drop.collision_mask = 0
 	drop.add_to_group("ground_items")
 	drop.set_meta("item_data", item)
 
-	var shape_node = CollisionShape2D.new()
-	var circle = CircleShape2D.new()
-	circle.radius = 8.0
-	shape_node.shape = circle
-	drop.add_child(shape_node)
-
-	var visual = Sprite2D.new()
+	var visual = drop.get_node("Visual") as Sprite2D
 	visual.texture = SpriteGenerator.get_texture("crystal_teal")
-	visual.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	var rarity = item.get("rarity", 0)
 	visual.modulate = ItemData.RARITY_COLORS.get(rarity, Color.WHITE)
-	drop.add_child(visual)
 
+	_get_world_node().add_child(drop)
+	# Tween must be created after add_child (node needs to be in tree)
 	var float_tween = drop.create_tween().set_loops()
 	float_tween.tween_property(visual, "position:y", -2.0, 0.6).set_trans(Tween.TRANS_SINE)
 	float_tween.tween_property(visual, "position:y", 0.0, 0.6).set_trans(Tween.TRANS_SINE)
-
-	_get_world_node().add_child(drop)
 
 	# Announce rare+ drops
 	var rarity_name = ItemData.RARITY_NAMES.get(rarity, "")
@@ -493,14 +523,19 @@ func _spawn_item_drop_dict(item: Dictionary) -> void:
 		GameManager.game_message.emit("%s %s dropped!" % [rarity_name, item.get("name", "Item")], color)
 
 func _spawn_damage_number(amount: int, is_crit: bool) -> void:
-	var label = Label.new()
+	var label: Label
+	if _dmg_label_pool.size() > 0:
+		label = _dmg_label_pool.pop_back()
+	else:
+		label = Label.new()
 	label.text = str(amount) + ("!" if is_crit else "")
 	label.position = Vector2(randf_range(-10, 10) if not is_crit else randf_range(-6, 6), -30)
 	label.label_settings = _dmg_settings_crit if is_crit else _dmg_settings_normal
+	label.modulate.a = 1.0
+	label.scale = Vector2.ONE
 	add_child(label)
 	var tween = create_tween()
 	if is_crit:
-		# Pop scale in, then float up and fade
 		label.scale = Vector2(0.4, 0.4)
 		tween.tween_property(label, "scale", Vector2(1.3, 1.3), 0.08).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 		tween.tween_property(label, "scale", Vector2(1.0, 1.0), 0.05)
@@ -513,7 +548,15 @@ func _spawn_damage_number(amount: int, is_crit: bool) -> void:
 		tween.tween_property(label, "position:y", label.position.y - 28, 0.55)
 		tween.tween_property(label, "modulate:a", 0.0, 0.55).set_delay(0.15)
 		tween.set_parallel(false)
-	tween.tween_callback(label.queue_free)
+	tween.tween_callback(_recycle_dmg_label.bind(label))
+
+static func _recycle_dmg_label(label: Label) -> void:
+	if is_instance_valid(label):
+		label.get_parent().remove_child(label)
+		if _dmg_label_pool.size() < DMG_LABEL_POOL_MAX:
+			_dmg_label_pool.append(label)
+		else:
+			label.queue_free()
 
 func _update_hp_bar() -> void:
 	if hp_bar:

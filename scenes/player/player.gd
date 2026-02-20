@@ -85,9 +85,18 @@ var _tex_slash_arc: Texture2D = null
 var _tex_crystal_white: Texture2D = null
 var _tex_selection_red: Texture2D = null
 var _tex_beacon_blue: Texture2D = null
+# Sprite2D pool for transient VFX (slash arcs, impact sparks, flash rings)
+var _vfx_pool: Array[Sprite2D] = []
+const VFX_POOL_MAX: int = 40
 # Pre-allocated label settings for player damage numbers
 var _player_dmg_normal: LabelSettings = null
 var _player_dmg_crit: LabelSettings = null
+# Cached physics query params (avoids allocation per click)
+var _enemy_query_params: PhysicsPointQueryParameters2D = null
+var _clickable_query_params: PhysicsPointQueryParameters2D = null
+# Damage label pool (avoids Label.new() per hit on player)
+var _player_dmg_pool: Array[Label] = []
+const PLAYER_DMG_POOL_MAX: int = 10
 const CHARGE_GRACE: float = 0.15  # Hold this long before suppressing basic attacks
 const TAP_RESOLVE_TIME: float = 0.12  # 120ms buffer — ~7 frames, barely perceptible
 const CHARGE_THRESHOLD: float = 1.5   # Hold 1.5s for charged slash
@@ -166,6 +175,12 @@ func _ready() -> void:
 	_player_dmg_crit.font_color = Color(1.0, 0.1, 0.1)
 	_player_dmg_crit.outline_size = 2
 	_player_dmg_crit.outline_color = Color.BLACK
+
+	# Pre-allocate physics query params (reused every click)
+	_enemy_query_params = PhysicsPointQueryParameters2D.new()
+	_enemy_query_params.collision_mask = 2  # Enemies only
+	_clickable_query_params = PhysicsPointQueryParameters2D.new()
+	_clickable_query_params.collision_mask = 4  # NPCs only
 
 	# Sync initial state to DeathCounterSystem
 	_sync_to_death_counters()
@@ -567,7 +582,6 @@ func _execute_power_strike(attack_dir: Vector2) -> void:
 			hit_target.apply_knockback(dir, 90.0)
 			_spawn_slash_vfx(dir, 50.0, 1.8)
 			_spawn_slash_vfx(dir.rotated(0.2), 45.0, 1.4)
-			_spawn_slash_vfx(dir.rotated(-0.2), 45.0, 1.4)
 			_spawn_impact_vfx(hit_target.global_position, true)
 			_do_screen_shake(7.0)
 			_do_hit_freeze(true)
@@ -608,12 +622,10 @@ func _execute_whirlwind(attack_dir: Vector2) -> void:
 	tween.tween_property(sprite, "position", base_pos + dir * 6.0, 0.32)
 	tween.tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.1)
 	tween.set_parallel(false)
-	# Spawn slash VFX at midpoint of spin
+	# Spawn slash VFX at midpoint of spin (2 opposing arcs for 360° feel)
 	tween.tween_callback(func():
 		_spawn_slash_vfx(dir, 50.0, 2.0)
-		_spawn_slash_vfx(dir.rotated(PI * 0.5), 45.0, 1.6)
 		_spawn_slash_vfx(dir.rotated(PI), 45.0, 1.6)
-		_spawn_slash_vfx(dir.rotated(-PI * 0.5), 45.0, 1.6)
 	)
 	if frames.size() >= 3:
 		tween.tween_callback(func(): sprite.texture = frames[2])
@@ -672,11 +684,9 @@ func _execute_charged_slash(attack_dir: Vector2) -> void:
 	# Impact — hit ALL enemies in the slash path
 	tween.tween_callback(func():
 		sprite.modulate = Color.WHITE
-		# Massive VFX burst
+		# VFX burst (reduced from 4 to 2 for performance)
 		_spawn_slash_vfx(dir, 55.0, 2.2)
 		_spawn_slash_vfx(dir.rotated(0.3), 50.0, 1.8)
-		_spawn_slash_vfx(dir.rotated(-0.3), 50.0, 1.8)
-		_spawn_slash_vfx(dir, 35.0, 1.4)
 		# Hit every enemy in a forward cone (~90° arc in attack direction)
 		var hit_count := 0
 		for enemy in _enemies_in_range:
@@ -863,10 +873,8 @@ func _get_world_mouse_pos() -> Vector2:
 func _get_enemy_at_mouse() -> Node2D:
 	var mouse_pos = _get_world_mouse_pos()
 	var space = get_world_2d().direct_space_state
-	var params = PhysicsPointQueryParameters2D.new()
-	params.position = mouse_pos
-	params.collision_mask = 2  # Enemies only
-	var results = space.intersect_point(params, 1)
+	_enemy_query_params.position = mouse_pos
+	var results = space.intersect_point(_enemy_query_params, 1)
 	if results.size() > 0:
 		var col = results[0]["collider"]
 		if col.is_in_group("enemies") and not col.get("_is_dead"):
@@ -876,10 +884,8 @@ func _get_enemy_at_mouse() -> Node2D:
 func _get_clickable_at_mouse() -> Node2D:
 	var mouse_pos = _get_world_mouse_pos()
 	var space = get_world_2d().direct_space_state
-	var params = PhysicsPointQueryParameters2D.new()
-	params.position = mouse_pos
-	params.collision_mask = 4  # NPCs only for movement interaction
-	var results = space.intersect_point(params, 1)
+	_clickable_query_params.position = mouse_pos
+	var results = space.intersect_point(_clickable_query_params, 1)
 	if results.size() > 0:
 		return results[0]["collider"]
 	return null
@@ -1283,9 +1289,8 @@ func _do_ranged_attack(target: Node2D, result: Dictionary) -> void:
 	tween.tween_callback(func(): _is_attack_animating = false)
 
 func _spawn_slash_vfx(direction: Vector2, radius: float, scale_mult: float) -> void:
-	var slash = Sprite2D.new()
+	var slash = _get_pooled_vfx()
 	slash.texture = _tex_slash_arc
-	slash.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	slash.global_position = global_position + direction * radius * 0.5
 	slash.rotation = direction.angle()
 	slash.scale = Vector2(scale_mult, scale_mult)
@@ -1297,20 +1302,19 @@ func _spawn_slash_vfx(direction: Vector2, radius: float, scale_mult: float) -> v
 	tween.tween_property(slash, "scale", slash.scale * 1.4, 0.15)
 	tween.tween_property(slash, "modulate:a", 0.0, 0.2)
 	tween.set_parallel(false)
-	tween.tween_callback(slash.queue_free)
+	tween.tween_callback(_recycle_vfx.bind(slash))
 
 func _spawn_impact_vfx(pos: Vector2, is_crit: bool = false) -> void:
-	var spark_count = 4 if is_crit else 2
+	# Reduced spark count: 1 normal, 2 crit (was 2/4)
+	var spark_count = 2 if is_crit else 1
 	var spread = 28.0 if is_crit else 18.0
 	var world = _get_world_node()
 	for i in range(spark_count):
-		var spark = Sprite2D.new()
+		var spark = _get_pooled_vfx()
 		spark.texture = _tex_crystal_white
-		spark.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		spark.global_position = pos
 		var sc = randf_range(0.3, 0.7) if not is_crit else randf_range(0.5, 1.0)
 		spark.scale = Vector2(sc, sc)
-		# Orange-red sparks, brighter on crit
 		var r = randf_range(0.9, 1.0)
 		var g = randf_range(0.2, 0.5) if not is_crit else randf_range(0.6, 0.9)
 		spark.modulate = Color(r, g, 0.1, 1.0)
@@ -1324,12 +1328,11 @@ func _spawn_impact_vfx(pos: Vector2, is_crit: bool = false) -> void:
 		tween.tween_property(spark, "modulate:a", 0.0, dur)
 		tween.tween_property(spark, "scale", Vector2.ZERO, dur)
 		tween.set_parallel(false)
-		tween.tween_callback(spark.queue_free)
+		tween.tween_callback(_recycle_vfx.bind(spark))
 
-	# White flash ring at impact centre
-	var flash = Sprite2D.new()
+	# Flash ring at impact centre
+	var flash = _get_pooled_vfx()
 	flash.texture = _tex_selection_red
-	flash.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	flash.modulate = Color(1.0, 0.9, 0.5, 0.9) if not is_crit else Color(1.0, 0.3, 0.1, 1.0)
 	flash.scale = Vector2(0.2, 0.2)
 	flash.z_index = 13
@@ -1340,7 +1343,7 @@ func _spawn_impact_vfx(pos: Vector2, is_crit: bool = false) -> void:
 	ft.tween_property(flash, "scale", Vector2(1.2, 1.2) if not is_crit else Vector2(2.0, 2.0), 0.1)
 	ft.tween_property(flash, "modulate:a", 0.0, 0.12)
 	ft.set_parallel(false)
-	ft.tween_callback(flash.queue_free)
+	ft.tween_callback(_recycle_vfx.bind(flash))
 
 func _do_hit_freeze(is_crit: bool) -> void:
 	if _hit_freeze_active:
@@ -1383,18 +1386,27 @@ func _on_pickup_area_area_entered(area: Area2D) -> void:
 			GameManager.add_gold(item.get("gold_amount", 0))
 			GameManager.game_message.emit("+ %s" % item.get("name", "Gold"), Color(0.3, 0.6, 1.0))
 			AudioManager.play_sfx("gold_pickup", -3.0)
-			area.queue_free()
+			_free_drop(area)
 			return
 		if item.get("id") == "_wood":
 			GameManager.add_wood(item.get("wood_amount", 0))
 			GameManager.game_message.emit("+ %s" % item.get("name", "Wood"), Color(0.65, 0.45, 0.2))
 			AudioManager.play_sfx("gold_pickup", -3.0)
-			area.queue_free()
+			_free_drop(area)
 			return
 		if inventory.add_item(item):
 			GameManager.game_message.emit("+ %s" % item.get("name", "Item"), Color(0.2, 1.0, 0.2))
 			AudioManager.play_sfx("item_pickup")
-			area.queue_free()
+			_free_drop(area)
+
+const _EnemyScript = preload("res://scenes/enemies/enemy.gd")
+
+func _free_drop(area: Area2D) -> void:
+	# Recycle pooled drops (have "Visual" child), queue_free others
+	if area.has_node("Visual"):
+		_EnemyScript.recycle_drop(area)
+	else:
+		area.queue_free()
 
 func _find_best_tree(dir: Vector2) -> Node2D:
 	_trees_in_range = _trees_in_range.filter(func(t): return is_instance_valid(t) and not t.get("_is_chopped"))
@@ -1446,9 +1458,8 @@ func _perform_tree_chop(tree: Node2D, attack_dir: Vector2) -> void:
 func _spawn_wood_chips(pos: Vector2, dir: Vector2) -> void:
 	var world = _get_world_node()
 	for i in range(2):
-		var chip = Sprite2D.new()
+		var chip = _get_pooled_vfx()
 		chip.texture = _tex_crystal_white
-		chip.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		chip.global_position = pos
 		chip.scale = Vector2(0.3, 0.3)
 		chip.modulate = Color(0.55, 0.38, 0.18)
@@ -1462,7 +1473,7 @@ func _spawn_wood_chips(pos: Vector2, dir: Vector2) -> void:
 		t.tween_property(chip, "modulate:a", 0.0, dur)
 		t.tween_property(chip, "scale", Vector2.ZERO, dur)
 		t.set_parallel(false)
-		t.tween_callback(chip.queue_free)
+		t.tween_callback(_recycle_vfx.bind(chip))
 
 func _spawn_buff_vfx(color: Color, duration: float) -> void:
 	var vfx = Sprite2D.new()
@@ -1477,15 +1488,33 @@ func _spawn_buff_vfx(color: Color, duration: float) -> void:
 	tween.tween_callback(vfx.queue_free)
 
 func _spawn_move_indicator(pos: Vector2) -> void:
-	var indicator = Sprite2D.new()
+	var indicator = _get_pooled_vfx()
 	indicator.texture = SpriteGenerator.get_texture("beacon_green")
 	indicator.scale = Vector2(0.3, 0.3)
 	indicator.global_position = pos
-	indicator.modulate.a = 0.7
+	indicator.modulate = Color(1, 1, 1, 0.7)
 	_get_world_node().add_child(indicator)
 	var tween = indicator.create_tween()
 	tween.tween_property(indicator, "modulate:a", 0.0, 0.4)
-	tween.tween_callback(indicator.queue_free)
+	tween.tween_callback(_recycle_vfx.bind(indicator))
+
+func _get_pooled_vfx() -> Sprite2D:
+	if _vfx_pool.size() > 0:
+		var s = _vfx_pool.pop_back()
+		s.rotation = 0.0
+		s.z_index = 0
+		return s
+	var s = Sprite2D.new()
+	s.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	return s
+
+func _recycle_vfx(s: Sprite2D) -> void:
+	if is_instance_valid(s):
+		s.get_parent().remove_child(s)
+		if _vfx_pool.size() < VFX_POOL_MAX:
+			_vfx_pool.append(s)
+		else:
+			s.queue_free()
 
 func _get_world_node() -> Node:
 	if _world_node and is_instance_valid(_world_node):
@@ -1507,15 +1536,29 @@ func take_damage(amount: int, is_crit: bool = false) -> void:
 	AudioManager.play_sfx("player_hurt", -4.0)
 
 func _spawn_damage_number(amount: int, is_crit: bool) -> void:
-	var label = Label.new()
+	var label: Label
+	if _player_dmg_pool.size() > 0:
+		label = _player_dmg_pool.pop_back()
+	else:
+		label = Label.new()
 	label.text = str(amount) + ("!" if is_crit else "")
 	label.position = Vector2(randf_range(-10, 10), -35)
 	label.label_settings = _player_dmg_crit if is_crit else _player_dmg_normal
+	label.modulate.a = 1.0
+	label.scale = Vector2.ONE
 	add_child(label)
 	var tween = create_tween()
 	tween.tween_property(label, "position:y", label.position.y - 30, 0.6)
 	tween.parallel().tween_property(label, "modulate:a", 0.0, 0.6)
-	tween.tween_callback(label.queue_free)
+	tween.tween_callback(_recycle_player_dmg_label.bind(label))
+
+func _recycle_player_dmg_label(label: Label) -> void:
+	if is_instance_valid(label):
+		label.get_parent().remove_child(label)
+		if _player_dmg_pool.size() < PLAYER_DMG_POOL_MAX:
+			_player_dmg_pool.append(label)
+		else:
+			label.queue_free()
 
 func _do_hit_flash() -> void:
 	sprite.modulate = Color(1, 0.5, 0.5)

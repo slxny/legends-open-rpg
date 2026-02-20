@@ -34,7 +34,11 @@ var _knockback_velocity: Vector2 = Vector2.ZERO
 var _patrol_target: Vector2 = Vector2.ZERO
 var _patrol_radius: float = 150.0
 var _patrol_wait_timer: float = 0.0
-var _patrol_speed_factor: float = 0.45  # Patrol at 45% of move speed
+var _patrol_speed_factor: float = 0.65  # Patrol at 65% of move speed — more active roaming
+
+# Effect proc chances (rare — 8-12% per attack depending on type)
+var _effect_chance: float = 0.0  # Overall chance this unit has any effect
+var _effect_type: String = ""    # "knockback", "paralyze", or "slow"
 
 func _ready() -> void:
 	add_to_group("enemies")
@@ -54,8 +58,8 @@ func _ready() -> void:
 	_shadow.move_to_front()
 	move_child(_shadow, 0)
 
-	# Start with a random idle delay before first patrol
-	_patrol_wait_timer = randf_range(1.0, 4.0)
+	# Start with a short random idle delay before first patrol
+	_patrol_wait_timer = randf_range(0.3, 1.5)
 
 
 func initialize(config: Dictionary) -> void:
@@ -78,9 +82,21 @@ func initialize(config: Dictionary) -> void:
 	stats.move_speed = config.get("move_speed", 80.0)
 	stats.primary_stat = "strength"
 
-	# Scale patrol radius with move speed — faster enemies roam further
-	_patrol_radius = 100.0 + stats.move_speed * 1.2
-	chase_range = _patrol_radius + 250.0
+	# Scale patrol radius with move speed — faster enemies roam much further
+	_patrol_radius = 300.0 + stats.move_speed * 3.0
+	chase_range = _patrol_radius + 350.0
+
+	# Randomly assign an effect to some units (~25% of enemies have an effect proc)
+	if randf() < 0.25:
+		var effects = ["knockback", "paralyze", "slow"]
+		_effect_type = effects[randi() % effects.size()]
+		match _effect_type:
+			"knockback":
+				_effect_chance = 0.12  # 12% per hit
+			"paralyze":
+				_effect_chance = 0.08  # 8% per hit — rarer, strong
+			"slow":
+				_effect_chance = 0.10  # 10% per hit
 
 	if is_inside_tree():
 		var tex = SpriteGenerator.get_texture(sprite_type)
@@ -157,10 +173,10 @@ func _process_patrol(delta: float) -> void:
 
 	var dist_to_target = global_position.distance_to(_patrol_target)
 	if dist_to_target < 8.0:
-		# Reached patrol waypoint — pause then go idle
+		# Reached patrol waypoint — short pause then go idle
 		velocity = Vector2.ZERO
 		current_state = State.IDLE
-		_patrol_wait_timer = randf_range(2.0, 5.0)
+		_patrol_wait_timer = randf_range(0.5, 2.0)
 		return
 
 	var dir = (_patrol_target - global_position).normalized()
@@ -231,6 +247,9 @@ func _process_attack(delta: float) -> void:
 			var result = CombatManager.calculate_damage(get_stats_dict(), target.get_stats_dict())
 			target.take_damage(result["damage"], result["is_crit"])
 			_do_attack_lunge()
+			# Rare effect proc
+			if _effect_chance > 0.0 and randf() < _effect_chance:
+				_apply_effect_to_target(target)
 
 func _process_return(delta: float) -> void:
 	var dist = global_position.distance_to(home_position)
@@ -239,7 +258,7 @@ func _process_return(delta: float) -> void:
 		current_state = State.IDLE
 		stats.current_hp = stats.max_hp
 		_update_hp_bar()
-		_patrol_wait_timer = randf_range(1.0, 3.0)
+		_patrol_wait_timer = randf_range(0.3, 1.0)
 		if not _is_selected:
 			name_label.visible = false
 		return
@@ -249,8 +268,23 @@ func _process_return(delta: float) -> void:
 		sprite.flip_h = true
 	elif dir.x > 0.1:
 		sprite.flip_h = false
-	velocity = dir * stats.move_speed * 1.5
+	velocity = dir * stats.move_speed * 1.8
 	move_and_slide()
+
+func _apply_effect_to_target(t: Node2D) -> void:
+	if not is_instance_valid(t):
+		return
+	match _effect_type:
+		"knockback":
+			if t.has_method("apply_knockback_effect"):
+				var dir = (t.global_position - global_position).normalized()
+				t.apply_knockback_effect(dir, 280.0)
+		"paralyze":
+			if t.has_method("apply_effect"):
+				t.apply_effect("paralyze", 2.0)
+		"slow":
+			if t.has_method("apply_effect"):
+				t.apply_effect("slow", 3.0)
 
 func take_damage(amount: int, is_crit: bool = false) -> void:
 	if _is_dead:

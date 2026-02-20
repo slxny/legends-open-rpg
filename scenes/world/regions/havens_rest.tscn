@@ -43,72 +43,132 @@ position = Vector2(-260, -100)
 [node name="GoblinCamp1" parent="." instance=ExtResource("2_camp")]
 position = Vector2(-1200, -900)
 camp_type = "goblin"
-enemy_count = 4
+enemy_count = 5
 
 [node name="GoblinCamp2" parent="." instance=ExtResource("2_camp")]
 position = Vector2(1100, -1100)
 camp_type = "goblin"
-enemy_count = 5
+enemy_count = 6
 
 [node name="GoblinCamp3" parent="." instance=ExtResource("2_camp")]
 position = Vector2(-700, -1600)
 camp_type = "goblin"
-enemy_count = 3
+enemy_count = 4
 
 [node name="GoblinCamp4" parent="." instance=ExtResource("2_camp")]
 position = Vector2(600, 800)
+camp_type = "goblin"
+enemy_count = 5
+
+[node name="GoblinCamp5" parent="." instance=ExtResource("2_camp")]
+position = Vector2(-400, -400)
+camp_type = "goblin"
+enemy_count = 4
+
+[node name="GoblinCamp6" parent="." instance=ExtResource("2_camp")]
+position = Vector2(1800, 400)
+camp_type = "goblin"
+enemy_count = 5
+
+[node name="GoblinCamp7" parent="." instance=ExtResource("2_camp")]
+position = Vector2(-1600, 500)
+camp_type = "goblin"
+enemy_count = 6
+
+[node name="GoblinCamp8" parent="." instance=ExtResource("2_camp")]
+position = Vector2(300, -2200)
 camp_type = "goblin"
 enemy_count = 4
 
 [node name="WolfCamp1" parent="." instance=ExtResource("2_camp")]
 position = Vector2(-2200, 1200)
 camp_type = "wolf"
-enemy_count = 4
+enemy_count = 5
 
 [node name="WolfCamp2" parent="." instance=ExtResource("2_camp")]
 position = Vector2(900, 1800)
 camp_type = "wolf"
-enemy_count = 3
+enemy_count = 4
 
 [node name="WolfCamp3" parent="." instance=ExtResource("2_camp")]
 position = Vector2(2400, -700)
 camp_type = "wolf"
-enemy_count = 4
+enemy_count = 5
 
 [node name="WolfCamp4" parent="." instance=ExtResource("2_camp")]
 position = Vector2(-1800, -1800)
+camp_type = "wolf"
+enemy_count = 5
+
+[node name="WolfCamp5" parent="." instance=ExtResource("2_camp")]
+position = Vector2(1500, -2000)
+camp_type = "wolf"
+enemy_count = 4
+
+[node name="WolfCamp6" parent="." instance=ExtResource("2_camp")]
+position = Vector2(-500, 2000)
+camp_type = "wolf"
+enemy_count = 6
+
+[node name="WolfCamp7" parent="." instance=ExtResource("2_camp")]
+position = Vector2(2800, 800)
+camp_type = "wolf"
+enemy_count = 5
+
+[node name="WolfCamp8" parent="." instance=ExtResource("2_camp")]
+position = Vector2(-3000, -200)
 camp_type = "wolf"
 enemy_count = 4
 
 [node name="BanditCamp1" parent="." instance=ExtResource("2_camp")]
 position = Vector2(3000, 1600)
 camp_type = "bandit"
-enemy_count = 5
+enemy_count = 6
 
 [node name="BanditCamp2" parent="." instance=ExtResource("2_camp")]
 position = Vector2(-3500, -700)
 camp_type = "bandit"
-enemy_count = 4
+enemy_count = 5
 
 [node name="BanditCamp3" parent="." instance=ExtResource("2_camp")]
 position = Vector2(3800, -1500)
 camp_type = "bandit"
-enemy_count = 4
+enemy_count = 5
 
 [node name="BanditCamp4" parent="." instance=ExtResource("2_camp")]
 position = Vector2(-2800, 2400)
 camp_type = "bandit"
-enemy_count = 5
+enemy_count = 6
 
 [node name="BanditCamp5" parent="." instance=ExtResource("2_camp")]
 position = Vector2(-4200, -2500)
 camp_type = "bandit"
-enemy_count = 5
+enemy_count = 6
 
 [node name="BanditCamp6" parent="." instance=ExtResource("2_camp")]
 position = Vector2(4400, 3000)
 camp_type = "bandit"
+enemy_count = 7
+
+[node name="BanditCamp7" parent="." instance=ExtResource("2_camp")]
+position = Vector2(-4500, 1800)
+camp_type = "bandit"
+enemy_count = 5
+
+[node name="BanditCamp8" parent="." instance=ExtResource("2_camp")]
+position = Vector2(4800, -500)
+camp_type = "bandit"
 enemy_count = 6
+
+[node name="BanditCamp9" parent="." instance=ExtResource("2_camp")]
+position = Vector2(2000, 3200)
+camp_type = "bandit"
+enemy_count = 5
+
+[node name="BanditCamp10" parent="." instance=ExtResource("2_camp")]
+position = Vector2(-3800, 3500)
+camp_type = "bandit"
+enemy_count = 7
 
 [node name="Walls" type="Node2D" parent="."]
 

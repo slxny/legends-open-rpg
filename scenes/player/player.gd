@@ -66,6 +66,18 @@ var _combo_index: int = 0       # Which swing we're on in the current combo
 var _combo_timer: float = 0.0   # Time since last hit — resets combo if too long
 const COMBO_WINDOW: float = 1.8 # Seconds before combo resets
 
+# Special attack input tracking
+var _tap_count: int = 0          # Rapid spacebar tap counter
+var _tap_window: float = 0.0    # Time left before tap sequence resolves
+var _charge_time: float = 0.0   # How long attack key has been held
+var _is_charging: bool = false   # Whether we're in a charge-up state
+var _charge_vfx: Sprite2D = null # Glow VFX while charging
+const TAP_WINDOW: float = 0.32  # Max gap between taps for multi-tap
+const CHARGE_THRESHOLD: float = 0.6  # Hold time for charged slash
+
+# Special attack type for current attack
+enum SpecialAttack { NONE, POWER_STRIKE, WHIRLWIND, CHARGED_SLASH, DASH_STRIKE }
+
 func _ready() -> void:
 	add_to_group("player")
 	hero_class = GameManager.current_hero_class
@@ -183,9 +195,38 @@ func _physics_process(delta: float) -> void:
 			_combo_timer = 0.0
 			_last_dir_category = ""
 
-	# Hold Space to keep attacking at normal cooldown rate
-	if Input.is_action_pressed("attack") and not _is_paralyzed:
-		_try_manual_attack()
+	# --- Special attack input processing ---
+	if not _is_paralyzed:
+		# Track charge time while attack is held
+		if Input.is_action_pressed("attack"):
+			_charge_time += delta
+			if _charge_time >= CHARGE_THRESHOLD and not _is_charging and not _is_attack_animating:
+				_is_charging = true
+				_start_charge_vfx()
+		else:
+			# Released — if we were charging, fire charged slash
+			if _is_charging and not _is_attack_animating:
+				_is_charging = false
+				_charge_time = 0.0
+				_stop_charge_vfx()
+				_try_special_attack(SpecialAttack.CHARGED_SLASH)
+			_charge_time = 0.0
+
+		# Tap window countdown — resolve multi-taps
+		if _tap_count > 0 and not _is_charging:
+			_tap_window -= delta
+			if _tap_window <= 0:
+				var taps = _tap_count
+				_tap_count = 0
+				if taps >= 3:
+					_try_special_attack(SpecialAttack.WHIRLWIND)
+				elif taps == 2:
+					_try_special_attack(SpecialAttack.POWER_STRIKE)
+				# Single tap falls through to normal auto-attack below
+
+		# Normal auto-attack: hold space (but not during charge or after special)
+		if Input.is_action_pressed("attack") and not _is_charging and _tap_count == 0:
+			_try_manual_attack()
 
 	# Update facing direction from movement
 	if velocity.length() > 5 and not _is_attack_animating:
@@ -262,6 +303,11 @@ func _unhandled_input(event: InputEvent) -> void:
 			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 		else:
 			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+
+	# Spacebar tap tracking for multi-tap specials
+	if event.is_action_pressed("attack") and not _is_paralyzed:
+		_tap_count += 1
+		_tap_window = TAP_WINDOW
 
 	# Abilities (Q and E)
 	if event.is_action_pressed("ability_1"):
@@ -389,6 +435,293 @@ func _clear_effect_vfx() -> void:
 	if _effect_vfx and is_instance_valid(_effect_vfx):
 		_effect_vfx.queue_free()
 		_effect_vfx = null
+
+# --- Special Attack System ---
+
+func _try_special_attack(special: SpecialAttack) -> void:
+	if _is_attack_animating:
+		return
+
+	var attack_dir = _get_aim_direction()
+	_set_facing(attack_dir)
+
+	# Check if diagonal input is held — override to dash strike
+	var input_raw = Vector2(
+		Input.get_axis("move_left", "move_right"),
+		Input.get_axis("move_up", "move_down")
+	)
+	if special == SpecialAttack.POWER_STRIKE and abs(input_raw.x) > 0.3 and abs(input_raw.y) > 0.3:
+		special = SpecialAttack.DASH_STRIKE
+
+	_enemies_in_range = _enemies_in_range.filter(func(e): return is_instance_valid(e) and not e.get("_is_dead"))
+
+	match special:
+		SpecialAttack.POWER_STRIKE:
+			_execute_power_strike(attack_dir)
+		SpecialAttack.WHIRLWIND:
+			_execute_whirlwind(attack_dir)
+		SpecialAttack.CHARGED_SLASH:
+			_execute_charged_slash(attack_dir)
+		SpecialAttack.DASH_STRIKE:
+			_execute_dash_strike(attack_dir)
+
+func _execute_power_strike(attack_dir: Vector2) -> void:
+	# Double-tap: Heavy single-target hit, 1.4x damage, dramatic wind-up
+	_is_attack_animating = true
+	_attack_cooldown = 0.7 / stats.attack_speed  # Slightly longer cooldown
+	var dir = attack_dir
+	var perp = Vector2(-dir.y, dir.x)
+	var base_pos = sprite.position
+
+	var hit_target = _find_best_target(dir)
+	var dmg_mult := 1.4
+
+	# Pick overhead chop frames for the heavy feel
+	var frames = _combo_swings[2] if _combo_swings.size() > 2 else []
+
+	var tween = create_tween()
+	# Long dramatic wind-up: pull WAY back
+	if frames.size() >= 3:
+		tween.tween_callback(func(): sprite.texture = frames[0])
+	tween.tween_property(sprite, "position", base_pos - dir * 8.0 + Vector2(0, -6), 0.14)
+	tween.tween_property(sprite, "scale", Vector2(1.25, 0.8), 0.06)
+	# Flash gold during wind-up
+	tween.tween_callback(func(): sprite.modulate = Color(1.2, 1.1, 0.7))
+	if frames.size() >= 3:
+		tween.tween_callback(func(): sprite.texture = frames[1])
+	# SLAM forward
+	tween.tween_property(sprite, "position", base_pos + dir * 16.0, 0.05)
+	tween.tween_property(sprite, "scale", Vector2(0.85, 1.25), 0.03)
+	if frames.size() >= 3:
+		tween.tween_callback(func(): sprite.texture = frames[2])
+	# Impact
+	tween.tween_property(sprite, "position", base_pos + dir * 20.0, 0.03)
+	tween.tween_callback(func():
+		sprite.modulate = Color.WHITE
+		if hit_target and is_instance_valid(hit_target):
+			var result = CombatManager.calculate_damage(stats.get_stats_dict(), hit_target.get_stats_dict(), dmg_mult)
+			hit_target.take_damage(result["damage"], result["is_crit"])
+			hit_target.apply_knockback(dir, 90.0)
+			_spawn_slash_vfx(dir, 50.0, 1.8)
+			_spawn_slash_vfx(dir.rotated(0.2), 45.0, 1.4)
+			_spawn_slash_vfx(dir.rotated(-0.2), 45.0, 1.4)
+			_spawn_impact_vfx(hit_target.global_position, true)
+			_do_screen_shake(7.0)
+			_do_hit_freeze(true)
+		else:
+			_spawn_slash_vfx(dir, 50.0, 1.8)
+			_do_screen_shake(3.0)
+		_spawn_effect_label("POWER STRIKE!", Color(1.0, 0.85, 0.2))
+	)
+	tween.tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.08)
+	tween.tween_interval(0.06)
+	_anim_return_to_idle(tween, base_pos)
+
+func _execute_whirlwind(attack_dir: Vector2) -> void:
+	# Triple-tap: AoE attack hitting ALL enemies in range, 720° double spin
+	_is_attack_animating = true
+	_attack_cooldown = 1.0 / stats.attack_speed  # Longer cooldown for AoE
+	var dir = attack_dir
+	var base_pos = sprite.position
+	var dmg_mult := 1.2
+
+	# Use spin slash frames
+	var frames = _combo_swings[4] if _combo_swings.size() > 4 else []
+
+	var tween = create_tween()
+	# Crouch and coil
+	if frames.size() >= 3:
+		tween.tween_callback(func(): sprite.texture = frames[0])
+	tween.tween_property(sprite, "position", base_pos + Vector2(0, 3), 0.06)
+	tween.tween_property(sprite, "scale", Vector2(1.15, 0.85), 0.04)
+	# Glow purple-white during spin
+	tween.tween_callback(func(): sprite.modulate = Color(1.3, 0.9, 1.3))
+	if frames.size() >= 3:
+		tween.tween_callback(func(): sprite.texture = frames[1])
+	# Double spin (720°) — big sweeping AoE feel
+	tween.set_parallel(true)
+	tween.tween_property(sprite, "rotation", TAU * 2.0, 0.32).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
+	tween.tween_property(sprite, "position", base_pos + dir * 6.0, 0.32)
+	tween.tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.1)
+	tween.set_parallel(false)
+	# Spawn slash VFX at midpoint of spin
+	tween.tween_callback(func():
+		_spawn_slash_vfx(dir, 50.0, 2.0)
+		_spawn_slash_vfx(dir.rotated(PI * 0.5), 45.0, 1.6)
+		_spawn_slash_vfx(dir.rotated(PI), 45.0, 1.6)
+		_spawn_slash_vfx(dir.rotated(-PI * 0.5), 45.0, 1.6)
+	)
+	if frames.size() >= 3:
+		tween.tween_callback(func(): sprite.texture = frames[2])
+	# Hit ALL enemies in attack range
+	tween.tween_callback(func():
+		sprite.modulate = Color.WHITE
+		var hit_count := 0
+		for enemy in _enemies_in_range:
+			if is_instance_valid(enemy) and not enemy.get("_is_dead") and enemy.has_method("take_damage"):
+				var result = CombatManager.calculate_damage(stats.get_stats_dict(), enemy.get_stats_dict(), dmg_mult)
+				enemy.take_damage(result["damage"], result["is_crit"])
+				var kb_dir = (enemy.global_position - global_position).normalized()
+				enemy.apply_knockback(kb_dir, 70.0)
+				_spawn_impact_vfx(enemy.global_position, result["is_crit"])
+				hit_count += 1
+		if hit_count > 0:
+			_do_screen_shake(8.0)
+			_do_hit_freeze(true)
+		else:
+			_do_screen_shake(3.0)
+		_spawn_effect_label("WHIRLWIND!", Color(0.8, 0.5, 1.0))
+	)
+	# Unwind
+	tween.tween_property(sprite, "rotation", 0.0, 0.1)
+	tween.tween_interval(0.06)
+	_anim_return_to_idle(tween, base_pos)
+
+func _execute_charged_slash(attack_dir: Vector2) -> void:
+	# Hold attack: Devastating single hit, 1.8x damage, massive everything
+	_is_attack_animating = true
+	_attack_cooldown = 0.8 / stats.attack_speed
+	var dir = attack_dir
+	var perp = Vector2(-dir.y, dir.x)
+	var base_pos = sprite.position
+	var dmg_mult := 1.8
+
+	var hit_target = _find_best_target(dir)
+
+	# Use thrust frames for the release
+	var frames = _combo_swings[3] if _combo_swings.size() > 3 else []
+
+	var tween = create_tween()
+	# Already charged up — now RELEASE. Brief coil then explosive lunge
+	if frames.size() >= 3:
+		tween.tween_callback(func(): sprite.texture = frames[0])
+	# Bright flash on release
+	tween.tween_callback(func(): sprite.modulate = Color(2.0, 1.8, 1.0))
+	tween.tween_property(sprite, "position", base_pos - dir * 4.0, 0.04)
+	tween.tween_property(sprite, "scale", Vector2(0.8, 1.3), 0.03)
+	if frames.size() >= 3:
+		tween.tween_callback(func(): sprite.texture = frames[1])
+	# Explosive forward lunge
+	tween.tween_property(sprite, "position", base_pos + dir * 24.0, 0.06)
+	if frames.size() >= 3:
+		tween.tween_callback(func(): sprite.texture = frames[2])
+	tween.tween_property(sprite, "position", base_pos + dir * 28.0, 0.03)
+	# Impact — the big one
+	tween.tween_callback(func():
+		sprite.modulate = Color.WHITE
+		# Massive VFX burst
+		_spawn_slash_vfx(dir, 55.0, 2.2)
+		_spawn_slash_vfx(dir.rotated(0.3), 50.0, 1.8)
+		_spawn_slash_vfx(dir.rotated(-0.3), 50.0, 1.8)
+		_spawn_slash_vfx(dir, 35.0, 1.4)
+		if hit_target and is_instance_valid(hit_target):
+			var result = CombatManager.calculate_damage(stats.get_stats_dict(), hit_target.get_stats_dict(), dmg_mult)
+			hit_target.take_damage(result["damage"], result["is_crit"])
+			hit_target.apply_knockback(dir, 140.0)
+			_spawn_impact_vfx(hit_target.global_position, true)
+			_do_screen_shake(10.0)
+			_do_hit_freeze(true)
+		else:
+			_do_screen_shake(5.0)
+		_spawn_effect_label("CHARGED SLASH!", Color(1.0, 0.9, 0.3))
+	)
+	tween.tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.1)
+	tween.tween_interval(0.08)
+	_anim_return_to_idle(tween, base_pos)
+
+func _execute_dash_strike(attack_dir: Vector2) -> void:
+	# Diagonal + attack: Dash forward through enemies, 1.3x damage
+	_is_attack_animating = true
+	_attack_cooldown = 0.6 / stats.attack_speed
+	var dir = attack_dir
+	var base_pos = sprite.position
+	var dmg_mult := 1.3
+	var dash_distance := 60.0  # Player physically moves forward
+
+	# Use spin slash frames
+	var frames = _combo_swings[4] if _combo_swings.size() > 4 else []
+
+	var tween = create_tween()
+	# Brief coil
+	if frames.size() >= 3:
+		tween.tween_callback(func(): sprite.texture = frames[0])
+	tween.tween_property(sprite, "position", base_pos - dir * 4.0, 0.05)
+	# Tint cyan for dash
+	tween.tween_callback(func(): sprite.modulate = Color(0.8, 1.2, 1.4))
+	if frames.size() >= 3:
+		tween.tween_callback(func(): sprite.texture = frames[1])
+	# Dash forward — spin + translate the CHARACTER (not just sprite)
+	tween.set_parallel(true)
+	tween.tween_property(sprite, "rotation", TAU, 0.16).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.tween_property(sprite, "position", base_pos + dir * 14.0, 0.16)
+	# Actually move the player body forward
+	tween.tween_property(self, "global_position", global_position + dir * dash_distance, 0.16).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.set_parallel(false)
+	if frames.size() >= 3:
+		tween.tween_callback(func(): sprite.texture = frames[2])
+	# Slash trail VFX along the dash path
+	tween.tween_callback(func():
+		sprite.modulate = Color.WHITE
+		_spawn_slash_vfx(dir, 45.0, 1.6)
+		_spawn_slash_vfx(dir.rotated(PI * 0.4), 35.0, 1.2)
+		_spawn_slash_vfx(dir.rotated(-PI * 0.4), 35.0, 1.2)
+		# Hit the best target
+		var hit_target = _find_best_target(dir)
+		if hit_target and is_instance_valid(hit_target):
+			var result = CombatManager.calculate_damage(stats.get_stats_dict(), hit_target.get_stats_dict(), dmg_mult)
+			hit_target.take_damage(result["damage"], result["is_crit"])
+			hit_target.apply_knockback(dir, 75.0)
+			_spawn_impact_vfx(hit_target.global_position, result["is_crit"])
+			_do_screen_shake(6.0)
+			_do_hit_freeze(result["is_crit"])
+		else:
+			_do_screen_shake(2.0)
+		_spawn_effect_label("DASH STRIKE!", Color(0.4, 0.9, 1.0))
+	)
+	tween.tween_property(sprite, "rotation", 0.0, 0.08)
+	tween.tween_interval(0.05)
+	_anim_return_to_idle(tween, base_pos)
+
+func _find_best_target(dir: Vector2) -> Node2D:
+	# Find the best target in a direction from current enemies in range
+	var hit_target: Node2D = null
+	var mouse_target = _get_enemy_at_mouse()
+	if mouse_target and mouse_target in _enemies_in_range:
+		return mouse_target
+	var best_score := -INF
+	for enemy in _enemies_in_range:
+		if not is_instance_valid(enemy) or enemy.get("_is_dead"):
+			continue
+		var to_enemy = (enemy.global_position - global_position)
+		var dot = dir.dot(to_enemy.normalized())
+		if dot > 0.2:
+			var score = dot - to_enemy.length() * 0.001
+			if score > best_score:
+				best_score = score
+				hit_target = enemy
+	return hit_target
+
+func _start_charge_vfx() -> void:
+	_stop_charge_vfx()
+	_charge_vfx = Sprite2D.new()
+	_charge_vfx.texture = SpriteGenerator.get_texture("beacon_blue")
+	_charge_vfx.modulate = Color(1.0, 0.8, 0.2, 0.0)
+	_charge_vfx.z_index = -1
+	add_child(_charge_vfx)
+	# Glow intensifies as you charge
+	var tween = _charge_vfx.create_tween().set_loops()
+	tween.tween_property(_charge_vfx, "modulate:a", 0.7, 0.3)
+	tween.tween_property(_charge_vfx, "modulate:a", 0.3, 0.3)
+	# Also vibrate sprite to show charge tension
+	var shake_tween = create_tween().set_loops()
+	shake_tween.set_meta("charge_shake", true)
+	shake_tween.tween_property(sprite, "offset:x", sprite.offset.x + 1.5, 0.03)
+	shake_tween.tween_property(sprite, "offset:x", sprite.offset.x - 1.5, 0.03)
+
+func _stop_charge_vfx() -> void:
+	if _charge_vfx and is_instance_valid(_charge_vfx):
+		_charge_vfx.queue_free()
+		_charge_vfx = null
 
 func _get_world_mouse_pos() -> Vector2:
 	# Use the viewport's canvas transform so the result matches what is
@@ -548,13 +881,21 @@ func _spawn_projectile(direction: Vector2, speed: float, max_range: float, dmg_m
 
 func _perform_attack(target: Node2D, attack_dir: Vector2 = Vector2.RIGHT) -> void:
 	_is_attack_animating = true
-	var result = CombatManager.calculate_damage(stats.get_stats_dict(), target.get_stats_dict())
 	attacked.emit(target)
 
 	var hero_data = HeroData.get_hero(hero_class)
 	if hero_data.get("primary_stat") == "agility":
+		var result = CombatManager.calculate_damage(stats.get_stats_dict(), target.get_stats_dict())
 		_do_ranged_attack(target, result)
 	else:
+		# Check for diagonal input → enhanced spin (dash strike damage)
+		var input_raw = Vector2(
+			Input.get_axis("move_left", "move_right"),
+			Input.get_axis("move_up", "move_down")
+		)
+		var is_diagonal = abs(input_raw.x) > 0.3 and abs(input_raw.y) > 0.3
+		var dmg_mult = 1.3 if is_diagonal else 1.0
+		var result = CombatManager.calculate_damage(stats.get_stats_dict(), target.get_stats_dict(), dmg_mult)
 		_do_melee_attack(target, result, attack_dir)
 
 func _perform_swing_no_target(dir: Vector2) -> void:

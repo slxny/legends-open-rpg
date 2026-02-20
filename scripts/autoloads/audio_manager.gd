@@ -508,74 +508,224 @@ const PENTA = {
 }
 
 func _gen_town_music() -> AudioStreamWAV:
-	# Calm ambient fantasy loop — ~24 seconds
-	var duration = 24.0
+	# Fantasy town theme — four distinct sections (~72s total) for variety
+	# Section A: Peaceful dawn (0-18s) — sparse, contemplative
+	# Section B: Village life (18-36s) — warmer, fuller melody
+	# Section C: Twilight reverie (36-54s) — bittersweet, minor color
+	# Section D: Hearthside (54-72s) — gentle resolution, leads back to A
+	var duration = 72.0
 	var samples = _make_samples(duration)
-
-	# Layer 1: Deep bass drone on A2, slowly modulated
-	for i in range(samples.size()):
-		var t = float(i) / SAMPLE_RATE
-		var amp = 0.12 + 0.03 * sin(t * 0.4)  # Gentle amplitude wobble
-		samples[i] += sin(t * PENTA["A2"] * TAU) * amp
-		# Sub-octave rumble
-		samples[i] += sin(t * 55.0 * TAU) * amp * 0.4
-
-	# Layer 2: Slow pad — A3 + E4 fifth, fading in and out
-	for i in range(samples.size()):
-		var t = float(i) / SAMPLE_RATE
-		# Slow swell every ~8 seconds
-		var pad_env = 0.5 + 0.5 * sin(t * TAU / 8.0 - PI / 2.0)
-		pad_env = pow(pad_env, 2.0) * 0.08
-		samples[i] += sin(t * PENTA["A3"] * TAU) * pad_env
-		samples[i] += sin(t * PENTA["E4"] * TAU) * pad_env * 0.7
-		samples[i] += sin(t * PENTA["C4"] * TAU) * pad_env * 0.3
-
-	# Layer 3: Gentle arpeggio melody
-	var melody_notes = [
-		PENTA["A4"], PENTA["C5"], PENTA["E5"], PENTA["D5"],
-		PENTA["C5"], PENTA["A4"], PENTA["G4"], PENTA["E4"],
-		PENTA["D4"], PENTA["E4"], PENTA["G4"], PENTA["A4"],
-		PENTA["C5"], PENTA["D5"], PENTA["E5"], PENTA["C5"],
-		PENTA["A4"], PENTA["G4"], PENTA["E4"], PENTA["D4"],
-		PENTA["C4"], PENTA["D4"], PENTA["E4"], PENTA["G4"],
-	]
-	var note_dur = 1.0  # 1 second per note
-	for n in range(melody_notes.size()):
-		var start_time = n * note_dur
-		if start_time >= duration:
-			break
-		var freq = melody_notes[n]
-		# Each note: soft attack, gentle decay
-		var note_samples = _make_samples(min(note_dur * 1.5, duration - start_time))
-		for i in range(note_samples.size()):
-			var t = float(i) / SAMPLE_RATE
-			# Soft sine with slight detune for warmth
-			note_samples[i] = sin(t * freq * TAU) * 0.06
-			note_samples[i] += sin(t * freq * 1.003 * TAU) * 0.03
-			note_samples[i] += sin(t * freq * 2.0 * TAU) * 0.015  # Octave harmonic
-		_apply_envelope(note_samples, 0.08, note_dur * 0.4, note_dur * 0.8)
-		_mix_into(samples, note_samples, int(start_time * SAMPLE_RATE))
-
-	# Layer 4: Very sparse high twinkles
 	var rng = RandomNumberGenerator.new()
-	rng.seed = 42
-	var twinkle_notes = [PENTA["E5"], PENTA["G5"], PENTA["A4"], PENTA["D5"], PENTA["C5"]]
-	var twinkle_time = 2.5
+	rng.seed = 7741
+
+	# Extended scale — natural minor with some borrowed tones for color
+	var NOTE = {
+		"A2": 110.0, "B2": 123.47, "C3": 130.81, "D3": 146.83, "E3": 164.81,
+		"F3": 174.61, "G3": 196.0,
+		"A3": 220.0, "B3": 246.94, "C4": 261.63, "D4": 293.66, "E4": 329.63,
+		"F4": 349.23, "G4": 392.0,
+		"A4": 440.0, "B4": 493.88, "C5": 523.25, "D5": 587.33, "E5": 659.25,
+		"F5": 698.46, "G5": 784.0, "A5": 880.0,
+	}
+
+	# ---- Layer 1: Evolving bass ----
+	# Bass moves through a chord progression instead of droning on one note
+	# Am - C - G - Em | Am - F - C - G | Am - Dm - Em - Am | F - G - Am - Am
+	var bass_prog = [
+		NOTE["A2"], NOTE["A2"], NOTE["C3"], NOTE["C3"],
+		NOTE["G3"], NOTE["G3"], NOTE["E3"], NOTE["E3"],
+		NOTE["A2"], NOTE["A2"], NOTE["F3"], NOTE["F3"],
+		NOTE["C3"], NOTE["C3"], NOTE["G3"], NOTE["G3"],
+		NOTE["A2"], NOTE["A2"], NOTE["D3"], NOTE["D3"],
+		NOTE["E3"], NOTE["E3"], NOTE["A2"], NOTE["A2"],
+		NOTE["F3"], NOTE["F3"], NOTE["G3"], NOTE["G3"],
+		NOTE["A2"], NOTE["A2"], NOTE["A2"], NOTE["A2"],
+	]
+	var bass_note_dur = duration / bass_prog.size()
+	for i in range(samples.size()):
+		var t = float(i) / SAMPLE_RATE
+		var prog_idx = int(t / bass_note_dur) % bass_prog.size()
+		var bass_freq = bass_prog[prog_idx]
+		# Crossfade between bass notes for smoothness
+		var note_t = fmod(t, bass_note_dur) / bass_note_dur
+		var bass_env = 0.10 * (0.7 + 0.3 * sin(note_t * PI))
+		# Warm bass: fundamental + soft 2nd harmonic
+		samples[i] += sin(t * bass_freq * TAU) * bass_env
+		samples[i] += sin(t * bass_freq * 2.0 * TAU) * bass_env * 0.2
+		# Sub rumble that breathes
+		samples[i] += sin(t * bass_freq * 0.5 * TAU) * bass_env * 0.25
+
+	# ---- Layer 2: Pad chords — shift voicing per section ----
+	# Each section gets different chord colors for 18s each
+	var _pad_chords = [
+		# Section A: open fifths + octave (spacious, calm)
+		[NOTE["A3"], NOTE["E4"]],
+		[NOTE["C4"], NOTE["G4"]],
+		[NOTE["G3"], NOTE["D4"]],
+		[NOTE["E3"], NOTE["B3"]],
+		# Section B: triads (fuller, warmer)
+		[NOTE["A3"], NOTE["C4"], NOTE["E4"]],
+		[NOTE["F3"], NOTE["A3"], NOTE["C4"]],
+		[NOTE["C4"], NOTE["E4"], NOTE["G4"]],
+		[NOTE["G3"], NOTE["B3"], NOTE["D4"]],
+		# Section C: minor / suspended (bittersweet)
+		[NOTE["A3"], NOTE["C4"], NOTE["E4"]],
+		[NOTE["D4"], NOTE["F4"], NOTE["A4"]],
+		[NOTE["E3"], NOTE["G3"], NOTE["B3"]],
+		[NOTE["A3"], NOTE["D4"], NOTE["E4"]],
+		# Section D: resolved, gentle (leads back)
+		[NOTE["F3"], NOTE["A3"], NOTE["C4"]],
+		[NOTE["G3"], NOTE["B3"], NOTE["D4"]],
+		[NOTE["A3"], NOTE["C4"], NOTE["E4"]],
+		[NOTE["A3"], NOTE["E4"]],
+	]
+	var pad_chord_dur = duration / _pad_chords.size()  # 4.5s each
+	for i in range(samples.size()):
+		var t = float(i) / SAMPLE_RATE
+		var chord_idx = int(t / pad_chord_dur) % _pad_chords.size()
+		var chord = _pad_chords[chord_idx]
+		# Swell envelope per chord — rises and falls over its duration
+		var chord_t = fmod(t, pad_chord_dur) / pad_chord_dur
+		var pad_env = sin(chord_t * PI) * 0.06
+		for freq in chord:
+			# Slightly detuned pair for warmth
+			samples[i] += sin(t * freq * TAU) * pad_env
+			samples[i] += sin(t * freq * 1.004 * TAU) * pad_env * 0.5
+
+	# ---- Layer 3: Four distinct melodies, one per section ----
+	# Section A (0-18s): Sparse, contemplative — long notes, wide intervals
+	var melody_a = [
+		[NOTE["E4"], 2.5], [0, 1.0],
+		[NOTE["A4"], 2.0], [NOTE["G4"], 1.5], [0, 0.5],
+		[NOTE["E4"], 1.5], [NOTE["D4"], 2.0], [0, 1.0],
+		[NOTE["C4"], 2.5], [NOTE["E4"], 1.5], [NOTE["A4"], 1.5],
+	]
+	# Section B (18-36s): Flowing, warmer — stepwise motion, more notes
+	var melody_b = [
+		[NOTE["A4"], 1.0], [NOTE["B4"], 0.75], [NOTE["C5"], 1.25],
+		[NOTE["B4"], 0.75], [NOTE["A4"], 1.0], [NOTE["G4"], 1.25],
+		[0, 0.5],
+		[NOTE["E4"], 1.0], [NOTE["G4"], 0.75], [NOTE["A4"], 1.25],
+		[NOTE["C5"], 1.0], [NOTE["D5"], 0.75], [NOTE["C5"], 1.0],
+		[NOTE["A4"], 1.5], [0, 0.5],
+		[NOTE["G4"], 0.75], [NOTE["A4"], 0.75], [NOTE["C5"], 1.0],
+		[NOTE["B4"], 1.0], [NOTE["A4"], 1.5],
+	]
+	# Section C (36-54s): Bittersweet — minor color, ornamental
+	var melody_c = [
+		[NOTE["E5"], 1.5], [NOTE["D5"], 1.0], [NOTE["C5"], 1.5],
+		[NOTE["B4"], 0.75], [NOTE["A4"], 1.25], [0, 0.5],
+		[NOTE["D5"], 1.5], [NOTE["C5"], 1.0], [NOTE["A4"], 1.5],
+		[NOTE["G4"], 0.75], [NOTE["F4"], 1.25], [0, 0.5],
+		[NOTE["A4"], 1.0], [NOTE["C5"], 1.0], [NOTE["E5"], 1.5],
+		[NOTE["D5"], 1.0], [NOTE["C5"], 1.5],
+	]
+	# Section D (54-72s): Gentle resolution — calm, brings us home
+	var melody_d = [
+		[NOTE["C5"], 1.5], [NOTE["A4"], 1.25], [0, 0.5],
+		[NOTE["G4"], 1.0], [NOTE["A4"], 1.25], [NOTE["C5"], 1.5],
+		[0, 0.5],
+		[NOTE["E4"], 1.5], [NOTE["G4"], 1.0], [NOTE["A4"], 2.0],
+		[0, 0.5],
+		[NOTE["C5"], 1.0], [NOTE["B4"], 0.75], [NOTE["A4"], 2.0],
+		[0, 1.0],
+		[NOTE["E4"], 1.5], [NOTE["A4"], 1.75],
+	]
+	var sections = [melody_a, melody_b, melody_c, melody_d]
+	var section_dur = 18.0
+	for s_idx in range(4):
+		var melody = sections[s_idx]
+		var section_start = s_idx * section_dur
+		var note_time = 0.0
+		for note_pair in melody:
+			var freq = note_pair[0]
+			var ndur = note_pair[1]
+			if freq > 0 and note_time + section_start < duration:
+				var actual_dur = min(ndur * 1.3, duration - (note_time + section_start))
+				var note_samp = _make_samples(actual_dur)
+				for i in range(note_samp.size()):
+					var t = float(i) / SAMPLE_RATE
+					# Rich tone: fundamental + detuned + soft harmonics
+					note_samp[i] = sin(t * freq * TAU) * 0.055
+					note_samp[i] += sin(t * freq * 1.003 * TAU) * 0.025
+					note_samp[i] += sin(t * freq * 2.0 * TAU) * 0.012
+					note_samp[i] += sin(t * freq * 3.0 * TAU) * 0.004
+				_apply_envelope(note_samp, 0.06, ndur * 0.35, ndur * 0.7)
+				_mix_into(samples, note_samp, int((note_time + section_start) * SAMPLE_RATE))
+			note_time += ndur
+
+	# ---- Layer 4: Counter-melody / response (sections B and D only) ----
+	# A lower voice that answers the main melody
+	var counter_b = [
+		[0, 2.0],
+		[NOTE["E4"], 1.5], [NOTE["D4"], 1.0], [NOTE["C4"], 1.5], [0, 1.0],
+		[NOTE["A3"], 1.5], [NOTE["C4"], 1.0], [NOTE["D4"], 1.5], [0, 1.0],
+		[NOTE["E4"], 1.5], [NOTE["D4"], 1.0], [NOTE["C4"], 2.0], [0, 1.0],
+		[NOTE["A3"], 2.0],
+	]
+	var counter_d = [
+		[0, 3.0],
+		[NOTE["A3"], 2.0], [NOTE["C4"], 1.5], [NOTE["E4"], 2.0], [0, 1.0],
+		[NOTE["D4"], 1.5], [NOTE["C4"], 2.0], [0, 1.0],
+		[NOTE["A3"], 2.0], [NOTE["E4"], 2.0],
+	]
+	var counters = [[1, counter_b], [3, counter_d]]
+	for pair in counters:
+		var sec = pair[0]
+		var counter = pair[1]
+		var counter_start = sec * section_dur
+		var ct = 0.0
+		for note_pair in counter:
+			var freq = note_pair[0]
+			var ndur = note_pair[1]
+			if freq > 0 and ct + counter_start < duration:
+				var actual_dur = min(ndur * 1.2, duration - (ct + counter_start))
+				var ns = _make_samples(actual_dur)
+				for i in range(ns.size()):
+					var t = float(i) / SAMPLE_RATE
+					ns[i] = sin(t * freq * TAU) * 0.035
+					ns[i] += sin(t * freq * 1.005 * TAU) * 0.015
+				_apply_envelope(ns, 0.1, ndur * 0.3, ndur * 0.65)
+				_mix_into(samples, ns, int((ct + counter_start) * SAMPLE_RATE))
+			ct += ndur
+
+	# ---- Layer 5: Twinkles & atmosphere (vary density by section) ----
+	var twinkle_notes = [NOTE["E5"], NOTE["G5"], NOTE["A5"], NOTE["D5"], NOTE["C5"]]
+	var twinkle_time = 3.0
 	while twinkle_time < duration - 1.0:
+		# Section index determines twinkle density
+		var sec_idx = int(twinkle_time / section_dur)
 		var freq = twinkle_notes[rng.randi() % twinkle_notes.size()]
-		var twinkle = _make_samples(0.5)
+		var twinkle = _make_samples(0.6)
 		for i in range(twinkle.size()):
 			var t = float(i) / SAMPLE_RATE
-			twinkle[i] = sin(t * freq * TAU) * 0.035
-		_apply_envelope(twinkle, 0.01, 0.05, 0.44)
+			twinkle[i] = sin(t * freq * TAU) * 0.03
+			twinkle[i] += sin(t * freq * 2.0 * TAU) * 0.008  # Shimmer
+		_apply_envelope(twinkle, 0.01, 0.06, 0.52)
 		_mix_into(samples, twinkle, int(twinkle_time * SAMPLE_RATE))
-		twinkle_time += rng.randf_range(2.5, 4.5)
+		# Sparse in A/D, denser in B/C
+		if sec_idx == 0 or sec_idx == 3:
+			twinkle_time += rng.randf_range(3.5, 6.0)
+		else:
+			twinkle_time += rng.randf_range(2.0, 3.5)
 
-	# Gentle crossfade at loop boundary (last 0.5s fades out, matches start)
-	var fade_len = int(0.5 * SAMPLE_RATE)
+	# ---- Layer 6: Soft rhythmic pulse (sections B and C only) ----
+	# Very gentle, almost subliminal heartbeat gives forward motion
+	for i in range(samples.size()):
+		var t = float(i) / SAMPLE_RATE
+		if t < 18.0 or t >= 54.0:
+			continue
+		# Gentle pulse every ~1.5s
+		var pulse_phase = fmod(t, 1.5) / 1.5
+		if pulse_phase < 0.08:
+			var pulse_env = sin(pulse_phase / 0.08 * PI) * 0.025
+			samples[i] += sin(t * NOTE["A2"] * TAU) * pulse_env
+
+	# ---- Smooth loop crossfade (last 2s fades, first 2s fades in) ----
+	var fade_len = int(2.0 * SAMPLE_RATE)
 	for i in range(fade_len):
 		var frac = float(i) / fade_len
-		# Fade out the end
 		samples[samples.size() - fade_len + i] *= (1.0 - frac)
+		samples[i] *= frac
 
 	return _to_stream(samples, true)

@@ -163,6 +163,11 @@ const ITEMS = {
 
 # Drop tables for creep camps
 const DROP_TABLES = {
+	"rat": {
+		"drop_chance": 0.08,
+		"items": ["health_potion_small"],
+		"weights": [100],
+	},
 	"goblin": {
 		"drop_chance": 0.25,
 		"items": ["rusty_sword", "cloth_tunic", "leather_cap", "copper_ring", "health_potion_small"],

@@ -40,6 +40,31 @@ position = Vector2(260, -100)
 [node name="Armorer" parent="." instance=ExtResource("5_armorer")]
 position = Vector2(-260, -100)
 
+[node name="RatSwarm1" parent="." instance=ExtResource("2_camp")]
+position = Vector2(500, 400)
+camp_type = "rat"
+enemy_count = 18
+
+[node name="RatSwarm2" parent="." instance=ExtResource("2_camp")]
+position = Vector2(-550, 350)
+camp_type = "rat"
+enemy_count = 15
+
+[node name="RatSwarm3" parent="." instance=ExtResource("2_camp")]
+position = Vector2(400, -500)
+camp_type = "rat"
+enemy_count = 20
+
+[node name="RatSwarm4" parent="." instance=ExtResource("2_camp")]
+position = Vector2(-450, -550)
+camp_type = "rat"
+enemy_count = 16
+
+[node name="RatSwarm5" parent="." instance=ExtResource("2_camp")]
+position = Vector2(100, 650)
+camp_type = "rat"
+enemy_count = 17
+
 [node name="GoblinCamp1" parent="." instance=ExtResource("2_camp")]
 position = Vector2(-1200, -900)
 camp_type = "goblin"

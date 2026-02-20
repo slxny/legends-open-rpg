@@ -44,7 +44,7 @@ func _init_asset_dirs() -> void:
 	for n in hero_names:
 		_asset_dirs[n] = "heroes"
 	# Enemies
-	for n in ["goblin", "wolf", "bandit"]:
+	for n in ["rat", "goblin", "wolf", "bandit"]:
 		_asset_dirs[n] = "enemies"
 	# Environment
 	for n in ["tree_jungle", "tree_small", "tree_dead", "rock", "rock_large",
@@ -89,6 +89,7 @@ func _generate_all() -> void:
 		for dir_key in ["down", "up", "side"]:
 			_gen_or_load("%s_dir_%s" % [hero, dir_key])
 	# Enemies
+	_gen_or_load("rat")
 	_gen_or_load("goblin")
 	_gen_or_load("wolf")
 	_gen_or_load("bandit")
@@ -762,6 +763,45 @@ func _gen_shadow_ranger_dir_side() -> void:
 # ============================================================
 # ENEMY SPRITES
 # ============================================================
+
+func _gen_rat() -> void:
+	var img = Image.create(20, 14, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = {
+		"fur": Color(0.4, 0.3, 0.2),
+		"fur_dark": Color(0.28, 0.2, 0.13),
+		"fur_light": Color(0.52, 0.42, 0.3),
+		"eyes": Color(0.1, 0.1, 0.1),
+		"nose": Color(0.7, 0.4, 0.35),
+		"tail": Color(0.6, 0.45, 0.4),
+		"ears": Color(0.65, 0.45, 0.4),
+		"shadow": Color(0, 0, 0, 0.2),
+	}
+	_fill_rect(img, 4, 12, 12, 2, c["shadow"])
+	# Legs (tiny)
+	_fill_rect(img, 5, 11, 2, 3, c["fur_dark"])
+	_fill_rect(img, 9, 11, 2, 3, c["fur_dark"])
+	_fill_rect(img, 13, 11, 2, 3, c["fur_dark"])
+	# Body (low, wide)
+	_fill_rect(img, 5, 6, 10, 6, c["fur"])
+	_fill_rect(img, 6, 7, 8, 4, c["fur_light"])
+	# Head
+	_fill_rect(img, 1, 5, 6, 5, c["fur"])
+	_fill_rect(img, 0, 6, 3, 3, c["fur"])  # Snout
+	# Eyes
+	_fill_rect(img, 3, 6, 1, 1, c["eyes"])
+	_fill_rect(img, 5, 6, 1, 1, c["eyes"])
+	# Nose
+	_fill_rect(img, 0, 7, 1, 1, c["nose"])
+	# Ears (round)
+	_fill_rect(img, 2, 4, 2, 2, c["ears"])
+	_fill_rect(img, 5, 4, 2, 2, c["ears"])
+	# Tail (long, curving)
+	_fill_rect(img, 15, 5, 3, 1, c["tail"])
+	_fill_rect(img, 17, 4, 2, 1, c["tail"])
+	_fill_rect(img, 18, 3, 2, 1, c["tail"])
+
+	textures["rat"] = ImageTexture.create_from_image(img)
 
 func _gen_goblin() -> void:
 	var img = Image.create(24, 28, false, Image.FORMAT_RGBA8)

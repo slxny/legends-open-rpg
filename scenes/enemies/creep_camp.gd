@@ -6,6 +6,17 @@ extends Node2D
 
 # Creep camp definitions
 const CAMP_TYPES = {
+	"rat": {
+		"name": "Rat",
+		"level_range": [1, 1],
+		"sprite_type": "rat",
+		"move_speed": 55.0,
+		"attack_range": 22.0,
+		"aggro_range": 70.0,
+		"xp_reward": 4,
+		"gold_reward": 1,
+		"drop_table": "rat",
+	},
 	"goblin": {
 		"name": "Goblin",
 		"level_range": [1, 2],
@@ -75,9 +86,11 @@ func _spawn_enemies(is_respawn: bool) -> void:
 	if is_respawn:
 		_times_respawned += 1
 
+	# Spread scales with group size so large swarms don't pile up
+	var spread = 30.0 + enemy_count * 4.0  # 5 enemies → ±50, 20 enemies → ±110
 	for i in range(enemy_count):
 		var enemy = _enemy_scene.instantiate()
-		var offset = Vector2(randf_range(-40, 40), randf_range(-40, 40))
+		var offset = Vector2(randf_range(-spread, spread), randf_range(-spread, spread))
 		enemy.position = offset
 
 		var level = randi_range(type_data["level_range"][0], type_data["level_range"][1])

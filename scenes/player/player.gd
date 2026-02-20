@@ -29,6 +29,13 @@ var _walk_bob_time: float = 0.0  # Accumulator for walk-bob sine wave
 var _is_attack_animating: bool = false
 var _attack_cooldown: float = 0.0
 
+# Status effects applied by enemies
+var _is_paralyzed: bool = false
+var _paralyze_timer: float = 0.0
+var _slow_factor: float = 1.0  # 1.0 = normal, < 1.0 = slowed
+var _slow_timer: float = 0.0
+var _effect_vfx: Sprite2D = null  # Visual indicator for active status effect
+
 # Sprite upgrade milestones: level -> texture key suffix
 const SPRITE_UPGRADE_LEVELS: Array[int] = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50]
 var _current_sprite_tier: int = 0
@@ -108,13 +115,22 @@ func move_to(world_pos: Vector2) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	# Process status effects
+	_process_status_effects(delta)
+
+	# Paralyzed: can't move or attack
+	if _is_paralyzed:
+		velocity = Vector2.ZERO
+		move_and_slide()
+		return
+
 	var input_dir = Vector2.ZERO
 	input_dir.x = Input.get_axis("move_left", "move_right")
 	input_dir.y = Input.get_axis("move_up", "move_down")
 	if input_dir.length() > 0:
 		input_dir = input_dir.normalized()
 
-	var max_speed = stats.get_total_move_speed()
+	var max_speed = stats.get_total_move_speed() * _slow_factor
 	var desired_velocity := Vector2.ZERO
 
 	if input_dir.length() > 0:
@@ -152,7 +168,7 @@ func _physics_process(delta: float) -> void:
 			_last_dir_category = ""
 
 	# Hold Space to keep attacking at normal cooldown rate
-	if Input.is_action_pressed("attack"):
+	if Input.is_action_pressed("attack") and not _is_paralyzed:
 		_try_manual_attack()
 
 	# Update facing direction from movement
@@ -206,6 +222,12 @@ func _unhandled_input(event: InputEvent) -> void:
 			return
 
 		if event.button_index == MOUSE_BUTTON_LEFT or event.button_index == MOUSE_BUTTON_RIGHT:
+			# Right-click on an enemy = attack (same as space)
+			if event.button_index == MOUSE_BUTTON_RIGHT:
+				var enemy_target = _get_enemy_at_mouse()
+				if enemy_target and not _is_paralyzed:
+					_try_manual_attack()
+					return
 			# Both mouse buttons move to clicked position
 			var clicked = _get_clickable_at_mouse()
 			if clicked and clicked.has_method("interact"):
@@ -280,6 +302,77 @@ func _try_manual_attack() -> void:
 		_perform_attack(hit_target, attack_dir)
 	else:
 		_perform_swing_no_target(attack_dir)
+
+func _process_status_effects(delta: float) -> void:
+	if _is_paralyzed:
+		_paralyze_timer -= delta
+		if _paralyze_timer <= 0:
+			_is_paralyzed = false
+			_clear_effect_vfx()
+	if _slow_factor < 1.0:
+		_slow_timer -= delta
+		if _slow_timer <= 0:
+			_slow_factor = 1.0
+			_clear_effect_vfx()
+
+func apply_effect(effect_type: String, duration: float, value: float = 0.0) -> void:
+	match effect_type:
+		"knockback":
+			var dir = value  # Reuse value slot... actually we need direction
+			# Knockback is handled by passing direction + force via apply_knockback_effect
+			pass
+		"paralyze":
+			_is_paralyzed = true
+			_paralyze_timer = duration
+			_spawn_effect_vfx(Color(0.8, 0.2, 1.0, 0.6), duration, "PARALYZED!")
+		"slow":
+			_slow_factor = 0.4
+			_slow_timer = duration
+			_spawn_effect_vfx(Color(0.2, 0.5, 1.0, 0.5), duration, "SLOWED!")
+
+func apply_knockback_effect(dir: Vector2, force: float) -> void:
+	# Strong knockback from enemy effect proc
+	velocity = dir * force
+	_spawn_effect_label("KNOCKBACK!", Color(1.0, 0.6, 0.1))
+
+func _spawn_effect_vfx(color: Color, duration: float, label_text: String) -> void:
+	_clear_effect_vfx()
+	# Pulsing aura around the player
+	_effect_vfx = Sprite2D.new()
+	_effect_vfx.texture = SpriteGenerator.get_texture("beacon_blue")
+	_effect_vfx.modulate = color
+	_effect_vfx.z_index = -1
+	add_child(_effect_vfx)
+	var tween = _effect_vfx.create_tween().set_loops()
+	tween.tween_property(_effect_vfx, "modulate:a", color.a * 0.3, 0.4)
+	tween.tween_property(_effect_vfx, "modulate:a", color.a, 0.4)
+	# Auto-cleanup after duration
+	var cleanup_tween = create_tween()
+	cleanup_tween.tween_interval(duration)
+	cleanup_tween.tween_callback(_clear_effect_vfx)
+	# Label
+	_spawn_effect_label(label_text, color)
+
+func _spawn_effect_label(text: String, color: Color) -> void:
+	var label = Label.new()
+	label.text = text
+	label.position = Vector2(-30, -50)
+	var settings = LabelSettings.new()
+	settings.font_size = 16
+	settings.font_color = color
+	settings.outline_size = 2
+	settings.outline_color = Color.BLACK
+	label.label_settings = settings
+	add_child(label)
+	var tween = create_tween()
+	tween.tween_property(label, "position:y", label.position.y - 25, 0.8)
+	tween.parallel().tween_property(label, "modulate:a", 0.0, 0.8)
+	tween.tween_callback(label.queue_free)
+
+func _clear_effect_vfx() -> void:
+	if _effect_vfx and is_instance_valid(_effect_vfx):
+		_effect_vfx.queue_free()
+		_effect_vfx = null
 
 func _get_world_mouse_pos() -> Vector2:
 	# Use the viewport's canvas transform so the result matches what is

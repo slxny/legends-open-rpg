@@ -2,7 +2,7 @@ extends Node2D
 
 @export var camp_type: String = "goblin"
 @export var enemy_count: int = 4
-@export var respawn_time: float = 120.0  # SC-spec: 120 seconds
+@export var respawn_time: float = 45.0  # Faster respawn for more action
 
 # Creep camp definitions
 const CAMP_TYPES = {
@@ -118,5 +118,7 @@ func _on_enemy_died(enemy: Node2D, xp_reward: int, gold_reward: int) -> void:
 
 	_alive_count -= 1
 	if _alive_count <= 0:
+		# Only respawn once the ENTIRE mob is dead
 		_waiting_respawn = true
-		_respawn_timer = respawn_time
+		# Random jitter: ±30% of base respawn time for variety
+		_respawn_timer = respawn_time * randf_range(0.7, 1.3)

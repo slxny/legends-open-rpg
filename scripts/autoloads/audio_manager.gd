@@ -22,6 +22,9 @@ func _ready() -> void:
 # PUBLIC API
 # ============================================================
 
+func get_sfx(sfx_name: String) -> AudioStreamWAV:
+	return _sfx_cache.get(sfx_name)
+
 func play_sfx(sfx_name: String, volume_offset: float = 0.0) -> void:
 	var stream = _sfx_cache.get(sfx_name)
 	if not stream:
@@ -202,6 +205,9 @@ func _generate_all_sfx() -> void:
 	_sfx_cache["power_strike"] = _gen_power_strike()
 	_sfx_cache["whirlwind"] = _gen_whirlwind()
 	_sfx_cache["player_hurt"] = _gen_player_hurt()
+	_sfx_cache["charge_loop"] = _gen_charge_loop()
+	_sfx_cache["charge_ready"] = _gen_charge_ready()
+	_sfx_cache["charge_release"] = _gen_charge_release()
 
 func _gen_sword_swing() -> AudioStreamWAV:
 	# Warm blade slice — smooth swoosh with subtle metal edge
@@ -383,6 +389,64 @@ func _gen_player_hurt() -> AudioStreamWAV:
 	_add_pitched_noise(samples, 1400.0, 800.0, 0.2)
 	_apply_envelope(samples, 0.003, 0.015, 0.08)
 	_soft_clip(samples, 1.4)
+	return _to_stream(samples)
+
+func _gen_charge_loop() -> AudioStreamWAV:
+	# Looping hum that builds tension — rising tone with pulsing energy
+	# Kept short and looped so it plays continuously while holding
+	var dur = 0.6
+	var samples = _make_samples(dur)
+	# Low pulsing hum — warm oscillating base
+	for i in range(samples.size()):
+		var t = float(i) / SAMPLE_RATE
+		# Slowly rising pitch across the loop
+		var freq = lerpf(120.0, 180.0, t / dur)
+		var phase = t * freq
+		samples[i] += sin(phase * TAU) * 0.3
+		# Second harmonic for warmth
+		samples[i] += sin(phase * 2.0 * TAU) * 0.12
+		# Pulsing amplitude modulation — "gathering energy" throb
+		var pulse = 0.6 + 0.4 * sin(t * 8.0 * TAU)
+		samples[i] *= pulse
+	# Soft shimmer on top
+	_add_pitched_noise(samples, 1200.0, 600.0, 0.06)
+	_soft_clip(samples, 1.3)
+	_normalize(samples, 0.7)
+	return _to_stream(samples, true)  # loop = true
+
+func _gen_charge_ready() -> AudioStreamWAV:
+	# Quick bright chime — tells the player "fully charged, ready to release"
+	# Like a confirmation ping / power-up complete ding
+	var samples = _make_samples(0.2)
+	# Ascending two-note chime
+	_add_sine_segment(samples, 600.0, 0.3, 0.0, 0.1)
+	_add_sine_segment(samples, 900.0, 0.35, 0.06, 0.14)
+	# Harmonics for sparkle
+	_add_sine_segment(samples, 1200.0, 0.12, 0.06, 0.14)
+	_add_sine_segment(samples, 1800.0, 0.06, 0.06, 0.12)
+	_apply_envelope(samples, 0.003, 0.03, 0.17)
+	_soft_clip(samples, 1.2)
+	return _to_stream(samples)
+
+func _gen_charge_release() -> AudioStreamWAV:
+	# Discharge blast — explosive burst of energy releasing at once
+	# Like a cannon/energy discharge: sharp transient into booming bass
+	var samples = _make_samples(0.3)
+	# Sharp bright crack at the very start (the "snap" of release)
+	var crack = _make_samples(0.03)
+	_add_pitched_noise(crack, 3000.0, 2000.0, 0.4)
+	_add_pitched_noise(crack, 1600.0, 1000.0, 0.3)
+	_apply_envelope(crack, 0.001, 0.004, 0.025)
+	_mix_into(samples, crack)
+	# Heavy bass boom — the power behind the release
+	_pitch_sweep_sine(samples, 220.0, 80.0, 0.6)
+	_pitch_sweep_sine(samples, 440.0, 160.0, 0.25)
+	# Mid presence for warmth and clarity
+	_pitch_sweep_sine(samples, 660.0, 250.0, 0.12)
+	# Whooshing tail — the energy dispersing
+	_add_pitched_noise(samples, 800.0, 600.0, 0.15, 0.02)
+	_apply_envelope(samples, 0.002, 0.05, 0.25)
+	_soft_clip(samples, 1.8)
 	return _to_stream(samples)
 
 # ============================================================

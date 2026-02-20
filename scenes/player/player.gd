@@ -76,6 +76,8 @@ var _charge_time: float = 0.0    # How long attack key has been held continuousl
 var _is_charging: bool = false    # Whether charge VFX is showing
 var _charge_vfx: Sprite2D = null  # Glow VFX while charging
 var _charge_shake_tween: Tween = null  # Sprite shake during charge
+var _charge_sfx_player: AudioStreamPlayer = null  # Looping charge sound
+const CHARGE_GRACE: float = 0.15  # Hold this long before suppressing basic attacks
 const TAP_RESOLVE_TIME: float = 0.12  # 120ms buffer — ~7 frames, barely perceptible
 const CHARGE_THRESHOLD: float = 1.5   # Hold 1.5s for charged slash
 
@@ -222,7 +224,8 @@ func _physics_process(delta: float) -> void:
 			if _charge_time >= CHARGE_THRESHOLD and not _is_charging and not _is_attack_animating:
 				_is_charging = true
 				_start_charge_vfx()
-			if not _is_charging:
+				AudioManager.play_sfx("charge_ready")
+			if not _is_charging and _charge_time < CHARGE_GRACE:
 				_try_manual_attack()
 		else:
 			if _is_charging and not _is_attack_animating:
@@ -627,7 +630,7 @@ func _execute_charged_slash(attack_dir: Vector2) -> void:
 			_do_hit_freeze(true)
 		else:
 			_do_screen_shake(5.0)
-		AudioManager.play_sfx("power_strike")
+		AudioManager.play_sfx("charge_release")
 		_spawn_effect_label("CHARGED SLASH!", Color(1.0, 0.9, 0.3))
 	)
 	tween.tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.1)
@@ -755,8 +758,11 @@ func _start_charge_vfx() -> void:
 	_charge_shake_tween = create_tween().set_loops()
 	_charge_shake_tween.tween_property(sprite, "offset:x", sprite.offset.x + 1.5, 0.03)
 	_charge_shake_tween.tween_property(sprite, "offset:x", sprite.offset.x - 1.5, 0.03)
+	# Looping charge buildup sound
+	_start_charge_sfx()
 
 func _stop_charge_vfx() -> void:
+	_stop_charge_sfx()
 	if _charge_shake_tween and _charge_shake_tween.is_valid():
 		_charge_shake_tween.kill()
 		_charge_shake_tween = null
@@ -764,6 +770,20 @@ func _stop_charge_vfx() -> void:
 	if _charge_vfx and is_instance_valid(_charge_vfx):
 		_charge_vfx.queue_free()
 		_charge_vfx = null
+
+func _start_charge_sfx() -> void:
+	_stop_charge_sfx()
+	_charge_sfx_player = AudioStreamPlayer.new()
+	_charge_sfx_player.stream = AudioManager.get_sfx("charge_loop")
+	_charge_sfx_player.volume_db = -4.0
+	add_child(_charge_sfx_player)
+	_charge_sfx_player.play()
+
+func _stop_charge_sfx() -> void:
+	if _charge_sfx_player and is_instance_valid(_charge_sfx_player):
+		_charge_sfx_player.stop()
+		_charge_sfx_player.queue_free()
+		_charge_sfx_player = null
 
 func _get_world_mouse_pos() -> Vector2:
 	# Use the viewport's canvas transform so the result matches what is

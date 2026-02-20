@@ -639,6 +639,24 @@ func _execute_dash_strike(attack_dir: Vector2) -> void:
 	var dmg_mult := 1.3
 	var dash_distance := 60.0  # Player physically moves forward
 
+	# Snapshot targets BEFORE the dash — after dashing, enemies end up behind us
+	# and leave the AttackArea, so we must pick targets now.
+	var start_pos = global_position
+	var end_pos = start_pos + dir * dash_distance
+	var dash_targets: Array[Node2D] = []
+	# Collect all enemies near the dash path (in range or along the path)
+	for enemy in get_tree().get_nodes_in_group("enemies"):
+		if not is_instance_valid(enemy) or enemy.get("_is_dead"):
+			continue
+		# Check if enemy is close to the dash line segment
+		var dist_to_path = _point_to_segment_dist(enemy.global_position, start_pos, end_pos)
+		if dist_to_path < stats.attack_range + 20.0:
+			# Also check rough direction alignment — don't hit enemies far behind us
+			var to_enemy = (enemy.global_position - start_pos)
+			var dot = dir.dot(to_enemy.normalized())
+			if dot > -0.3:  # generous: catch enemies slightly to the side/behind
+				dash_targets.append(enemy)
+
 	# Use spin slash frames
 	var frames = _combo_swings[4] if _combo_swings.size() > 4 else []
 
@@ -656,7 +674,7 @@ func _execute_dash_strike(attack_dir: Vector2) -> void:
 	tween.tween_property(sprite, "rotation", TAU, 0.16).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	tween.tween_property(sprite, "position", base_pos + dir * 14.0, 0.16)
 	# Actually move the player body forward
-	tween.tween_property(self, "global_position", global_position + dir * dash_distance, 0.16).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.tween_property(self, "global_position", end_pos, 0.16).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	tween.set_parallel(false)
 	if frames.size() >= 3:
 		tween.tween_callback(func(): sprite.texture = frames[2])
@@ -666,15 +684,18 @@ func _execute_dash_strike(attack_dir: Vector2) -> void:
 		_spawn_slash_vfx(dir, 45.0, 1.6)
 		_spawn_slash_vfx(dir.rotated(PI * 0.4), 35.0, 1.2)
 		_spawn_slash_vfx(dir.rotated(-PI * 0.4), 35.0, 1.2)
-		# Hit the best target
-		var hit_target = _find_best_target(dir)
-		if hit_target and is_instance_valid(hit_target):
-			var result = CombatManager.calculate_damage(stats.get_stats_dict(), hit_target.get_stats_dict(), dmg_mult)
-			hit_target.take_damage(result["damage"], result["is_crit"])
-			hit_target.apply_knockback(dir, 75.0)
-			_spawn_impact_vfx(hit_target.global_position, result["is_crit"])
+		# Hit all enemies along the dash path using pre-captured targets
+		var did_hit := false
+		for hit_target in dash_targets:
+			if is_instance_valid(hit_target) and not hit_target.get("_is_dead"):
+				var result = CombatManager.calculate_damage(stats.get_stats_dict(), hit_target.get_stats_dict(), dmg_mult)
+				hit_target.take_damage(result["damage"], result["is_crit"])
+				hit_target.apply_knockback(dir, 75.0)
+				_spawn_impact_vfx(hit_target.global_position, result["is_crit"])
+				did_hit = true
+		if did_hit:
 			_do_screen_shake(6.0)
-			_do_hit_freeze(result["is_crit"])
+			_do_hit_freeze(false)
 		else:
 			_do_screen_shake(2.0)
 		_spawn_effect_label("DASH STRIKE!", Color(0.4, 0.9, 1.0))
@@ -682,6 +703,16 @@ func _execute_dash_strike(attack_dir: Vector2) -> void:
 	tween.tween_property(sprite, "rotation", 0.0, 0.08)
 	tween.tween_interval(0.05)
 	_anim_return_to_idle(tween, base_pos)
+
+## Distance from a point to a line segment (start -> end)
+func _point_to_segment_dist(point: Vector2, seg_start: Vector2, seg_end: Vector2) -> float:
+	var seg = seg_end - seg_start
+	var seg_len_sq = seg.length_squared()
+	if seg_len_sq < 0.001:
+		return point.distance_to(seg_start)
+	var t = clampf((point - seg_start).dot(seg) / seg_len_sq, 0.0, 1.0)
+	var proj = seg_start + seg * t
+	return point.distance_to(proj)
 
 func _find_best_target(dir: Vector2) -> Node2D:
 	# Find the best target in a direction from current enemies in range

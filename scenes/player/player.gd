@@ -253,7 +253,6 @@ func _update_walk_anim(delta: float) -> void:
 				3: sprite.texture = frames[2]
 	else:
 		# Settle back to idle — snap once close enough to stop sub-pixel jitter
-		_walk_bob_time = 0.0
 		if abs(sprite.offset.y - (-20.0)) < 0.05 and abs(sprite.offset.x) < 0.05 \
 				and abs(sprite.rotation) < 0.001 and sprite.scale.distance_to(Vector2.ONE) < 0.001:
 			sprite.offset.y = -20.0

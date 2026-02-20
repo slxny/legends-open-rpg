@@ -122,15 +122,44 @@ var _enemy_scene: PackedScene = preload("res://scenes/enemies/enemy.tscn")
 var _alive_count: int = 0
 var _respawn_timer: float = 0.0
 var _waiting_respawn: bool = false
+var _spawned: bool = false  # Whether initial spawn has happened
 var _times_respawned: int = 0
 var _cached_player: Node2D = null
 var _player_check_timer: float = 0.0
+var _spawn_queue: Array = []  # Pending enemies to spawn across frames
+var _is_stagger_spawning: bool = false
 const PLAYER_CHECK_INTERVAL: float = 0.5  # Only check player proximity twice per second
+const ACTIVATION_DISTANCE_SQ: float = 2250000.0  # 1500^2 — camps within this activate immediately
+const ENEMIES_PER_FRAME: int = 3  # Max enemies to instantiate per frame during staggered spawn
 
 func _ready() -> void:
-	_spawn_enemies(false)
+	# Defer initial spawn: camps close to origin (player spawn) activate immediately,
+	# distant camps wait until the player approaches
+	var dist_sq = global_position.length_squared()
+	if dist_sq < ACTIVATION_DISTANCE_SQ:
+		_spawn_enemies_staggered(false)
+	# Distant camps stay dormant until player is nearby (checked in _process)
 
 func _process(delta: float) -> void:
+	# Handle staggered spawning: drip-feed enemies across frames
+	if _is_stagger_spawning and _spawn_queue.size() > 0:
+		var count = mini(_spawn_queue.size(), ENEMIES_PER_FRAME)
+		for _i in range(count):
+			var pending = _spawn_queue.pop_front()
+			_instantiate_enemy(pending)
+		if _spawn_queue.size() == 0:
+			_is_stagger_spawning = false
+		return
+
+	# Check if this camp hasn't spawned yet (distant camp waiting for player)
+	if not _spawned and not _is_stagger_spawning:
+		_player_check_timer -= delta
+		if _player_check_timer <= 0.0:
+			_player_check_timer = PLAYER_CHECK_INTERVAL
+			if _is_player_in_activation_range():
+				_spawn_enemies_staggered(false)
+		return
+
 	if not _waiting_respawn:
 		return
 	# Throttle player proximity checks to twice per second
@@ -142,7 +171,7 @@ func _process(delta: float) -> void:
 	_respawn_timer -= delta
 	if _respawn_timer <= 0:
 		_waiting_respawn = false
-		_spawn_enemies(true)
+		_spawn_enemies_staggered(true)
 
 func _is_player_nearby() -> bool:
 	if not _cached_player or not is_instance_valid(_cached_player):
@@ -152,47 +181,67 @@ func _is_player_nearby() -> bool:
 		return global_position.distance_squared_to(_cached_player.global_position) < 360000.0  # 600^2
 	return false
 
-func _spawn_enemies(is_respawn: bool) -> void:
+func _is_player_in_activation_range() -> bool:
+	if not _cached_player or not is_instance_valid(_cached_player):
+		var players = get_tree().get_nodes_in_group("player")
+		_cached_player = players[0] if players.size() > 0 else null
+	if _cached_player and is_instance_valid(_cached_player):
+		return global_position.distance_squared_to(_cached_player.global_position) < ACTIVATION_DISTANCE_SQ
+	return false
+
+func _spawn_enemies_staggered(is_respawn: bool) -> void:
 	var type_data = CAMP_TYPES.get(camp_type, CAMP_TYPES["goblin"])
 	_alive_count = enemy_count
+	_spawned = true
 
 	if is_respawn:
 		_times_respawned += 1
 
-	# Spread scales with group size so large swarms don't pile up
-	var spread = 30.0 + enemy_count * 4.0  # 5 enemies → ±50, 20 enemies → ±110
+	var spread = 30.0 + enemy_count * 4.0
+	_spawn_queue.clear()
 	for i in range(enemy_count):
-		var enemy = _enemy_scene.instantiate()
-		var offset = Vector2(randf_range(-spread, spread), randf_range(-spread, spread))
-		enemy.position = offset
-
 		var level = randi_range(type_data["level_range"][0], type_data["level_range"][1])
-		# Respawned enemies are slightly weaker (fewer HP, less reward)
 		var weakness_factor = 1.0
 		if is_respawn:
 			weakness_factor = max(0.6, 1.0 - _times_respawned * 0.1)
 
-		var config = {
-			"name": type_data["name"],
+		_spawn_queue.append({
+			"offset": Vector2(randf_range(-spread, spread), randf_range(-spread, spread)),
+			"type_data": type_data,
 			"level": level,
-			"sprite_type": type_data["sprite_type"],
-			"move_speed": type_data["move_speed"],
-			"attack_range": type_data["attack_range"],
-			"aggro_range": type_data["aggro_range"],
-			"xp_reward": int((type_data["xp_reward"] + (level - 1) * 5) * weakness_factor),
-			"gold_reward": int((type_data["gold_reward"] + (level - 1) * 2) * weakness_factor),
-			"drop_table": type_data["drop_table"],
 			"weakness_factor": weakness_factor,
-		}
+			"is_respawn": is_respawn,
+		})
+	_is_stagger_spawning = true
 
-		add_child(enemy)
-		enemy.initialize(config)
-		# Apply weakness to respawned enemies
-		if is_respawn and weakness_factor < 1.0:
-			enemy.stats.max_hp = int(enemy.stats.max_hp * weakness_factor)
-			enemy.stats.current_hp = enemy.stats.max_hp
-			enemy.stats.attack_damage = int(enemy.stats.attack_damage * weakness_factor)
-		enemy.died.connect(_on_enemy_died)
+func _instantiate_enemy(pending: Dictionary) -> void:
+	var enemy = _enemy_scene.instantiate()
+	enemy.position = pending["offset"]
+	var type_data = pending["type_data"]
+	var level = pending["level"]
+	var weakness_factor = pending["weakness_factor"]
+	var is_respawn = pending["is_respawn"]
+
+	var config = {
+		"name": type_data["name"],
+		"level": level,
+		"sprite_type": type_data["sprite_type"],
+		"move_speed": type_data["move_speed"],
+		"attack_range": type_data["attack_range"],
+		"aggro_range": type_data["aggro_range"],
+		"xp_reward": int((type_data["xp_reward"] + (level - 1) * 5) * weakness_factor),
+		"gold_reward": int((type_data["gold_reward"] + (level - 1) * 2) * weakness_factor),
+		"drop_table": type_data["drop_table"],
+		"weakness_factor": weakness_factor,
+	}
+
+	add_child(enemy)
+	enemy.initialize(config)
+	if is_respawn and weakness_factor < 1.0:
+		enemy.stats.max_hp = int(enemy.stats.max_hp * weakness_factor)
+		enemy.stats.current_hp = enemy.stats.max_hp
+		enemy.stats.attack_damage = int(enemy.stats.attack_damage * weakness_factor)
+	enemy.died.connect(_on_enemy_died)
 
 func _on_enemy_died(enemy: Node2D, xp_reward: int, gold_reward: int) -> void:
 	GameManager.record_kill(enemy.enemy_name)

@@ -32,6 +32,13 @@ var _knockback_velocity: Vector2 = Vector2.ZERO
 var _cached_player: Node2D = null  # Cached player reference to avoid per-frame group lookups
 var _cached_world_node: Node = null  # Cached world node for VFX spawning
 
+# Distance-based sleep/wake — enemies far from the player disable physics processing
+var _is_sleeping: bool = false
+var _sleep_check_timer: float = 0.0
+const SLEEP_DISTANCE_SQ: float = 640000.0  # 800^2 — sleep when player is >800px away
+const WAKE_DISTANCE_SQ: float = 490000.0   # 700^2 — wake when player is <700px (hysteresis)
+const SLEEP_CHECK_INTERVAL: float = 0.4    # Check sleep/wake ~2.5x per second
+
 # Patrol state
 var _patrol_target: Vector2 = Vector2.ZERO
 var _patrol_radius: float = 150.0
@@ -79,6 +86,9 @@ func _ready() -> void:
 
 	# Start with a short random idle delay before first patrol
 	_patrol_wait_timer = randf_range(0.3, 1.5)
+
+	# Stagger sleep checks so not all enemies check on the same frame
+	_sleep_check_timer = randf_range(0.0, SLEEP_CHECK_INTERVAL)
 
 
 func initialize(config: Dictionary) -> void:
@@ -137,6 +147,16 @@ func hide_selection() -> void:
 
 func _physics_process(delta: float) -> void:
 	if _is_dead:
+		return
+
+	# Distance-based sleep/wake check (throttled)
+	_sleep_check_timer -= delta
+	if _sleep_check_timer <= 0.0:
+		_sleep_check_timer = SLEEP_CHECK_INTERVAL
+		_update_sleep_state()
+		if _is_sleeping:
+			return
+	elif _is_sleeping:
 		return
 
 	# Apply knockback impulse — overrides state machine until it decays
@@ -308,6 +328,10 @@ func _apply_effect_to_target(t: Node2D) -> void:
 func take_damage(amount: int, is_crit: bool = false) -> void:
 	if _is_dead:
 		return
+	# Force wake if sleeping (player somehow hit us at range)
+	if _is_sleeping:
+		_is_sleeping = false
+		visible = true
 	stats.take_damage(amount)
 	_update_hp_bar()
 	hp_bar.visible = true
@@ -508,6 +532,23 @@ func _get_player() -> Node2D:
 		_cached_player = players[0]
 		return _cached_player
 	return null
+
+func _update_sleep_state() -> void:
+	var player = _get_player()
+	if not player:
+		return
+	var dist_sq = global_position.distance_squared_to(player.global_position)
+	if _is_sleeping:
+		# Wake up when player gets close enough (with hysteresis to avoid flicker)
+		if dist_sq < WAKE_DISTANCE_SQ:
+			_is_sleeping = false
+			visible = true
+	else:
+		# Fall asleep when player is far away (only if not in combat)
+		if dist_sq > SLEEP_DISTANCE_SQ and current_state != State.CHASE and current_state != State.ATTACK:
+			_is_sleeping = true
+			visible = false
+			velocity = Vector2.ZERO
 
 func _get_world_node() -> Node:
 	if _cached_world_node and is_instance_valid(_cached_world_node):

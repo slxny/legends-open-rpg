@@ -13,6 +13,7 @@ signal attacked(target: Node2D)
 var hero_class: String = ""
 var player_id: int = 0
 var _enemies_in_range: Array[Node2D] = []
+var _trees_in_range: Array[Node2D] = []
 
 # Click-to-move
 var _move_target: Vector2 = Vector2.ZERO
@@ -422,8 +423,13 @@ func _try_manual_attack() -> void:
 	if hit_target:
 		_perform_attack(hit_target, attack_dir)
 	else:
-		AudioManager.play_sfx("sword_swing")
-		_perform_swing_no_target(attack_dir)
+		# No enemy — check for a harvestable tree in swing direction
+		var tree_target = _find_best_tree(attack_dir)
+		if tree_target:
+			_perform_tree_chop(tree_target, attack_dir)
+		else:
+			AudioManager.play_sfx("sword_swing")
+			_perform_swing_no_target(attack_dir)
 
 func _process_status_effects(delta: float) -> void:
 	if _is_paralyzed:
@@ -1360,9 +1366,12 @@ func _spawn_auto_attack_projectile(target: Node2D) -> void:
 func _on_attack_area_body_entered(body: Node2D) -> void:
 	if body.is_in_group("enemies"):
 		_enemies_in_range.append(body)
+	elif body.is_in_group("harvestable_trees"):
+		_trees_in_range.append(body)
 
 func _on_attack_area_body_exited(body: Node2D) -> void:
 	_enemies_in_range.erase(body)
+	_trees_in_range.erase(body)
 
 # Walk-over pickup for items/gold dropped on the ground
 func _on_pickup_area_area_entered(area: Area2D) -> void:
@@ -1376,10 +1385,84 @@ func _on_pickup_area_area_entered(area: Area2D) -> void:
 			AudioManager.play_sfx("gold_pickup", -3.0)
 			area.queue_free()
 			return
+		if item.get("id") == "_wood":
+			GameManager.add_wood(item.get("wood_amount", 0))
+			GameManager.game_message.emit("+ %s" % item.get("name", "Wood"), Color(0.65, 0.45, 0.2))
+			AudioManager.play_sfx("gold_pickup", -3.0)
+			area.queue_free()
+			return
 		if inventory.add_item(item):
 			GameManager.game_message.emit("+ %s" % item.get("name", "Item"), Color(0.2, 1.0, 0.2))
 			AudioManager.play_sfx("item_pickup")
 			area.queue_free()
+
+func _find_best_tree(dir: Vector2) -> Node2D:
+	_trees_in_range = _trees_in_range.filter(func(t): return is_instance_valid(t) and not t.get("_is_chopped"))
+	var best_tree: Node2D = null
+	var best_score := -INF
+	for tree in _trees_in_range:
+		var to_tree = (tree.global_position - global_position)
+		var dot = dir.dot(to_tree.normalized())
+		if dot > 0.0:  # Tree is roughly in front of us
+			var score = dot - to_tree.length() * 0.001
+			if score > best_score:
+				best_score = score
+				best_tree = tree
+	return best_tree
+
+func _perform_tree_chop(tree: Node2D, attack_dir: Vector2) -> void:
+	_is_attack_animating = true
+	_attack_cooldown = 0.5 / stats.attack_speed
+	var dir = attack_dir
+	var base_pos = sprite.position
+
+	# Pick overhead chop frames for tree chopping
+	var frames = _combo_swings[2] if _combo_swings.size() > 2 else []
+
+	var tween = create_tween()
+	# Wind-up
+	if frames.size() >= 3:
+		tween.tween_callback(func(): sprite.texture = frames[0])
+	tween.tween_property(sprite, "position", base_pos - dir * 3.0 + Vector2(0, -3), 0.08)
+	tween.tween_property(sprite, "scale", Vector2(1.1, 0.9), 0.04)
+	if frames.size() >= 3:
+		tween.tween_callback(func(): sprite.texture = frames[1])
+	# Chop forward
+	tween.tween_property(sprite, "position", base_pos + dir * 8.0, 0.05)
+	tween.tween_property(sprite, "scale", Vector2(0.9, 1.1), 0.03)
+	if frames.size() >= 3:
+		tween.tween_callback(func(): sprite.texture = frames[2])
+	# Impact
+	tween.tween_callback(func():
+		if is_instance_valid(tree) and tree.has_method("take_damage"):
+			tree.take_damage(1)
+			_spawn_wood_chips(tree.global_position, dir)
+			_do_screen_shake(1.5)
+	)
+	tween.tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.06)
+	tween.tween_interval(0.04)
+	_anim_return_to_idle(tween, base_pos)
+
+func _spawn_wood_chips(pos: Vector2, dir: Vector2) -> void:
+	var world = _get_world_node()
+	for i in range(2):
+		var chip = Sprite2D.new()
+		chip.texture = _tex_crystal_white
+		chip.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		chip.global_position = pos
+		chip.scale = Vector2(0.3, 0.3)
+		chip.modulate = Color(0.55, 0.38, 0.18)
+		chip.z_index = 12
+		world.add_child(chip)
+		var chip_dir = dir.rotated(randf_range(-0.8, 0.8)) * randf_range(12, 22)
+		var dur = randf_range(0.15, 0.25)
+		var t = chip.create_tween()
+		t.set_parallel(true)
+		t.tween_property(chip, "global_position", pos + chip_dir, dur)
+		t.tween_property(chip, "modulate:a", 0.0, dur)
+		t.tween_property(chip, "scale", Vector2.ZERO, dur)
+		t.set_parallel(false)
+		t.tween_callback(chip.queue_free)
 
 func _spawn_buff_vfx(color: Color, duration: float) -> void:
 	var vfx = Sprite2D.new()

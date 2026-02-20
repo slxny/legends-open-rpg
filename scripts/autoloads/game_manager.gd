@@ -1,6 +1,7 @@
 extends Node
 
 signal gold_changed(new_amount: int)
+signal wood_changed(new_amount: int)
 signal hero_selected(hero_class: String)
 signal game_started
 signal item_picked_up(item_name: String)
@@ -13,6 +14,10 @@ var gold: int = 0:
 	set(value):
 		gold = max(0, value)
 		gold_changed.emit(gold)
+var wood: int = 0:
+	set(value):
+		wood = max(0, value)
+		wood_changed.emit(wood)
 
 var total_kills: int = 0
 var killed_bosses: Array[String] = []
@@ -33,6 +38,9 @@ func add_gold(amount: int) -> void:
 	gold += amount
 	# Mirror to EconomyManager for multiplayer-readiness
 	EconomyManager.add_gold(amount, 0)
+
+func add_wood(amount: int) -> void:
+	wood += amount
 
 func spend_gold(amount: int) -> bool:
 	if gold >= amount:

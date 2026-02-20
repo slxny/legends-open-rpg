@@ -28,6 +28,8 @@ var _camp_positions := [
 	Vector2(5200, -3500), Vector2(-5400, -3800),
 ]
 
+const HarvestableTree = preload("res://scenes/world/harvestable_tree.gd")
+
 func _ready() -> void:
 	GameManager.game_message.emit("Welcome to Haven's Rest", Color(1, 1, 1))
 	GameManager.game_message.emit("Level 1-5 Zone", Color(0.7, 0.7, 0.7))
@@ -40,6 +42,7 @@ func _ready() -> void:
 	_generate_terrain()
 	_generate_town()
 	_generate_decorations()
+	_generate_harvestable_trees()
 
 func _on_heal_beacon(_b: Area2D) -> void:
 	var players = get_tree().get_nodes_in_group("player")
@@ -513,6 +516,81 @@ func _generate_decorations() -> void:
 
 	# ---- Ambient floating particles (dust/pollen) ----
 	_spawn_ambient_particles()
+
+# ============================================================
+# HARVESTABLE TREES: Choppable trees that drop wood
+# ============================================================
+
+func _generate_harvestable_trees() -> void:
+	var tree_layer = $Decorations
+	var rng = RandomNumberGenerator.new()
+	rng.seed = 9876
+
+	# Scatter harvestable trees across the map in small groves
+	# More trees further from town, mixed sizes
+	var grove_centers = [
+		# Near town (small trees mostly — easy early wood)
+		Vector2(-650, -500), Vector2(550, -450), Vector2(-500, 600),
+		Vector2(650, 400), Vector2(-400, -800), Vector2(500, 700),
+		# Mid range (medium trees mixed with small)
+		Vector2(-1300, -700), Vector2(1200, -600), Vector2(-1100, 900),
+		Vector2(1300, 800), Vector2(-900, -1100), Vector2(800, 1200),
+		Vector2(-1600, 400), Vector2(1500, -300), Vector2(0, -1400),
+		Vector2(0, 1500), Vector2(-700, 1400), Vector2(900, -1300),
+		# Outer ring (large trees appear)
+		Vector2(-2200, -800), Vector2(2100, -600), Vector2(-2000, 1200),
+		Vector2(2300, 1000), Vector2(-2500, -1500), Vector2(2400, -1400),
+		Vector2(-1800, 1800), Vector2(2000, 1600), Vector2(-2800, 200),
+		Vector2(2700, -100), Vector2(-1400, -2000), Vector2(1600, 2100),
+		# Far groves (mostly large)
+		Vector2(-3400, -1000), Vector2(3200, -800), Vector2(-3000, 1600),
+		Vector2(3300, 1400), Vector2(-3800, 600), Vector2(3600, -400),
+		Vector2(-2600, 2400), Vector2(2800, 2200), Vector2(-4000, -500),
+		Vector2(4100, 300), Vector2(-3200, -2200), Vector2(3400, -2000),
+	]
+
+	for center in grove_centers:
+		# Determine size bias based on distance from town center
+		var dist = center.length()
+		var tree_count = rng.randi_range(2, 5)
+		for _i in range(tree_count):
+			var offset = Vector2(rng.randf_range(-60, 60), rng.randf_range(-60, 60))
+			var pos = center + offset
+			# Skip if too close to town
+			if pos.length() < 520:
+				continue
+			# Determine tree size based on distance
+			var size_roll = rng.randf()
+			var tree_size: int  # 0=SMALL, 1=MEDIUM, 2=LARGE
+			if dist < 1000:
+				# Near town: mostly small
+				tree_size = 0 if size_roll < 0.7 else 1
+			elif dist < 2500:
+				# Mid range: mixed
+				if size_roll < 0.3:
+					tree_size = 0
+				elif size_roll < 0.75:
+					tree_size = 1
+				else:
+					tree_size = 2
+			else:
+				# Far out: mostly large
+				if size_roll < 0.1:
+					tree_size = 0
+				elif size_roll < 0.4:
+					tree_size = 1
+				else:
+					tree_size = 2
+			_spawn_harvestable_tree(tree_layer, pos, tree_size)
+
+func _spawn_harvestable_tree(parent: Node2D, pos: Vector2, size_enum: int) -> void:
+	var tree = HarvestableTree.new()
+	tree.setup(size_enum)
+	tree.position = pos
+	# Slight random scale variation
+	var s = randf_range(0.9, 1.15)
+	tree.scale = Vector2(s, s)
+	parent.add_child(tree)
 
 # ============================================================
 # DECORATION HELPERS

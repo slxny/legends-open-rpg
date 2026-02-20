@@ -107,6 +107,11 @@ func _generate_all() -> void:
 	_gen_or_load("tree_jungle")
 	_gen_or_load("tree_small")
 	_gen_or_load("tree_dead")
+	_gen_or_load("tree_harvest_small")
+	_gen_or_load("tree_harvest_medium")
+	_gen_or_load("tree_harvest_large")
+	_gen_or_load("tree_stump")
+	_gen_or_load("wood_log")
 	_gen_or_load("rock")
 	_gen_or_load("rock_large")
 	_gen_or_load("bush")
@@ -2870,6 +2875,126 @@ func _gen_blood_splatter() -> void:
 # ============================================================
 # DRAWING HELPERS
 # ============================================================
+
+func _gen_tree_harvest_small() -> void:
+	# Small harvestable sapling — bright green, clearly interactive, ~3 wood
+	var img = Image.create(20, 32, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	# Shadow
+	_fill_ellipse(img, 10, 30, 8, 2, Color(0, 0, 0, 0.25))
+	# Trunk — warm brown, visible
+	_fill_rect(img, 8, 20, 4, 11, Color(0.35, 0.22, 0.1))
+	_fill_rect(img, 9, 22, 2, 8, Color(0.42, 0.28, 0.14))
+	# Canopy — bright inviting green (stands out from dark jungle trees)
+	_fill_ellipse(img, 10, 14, 9, 10, Color(0.12, 0.35, 0.08))
+	_fill_ellipse(img, 10, 12, 8, 8, Color(0.18, 0.45, 0.12))
+	_fill_ellipse(img, 10, 10, 6, 6, Color(0.25, 0.55, 0.15))
+	# Bright highlight (makes it look selectable/special)
+	_fill_rect(img, 7, 7, 4, 3, Color(0.32, 0.65, 0.2))
+	_fill_rect(img, 12, 10, 2, 2, Color(0.3, 0.6, 0.18))
+	# Yellow-green accent dots (fruit/sap — signals interactivity)
+	_fill_rect(img, 6, 12, 2, 2, Color(0.6, 0.7, 0.15))
+	_fill_rect(img, 13, 9, 2, 2, Color(0.55, 0.65, 0.12))
+	textures["tree_harvest_small"] = ImageTexture.create_from_image(img)
+
+func _gen_tree_harvest_medium() -> void:
+	# Medium harvestable tree — fuller canopy, visible trunk, ~6 wood
+	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	# Shadow
+	_fill_ellipse(img, 16, 45, 13, 3, Color(0, 0, 0, 0.3))
+	# Thick trunk — clearly choppable
+	_fill_rect(img, 13, 28, 6, 18, Color(0.38, 0.24, 0.12))
+	_fill_rect(img, 14, 30, 4, 14, Color(0.45, 0.3, 0.15))
+	_fill_rect(img, 15, 32, 2, 10, Color(0.5, 0.34, 0.18))
+	# Bark rings
+	_fill_rect(img, 13, 34, 6, 1, Color(0.3, 0.18, 0.08))
+	_fill_rect(img, 13, 38, 6, 1, Color(0.3, 0.18, 0.08))
+	# Full canopy — bright, lively greens
+	_fill_ellipse(img, 16, 18, 14, 14, Color(0.1, 0.3, 0.06))
+	_fill_ellipse(img, 12, 15, 10, 10, Color(0.15, 0.4, 0.1))
+	_fill_ellipse(img, 20, 14, 10, 10, Color(0.14, 0.38, 0.09))
+	_fill_ellipse(img, 16, 12, 12, 10, Color(0.2, 0.48, 0.13))
+	# Top highlights
+	_fill_ellipse(img, 15, 9, 8, 6, Color(0.26, 0.56, 0.16))
+	_fill_rect(img, 10, 7, 5, 3, Color(0.32, 0.62, 0.2))
+	_fill_rect(img, 19, 10, 3, 3, Color(0.28, 0.58, 0.18))
+	# Fruit/sap accents
+	_fill_rect(img, 7, 14, 2, 2, Color(0.65, 0.7, 0.15))
+	_fill_rect(img, 22, 12, 2, 2, Color(0.6, 0.65, 0.12))
+	_fill_rect(img, 14, 8, 2, 2, Color(0.55, 0.68, 0.18))
+	textures["tree_harvest_medium"] = ImageTexture.create_from_image(img)
+
+func _gen_tree_harvest_large() -> void:
+	# Large ancient harvestable tree — thick trunk, massive canopy, ~12 wood
+	var img = Image.create(48, 64, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	# Shadow
+	_fill_ellipse(img, 24, 60, 20, 4, Color(0, 0, 0, 0.3))
+	# Massive trunk — thick and gnarled
+	_fill_rect(img, 19, 36, 10, 26, Color(0.35, 0.22, 0.1))
+	_fill_rect(img, 20, 38, 8, 22, Color(0.42, 0.28, 0.14))
+	_fill_rect(img, 22, 40, 4, 18, Color(0.48, 0.32, 0.17))
+	# Root flares
+	_fill_rect(img, 16, 56, 4, 4, Color(0.32, 0.2, 0.09))
+	_fill_rect(img, 28, 55, 4, 5, Color(0.32, 0.2, 0.09))
+	# Bark detail
+	_fill_rect(img, 19, 42, 10, 1, Color(0.28, 0.16, 0.07))
+	_fill_rect(img, 19, 48, 10, 1, Color(0.28, 0.16, 0.07))
+	_fill_rect(img, 19, 53, 10, 1, Color(0.28, 0.16, 0.07))
+	# Branches visible above trunk
+	_fill_rect(img, 12, 34, 8, 3, Color(0.38, 0.24, 0.12))
+	_fill_rect(img, 28, 32, 8, 3, Color(0.38, 0.24, 0.12))
+	# Massive canopy — rich greens
+	_fill_ellipse(img, 24, 22, 22, 20, Color(0.08, 0.25, 0.05))
+	_fill_ellipse(img, 16, 18, 14, 14, Color(0.12, 0.34, 0.08))
+	_fill_ellipse(img, 32, 17, 14, 14, Color(0.11, 0.32, 0.07))
+	_fill_ellipse(img, 24, 14, 18, 14, Color(0.17, 0.42, 0.11))
+	_fill_ellipse(img, 20, 10, 12, 10, Color(0.22, 0.5, 0.14))
+	_fill_ellipse(img, 30, 12, 10, 8, Color(0.2, 0.48, 0.13))
+	# Crown highlights
+	_fill_ellipse(img, 22, 8, 8, 5, Color(0.28, 0.58, 0.18))
+	_fill_rect(img, 14, 6, 6, 3, Color(0.34, 0.64, 0.22))
+	_fill_rect(img, 30, 9, 4, 3, Color(0.3, 0.6, 0.2))
+	# Fruit/sap accents (bigger tree = more)
+	_fill_rect(img, 10, 16, 2, 2, Color(0.7, 0.72, 0.15))
+	_fill_rect(img, 36, 14, 2, 2, Color(0.65, 0.68, 0.12))
+	_fill_rect(img, 22, 6, 2, 2, Color(0.6, 0.7, 0.18))
+	_fill_rect(img, 16, 22, 2, 2, Color(0.55, 0.62, 0.14))
+	textures["tree_harvest_large"] = ImageTexture.create_from_image(img)
+
+func _gen_tree_stump() -> void:
+	# Leftover stump after tree is chopped
+	var img = Image.create(16, 12, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	# Shadow
+	_fill_ellipse(img, 8, 10, 7, 2, Color(0, 0, 0, 0.2))
+	# Stump body
+	_fill_rect(img, 4, 4, 8, 7, Color(0.35, 0.22, 0.1))
+	_fill_rect(img, 5, 5, 6, 5, Color(0.42, 0.28, 0.14))
+	# Cut top — flat light wood
+	_fill_ellipse(img, 8, 4, 5, 2, Color(0.6, 0.5, 0.3))
+	# Ring detail on top
+	_fill_rect(img, 7, 3, 2, 2, Color(0.5, 0.38, 0.2))
+	textures["tree_stump"] = ImageTexture.create_from_image(img)
+
+func _gen_wood_log() -> void:
+	# Wood log drop item — small brown log bundle
+	var img = Image.create(14, 10, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	# Bottom log
+	_fill_rect(img, 1, 5, 12, 4, Color(0.4, 0.26, 0.12))
+	_fill_rect(img, 2, 6, 10, 2, Color(0.5, 0.34, 0.16))
+	# Top log (slightly offset)
+	_fill_rect(img, 3, 1, 10, 4, Color(0.45, 0.3, 0.14))
+	_fill_rect(img, 4, 2, 8, 2, Color(0.55, 0.38, 0.18))
+	# Cut ends (circles) — light wood color
+	_fill_ellipse(img, 2, 7, 2, 2, Color(0.65, 0.52, 0.3))
+	_fill_ellipse(img, 12, 3, 2, 2, Color(0.65, 0.52, 0.3))
+	# Ring in cut ends
+	_fill_rect(img, 2, 7, 1, 1, Color(0.5, 0.38, 0.2))
+	_fill_rect(img, 12, 3, 1, 1, Color(0.5, 0.38, 0.2))
+	textures["wood_log"] = ImageTexture.create_from_image(img)
 
 func _fill_rect(img: Image, x: int, y: int, w: int, h: int, color: Color) -> void:
 	for py in range(max(0, y), min(img.get_height(), y + h)):

@@ -215,6 +215,8 @@ func _generate_all_sfx() -> void:
 	_sfx_cache["charge_loop"] = _gen_charge_loop()
 	_sfx_cache["charge_ready"] = _gen_charge_ready()
 	_sfx_cache["charge_release"] = _gen_charge_release()
+	_sfx_cache["tree_chop"] = _gen_tree_chop()
+	_sfx_cache["tree_fall"] = _gen_tree_fall()
 
 func _gen_sword_swing() -> AudioStreamWAV:
 	# Warm blade slice — smooth swoosh with subtle metal edge
@@ -454,6 +456,41 @@ func _gen_charge_release() -> AudioStreamWAV:
 	_add_pitched_noise(samples, 800.0, 600.0, 0.15, 0.02)
 	_apply_envelope(samples, 0.002, 0.05, 0.25)
 	_soft_clip(samples, 1.8)
+	return _to_stream(samples)
+
+func _gen_tree_chop() -> AudioStreamWAV:
+	# Chunky wood chop — sharp thwack with woody resonance
+	var samples = _make_samples(0.15)
+	# Sharp crack transient (axe/blade hitting wood)
+	var crack = _make_samples(0.02)
+	_add_pitched_noise(crack, 2200.0, 1400.0, 0.35)
+	_apply_envelope(crack, 0.001, 0.003, 0.016)
+	_mix_into(samples, crack)
+	# Woody thud body — mid-bass, warm
+	_pitch_sweep_sine(samples, 200.0, 100.0, 0.45)
+	_pitch_sweep_sine(samples, 400.0, 200.0, 0.2)
+	# Woody resonance
+	_add_sine_segment(samples, 300.0, 0.15, 0.01, 0.08)
+	_apply_envelope(samples, 0.002, 0.02, 0.12)
+	_soft_clip(samples, 1.3)
+	return _to_stream(samples)
+
+func _gen_tree_fall() -> AudioStreamWAV:
+	# Tree falling — creaking descent into ground thump
+	var samples = _make_samples(0.5)
+	# Creaking (descending tone with harmonics)
+	_pitch_sweep_sine(samples, 350.0, 120.0, 0.3)
+	_pitch_sweep_sine(samples, 700.0, 240.0, 0.12)
+	# Cracking/splintering noise layer
+	_add_pitched_noise(samples, 1200.0, 800.0, 0.15, 0.0)
+	# Ground impact thump at the end
+	var thump = _make_samples(0.15)
+	_pitch_sweep_sine(thump, 120.0, 50.0, 0.5)
+	_pitch_sweep_sine(thump, 240.0, 100.0, 0.2)
+	_apply_envelope(thump, 0.003, 0.02, 0.13)
+	_mix_into(samples, thump, int(0.3 * SAMPLE_RATE))
+	_apply_envelope(samples, 0.01, 0.1, 0.4)
+	_soft_clip(samples, 1.4)
 	return _to_stream(samples)
 
 # ============================================================

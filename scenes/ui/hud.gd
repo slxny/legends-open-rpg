@@ -5,6 +5,7 @@ extends CanvasLayer
 
 # Top bar refs
 @onready var gold_label: Label = $TopBar/GoldLabel
+@onready var wood_label: Label = $TopBar/WoodLabel
 @onready var alignment_label: Label = $TopBar/AlignmentLabel
 
 # Bottom console panel refs
@@ -36,6 +37,7 @@ func setup(player: Node2D) -> void:
 	stats.leveled_up.connect(_on_leveled_up)
 	ability_mgr.ability_cooldown_updated.connect(_on_ability_cooldown)
 	GameManager.gold_changed.connect(_on_gold_changed)
+	GameManager.wood_changed.connect(_on_wood_changed)
 	AlignmentManager.alignment_changed.connect(_on_alignment_changed)
 
 	# Ability names
@@ -57,6 +59,7 @@ func setup(player: Node2D) -> void:
 	_on_xp_changed(stats.xp, stats.get_xp_to_next_level())
 	level_label.text = "%s  Lv %d  Adventurer" % [hero_data.get("name", "Hero"), stats.level]
 	_on_gold_changed(GameManager.gold)
+	_on_wood_changed(GameManager.wood)
 	_update_alignment_display()
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -93,6 +96,9 @@ func _on_leveled_up(new_level: int) -> void:
 
 func _on_gold_changed(amount: int) -> void:
 	gold_label.text = "Gold: %d" % amount
+
+func _on_wood_changed(amount: int) -> void:
+	wood_label.text = "Wood: %d" % amount
 
 func _on_alignment_changed(_player_id: int, _value: int) -> void:
 	_update_alignment_display()

@@ -346,6 +346,11 @@ func _try_manual_attack() -> void:
 	# Update facing to match attack direction
 	_set_facing(attack_dir)
 
+	# Diagonal keys + attack = dash strike
+	if abs(input_raw.x) > 0.3 and abs(input_raw.y) > 0.3:
+		_execute_dash_strike(attack_dir)
+		return
+
 	_enemies_in_range = _enemies_in_range.filter(func(e): return is_instance_valid(e) and not e.get("_is_dead"))
 
 	# Find the best target in the attack direction
@@ -448,14 +453,6 @@ func _try_special_attack(special: SpecialAttack) -> void:
 
 	var attack_dir = _get_aim_direction()
 	_set_facing(attack_dir)
-
-	# Check if diagonal input is held — override to dash strike
-	var input_raw = Vector2(
-		Input.get_axis("move_left", "move_right"),
-		Input.get_axis("move_up", "move_down")
-	)
-	if special == SpecialAttack.POWER_STRIKE and abs(input_raw.x) > 0.3 and abs(input_raw.y) > 0.3:
-		special = SpecialAttack.DASH_STRIKE
 
 	_enemies_in_range = _enemies_in_range.filter(func(e): return is_instance_valid(e) and not e.get("_is_dead"))
 
@@ -897,14 +894,7 @@ func _perform_attack(target: Node2D, attack_dir: Vector2 = Vector2.RIGHT) -> voi
 		var result = CombatManager.calculate_damage(stats.get_stats_dict(), target.get_stats_dict())
 		_do_ranged_attack(target, result)
 	else:
-		# Check for diagonal input → enhanced spin (dash strike damage)
-		var input_raw = Vector2(
-			Input.get_axis("move_left", "move_right"),
-			Input.get_axis("move_up", "move_down")
-		)
-		var is_diagonal = abs(input_raw.x) > 0.3 and abs(input_raw.y) > 0.3
-		var dmg_mult = 1.3 if is_diagonal else 1.0
-		var result = CombatManager.calculate_damage(stats.get_stats_dict(), target.get_stats_dict(), dmg_mult)
+		var result = CombatManager.calculate_damage(stats.get_stats_dict(), target.get_stats_dict())
 		_do_melee_attack(target, result, attack_dir)
 
 func _perform_swing_no_target(dir: Vector2) -> void:

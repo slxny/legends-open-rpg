@@ -30,6 +30,7 @@ var _current_sprite_tier: int = 0
 
 # Persistent facing direction — updated by movement, attack, and ability input
 var _facing: Vector2 = Vector2.DOWN
+var _facing_cat: String = "down"  # Current direction category to avoid redundant texture swaps
 # Directional idle textures: "down", "up", "side" (flip_h handles left vs right)
 var _dir_textures: Dictionary = {}
 
@@ -270,20 +271,22 @@ func _get_clickable_at_mouse() -> Node2D:
 
 func _set_facing(dir: Vector2) -> void:
 	_facing = dir
-	# Update sprite flip and directional texture
+	# Determine direction category with hysteresis to prevent jitter
+	var new_cat: String
+	var new_flip: bool = false
 	if abs(dir.x) > abs(dir.y) * 0.6:
-		# Facing left or right — use side sprite
-		sprite.flip_h = dir.x < 0
-		_idle_texture = _dir_textures.get("side", _dir_textures.get("down"))
+		new_cat = "side"
+		new_flip = dir.x < 0
 	elif dir.y < -0.3:
-		# Facing up/away
-		sprite.flip_h = false
-		_idle_texture = _dir_textures.get("up", _dir_textures.get("down"))
+		new_cat = "up"
 	else:
-		# Facing down/toward camera (default)
-		sprite.flip_h = false
-		_idle_texture = _dir_textures.get("down")
-	# Apply the directional idle texture if not mid-attack
+		new_cat = "down"
+	# Only update sprite when the category or flip actually changes
+	if new_cat == _facing_cat and new_flip == sprite.flip_h:
+		return
+	_facing_cat = new_cat
+	sprite.flip_h = new_flip
+	_idle_texture = _dir_textures.get(new_cat, _dir_textures.get("down"))
 	if not _is_attack_animating and _idle_texture:
 		sprite.texture = _idle_texture
 

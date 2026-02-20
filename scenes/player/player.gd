@@ -585,15 +585,13 @@ func _execute_whirlwind(attack_dir: Vector2) -> void:
 	_anim_return_to_idle(tween, base_pos)
 
 func _execute_charged_slash(attack_dir: Vector2) -> void:
-	# Hold attack 1.5s: Heavy single hit, 1.6x damage
+	# Hold attack 1.5s: Heavy cleave through all enemies in the path, 1.6x damage
 	_is_attack_animating = true
 	_attack_cooldown = 0.8 / stats.attack_speed
 	var dir = attack_dir
 	var perp = Vector2(-dir.y, dir.x)
 	var base_pos = sprite.position
 	var dmg_mult := 1.6
-
-	var hit_target = _find_best_target(dir)
 
 	# Use thrust frames for the release
 	var frames = _combo_swings[3] if _combo_swings.size() > 3 else []
@@ -613,7 +611,7 @@ func _execute_charged_slash(attack_dir: Vector2) -> void:
 	if frames.size() >= 3:
 		tween.tween_callback(func(): sprite.texture = frames[2])
 	tween.tween_property(sprite, "position", base_pos + dir * 28.0, 0.03)
-	# Impact — the big one
+	# Impact — hit ALL enemies in the slash path
 	tween.tween_callback(func():
 		sprite.modulate = Color.WHITE
 		# Massive VFX burst
@@ -621,11 +619,19 @@ func _execute_charged_slash(attack_dir: Vector2) -> void:
 		_spawn_slash_vfx(dir.rotated(0.3), 50.0, 1.8)
 		_spawn_slash_vfx(dir.rotated(-0.3), 50.0, 1.8)
 		_spawn_slash_vfx(dir, 35.0, 1.4)
-		if hit_target and is_instance_valid(hit_target):
-			var result = CombatManager.calculate_damage(stats.get_stats_dict(), hit_target.get_stats_dict(), dmg_mult)
-			hit_target.take_damage(result["damage"], result["is_crit"])
-			hit_target.apply_knockback(dir, 140.0)
-			_spawn_impact_vfx(hit_target.global_position, true)
+		# Hit every enemy in a forward cone (~90° arc in attack direction)
+		var hit_count := 0
+		for enemy in _enemies_in_range:
+			if not is_instance_valid(enemy) or enemy.get("_is_dead") or not enemy.has_method("take_damage"):
+				continue
+			var to_enemy = (enemy.global_position - global_position).normalized()
+			if dir.dot(to_enemy) > 0.3:  # ~72° cone
+				var result = CombatManager.calculate_damage(stats.get_stats_dict(), enemy.get_stats_dict(), dmg_mult)
+				enemy.take_damage(result["damage"], result["is_crit"])
+				enemy.apply_knockback(dir, 140.0)
+				_spawn_impact_vfx(enemy.global_position, result["is_crit"])
+				hit_count += 1
+		if hit_count > 0:
 			_do_screen_shake(10.0)
 			_do_hit_freeze(true)
 		else:

@@ -41,6 +41,11 @@ func _init_asset_dirs() -> void:
 	for hero in ["blade_knight", "shadow_ranger"]:
 		for dir_key in ["down", "up", "side"]:
 			hero_names.append("%s_dir_%s" % [hero, dir_key])
+	# Walk cycle frames (3 per direction per hero)
+	for hero in ["blade_knight", "shadow_ranger"]:
+		for dir_key in ["down", "up", "side"]:
+			for frame in [1, 2, 3]:
+				hero_names.append("%s_walk_%s_%d" % [hero, dir_key, frame])
 	for n in hero_names:
 		_asset_dirs[n] = "heroes"
 	# Enemies
@@ -88,6 +93,11 @@ func _generate_all() -> void:
 	for hero in ["blade_knight", "shadow_ranger"]:
 		for dir_key in ["down", "up", "side"]:
 			_gen_or_load("%s_dir_%s" % [hero, dir_key])
+	# Walk cycle frames for heroes
+	for hero in ["blade_knight", "shadow_ranger"]:
+		for dir_key in ["down", "up", "side"]:
+			for frame in [1, 2, 3]:
+				_gen_or_load("%s_walk_%s_%d" % [hero, dir_key, frame])
 	# Enemies
 	_gen_or_load("rat")
 	_gen_or_load("goblin")
@@ -645,6 +655,272 @@ func _gen_blade_knight_dir_side() -> void:
 	_fill_rect(img, 5, 29, 6, 2, c["shield_rim"])
 	textures["blade_knight_dir_side"] = ImageTexture.create_from_image(img)
 
+# ---- Blade Knight walk cycle frames (4 frames per direction) ----
+# Frame 0 = idle pose, 1 = left foot forward, 2 = passing (feet together), 3 = right foot forward
+
+func _gen_blade_knight_walk_down_1() -> void:
+	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = _bk_colors()
+	_fill_rect(img, 8, 44, 16, 4, c["shadow"])
+	# Left foot forward, right foot back
+	_fill_rect(img, 8, 39, 5, 6, c["boot"])   # left foot forward+left
+	_fill_rect(img, 19, 41, 5, 6, c["boot"])   # right foot back+right
+	_fill_rect(img, 9, 32, 4, 8, c["armor_dark"])   # left leg forward
+	_fill_rect(img, 19, 33, 4, 8, c["armor_dark"])   # right leg back
+	# Torso (slight bounce down)
+	_fill_rect(img, 9, 19, 14, 15, c["armor_mid"])
+	_fill_rect(img, 10, 20, 12, 13, c["armor_light"])
+	_fill_rect(img, 9, 31, 14, 3, c["armor_dark"])
+	_fill_rect(img, 5, 19, 6, 5, c["armor_mid"])
+	_fill_rect(img, 21, 19, 6, 5, c["armor_mid"])
+	# Head
+	_fill_rect(img, 11, 7, 10, 13, c["helm"])
+	_fill_rect(img, 12, 8, 8, 11, c["armor_mid"])
+	_fill_rect(img, 13, 12, 6, 3, c["visor"])
+	_fill_rect(img, 14, 5, 4, 4, c["armor_light"])
+	# Sword/shield
+	_fill_rect(img, 26, 21, 3, 18, c["sword"])
+	_fill_rect(img, 25, 37, 5, 3, c["armor_dark"])
+	_fill_rect(img, 2, 21, 7, 10, c["shield"])
+	_fill_rect(img, 2, 21, 7, 2, c["shield_rim"])
+	_fill_rect(img, 2, 29, 7, 2, c["shield_rim"])
+	_fill_rect(img, 2, 21, 2, 10, c["shield_rim"])
+	textures["blade_knight_walk_down_1"] = ImageTexture.create_from_image(img)
+
+func _gen_blade_knight_walk_down_2() -> void:
+	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = _bk_colors()
+	_fill_rect(img, 8, 44, 16, 4, c["shadow"])
+	# Feet together (passing position)
+	_fill_rect(img, 12, 40, 5, 6, c["boot"])
+	_fill_rect(img, 15, 40, 5, 6, c["boot"])
+	_fill_rect(img, 13, 32, 4, 9, c["armor_dark"])
+	_fill_rect(img, 15, 32, 4, 9, c["armor_dark"])
+	# Torso (up position — bounce)
+	_fill_rect(img, 9, 17, 14, 15, c["armor_mid"])
+	_fill_rect(img, 10, 18, 12, 13, c["armor_light"])
+	_fill_rect(img, 9, 29, 14, 3, c["armor_dark"])
+	_fill_rect(img, 5, 17, 6, 5, c["armor_mid"])
+	_fill_rect(img, 21, 17, 6, 5, c["armor_mid"])
+	# Head
+	_fill_rect(img, 11, 5, 10, 13, c["helm"])
+	_fill_rect(img, 12, 6, 8, 11, c["armor_mid"])
+	_fill_rect(img, 13, 10, 6, 3, c["visor"])
+	_fill_rect(img, 14, 3, 4, 4, c["armor_light"])
+	# Sword/shield
+	_fill_rect(img, 26, 19, 3, 18, c["sword"])
+	_fill_rect(img, 25, 35, 5, 3, c["armor_dark"])
+	_fill_rect(img, 2, 19, 7, 10, c["shield"])
+	_fill_rect(img, 2, 19, 7, 2, c["shield_rim"])
+	_fill_rect(img, 2, 27, 7, 2, c["shield_rim"])
+	_fill_rect(img, 2, 19, 2, 10, c["shield_rim"])
+	textures["blade_knight_walk_down_2"] = ImageTexture.create_from_image(img)
+
+func _gen_blade_knight_walk_down_3() -> void:
+	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = _bk_colors()
+	_fill_rect(img, 8, 44, 16, 4, c["shadow"])
+	# Right foot forward, left foot back (mirror of frame 1)
+	_fill_rect(img, 19, 39, 5, 6, c["boot"])   # right foot forward
+	_fill_rect(img, 8, 41, 5, 6, c["boot"])    # left foot back
+	_fill_rect(img, 19, 32, 4, 8, c["armor_dark"])
+	_fill_rect(img, 9, 33, 4, 8, c["armor_dark"])
+	# Torso (slight bounce down)
+	_fill_rect(img, 9, 19, 14, 15, c["armor_mid"])
+	_fill_rect(img, 10, 20, 12, 13, c["armor_light"])
+	_fill_rect(img, 9, 31, 14, 3, c["armor_dark"])
+	_fill_rect(img, 5, 19, 6, 5, c["armor_mid"])
+	_fill_rect(img, 21, 19, 6, 5, c["armor_mid"])
+	# Head
+	_fill_rect(img, 11, 7, 10, 13, c["helm"])
+	_fill_rect(img, 12, 8, 8, 11, c["armor_mid"])
+	_fill_rect(img, 13, 12, 6, 3, c["visor"])
+	_fill_rect(img, 14, 5, 4, 4, c["armor_light"])
+	# Sword/shield
+	_fill_rect(img, 26, 21, 3, 18, c["sword"])
+	_fill_rect(img, 25, 37, 5, 3, c["armor_dark"])
+	_fill_rect(img, 2, 21, 7, 10, c["shield"])
+	_fill_rect(img, 2, 21, 7, 2, c["shield_rim"])
+	_fill_rect(img, 2, 29, 7, 2, c["shield_rim"])
+	_fill_rect(img, 2, 21, 2, 10, c["shield_rim"])
+	textures["blade_knight_walk_down_3"] = ImageTexture.create_from_image(img)
+
+func _gen_blade_knight_walk_up_1() -> void:
+	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = _bk_colors()
+	_fill_rect(img, 8, 44, 16, 4, c["shadow"])
+	# Left foot forward, right back
+	_fill_rect(img, 8, 39, 5, 6, c["boot"])
+	_fill_rect(img, 19, 41, 5, 6, c["boot"])
+	_fill_rect(img, 9, 32, 4, 8, c["armor_dark"])
+	_fill_rect(img, 19, 33, 4, 8, c["armor_dark"])
+	# Torso back
+	_fill_rect(img, 9, 19, 14, 15, c["armor_dark"])
+	_fill_rect(img, 10, 20, 12, 13, c["armor_mid"])
+	_fill_rect(img, 10, 23, 12, 16, Color(0.15, 0.2, 0.5))
+	_fill_rect(img, 11, 24, 10, 14, Color(0.2, 0.25, 0.55))
+	_fill_rect(img, 9, 31, 14, 3, c["armor_dark"])
+	_fill_rect(img, 5, 19, 6, 5, c["armor_mid"])
+	_fill_rect(img, 21, 19, 6, 5, c["armor_mid"])
+	# Helm back
+	_fill_rect(img, 11, 7, 10, 13, c["helm"])
+	_fill_rect(img, 12, 8, 8, 11, c["armor_dark"])
+	_fill_rect(img, 14, 5, 4, 4, c["armor_light"])
+	# Sword on back
+	_fill_rect(img, 13, 9, 3, 26, c["sword"])
+	_fill_rect(img, 12, 33, 5, 3, c["armor_dark"])
+	_fill_rect(img, 18, 15, 6, 8, c["shield"])
+	_fill_rect(img, 18, 15, 6, 2, c["shield_rim"])
+	textures["blade_knight_walk_up_1"] = ImageTexture.create_from_image(img)
+
+func _gen_blade_knight_walk_up_2() -> void:
+	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = _bk_colors()
+	_fill_rect(img, 8, 44, 16, 4, c["shadow"])
+	# Feet together
+	_fill_rect(img, 12, 40, 5, 6, c["boot"])
+	_fill_rect(img, 15, 40, 5, 6, c["boot"])
+	_fill_rect(img, 13, 32, 4, 9, c["armor_dark"])
+	_fill_rect(img, 15, 32, 4, 9, c["armor_dark"])
+	# Torso back (up bounce)
+	_fill_rect(img, 9, 17, 14, 15, c["armor_dark"])
+	_fill_rect(img, 10, 18, 12, 13, c["armor_mid"])
+	_fill_rect(img, 10, 21, 12, 16, Color(0.15, 0.2, 0.5))
+	_fill_rect(img, 11, 22, 10, 14, Color(0.2, 0.25, 0.55))
+	_fill_rect(img, 9, 29, 14, 3, c["armor_dark"])
+	_fill_rect(img, 5, 17, 6, 5, c["armor_mid"])
+	_fill_rect(img, 21, 17, 6, 5, c["armor_mid"])
+	# Helm
+	_fill_rect(img, 11, 5, 10, 13, c["helm"])
+	_fill_rect(img, 12, 6, 8, 11, c["armor_dark"])
+	_fill_rect(img, 14, 3, 4, 4, c["armor_light"])
+	_fill_rect(img, 13, 7, 3, 26, c["sword"])
+	_fill_rect(img, 12, 31, 5, 3, c["armor_dark"])
+	_fill_rect(img, 18, 13, 6, 8, c["shield"])
+	_fill_rect(img, 18, 13, 6, 2, c["shield_rim"])
+	textures["blade_knight_walk_up_2"] = ImageTexture.create_from_image(img)
+
+func _gen_blade_knight_walk_up_3() -> void:
+	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = _bk_colors()
+	_fill_rect(img, 8, 44, 16, 4, c["shadow"])
+	# Right foot forward, left back (mirror of frame 1)
+	_fill_rect(img, 19, 39, 5, 6, c["boot"])
+	_fill_rect(img, 8, 41, 5, 6, c["boot"])
+	_fill_rect(img, 19, 32, 4, 8, c["armor_dark"])
+	_fill_rect(img, 9, 33, 4, 8, c["armor_dark"])
+	# Torso back
+	_fill_rect(img, 9, 19, 14, 15, c["armor_dark"])
+	_fill_rect(img, 10, 20, 12, 13, c["armor_mid"])
+	_fill_rect(img, 10, 23, 12, 16, Color(0.15, 0.2, 0.5))
+	_fill_rect(img, 11, 24, 10, 14, Color(0.2, 0.25, 0.55))
+	_fill_rect(img, 9, 31, 14, 3, c["armor_dark"])
+	_fill_rect(img, 5, 19, 6, 5, c["armor_mid"])
+	_fill_rect(img, 21, 19, 6, 5, c["armor_mid"])
+	_fill_rect(img, 11, 7, 10, 13, c["helm"])
+	_fill_rect(img, 12, 8, 8, 11, c["armor_dark"])
+	_fill_rect(img, 14, 5, 4, 4, c["armor_light"])
+	_fill_rect(img, 13, 9, 3, 26, c["sword"])
+	_fill_rect(img, 12, 33, 5, 3, c["armor_dark"])
+	_fill_rect(img, 18, 15, 6, 8, c["shield"])
+	_fill_rect(img, 18, 15, 6, 2, c["shield_rim"])
+	textures["blade_knight_walk_up_3"] = ImageTexture.create_from_image(img)
+
+func _gen_blade_knight_walk_side_1() -> void:
+	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = _bk_colors()
+	_fill_rect(img, 8, 44, 16, 4, c["shadow"])
+	# Front foot extended forward, back foot behind
+	_fill_rect(img, 17, 39, 5, 6, c["boot"])  # front foot forward
+	_fill_rect(img, 9, 41, 5, 6, c["boot"])   # back foot behind
+	_fill_rect(img, 17, 32, 4, 8, c["armor_dark"])
+	_fill_rect(img, 10, 33, 4, 8, c["armor_dark"])
+	# Torso
+	_fill_rect(img, 10, 19, 12, 15, c["armor_mid"])
+	_fill_rect(img, 11, 20, 10, 13, c["armor_light"])
+	_fill_rect(img, 10, 31, 12, 3, c["armor_dark"])
+	_fill_rect(img, 20, 19, 5, 5, c["armor_mid"])
+	# Helm
+	_fill_rect(img, 12, 7, 10, 13, c["helm"])
+	_fill_rect(img, 13, 8, 8, 11, c["armor_mid"])
+	_fill_rect(img, 19, 12, 3, 3, c["visor"])
+	_fill_rect(img, 14, 5, 4, 4, c["armor_light"])
+	# Sword
+	_fill_rect(img, 24, 13, 3, 20, c["sword"])
+	_fill_rect(img, 25, 11, 2, 4, c["sword_glow"])
+	_fill_rect(img, 23, 31, 5, 3, c["armor_dark"])
+	# Shield
+	_fill_rect(img, 5, 23, 6, 9, c["shield"])
+	_fill_rect(img, 5, 23, 6, 2, c["shield_rim"])
+	_fill_rect(img, 5, 30, 6, 2, c["shield_rim"])
+	textures["blade_knight_walk_side_1"] = ImageTexture.create_from_image(img)
+
+func _gen_blade_knight_walk_side_2() -> void:
+	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = _bk_colors()
+	_fill_rect(img, 8, 44, 16, 4, c["shadow"])
+	# Feet together (passing)
+	_fill_rect(img, 13, 40, 5, 6, c["boot"])
+	_fill_rect(img, 14, 40, 5, 6, c["boot"])
+	_fill_rect(img, 14, 32, 4, 9, c["armor_dark"])
+	# Torso (up bounce)
+	_fill_rect(img, 10, 17, 12, 15, c["armor_mid"])
+	_fill_rect(img, 11, 18, 10, 13, c["armor_light"])
+	_fill_rect(img, 10, 29, 12, 3, c["armor_dark"])
+	_fill_rect(img, 20, 17, 5, 5, c["armor_mid"])
+	# Helm
+	_fill_rect(img, 12, 5, 10, 13, c["helm"])
+	_fill_rect(img, 13, 6, 8, 11, c["armor_mid"])
+	_fill_rect(img, 19, 10, 3, 3, c["visor"])
+	_fill_rect(img, 14, 3, 4, 4, c["armor_light"])
+	# Sword
+	_fill_rect(img, 24, 11, 3, 20, c["sword"])
+	_fill_rect(img, 25, 9, 2, 4, c["sword_glow"])
+	_fill_rect(img, 23, 29, 5, 3, c["armor_dark"])
+	# Shield
+	_fill_rect(img, 5, 21, 6, 9, c["shield"])
+	_fill_rect(img, 5, 21, 6, 2, c["shield_rim"])
+	_fill_rect(img, 5, 28, 6, 2, c["shield_rim"])
+	textures["blade_knight_walk_side_2"] = ImageTexture.create_from_image(img)
+
+func _gen_blade_knight_walk_side_3() -> void:
+	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = _bk_colors()
+	_fill_rect(img, 8, 44, 16, 4, c["shadow"])
+	# Back foot forward, front foot behind (mirror of frame 1)
+	_fill_rect(img, 9, 39, 5, 6, c["boot"])   # back foot now forward
+	_fill_rect(img, 17, 41, 5, 6, c["boot"])   # front foot now behind
+	_fill_rect(img, 10, 32, 4, 8, c["armor_dark"])
+	_fill_rect(img, 17, 33, 4, 8, c["armor_dark"])
+	# Torso
+	_fill_rect(img, 10, 19, 12, 15, c["armor_mid"])
+	_fill_rect(img, 11, 20, 10, 13, c["armor_light"])
+	_fill_rect(img, 10, 31, 12, 3, c["armor_dark"])
+	_fill_rect(img, 20, 19, 5, 5, c["armor_mid"])
+	# Helm
+	_fill_rect(img, 12, 7, 10, 13, c["helm"])
+	_fill_rect(img, 13, 8, 8, 11, c["armor_mid"])
+	_fill_rect(img, 19, 12, 3, 3, c["visor"])
+	_fill_rect(img, 14, 5, 4, 4, c["armor_light"])
+	# Sword
+	_fill_rect(img, 24, 13, 3, 20, c["sword"])
+	_fill_rect(img, 25, 11, 2, 4, c["sword_glow"])
+	_fill_rect(img, 23, 31, 5, 3, c["armor_dark"])
+	# Shield
+	_fill_rect(img, 5, 23, 6, 9, c["shield"])
+	_fill_rect(img, 5, 23, 6, 2, c["shield_rim"])
+	_fill_rect(img, 5, 30, 6, 2, c["shield_rim"])
+	textures["blade_knight_walk_side_3"] = ImageTexture.create_from_image(img)
+
 # ---- Shadow Ranger directional sprites ----
 
 func _sr_colors() -> Dictionary:
@@ -759,6 +1035,258 @@ func _gen_shadow_ranger_dir_side() -> void:
 	_fill_rect(img, 6, 14, 4, 12, c["quiver"])
 	_fill_rect(img, 7, 12, 2, 3, c["bow_wood"])
 	textures["shadow_ranger_dir_side"] = ImageTexture.create_from_image(img)
+
+# ---- Shadow Ranger walk cycle frames (4 frames per direction) ----
+
+func _gen_shadow_ranger_walk_down_1() -> void:
+	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = _sr_colors()
+	_fill_rect(img, 8, 44, 16, 4, c["shadow"])
+	# Left foot forward, right back
+	_fill_rect(img, 8, 39, 5, 6, c["boot"])
+	_fill_rect(img, 19, 41, 5, 6, c["boot"])
+	_fill_rect(img, 9, 32, 4, 8, c["cloak_dark"])
+	_fill_rect(img, 19, 33, 4, 8, c["cloak_dark"])
+	# Cloak body (bounce down)
+	_fill_rect(img, 8, 17, 16, 18, c["cloak_mid"])
+	_fill_rect(img, 9, 18, 14, 16, c["cloak_light"])
+	_fill_rect(img, 6, 23, 3, 16, c["cloak_dark"])
+	_fill_rect(img, 23, 23, 3, 16, c["cloak_dark"])
+	_fill_rect(img, 8, 31, 16, 2, c["quiver"])
+	# Hood
+	_fill_rect(img, 10, 7, 12, 11, c["hood"])
+	_fill_rect(img, 11, 8, 10, 9, c["cloak_dark"])
+	_fill_rect(img, 13, 11, 6, 5, c["skin"])
+	_fill_rect(img, 14, 12, 2, 2, c["eyes"])
+	_fill_rect(img, 18, 12, 2, 2, c["eyes"])
+	# Bow
+	_fill_rect(img, 2, 11, 2, 28, c["bow_wood"])
+	_fill_rect(img, 1, 9, 2, 3, c["bow_wood"])
+	_fill_rect(img, 1, 38, 2, 3, c["bow_wood"])
+	_fill_rect(img, 4, 11, 1, 28, c["bow_string"])
+	# Quiver
+	_fill_rect(img, 24, 15, 4, 14, c["quiver"])
+	_fill_rect(img, 25, 13, 2, 3, c["bow_wood"])
+	textures["shadow_ranger_walk_down_1"] = ImageTexture.create_from_image(img)
+
+func _gen_shadow_ranger_walk_down_2() -> void:
+	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = _sr_colors()
+	_fill_rect(img, 8, 44, 16, 4, c["shadow"])
+	# Feet together
+	_fill_rect(img, 12, 40, 5, 6, c["boot"])
+	_fill_rect(img, 15, 40, 5, 6, c["boot"])
+	_fill_rect(img, 13, 33, 4, 8, c["cloak_dark"])
+	_fill_rect(img, 15, 33, 4, 8, c["cloak_dark"])
+	# Cloak body (bounce up)
+	_fill_rect(img, 8, 15, 16, 18, c["cloak_mid"])
+	_fill_rect(img, 9, 16, 14, 16, c["cloak_light"])
+	_fill_rect(img, 6, 21, 3, 16, c["cloak_dark"])
+	_fill_rect(img, 23, 21, 3, 16, c["cloak_dark"])
+	_fill_rect(img, 8, 29, 16, 2, c["quiver"])
+	# Hood
+	_fill_rect(img, 10, 5, 12, 11, c["hood"])
+	_fill_rect(img, 11, 6, 10, 9, c["cloak_dark"])
+	_fill_rect(img, 13, 9, 6, 5, c["skin"])
+	_fill_rect(img, 14, 10, 2, 2, c["eyes"])
+	_fill_rect(img, 18, 10, 2, 2, c["eyes"])
+	# Bow
+	_fill_rect(img, 2, 9, 2, 28, c["bow_wood"])
+	_fill_rect(img, 1, 7, 2, 3, c["bow_wood"])
+	_fill_rect(img, 1, 36, 2, 3, c["bow_wood"])
+	_fill_rect(img, 4, 9, 1, 28, c["bow_string"])
+	# Quiver
+	_fill_rect(img, 24, 13, 4, 14, c["quiver"])
+	_fill_rect(img, 25, 11, 2, 3, c["bow_wood"])
+	textures["shadow_ranger_walk_down_2"] = ImageTexture.create_from_image(img)
+
+func _gen_shadow_ranger_walk_down_3() -> void:
+	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = _sr_colors()
+	_fill_rect(img, 8, 44, 16, 4, c["shadow"])
+	# Right foot forward, left back (mirror of frame 1)
+	_fill_rect(img, 19, 39, 5, 6, c["boot"])
+	_fill_rect(img, 8, 41, 5, 6, c["boot"])
+	_fill_rect(img, 19, 32, 4, 8, c["cloak_dark"])
+	_fill_rect(img, 9, 33, 4, 8, c["cloak_dark"])
+	_fill_rect(img, 8, 17, 16, 18, c["cloak_mid"])
+	_fill_rect(img, 9, 18, 14, 16, c["cloak_light"])
+	_fill_rect(img, 6, 23, 3, 16, c["cloak_dark"])
+	_fill_rect(img, 23, 23, 3, 16, c["cloak_dark"])
+	_fill_rect(img, 8, 31, 16, 2, c["quiver"])
+	_fill_rect(img, 10, 7, 12, 11, c["hood"])
+	_fill_rect(img, 11, 8, 10, 9, c["cloak_dark"])
+	_fill_rect(img, 13, 11, 6, 5, c["skin"])
+	_fill_rect(img, 14, 12, 2, 2, c["eyes"])
+	_fill_rect(img, 18, 12, 2, 2, c["eyes"])
+	_fill_rect(img, 2, 11, 2, 28, c["bow_wood"])
+	_fill_rect(img, 1, 9, 2, 3, c["bow_wood"])
+	_fill_rect(img, 1, 38, 2, 3, c["bow_wood"])
+	_fill_rect(img, 4, 11, 1, 28, c["bow_string"])
+	_fill_rect(img, 24, 15, 4, 14, c["quiver"])
+	_fill_rect(img, 25, 13, 2, 3, c["bow_wood"])
+	textures["shadow_ranger_walk_down_3"] = ImageTexture.create_from_image(img)
+
+func _gen_shadow_ranger_walk_up_1() -> void:
+	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = _sr_colors()
+	_fill_rect(img, 8, 44, 16, 4, c["shadow"])
+	_fill_rect(img, 8, 39, 5, 6, c["boot"])
+	_fill_rect(img, 19, 41, 5, 6, c["boot"])
+	_fill_rect(img, 9, 32, 4, 8, c["cloak_dark"])
+	_fill_rect(img, 19, 33, 4, 8, c["cloak_dark"])
+	_fill_rect(img, 8, 17, 16, 18, c["cloak_dark"])
+	_fill_rect(img, 9, 18, 14, 16, c["cloak_mid"])
+	_fill_rect(img, 9, 29, 14, 12, c["cloak_dark"])
+	_fill_rect(img, 10, 30, 12, 10, Color(0.14, 0.32, 0.17))
+	_fill_rect(img, 6, 23, 3, 16, c["cloak_dark"])
+	_fill_rect(img, 23, 23, 3, 16, c["cloak_dark"])
+	_fill_rect(img, 8, 31, 16, 2, c["quiver"])
+	_fill_rect(img, 10, 7, 12, 11, c["hood"])
+	_fill_rect(img, 11, 8, 10, 9, c["cloak_dark"])
+	_fill_rect(img, 12, 13, 8, 16, c["quiver"])
+	_fill_rect(img, 13, 11, 2, 3, c["bow_wood"])
+	_fill_rect(img, 17, 11, 2, 3, c["bow_wood"])
+	_fill_rect(img, 15, 10, 2, 3, c["bow_wood"])
+	_fill_rect(img, 5, 15, 2, 22, c["bow_wood"])
+	_fill_rect(img, 4, 13, 2, 3, c["bow_wood"])
+	_fill_rect(img, 7, 15, 1, 22, c["bow_string"])
+	textures["shadow_ranger_walk_up_1"] = ImageTexture.create_from_image(img)
+
+func _gen_shadow_ranger_walk_up_2() -> void:
+	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = _sr_colors()
+	_fill_rect(img, 8, 44, 16, 4, c["shadow"])
+	_fill_rect(img, 12, 40, 5, 6, c["boot"])
+	_fill_rect(img, 15, 40, 5, 6, c["boot"])
+	_fill_rect(img, 13, 33, 4, 8, c["cloak_dark"])
+	_fill_rect(img, 15, 33, 4, 8, c["cloak_dark"])
+	_fill_rect(img, 8, 15, 16, 18, c["cloak_dark"])
+	_fill_rect(img, 9, 16, 14, 16, c["cloak_mid"])
+	_fill_rect(img, 9, 27, 14, 12, c["cloak_dark"])
+	_fill_rect(img, 10, 28, 12, 10, Color(0.14, 0.32, 0.17))
+	_fill_rect(img, 6, 21, 3, 16, c["cloak_dark"])
+	_fill_rect(img, 23, 21, 3, 16, c["cloak_dark"])
+	_fill_rect(img, 8, 29, 16, 2, c["quiver"])
+	_fill_rect(img, 10, 5, 12, 11, c["hood"])
+	_fill_rect(img, 11, 6, 10, 9, c["cloak_dark"])
+	_fill_rect(img, 12, 11, 8, 16, c["quiver"])
+	_fill_rect(img, 13, 9, 2, 3, c["bow_wood"])
+	_fill_rect(img, 17, 9, 2, 3, c["bow_wood"])
+	_fill_rect(img, 15, 8, 2, 3, c["bow_wood"])
+	_fill_rect(img, 5, 13, 2, 22, c["bow_wood"])
+	_fill_rect(img, 4, 11, 2, 3, c["bow_wood"])
+	_fill_rect(img, 7, 13, 1, 22, c["bow_string"])
+	textures["shadow_ranger_walk_up_2"] = ImageTexture.create_from_image(img)
+
+func _gen_shadow_ranger_walk_up_3() -> void:
+	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = _sr_colors()
+	_fill_rect(img, 8, 44, 16, 4, c["shadow"])
+	_fill_rect(img, 19, 39, 5, 6, c["boot"])
+	_fill_rect(img, 8, 41, 5, 6, c["boot"])
+	_fill_rect(img, 19, 32, 4, 8, c["cloak_dark"])
+	_fill_rect(img, 9, 33, 4, 8, c["cloak_dark"])
+	_fill_rect(img, 8, 17, 16, 18, c["cloak_dark"])
+	_fill_rect(img, 9, 18, 14, 16, c["cloak_mid"])
+	_fill_rect(img, 9, 29, 14, 12, c["cloak_dark"])
+	_fill_rect(img, 10, 30, 12, 10, Color(0.14, 0.32, 0.17))
+	_fill_rect(img, 6, 23, 3, 16, c["cloak_dark"])
+	_fill_rect(img, 23, 23, 3, 16, c["cloak_dark"])
+	_fill_rect(img, 8, 31, 16, 2, c["quiver"])
+	_fill_rect(img, 10, 7, 12, 11, c["hood"])
+	_fill_rect(img, 11, 8, 10, 9, c["cloak_dark"])
+	_fill_rect(img, 12, 13, 8, 16, c["quiver"])
+	_fill_rect(img, 13, 11, 2, 3, c["bow_wood"])
+	_fill_rect(img, 17, 11, 2, 3, c["bow_wood"])
+	_fill_rect(img, 15, 10, 2, 3, c["bow_wood"])
+	_fill_rect(img, 5, 15, 2, 22, c["bow_wood"])
+	_fill_rect(img, 4, 13, 2, 3, c["bow_wood"])
+	_fill_rect(img, 7, 15, 1, 22, c["bow_string"])
+	textures["shadow_ranger_walk_up_3"] = ImageTexture.create_from_image(img)
+
+func _gen_shadow_ranger_walk_side_1() -> void:
+	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = _sr_colors()
+	_fill_rect(img, 8, 44, 16, 4, c["shadow"])
+	_fill_rect(img, 17, 39, 5, 6, c["boot"])
+	_fill_rect(img, 9, 41, 5, 6, c["boot"])
+	_fill_rect(img, 17, 32, 4, 8, c["cloak_dark"])
+	_fill_rect(img, 10, 33, 4, 8, c["cloak_dark"])
+	_fill_rect(img, 9, 17, 14, 18, c["cloak_mid"])
+	_fill_rect(img, 10, 18, 12, 16, c["cloak_light"])
+	_fill_rect(img, 4, 23, 6, 16, c["cloak_dark"])
+	_fill_rect(img, 5, 24, 4, 14, Color(0.14, 0.32, 0.17))
+	_fill_rect(img, 9, 31, 14, 2, c["quiver"])
+	_fill_rect(img, 11, 7, 11, 11, c["hood"])
+	_fill_rect(img, 12, 8, 9, 9, c["cloak_dark"])
+	_fill_rect(img, 19, 11, 4, 5, c["skin"])
+	_fill_rect(img, 20, 12, 2, 2, c["eyes"])
+	_fill_rect(img, 24, 13, 2, 24, c["bow_wood"])
+	_fill_rect(img, 23, 11, 2, 3, c["bow_wood"])
+	_fill_rect(img, 23, 36, 2, 3, c["bow_wood"])
+	_fill_rect(img, 26, 13, 1, 24, c["bow_string"])
+	_fill_rect(img, 6, 15, 4, 12, c["quiver"])
+	_fill_rect(img, 7, 13, 2, 3, c["bow_wood"])
+	textures["shadow_ranger_walk_side_1"] = ImageTexture.create_from_image(img)
+
+func _gen_shadow_ranger_walk_side_2() -> void:
+	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = _sr_colors()
+	_fill_rect(img, 8, 44, 16, 4, c["shadow"])
+	_fill_rect(img, 13, 40, 5, 6, c["boot"])
+	_fill_rect(img, 14, 40, 5, 6, c["boot"])
+	_fill_rect(img, 14, 33, 4, 8, c["cloak_dark"])
+	_fill_rect(img, 9, 15, 14, 18, c["cloak_mid"])
+	_fill_rect(img, 10, 16, 12, 16, c["cloak_light"])
+	_fill_rect(img, 4, 21, 6, 16, c["cloak_dark"])
+	_fill_rect(img, 5, 22, 4, 14, Color(0.14, 0.32, 0.17))
+	_fill_rect(img, 9, 29, 14, 2, c["quiver"])
+	_fill_rect(img, 11, 5, 11, 11, c["hood"])
+	_fill_rect(img, 12, 6, 9, 9, c["cloak_dark"])
+	_fill_rect(img, 19, 9, 4, 5, c["skin"])
+	_fill_rect(img, 20, 10, 2, 2, c["eyes"])
+	_fill_rect(img, 24, 11, 2, 24, c["bow_wood"])
+	_fill_rect(img, 23, 9, 2, 3, c["bow_wood"])
+	_fill_rect(img, 23, 34, 2, 3, c["bow_wood"])
+	_fill_rect(img, 26, 11, 1, 24, c["bow_string"])
+	_fill_rect(img, 6, 13, 4, 12, c["quiver"])
+	_fill_rect(img, 7, 11, 2, 3, c["bow_wood"])
+	textures["shadow_ranger_walk_side_2"] = ImageTexture.create_from_image(img)
+
+func _gen_shadow_ranger_walk_side_3() -> void:
+	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = _sr_colors()
+	_fill_rect(img, 8, 44, 16, 4, c["shadow"])
+	_fill_rect(img, 9, 39, 5, 6, c["boot"])
+	_fill_rect(img, 17, 41, 5, 6, c["boot"])
+	_fill_rect(img, 10, 32, 4, 8, c["cloak_dark"])
+	_fill_rect(img, 17, 33, 4, 8, c["cloak_dark"])
+	_fill_rect(img, 9, 17, 14, 18, c["cloak_mid"])
+	_fill_rect(img, 10, 18, 12, 16, c["cloak_light"])
+	_fill_rect(img, 4, 23, 6, 16, c["cloak_dark"])
+	_fill_rect(img, 5, 24, 4, 14, Color(0.14, 0.32, 0.17))
+	_fill_rect(img, 9, 31, 14, 2, c["quiver"])
+	_fill_rect(img, 11, 7, 11, 11, c["hood"])
+	_fill_rect(img, 12, 8, 9, 9, c["cloak_dark"])
+	_fill_rect(img, 19, 11, 4, 5, c["skin"])
+	_fill_rect(img, 20, 12, 2, 2, c["eyes"])
+	_fill_rect(img, 24, 13, 2, 24, c["bow_wood"])
+	_fill_rect(img, 23, 11, 2, 3, c["bow_wood"])
+	_fill_rect(img, 23, 36, 2, 3, c["bow_wood"])
+	_fill_rect(img, 26, 13, 1, 24, c["bow_string"])
+	_fill_rect(img, 6, 15, 4, 12, c["quiver"])
+	_fill_rect(img, 7, 13, 2, 3, c["bow_wood"])
+	textures["shadow_ranger_walk_side_3"] = ImageTexture.create_from_image(img)
 
 # ============================================================
 # ENEMY SPRITES

@@ -23,7 +23,13 @@ var _shadow: Sprite2D = null
 # Smooth movement
 const ACCEL: float = 1200.0  # Pixels/sec² — how fast we reach top speed
 const FRICTION: float = 1800.0  # Pixels/sec² — how fast we stop (snappier than accel)
-var _walk_bob_time: float = 0.0  # Accumulator for walk-bob sine wave
+
+# Walk animation — 4-frame cycle per direction: idle, stride1, passing, stride2
+# Stored as: _walk_frames[dir_key] = [frame1, frame2, frame3]  (idle = _dir_textures[dir_key])
+var _walk_frames: Dictionary = {}  # "down" -> [tex1, tex2, tex3], etc.
+var _walk_anim_time: float = 0.0
+var _walk_anim_frame: int = -1  # -1 = idle
+const WALK_FPS: float = 8.0  # Frames per second for walk cycle
 
 # Attack state
 var _is_attack_animating: bool = false
@@ -73,6 +79,16 @@ func _ready() -> void:
 	# Default facing texture is the base sprite (facing down/front)
 	if not _dir_textures.has("down"):
 		_dir_textures["down"] = _idle_texture
+
+	# Cache walk cycle frames (3 frames per direction)
+	for dir_key in ["down", "up", "side"]:
+		var frames: Array[Texture2D] = []
+		for i in [1, 2, 3]:
+			var wtex = SpriteGenerator.get_texture("%s_walk_%s_%d" % [hero_class, dir_key, i])
+			if wtex:
+				frames.append(wtex)
+		if frames.size() == 3:
+			_walk_frames[dir_key] = frames
 
 	# Cache melee combo swing frames (5 swing types x 3 frames each)
 	for swing_key in ["a", "b", "c", "d", "e"]:
@@ -137,7 +153,7 @@ func _physics_process(delta: float) -> void:
 		velocity = velocity.move_toward(Vector2.ZERO, FRICTION * delta)
 
 	move_and_slide()
-	_update_walk_bob(delta)
+	_update_walk_anim(delta)
 	stats.process_regen(delta)
 
 	if _attack_cooldown > 0.0:
@@ -159,32 +175,32 @@ func _physics_process(delta: float) -> void:
 	if velocity.length() > 5 and not _is_attack_animating:
 		_set_facing(velocity.normalized())
 
-func _update_walk_bob(delta: float) -> void:
+func _update_walk_anim(delta: float) -> void:
 	if _is_attack_animating:
-		return  # Attack tweens own the sprite transform
+		return  # Attack tweens own the sprite
 
 	var speed_ratio = velocity.length() / max(stats.get_total_move_speed(), 1.0)
-	if speed_ratio > 0.1:
-		# Bob frequency scales with speed — feels like footsteps
-		_walk_bob_time += delta * (8.0 + speed_ratio * 4.0)
-		var bob_y = sin(_walk_bob_time) * 1.5 * speed_ratio
-		# Subtle horizontal sway on alternating steps
-		var sway_x = cos(_walk_bob_time * 0.5) * 0.5 * speed_ratio
-		sprite.offset.y = -20 + bob_y  # -20 is the base sprite offset
-		sprite.offset.x = sway_x
-		# Lean into movement direction (very subtle)
-		var lean = velocity.x / max(stats.get_total_move_speed(), 1.0) * 0.04
-		sprite.rotation = lean
-		# Squash-stretch: slight vertical squish at bob peaks
-		var squash = 1.0 + sin(_walk_bob_time) * 0.02 * speed_ratio
-		sprite.scale = Vector2(1.0 / squash, squash)
+	var frames = _walk_frames.get(_facing_cat, []) as Array
+
+	if speed_ratio > 0.15 and frames.size() == 3:
+		# Advance walk timer — speed scales the animation rate
+		_walk_anim_time += delta * WALK_FPS * clampf(speed_ratio, 0.5, 1.2)
+		# 4-frame cycle: idle(0) -> stride1(1) -> passing(2) -> stride2(3)
+		var new_frame = int(_walk_anim_time) % 4
+		if new_frame != _walk_anim_frame:
+			_walk_anim_frame = new_frame
+			match new_frame:
+				0: sprite.texture = _dir_textures.get(_facing_cat, _idle_texture)
+				1: sprite.texture = frames[0]
+				2: sprite.texture = frames[1]
+				3: sprite.texture = frames[2]
 	else:
-		# Settle back to idle smoothly
-		_walk_bob_time = 0.0
-		sprite.offset.y = lerp(sprite.offset.y, -20.0, 12.0 * delta)
-		sprite.offset.x = lerp(sprite.offset.x, 0.0, 12.0 * delta)
-		sprite.rotation = lerp(sprite.rotation, 0.0, 12.0 * delta)
-		sprite.scale = sprite.scale.lerp(Vector2.ONE, 12.0 * delta)
+		# Stopped — return to idle pose
+		if _walk_anim_frame != -1:
+			_walk_anim_frame = -1
+			_walk_anim_time = 0.0
+			if _idle_texture:
+				sprite.texture = _idle_texture
 
 const ZOOM_MIN := Vector2(1.5, 1.5)
 const ZOOM_MAX := Vector2(5.0, 5.0)
@@ -328,6 +344,8 @@ func _set_facing(dir: Vector2) -> void:
 	_facing_cat = new_cat
 	sprite.flip_h = new_flip
 	_idle_texture = _dir_textures.get(new_cat, _dir_textures.get("down"))
+	# Reset walk animation so it picks up the new direction's frames immediately
+	_walk_anim_frame = -1
 	if not _is_attack_animating and _idle_texture:
 		sprite.texture = _idle_texture
 

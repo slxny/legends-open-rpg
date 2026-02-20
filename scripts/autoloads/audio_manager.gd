@@ -133,6 +133,39 @@ func _normalize(samples: Array[float], peak: float = 0.9) -> void:
 		for i in range(samples.size()):
 			samples[i] *= scale
 
+func _soft_clip(samples: Array[float], drive: float = 2.0) -> void:
+	## Warm saturation — adds natural harmonics so things don't sound hollow
+	for i in range(samples.size()):
+		var x = samples[i] * drive
+		samples[i] = x / (1.0 + absf(x))
+
+func _add_pitched_noise(samples: Array[float], center_freq: float, bandwidth: float, volume: float = 1.0, start: float = 0.0) -> void:
+	## Band-pass-ish noise — sounds less harsh than raw white noise
+	## Uses a simple 1-pole resonator to shape noise around a center frequency
+	var start_idx = int(start * SAMPLE_RATE)
+	var r = exp(-PI * bandwidth / SAMPLE_RATE)
+	var cos_w = cos(TAU * center_freq / SAMPLE_RATE)
+	var a1 = -2.0 * r * cos_w
+	var a2 = r * r
+	var prev1 = 0.0
+	var prev2 = 0.0
+	for i in range(start_idx, samples.size()):
+		var noise_in = randf_range(-1.0, 1.0)
+		var out = noise_in - a1 * prev1 - a2 * prev2
+		prev2 = prev1
+		prev1 = out
+		samples[i] += out * volume * (1.0 - r)  # Normalize by bandwidth
+
+func _pitch_sweep_sine(samples: Array[float], freq_start: float, freq_end: float, volume: float = 1.0, start: float = 0.0) -> void:
+	## Sine with smooth pitch sweep — sounds organic, not robotic
+	var start_idx = int(start * SAMPLE_RATE)
+	var phase = 0.0
+	for i in range(start_idx, samples.size()):
+		var frac = float(i - start_idx) / max(samples.size() - start_idx, 1)
+		var freq = lerpf(freq_start, freq_end, frac)
+		phase += freq / SAMPLE_RATE
+		samples[i] += sin(phase * TAU) * volume
+
 func _to_stream(samples: Array[float], loop: bool = false) -> AudioStreamWAV:
 	_normalize(samples)
 	var data = PackedByteArray()
@@ -171,42 +204,71 @@ func _generate_all_sfx() -> void:
 	_sfx_cache["player_hurt"] = _gen_player_hurt()
 
 func _gen_sword_swing() -> AudioStreamWAV:
-	# Short whoosh — filtered noise with quick decay
-	var samples = _make_samples(0.15)
-	_add_noise(samples, 0.6)
-	# Simulate high-pass by mixing in a descending tone
-	_add_sine(samples, 800.0, 0.15)
-	_add_sine(samples, 1200.0, 0.1)
-	_apply_envelope(samples, 0.01, 0.02, 0.12)
+	# Air displacement whoosh — shaped noise sweep, no tonal content
+	var samples = _make_samples(0.14)
+	# Band-passed noise sweeping from high to mid (like a blade cutting air)
+	_add_pitched_noise(samples, 2500.0, 1800.0, 0.5)
+	_add_pitched_noise(samples, 1200.0, 800.0, 0.3)
+	# Subtle pitch-swept body
+	_pitch_sweep_sine(samples, 600.0, 200.0, 0.08)
+	_apply_envelope(samples, 0.008, 0.015, 0.12)
+	_soft_clip(samples, 1.5)
 	return _to_stream(samples)
 
 func _gen_hit_impact() -> AudioStreamWAV:
-	# Meaty thud — low sine burst + noise
-	var samples = _make_samples(0.12)
-	_add_sine(samples, 120.0, 0.7)
-	_add_sine(samples, 80.0, 0.3)
-	_add_noise(samples, 0.3)
-	_apply_envelope(samples, 0.005, 0.02, 0.10)
+	# Punchy thud — sub-bass thump with mid crack, saturated for warmth
+	var samples = _make_samples(0.13)
+	# Sub-bass body with fast pitch drop (the "weight" of the hit)
+	_pitch_sweep_sine(samples, 100.0, 40.0, 0.7)
+	# Second harmonic for fullness
+	_pitch_sweep_sine(samples, 200.0, 80.0, 0.3)
+	# Short mid-freq crack for the transient "snap"
+	var crack = _make_samples(0.03)
+	_add_pitched_noise(crack, 800.0, 600.0, 0.6)
+	_add_pitched_noise(crack, 2000.0, 1000.0, 0.25)
+	_apply_envelope(crack, 0.001, 0.005, 0.025)
+	_mix_into(samples, crack)
+	_apply_envelope(samples, 0.003, 0.025, 0.10)
+	_soft_clip(samples, 3.0)
 	return _to_stream(samples)
 
 func _gen_crit_hit() -> AudioStreamWAV:
-	# Punchier hit with high "ting"
-	var samples = _make_samples(0.18)
-	_add_sine(samples, 100.0, 0.6)
-	_add_sine(samples, 60.0, 0.3)
-	_add_noise(samples, 0.35)
-	_add_sine(samples, 900.0, 0.25)
-	_add_sine(samples, 1400.0, 0.15)
-	_apply_envelope(samples, 0.005, 0.03, 0.15)
+	# Heavier hit — deeper sub + sharp metallic crack at the start
+	var samples = _make_samples(0.2)
+	# Heavy sub-bass thump
+	_pitch_sweep_sine(samples, 120.0, 35.0, 0.8)
+	_pitch_sweep_sine(samples, 240.0, 70.0, 0.35)
+	# Third harmonic for grit
+	_pitch_sweep_sine(samples, 360.0, 105.0, 0.15)
+	# Sharp metallic transient at very start
+	var metal = _make_samples(0.025)
+	_add_pitched_noise(metal, 3500.0, 2000.0, 0.5)
+	_add_pitched_noise(metal, 1500.0, 800.0, 0.4)
+	_apply_envelope(metal, 0.001, 0.004, 0.02)
+	_mix_into(samples, metal)
+	# Mid crack layer
+	var crack = _make_samples(0.04)
+	_add_pitched_noise(crack, 900.0, 700.0, 0.5)
+	_apply_envelope(crack, 0.001, 0.008, 0.03)
+	_mix_into(samples, crack)
+	_apply_envelope(samples, 0.002, 0.04, 0.16)
+	_soft_clip(samples, 3.5)
 	return _to_stream(samples)
 
 func _gen_enemy_death() -> AudioStreamWAV:
-	# Low thud with longer tail
-	var samples = _make_samples(0.25)
-	_add_sine(samples, 70.0, 0.6)
-	_add_sine(samples, 50.0, 0.4)
-	_add_noise(samples, 0.25)
-	_apply_envelope(samples, 0.005, 0.04, 0.20)
+	# Body drop — descending pitch sweep with crunch at start
+	var samples = _make_samples(0.3)
+	# Deep descending thud
+	_pitch_sweep_sine(samples, 90.0, 25.0, 0.7)
+	_pitch_sweep_sine(samples, 180.0, 50.0, 0.3)
+	# Crunch burst at start
+	var crunch = _make_samples(0.05)
+	_add_pitched_noise(crunch, 600.0, 500.0, 0.5)
+	_add_pitched_noise(crunch, 1200.0, 600.0, 0.2)
+	_apply_envelope(crunch, 0.002, 0.01, 0.04)
+	_mix_into(samples, crunch)
+	_apply_envelope(samples, 0.003, 0.06, 0.24)
+	_soft_clip(samples, 2.5)
 	return _to_stream(samples)
 
 func _gen_gold_pickup() -> AudioStreamWAV:
@@ -241,64 +303,77 @@ func _gen_level_up() -> AudioStreamWAV:
 	return _to_stream(samples)
 
 func _gen_dash_swoosh() -> AudioStreamWAV:
-	# Fast descending noise sweep
-	var samples = _make_samples(0.2)
-	_add_noise(samples, 0.5)
-	# Descending tone to suggest motion
-	for i in range(samples.size()):
-		var t = float(i) / SAMPLE_RATE
-		var freq = lerpf(1500.0, 300.0, t / 0.2)
-		samples[i] += sin(t * freq * TAU) * 0.2
-	_apply_envelope(samples, 0.01, 0.03, 0.16)
+	# Fast rushing air — descending band-passed noise, tight and quick
+	var samples = _make_samples(0.18)
+	_add_pitched_noise(samples, 2000.0, 1500.0, 0.4)
+	_add_pitched_noise(samples, 800.0, 600.0, 0.3)
+	# Descending body for "moving through space" feel
+	_pitch_sweep_sine(samples, 500.0, 120.0, 0.12)
+	_apply_envelope(samples, 0.006, 0.02, 0.15)
+	_soft_clip(samples, 1.8)
 	return _to_stream(samples)
 
 func _gen_ability_whoosh() -> AudioStreamWAV:
-	# Mid-range magical whoosh
-	var samples = _make_samples(0.3)
-	_add_noise(samples, 0.35)
-	for i in range(samples.size()):
-		var t = float(i) / SAMPLE_RATE
-		var freq = lerpf(400.0, 1200.0, t / 0.3)
-		samples[i] += sin(t * freq * TAU) * 0.3
-	_apply_envelope(samples, 0.02, 0.06, 0.22)
+	# Rising magical sweep — layered ascending noise + harmonics
+	var samples = _make_samples(0.28)
+	# Rising pitched noise bands
+	_add_pitched_noise(samples, 600.0, 400.0, 0.25)
+	_add_pitched_noise(samples, 1800.0, 1000.0, 0.2)
+	# Ascending tonal sweep for magical feel
+	_pitch_sweep_sine(samples, 200.0, 800.0, 0.2)
+	_pitch_sweep_sine(samples, 400.0, 1600.0, 0.1)
+	_apply_envelope(samples, 0.015, 0.08, 0.19)
+	_soft_clip(samples, 2.0)
 	return _to_stream(samples)
 
 func _gen_power_strike() -> AudioStreamWAV:
-	# Heavy wind-up slam — low whoosh then impact
-	var samples = _make_samples(0.25)
-	# Wind-up
-	for i in range(samples.size()):
-		var t = float(i) / SAMPLE_RATE
-		var freq = lerpf(200.0, 600.0, t / 0.25)
-		samples[i] += sin(t * freq * TAU) * 0.3
-	# Impact at ~0.15s
-	var impact = _make_samples(0.1)
-	_add_sine(impact, 90.0, 0.7)
-	_add_noise(impact, 0.4)
-	_apply_envelope(impact, 0.005, 0.02, 0.08)
-	_mix_into(samples, impact, int(0.15 * SAMPLE_RATE))
-	_apply_envelope(samples, 0.02, 0.06, 0.17)
+	# Two-phase: rising tension then heavy crunch impact
+	var samples = _make_samples(0.28)
+	# Phase 1: Rising tension sweep (wind-up feel)
+	_pitch_sweep_sine(samples, 150.0, 500.0, 0.2)
+	_add_pitched_noise(samples, 400.0, 300.0, 0.15)
+	# Phase 2: Heavy impact at ~0.14s
+	var impact = _make_samples(0.14)
+	_pitch_sweep_sine(impact, 130.0, 30.0, 0.8)
+	_pitch_sweep_sine(impact, 260.0, 60.0, 0.35)
+	# Crunchy transient
+	var crunch = _make_samples(0.04)
+	_add_pitched_noise(crunch, 1000.0, 800.0, 0.6)
+	_add_pitched_noise(crunch, 2500.0, 1200.0, 0.3)
+	_apply_envelope(crunch, 0.001, 0.006, 0.035)
+	_mix_into(impact, crunch)
+	_apply_envelope(impact, 0.002, 0.04, 0.10)
+	_soft_clip(impact, 3.5)
+	_mix_into(samples, impact, int(0.14 * SAMPLE_RATE))
+	_apply_envelope(samples, 0.01, 0.08, 0.19)
 	return _to_stream(samples)
 
 func _gen_whirlwind() -> AudioStreamWAV:
-	# Spinning wind — oscillating noise
+	# Spinning wind — doppler-like amplitude modulation with shaped noise
 	var samples = _make_samples(0.4)
-	_add_noise(samples, 0.4)
-	# Modulate with spinning feel
+	# Layered band-passed noise for wind texture
+	_add_pitched_noise(samples, 500.0, 400.0, 0.35)
+	_add_pitched_noise(samples, 1500.0, 800.0, 0.2)
+	# Spinning modulation that accelerates
 	for i in range(samples.size()):
 		var t = float(i) / SAMPLE_RATE
-		var mod = 0.5 + 0.5 * sin(t * 25.0)  # Fast oscillation
+		# Spin speeds up over duration
+		var spin_rate = lerpf(12.0, 35.0, t / 0.4)
+		var mod = 0.4 + 0.6 * (0.5 + 0.5 * sin(t * spin_rate))
 		samples[i] *= mod
-		samples[i] += sin(t * 300.0 * TAU) * 0.15
-	_apply_envelope(samples, 0.03, 0.15, 0.22)
+	# Low tonal body
+	_pitch_sweep_sine(samples, 150.0, 250.0, 0.12)
+	_apply_envelope(samples, 0.025, 0.18, 0.20)
+	_soft_clip(samples, 2.0)
 	return _to_stream(samples)
 
 func _gen_player_hurt() -> AudioStreamWAV:
-	# Quick low thud
+	# Short dull impact — low-mid thump, muffled feel
 	var samples = _make_samples(0.1)
-	_add_sine(samples, 150.0, 0.5)
-	_add_noise(samples, 0.3)
-	_apply_envelope(samples, 0.005, 0.02, 0.08)
+	_pitch_sweep_sine(samples, 130.0, 60.0, 0.6)
+	_add_pitched_noise(samples, 500.0, 400.0, 0.3)
+	_apply_envelope(samples, 0.003, 0.015, 0.08)
+	_soft_clip(samples, 2.5)
 	return _to_stream(samples)
 
 # ============================================================

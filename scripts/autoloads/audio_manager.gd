@@ -204,71 +204,73 @@ func _generate_all_sfx() -> void:
 	_sfx_cache["player_hurt"] = _gen_player_hurt()
 
 func _gen_sword_swing() -> AudioStreamWAV:
-	# Air displacement whoosh — shaped noise sweep, no tonal content
-	var samples = _make_samples(0.14)
-	# Band-passed noise sweeping from high to mid (like a blade cutting air)
-	_add_pitched_noise(samples, 2500.0, 1800.0, 0.5)
-	_add_pitched_noise(samples, 1200.0, 800.0, 0.3)
-	# Subtle pitch-swept body
-	_pitch_sweep_sine(samples, 600.0, 200.0, 0.08)
-	_apply_envelope(samples, 0.008, 0.015, 0.12)
-	_soft_clip(samples, 1.5)
+	# Crisp whoosh — bright airy sweep, satisfying and clean
+	var samples = _make_samples(0.13)
+	# Airy high-mid noise for the "cut" feel
+	_add_pitched_noise(samples, 3000.0, 2000.0, 0.3)
+	_add_pitched_noise(samples, 1600.0, 1000.0, 0.25)
+	# Warm mid-range body so it doesn't sound thin
+	_pitch_sweep_sine(samples, 500.0, 250.0, 0.15)
+	_pitch_sweep_sine(samples, 1000.0, 500.0, 0.06)
+	_apply_envelope(samples, 0.005, 0.02, 0.10)
+	_soft_clip(samples, 1.2)
 	return _to_stream(samples)
 
 func _gen_hit_impact() -> AudioStreamWAV:
-	# Punchy thud — sub-bass thump with mid crack, saturated for warmth
-	var samples = _make_samples(0.13)
-	# Sub-bass body with fast pitch drop (the "weight" of the hit)
-	_pitch_sweep_sine(samples, 100.0, 40.0, 0.7)
-	# Second harmonic for fullness
-	_pitch_sweep_sine(samples, 200.0, 80.0, 0.3)
-	# Short mid-freq crack for the transient "snap"
-	var crack = _make_samples(0.03)
-	_add_pitched_noise(crack, 800.0, 600.0, 0.6)
-	_add_pitched_noise(crack, 2000.0, 1000.0, 0.25)
-	_apply_envelope(crack, 0.001, 0.005, 0.025)
-	_mix_into(samples, crack)
-	_apply_envelope(samples, 0.003, 0.025, 0.10)
-	_soft_clip(samples, 3.0)
+	# Warm punchy thud — clean bass knock with bright snap on top
+	var samples = _make_samples(0.12)
+	# Bass body — stays in audible range, not sub-bass mud
+	_pitch_sweep_sine(samples, 160.0, 80.0, 0.6)
+	# Warm mid harmonic
+	_pitch_sweep_sine(samples, 320.0, 160.0, 0.25)
+	# Upper presence for definition
+	_pitch_sweep_sine(samples, 640.0, 300.0, 0.1)
+	# Quick bright snap at the very start
+	var snap = _make_samples(0.02)
+	_add_pitched_noise(snap, 1800.0, 1200.0, 0.35)
+	_apply_envelope(snap, 0.001, 0.003, 0.016)
+	_mix_into(samples, snap)
+	_apply_envelope(samples, 0.003, 0.02, 0.10)
+	_soft_clip(samples, 1.5)
 	return _to_stream(samples)
 
 func _gen_crit_hit() -> AudioStreamWAV:
-	# Heavier hit — deeper sub + sharp metallic crack at the start
-	var samples = _make_samples(0.2)
-	# Heavy sub-bass thump
-	_pitch_sweep_sine(samples, 120.0, 35.0, 0.8)
-	_pitch_sweep_sine(samples, 240.0, 70.0, 0.35)
-	# Third harmonic for grit
-	_pitch_sweep_sine(samples, 360.0, 105.0, 0.15)
-	# Sharp metallic transient at very start
-	var metal = _make_samples(0.025)
-	_add_pitched_noise(metal, 3500.0, 2000.0, 0.5)
-	_add_pitched_noise(metal, 1500.0, 800.0, 0.4)
-	_apply_envelope(metal, 0.001, 0.004, 0.02)
-	_mix_into(samples, metal)
-	# Mid crack layer
-	var crack = _make_samples(0.04)
-	_add_pitched_noise(crack, 900.0, 700.0, 0.5)
-	_apply_envelope(crack, 0.001, 0.008, 0.03)
-	_mix_into(samples, crack)
-	_apply_envelope(samples, 0.002, 0.04, 0.16)
-	_soft_clip(samples, 3.5)
+	# Bigger impact — warm bass knock + clear metallic ting
+	var samples = _make_samples(0.18)
+	# Full bass thump
+	_pitch_sweep_sine(samples, 180.0, 90.0, 0.55)
+	_pitch_sweep_sine(samples, 360.0, 180.0, 0.25)
+	_pitch_sweep_sine(samples, 540.0, 250.0, 0.12)
+	# Clean metallic ting (tonal, not noisy)
+	var ting = _make_samples(0.08)
+	_add_sine(ting, 1200.0, 0.3)
+	_add_sine(ting, 2400.0, 0.12)
+	_apply_envelope(ting, 0.001, 0.01, 0.07)
+	_mix_into(samples, ting)
+	# Bright snap transient
+	var snap = _make_samples(0.025)
+	_add_pitched_noise(snap, 2200.0, 1500.0, 0.3)
+	_apply_envelope(snap, 0.001, 0.005, 0.02)
+	_mix_into(samples, snap)
+	_apply_envelope(samples, 0.002, 0.03, 0.15)
+	_soft_clip(samples, 1.6)
 	return _to_stream(samples)
 
 func _gen_enemy_death() -> AudioStreamWAV:
-	# Body drop — descending pitch sweep with crunch at start
-	var samples = _make_samples(0.3)
-	# Deep descending thud
-	_pitch_sweep_sine(samples, 90.0, 25.0, 0.7)
-	_pitch_sweep_sine(samples, 180.0, 50.0, 0.3)
-	# Crunch burst at start
-	var crunch = _make_samples(0.05)
-	_add_pitched_noise(crunch, 600.0, 500.0, 0.5)
-	_add_pitched_noise(crunch, 1200.0, 600.0, 0.2)
-	_apply_envelope(crunch, 0.002, 0.01, 0.04)
-	_mix_into(samples, crunch)
-	_apply_envelope(samples, 0.003, 0.06, 0.24)
-	_soft_clip(samples, 2.5)
+	# Satisfying defeat thud — warm descending knock with mid presence
+	var samples = _make_samples(0.28)
+	# Descending thud in pleasant bass range
+	_pitch_sweep_sine(samples, 140.0, 60.0, 0.55)
+	_pitch_sweep_sine(samples, 280.0, 120.0, 0.25)
+	# Mid-range presence so it's warm not muddy
+	_pitch_sweep_sine(samples, 420.0, 200.0, 0.12)
+	# Crisp burst at start
+	var burst = _make_samples(0.04)
+	_add_pitched_noise(burst, 1400.0, 800.0, 0.3)
+	_apply_envelope(burst, 0.002, 0.008, 0.03)
+	_mix_into(samples, burst)
+	_apply_envelope(samples, 0.003, 0.05, 0.23)
+	_soft_clip(samples, 1.4)
 	return _to_stream(samples)
 
 func _gen_gold_pickup() -> AudioStreamWAV:
@@ -303,77 +305,82 @@ func _gen_level_up() -> AudioStreamWAV:
 	return _to_stream(samples)
 
 func _gen_dash_swoosh() -> AudioStreamWAV:
-	# Fast rushing air — descending band-passed noise, tight and quick
-	var samples = _make_samples(0.18)
-	_add_pitched_noise(samples, 2000.0, 1500.0, 0.4)
-	_add_pitched_noise(samples, 800.0, 600.0, 0.3)
-	# Descending body for "moving through space" feel
-	_pitch_sweep_sine(samples, 500.0, 120.0, 0.12)
-	_apply_envelope(samples, 0.006, 0.02, 0.15)
-	_soft_clip(samples, 1.8)
+	# Bright quick swoosh — airy and clean, not rumbling
+	var samples = _make_samples(0.15)
+	# High-mid noise for rushing air
+	_add_pitched_noise(samples, 2800.0, 1800.0, 0.3)
+	_add_pitched_noise(samples, 1400.0, 900.0, 0.2)
+	# Descending tonal body for motion feel
+	_pitch_sweep_sine(samples, 600.0, 200.0, 0.15)
+	_pitch_sweep_sine(samples, 1200.0, 400.0, 0.06)
+	_apply_envelope(samples, 0.005, 0.02, 0.12)
+	_soft_clip(samples, 1.2)
 	return _to_stream(samples)
 
 func _gen_ability_whoosh() -> AudioStreamWAV:
-	# Rising magical sweep — layered ascending noise + harmonics
-	var samples = _make_samples(0.28)
-	# Rising pitched noise bands
-	_add_pitched_noise(samples, 600.0, 400.0, 0.25)
-	_add_pitched_noise(samples, 1800.0, 1000.0, 0.2)
-	# Ascending tonal sweep for magical feel
-	_pitch_sweep_sine(samples, 200.0, 800.0, 0.2)
-	_pitch_sweep_sine(samples, 400.0, 1600.0, 0.1)
-	_apply_envelope(samples, 0.015, 0.08, 0.19)
-	_soft_clip(samples, 2.0)
+	# Rising magical sweep — clean ascending tone with airy shimmer
+	var samples = _make_samples(0.25)
+	# Bright shimmer noise
+	_add_pitched_noise(samples, 2200.0, 1200.0, 0.15)
+	# Clean ascending tonal sweep
+	_pitch_sweep_sine(samples, 300.0, 900.0, 0.25)
+	_pitch_sweep_sine(samples, 600.0, 1800.0, 0.1)
+	# Warm mid body
+	_pitch_sweep_sine(samples, 450.0, 700.0, 0.1)
+	_apply_envelope(samples, 0.01, 0.07, 0.17)
+	_soft_clip(samples, 1.3)
 	return _to_stream(samples)
 
 func _gen_power_strike() -> AudioStreamWAV:
-	# Two-phase: rising tension then heavy crunch impact
-	var samples = _make_samples(0.28)
-	# Phase 1: Rising tension sweep (wind-up feel)
-	_pitch_sweep_sine(samples, 150.0, 500.0, 0.2)
-	_add_pitched_noise(samples, 400.0, 300.0, 0.15)
-	# Phase 2: Heavy impact at ~0.14s
-	var impact = _make_samples(0.14)
-	_pitch_sweep_sine(impact, 130.0, 30.0, 0.8)
-	_pitch_sweep_sine(impact, 260.0, 60.0, 0.35)
-	# Crunchy transient
-	var crunch = _make_samples(0.04)
-	_add_pitched_noise(crunch, 1000.0, 800.0, 0.6)
-	_add_pitched_noise(crunch, 2500.0, 1200.0, 0.3)
-	_apply_envelope(crunch, 0.001, 0.006, 0.035)
-	_mix_into(impact, crunch)
-	_apply_envelope(impact, 0.002, 0.04, 0.10)
-	_soft_clip(impact, 3.5)
-	_mix_into(samples, impact, int(0.14 * SAMPLE_RATE))
-	_apply_envelope(samples, 0.01, 0.08, 0.19)
+	# Wind-up then strong warm hit
+	var samples = _make_samples(0.26)
+	# Phase 1: Clean rising tension
+	_pitch_sweep_sine(samples, 250.0, 600.0, 0.18)
+	_pitch_sweep_sine(samples, 500.0, 1200.0, 0.07)
+	# Phase 2: Warm heavy impact at ~0.13s
+	var impact = _make_samples(0.13)
+	_pitch_sweep_sine(impact, 200.0, 80.0, 0.6)
+	_pitch_sweep_sine(impact, 400.0, 160.0, 0.25)
+	_pitch_sweep_sine(impact, 600.0, 250.0, 0.1)
+	# Clean bright transient
+	var snap = _make_samples(0.03)
+	_add_pitched_noise(snap, 2000.0, 1400.0, 0.35)
+	_apply_envelope(snap, 0.001, 0.005, 0.025)
+	_mix_into(impact, snap)
+	_apply_envelope(impact, 0.002, 0.03, 0.10)
+	_soft_clip(impact, 1.6)
+	_mix_into(samples, impact, int(0.13 * SAMPLE_RATE))
+	_apply_envelope(samples, 0.008, 0.07, 0.18)
 	return _to_stream(samples)
 
 func _gen_whirlwind() -> AudioStreamWAV:
-	# Spinning wind — doppler-like amplitude modulation with shaped noise
-	var samples = _make_samples(0.4)
-	# Layered band-passed noise for wind texture
-	_add_pitched_noise(samples, 500.0, 400.0, 0.35)
-	_add_pitched_noise(samples, 1500.0, 800.0, 0.2)
-	# Spinning modulation that accelerates
+	# Spinning wind — bright airy texture with gentle modulation
+	var samples = _make_samples(0.38)
+	# Airy mid-high noise for wind
+	_add_pitched_noise(samples, 1200.0, 800.0, 0.25)
+	_add_pitched_noise(samples, 2400.0, 1200.0, 0.15)
+	# Gentle spinning modulation
 	for i in range(samples.size()):
 		var t = float(i) / SAMPLE_RATE
-		# Spin speeds up over duration
-		var spin_rate = lerpf(12.0, 35.0, t / 0.4)
-		var mod = 0.4 + 0.6 * (0.5 + 0.5 * sin(t * spin_rate))
+		var spin_rate = lerpf(10.0, 28.0, t / 0.38)
+		var mod = 0.55 + 0.45 * (0.5 + 0.5 * sin(t * spin_rate))
 		samples[i] *= mod
-	# Low tonal body
-	_pitch_sweep_sine(samples, 150.0, 250.0, 0.12)
-	_apply_envelope(samples, 0.025, 0.18, 0.20)
-	_soft_clip(samples, 2.0)
+	# Warm tonal body
+	_pitch_sweep_sine(samples, 250.0, 350.0, 0.15)
+	_pitch_sweep_sine(samples, 500.0, 700.0, 0.06)
+	_apply_envelope(samples, 0.02, 0.15, 0.21)
+	_soft_clip(samples, 1.3)
 	return _to_stream(samples)
 
 func _gen_player_hurt() -> AudioStreamWAV:
-	# Short dull impact — low-mid thump, muffled feel
+	# Quick warm knock — clear and defined, not muffled
 	var samples = _make_samples(0.1)
-	_pitch_sweep_sine(samples, 130.0, 60.0, 0.6)
-	_add_pitched_noise(samples, 500.0, 400.0, 0.3)
+	_pitch_sweep_sine(samples, 200.0, 100.0, 0.5)
+	_pitch_sweep_sine(samples, 400.0, 200.0, 0.2)
+	# Bit of brightness for clarity
+	_add_pitched_noise(samples, 1400.0, 800.0, 0.2)
 	_apply_envelope(samples, 0.003, 0.015, 0.08)
-	_soft_clip(samples, 2.5)
+	_soft_clip(samples, 1.4)
 	return _to_stream(samples)
 
 # ============================================================

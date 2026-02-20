@@ -20,6 +20,11 @@ var _is_moving_to_target: bool = false
 
 var _shadow: Sprite2D = null
 
+# Smooth movement
+const ACCEL: float = 1200.0  # Pixels/sec² — how fast we reach top speed
+const FRICTION: float = 1800.0  # Pixels/sec² — how fast we stop (snappier than accel)
+var _walk_bob_time: float = 0.0  # Accumulator for walk-bob sine wave
+
 # Attack state
 var _is_attack_animating: bool = false
 var _attack_cooldown: float = 0.0
@@ -109,21 +114,30 @@ func _physics_process(delta: float) -> void:
 	if input_dir.length() > 0:
 		input_dir = input_dir.normalized()
 
+	var max_speed = stats.get_total_move_speed()
+	var desired_velocity := Vector2.ZERO
+
 	if input_dir.length() > 0:
 		_is_moving_to_target = false
-		velocity = input_dir * stats.get_total_move_speed()
+		desired_velocity = input_dir * max_speed
 	elif _is_moving_to_target:
 		var dist = global_position.distance_to(_move_target)
 		if dist < 5.0:
 			_is_moving_to_target = false
-			velocity = Vector2.ZERO
 		else:
 			var dir = (_move_target - global_position).normalized()
-			velocity = dir * stats.get_total_move_speed()
+			# Ease into stop near the target
+			var approach_factor = clampf(dist / 40.0, 0.3, 1.0)
+			desired_velocity = dir * max_speed * approach_factor
+
+	# Smooth acceleration / friction
+	if desired_velocity.length() > 0:
+		velocity = velocity.move_toward(desired_velocity, ACCEL * delta)
 	else:
-		velocity = Vector2.ZERO
+		velocity = velocity.move_toward(Vector2.ZERO, FRICTION * delta)
 
 	move_and_slide()
+	_update_walk_bob(delta)
 	stats.process_regen(delta)
 
 	if _attack_cooldown > 0.0:
@@ -144,6 +158,33 @@ func _physics_process(delta: float) -> void:
 	# Update facing direction from movement
 	if velocity.length() > 5 and not _is_attack_animating:
 		_set_facing(velocity.normalized())
+
+func _update_walk_bob(delta: float) -> void:
+	if _is_attack_animating:
+		return  # Attack tweens own the sprite transform
+
+	var speed_ratio = velocity.length() / max(stats.get_total_move_speed(), 1.0)
+	if speed_ratio > 0.1:
+		# Bob frequency scales with speed — feels like footsteps
+		_walk_bob_time += delta * (8.0 + speed_ratio * 4.0)
+		var bob_y = sin(_walk_bob_time) * 1.5 * speed_ratio
+		# Subtle horizontal sway on alternating steps
+		var sway_x = cos(_walk_bob_time * 0.5) * 0.5 * speed_ratio
+		sprite.offset.y = -20 + bob_y  # -20 is the base sprite offset
+		sprite.offset.x = sway_x
+		# Lean into movement direction (very subtle)
+		var lean = velocity.x / max(stats.get_total_move_speed(), 1.0) * 0.04
+		sprite.rotation = lean
+		# Squash-stretch: slight vertical squish at bob peaks
+		var squash = 1.0 + sin(_walk_bob_time) * 0.02 * speed_ratio
+		sprite.scale = Vector2(1.0 / squash, squash)
+	else:
+		# Settle back to idle smoothly
+		_walk_bob_time = 0.0
+		sprite.offset.y = lerp(sprite.offset.y, -20.0, 12.0 * delta)
+		sprite.offset.x = lerp(sprite.offset.x, 0.0, 12.0 * delta)
+		sprite.rotation = lerp(sprite.rotation, 0.0, 12.0 * delta)
+		sprite.scale = sprite.scale.lerp(Vector2.ONE, 12.0 * delta)
 
 const ZOOM_MIN := Vector2(1.5, 1.5)
 const ZOOM_MAX := Vector2(5.0, 5.0)

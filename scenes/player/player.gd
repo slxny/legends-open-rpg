@@ -348,8 +348,12 @@ func _unhandled_input(event: InputEvent) -> void:
 			return
 
 		if event.button_index == MOUSE_BUTTON_LEFT or event.button_index == MOUSE_BUTTON_RIGHT:
-			# Right-click on an enemy = attack (same as space)
+			# Right-click on self = open hero stats panel
 			if event.button_index == MOUSE_BUTTON_RIGHT:
+				var mouse_world = _get_world_mouse_pos()
+				if global_position.distance_squared_to(mouse_world) < 625.0:  # 25^2
+					_toggle_hero_stats_panel()
+					return
 				var enemy_target = _get_enemy_at_mouse()
 				if enemy_target and not _is_paralyzed:
 					_try_manual_attack()
@@ -1497,6 +1501,11 @@ func _spawn_move_indicator(pos: Vector2) -> void:
 	var tween = indicator.create_tween()
 	tween.tween_property(indicator, "modulate:a", 0.0, 0.4)
 	tween.tween_callback(_recycle_vfx.bind(indicator))
+
+func _toggle_hero_stats_panel() -> void:
+	var panels = get_tree().get_nodes_in_group("hero_stats_panel")
+	if panels.size() > 0:
+		panels[0].toggle()
 
 func _get_pooled_vfx() -> Sprite2D:
 	if _vfx_pool.size() > 0:

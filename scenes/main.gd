@@ -7,6 +7,7 @@ var _inventory_scene: PackedScene = preload("res://scenes/ui/inventory_screen.ts
 var _shop_scene: PackedScene = preload("res://scenes/ui/shop_dialog.tscn")
 var _armory_scene: PackedScene = preload("res://scenes/ui/armory_dialog.tscn")
 var _tavern_scene: PackedScene = preload("res://scenes/ui/tavern_dialog.tscn")
+var _hero_stats_scene: PackedScene = preload("res://scenes/ui/hero_stats_panel.tscn")
 var _messages_scene: PackedScene = preload("res://scenes/ui/game_messages.tscn")
 var _center_msg_scene: PackedScene = preload("res://scenes/ui/center_message_system.tscn")
 
@@ -57,6 +58,11 @@ func _on_hero_chosen(hero_class: String) -> void:
 	tavern_dialog.add_to_group("tavern_dialog")
 	add_child(tavern_dialog)
 	tavern_dialog.setup(_player)
+
+	var hero_stats = _hero_stats_scene.instantiate()
+	hero_stats.add_to_group("hero_stats_panel")
+	add_child(hero_stats)
+	hero_stats.setup(_player)
 
 	var messages = _messages_scene.instantiate()
 	add_child(messages)

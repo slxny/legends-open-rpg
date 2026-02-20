@@ -89,7 +89,7 @@ func _refresh_stats() -> void:
 	if not _player:
 		return
 	var s = _player.stats
-	stats_label.text = """Level: %d
+	var text = """Level: %d
 HP: %d / %d
 Mana: %d / %d
 STR: %d (+%d)
@@ -108,6 +108,16 @@ Speed: %.0f""" % [
 		s.attack_damage + s.weapon_damage,
 		s.get_total_move_speed(),
 	]
+	# Show active buffs/debuffs
+	var buffs = s.get_active_buffs()
+	if buffs.size() > 0:
+		text += "\n\n-- Effects --"
+		for b in buffs:
+			var mins = int(b["time_left"]) / 60
+			var secs = int(b["time_left"]) % 60
+			var sign = "+" if float(b["amount"]) > 0 else ""
+			text += "\n%s%s %s (%d:%02d)" % [sign, str(b["amount"]), b["stat"].capitalize(), mins, secs]
+	stats_label.text = text
 
 func _show_tooltip(item: Dictionary) -> void:
 	if item.is_empty():

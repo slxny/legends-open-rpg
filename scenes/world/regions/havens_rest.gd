@@ -101,7 +101,7 @@ func _generate_terrain() -> void:
 	# Scattered dirt patches across the expanded map
 	var rng = RandomNumberGenerator.new()
 	rng.seed = 555
-	for _i in range(120):
+	for _i in range(50):
 		var pos = Vector2(rng.randf_range(-5700, 5700), rng.randf_range(-4200, 4200))
 		if pos.length() > 550:  # Avoid town area
 			_add_dirt_ground_patch(pos)
@@ -434,49 +434,49 @@ func _generate_decorations() -> void:
 	_add_camp_marker(deco_layer, Vector2(5200, -3460), "OGRE WARLORD Lv10-12")
 	_add_camp_marker(deco_layer, Vector2(-5400, -3760), "OGRE WARLORD Lv10-12")
 
-	# ---- Dense grass tufts scattered everywhere ----
-	for i in range(400):
+	# ---- Grass tufts scattered (reduced for performance) ----
+	for i in range(150):
 		var gx = randf_range(-5700, 5700)
 		var gy = randf_range(-4200, 4200)
 		if Vector2(gx, gy).length() > 550:
 			_add_grass_tuft(deco_layer, Vector2(gx, gy))
 
-	# ---- Bush clusters ----
-	for i in range(180):
+	# ---- Bush clusters (reduced for performance) ----
+	for i in range(70):
 		var bx = randf_range(-5600, 5600)
 		var by = randf_range(-4100, 4100)
 		if Vector2(bx, by).length() > 550:
 			_add_bush(deco_layer, Vector2(bx, by))
 
 	# ---- Flower patches ----
-	for i in range(30):
+	for i in range(12):
 		var fx = randf_range(-5200, 5200)
 		var fy = randf_range(-3800, 3800)
 		if Vector2(fx, fy).length() > 600:
 			_add_flowers(deco_layer, Vector2(fx, fy))
 
 	# ---- Fallen logs scattered around ----
-	for i in range(45):
+	for i in range(18):
 		var lx = randf_range(-5400, 5400)
 		var ly = randf_range(-4000, 4000)
 		if Vector2(lx, ly).length() > 550:
 			_add_fallen_log(deco_layer, Vector2(lx, ly))
 
-	# ---- Ground debris everywhere ----
-	for i in range(280):
+	# ---- Ground debris (reduced for performance) ----
+	for i in range(100):
 		var dx = randf_range(-5700, 5700)
 		var dy = randf_range(-4200, 4200)
 		_add_ground_debris(deco_layer, Vector2(dx, dy))
 
 	# ---- Mushroom clusters near moist areas ----
-	for i in range(70):
+	for i in range(25):
 		var mx = randf_range(-5400, 5400)
 		var my = randf_range(-4000, 4000)
 		if Vector2(mx, my).length() > 550:
 			_add_mushrooms(deco_layer, Vector2(mx, my))
 
 	# ---- Vine decorations ----
-	for i in range(50):
+	for i in range(20):
 		var vx = randf_range(-5200, 5200)
 		var vy = randf_range(-3800, 3800)
 		if Vector2(vx, vy).length() > 600:
@@ -626,7 +626,7 @@ func _spawn_ambient_particles() -> void:
 	# Floating dust/pollen particles
 	var particles = CPUParticles2D.new()
 	particles.z_index = 5
-	particles.amount = 30
+	particles.amount = 15
 	particles.lifetime = 8.0
 	particles.emitting = true
 	particles.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE

@@ -29,6 +29,8 @@ var _is_dead: bool = false
 var _shadow: Sprite2D = null
 var _is_selected: bool = false
 var _knockback_velocity: Vector2 = Vector2.ZERO
+var _cached_player: Node2D = null  # Cached player reference to avoid per-frame group lookups
+var _cached_world_node: Node = null  # Cached world node for VFX spawning
 
 # Patrol state
 var _patrol_target: Vector2 = Vector2.ZERO
@@ -87,9 +89,9 @@ func initialize(config: Dictionary) -> void:
 	chase_range = _patrol_radius + 350.0
 
 	# Randomly assign an effect to some units (~25% of enemies have an effect proc)
+	const EFFECT_TYPES = ["knockback", "paralyze", "slow"]
 	if randf() < 0.25:
-		var effects = ["knockback", "paralyze", "slow"]
-		_effect_type = effects[randi() % effects.size()]
+		_effect_type = EFFECT_TYPES[randi() % EFFECT_TYPES.size()]
 		match _effect_type:
 			"knockback":
 				_effect_chance = 0.12  # 12% per hit
@@ -121,7 +123,7 @@ func _physics_process(delta: float) -> void:
 		return
 
 	# Apply knockback impulse — overrides state machine until it decays
-	if _knockback_velocity.length() > 2.0:
+	if _knockback_velocity.length_squared() > 4.0:
 		velocity = _knockback_velocity
 		_knockback_velocity = _knockback_velocity.lerp(Vector2.ZERO, delta * 14.0)
 		move_and_slide()
@@ -379,10 +381,10 @@ func _spawn_blood_splatter() -> void:
 		blood.z_index = -2
 		blood.modulate.a = randf_range(0.6, 0.9)
 		_get_world_node().add_child(blood)
-		# Fade out after 8-12 seconds
+		# Fade out after 3-5 seconds (reduced from 8-12 for performance)
 		var fade_tween = blood.create_tween()
-		fade_tween.tween_interval(randf_range(8.0, 12.0))
-		fade_tween.tween_property(blood, "modulate:a", 0.0, 2.0)
+		fade_tween.tween_interval(randf_range(3.0, 5.0))
+		fade_tween.tween_property(blood, "modulate:a", 0.0, 1.0)
 		fade_tween.tween_callback(blood.queue_free)
 
 func _spawn_gold_drop(amount: int) -> void:
@@ -487,13 +489,20 @@ func get_stats_dict() -> Dictionary:
 	return stats.get_stats_dict()
 
 func _get_player() -> Node2D:
+	if _cached_player and is_instance_valid(_cached_player):
+		return _cached_player
 	var players = get_tree().get_nodes_in_group("player")
 	if players.size() > 0:
-		return players[0]
+		_cached_player = players[0]
+		return _cached_player
 	return null
 
 func _get_world_node() -> Node:
+	if _cached_world_node and is_instance_valid(_cached_world_node):
+		return _cached_world_node
 	var world = get_tree().get_nodes_in_group("world")
 	if world.size() > 0:
-		return world[0]
-	return get_tree().current_scene
+		_cached_world_node = world[0]
+	else:
+		_cached_world_node = get_tree().current_scene
+	return _cached_world_node

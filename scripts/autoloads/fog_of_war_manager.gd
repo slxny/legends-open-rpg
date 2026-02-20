@@ -19,20 +19,37 @@ var visible_tiles: Dictionary = {}
 ## Player sight radius in grid cells
 var sight_radius: int = 6
 
+## Pre-computed sight offsets (avoids nested loop + distance check every tick)
+var _sight_offsets: Array[Vector2i] = []
+var _last_grid_pos: Vector2i = Vector2i(-99999, -99999)
+
 func _ready() -> void:
 	set_process(false)  # Managed by trigger engine tick
+	_precompute_sight_offsets()
+
+func _precompute_sight_offsets() -> void:
+	_sight_offsets.clear()
+	var r_sq = sight_radius * sight_radius
+	for dx in range(-sight_radius, sight_radius + 1):
+		for dy in range(-sight_radius, sight_radius + 1):
+			if dx * dx + dy * dy <= r_sq:
+				_sight_offsets.append(Vector2i(dx, dy))
 
 func update_visibility(player_positions: Array) -> void:
+	# Skip update if player hasn't moved to a new grid cell
+	if player_positions.size() > 0:
+		var new_grid = world_to_grid(player_positions[0])
+		if new_grid == _last_grid_pos:
+			return  # Same cell — no visibility change
+		_last_grid_pos = new_grid
+
 	visible_tiles.clear()
 	for pos in player_positions:
 		var grid_pos = world_to_grid(pos)
-		# Reveal cells within sight radius
-		for dx in range(-sight_radius, sight_radius + 1):
-			for dy in range(-sight_radius, sight_radius + 1):
-				if dx * dx + dy * dy <= sight_radius * sight_radius:
-					var cell = Vector2i(grid_pos.x + dx, grid_pos.y + dy)
-					visible_tiles[cell] = true
-					explored_tiles[cell] = true
+		for offset in _sight_offsets:
+			var cell = grid_pos + offset
+			visible_tiles[cell] = true
+			explored_tiles[cell] = true
 	fog_updated.emit()
 
 func world_to_grid(world_pos: Vector2) -> Vector2i:

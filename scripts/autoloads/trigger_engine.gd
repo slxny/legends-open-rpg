@@ -14,7 +14,7 @@ func unregister(trigger: Trigger) -> void:
 
 func evaluate_all() -> void:
 	for t in triggers:
-		if is_instance_valid(t) or t is Trigger:
+		if t is Trigger and t.enabled:
 			t.evaluate()
 
 func clear() -> void:

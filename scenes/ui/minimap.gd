@@ -11,10 +11,13 @@ const FOG_CELL_SIZE_ON_MAP := Vector2(
 )
 
 var _player: Node2D = null
+var _redraw_timer: float = 0.0
+const REDRAW_INTERVAL: float = 0.25  # Redraw 4 times per second, not 60
 
 func _ready() -> void:
 	custom_minimum_size = MINIMAP_SIZE
 	mouse_filter = Control.MOUSE_FILTER_STOP
+	FogOfWarManager.fog_updated.connect(queue_redraw)
 
 func setup(player: Node2D) -> void:
 	_player = player
@@ -29,8 +32,12 @@ func _gui_input(event: InputEvent) -> void:
 			_player.move_to(world_pos)
 		get_viewport().set_input_as_handled()
 
-func _process(_delta: float) -> void:
-	queue_redraw()
+func _process(delta: float) -> void:
+	# Throttle minimap redraws to ~4 FPS instead of 60
+	_redraw_timer -= delta
+	if _redraw_timer <= 0.0:
+		_redraw_timer = REDRAW_INTERVAL
+		queue_redraw()
 
 func _draw() -> void:
 	# Background (unexplored = black)

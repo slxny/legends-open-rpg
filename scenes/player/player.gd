@@ -35,7 +35,6 @@ const WALK_FPS: float = 8.0  # Frames per second for walk cycle
 var _is_attack_animating: bool = false
 var _attack_cooldown: float = 0.0
 var _hit_freeze_active: bool = false  # Guard against overlapping hit freezes
-var _shake_tween: Tween = null  # Track screen shake to prevent overlap
 
 # Status effects applied by enemies
 var _is_paralyzed: bool = false
@@ -77,9 +76,22 @@ var _is_charging: bool = false    # Whether charge VFX is showing
 var _charge_vfx: Sprite2D = null  # Glow VFX while charging
 var _charge_shake_tween: Tween = null  # Sprite shake during charge
 var _charge_sfx_player: AudioStreamPlayer = null  # Looping charge sound
+var _charge_vfx_tween: Tween = null  # Looping glow tween during charge
+var _effect_vfx_tween: Tween = null  # Looping pulse tween for status effect
+var _world_node: Node = null  # Cached world node for VFX spawning
+# Cached VFX textures to avoid per-spawn lookups
+var _tex_slash_arc: Texture2D = null
+var _tex_crystal_white: Texture2D = null
+var _tex_selection_red: Texture2D = null
+var _tex_beacon_blue: Texture2D = null
 const CHARGE_GRACE: float = 0.15  # Hold this long before suppressing basic attacks
 const TAP_RESOLVE_TIME: float = 0.12  # 120ms buffer — ~7 frames, barely perceptible
 const CHARGE_THRESHOLD: float = 1.5   # Hold 1.5s for charged slash
+
+# Screen shake state (procedural, no tween)
+var _shake_intensity: float = 0.0
+var _shake_time_left: float = 0.0
+const SHAKE_DURATION: float = 0.11
 
 # Special attack type for current attack
 enum SpecialAttack { NONE, POWER_STRIKE, WHIRLWIND, CHARGED_SLASH, DASH_STRIKE }
@@ -134,6 +146,12 @@ func _ready() -> void:
 	_shadow.z_index = -1
 	add_child(_shadow)
 
+	# Cache VFX textures for reuse (avoids per-spawn dictionary lookups)
+	_tex_slash_arc = SpriteGenerator.get_texture("slash_arc")
+	_tex_crystal_white = SpriteGenerator.get_texture("crystal_white")
+	_tex_selection_red = SpriteGenerator.get_texture("selection_red")
+	_tex_beacon_blue = SpriteGenerator.get_texture("beacon_blue")
+
 	# Sync initial state to DeathCounterSystem
 	_sync_to_death_counters()
 	# Connect level-up for sprite upgrade and DC sync
@@ -161,13 +179,14 @@ func _physics_process(delta: float) -> void:
 	var input_dir = Vector2.ZERO
 	input_dir.x = Input.get_axis("move_left", "move_right")
 	input_dir.y = Input.get_axis("move_up", "move_down")
-	if input_dir.length() > 0:
+	var has_input = input_dir.length_squared() > 0.0
+	if has_input:
 		input_dir = input_dir.normalized()
 
 	var max_speed = stats.get_total_move_speed() * _slow_factor
 	var desired_velocity := Vector2.ZERO
 
-	if input_dir.length() > 0:
+	if has_input:
 		_is_moving_to_target = false
 		desired_velocity = input_dir * max_speed
 	elif _is_moving_to_target:
@@ -181,7 +200,7 @@ func _physics_process(delta: float) -> void:
 			desired_velocity = dir * max_speed * approach_factor
 
 	# Smooth acceleration / friction
-	if desired_velocity.length() > 0:
+	if desired_velocity.length_squared() > 0.0:
 		velocity = velocity.move_toward(desired_velocity, ACCEL * delta)
 	else:
 		velocity = velocity.move_toward(Vector2.ZERO, FRICTION * delta)
@@ -239,8 +258,17 @@ func _physics_process(delta: float) -> void:
 				_try_special_attack(SpecialAttack.CHARGED_SLASH)
 			_charge_time = 0.0
 
+	# Procedural screen shake tick
+	if _shake_time_left > 0.0:
+		_shake_time_left -= delta
+		if _shake_time_left <= 0.0:
+			camera.offset = Vector2.ZERO
+		else:
+			var decay = _shake_time_left / SHAKE_DURATION
+			camera.offset = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * _shake_intensity * decay
+
 	# Update facing direction from movement
-	if velocity.length() > 5 and not _is_attack_animating:
+	if velocity.length_squared() > 25.0 and not _is_attack_animating:
 		_set_facing(velocity.normalized())
 
 func _update_walk_anim(delta: float) -> void:
@@ -419,13 +447,15 @@ func _spawn_effect_vfx(color: Color, duration: float, label_text: String) -> voi
 	_clear_effect_vfx()
 	# Pulsing aura around the player
 	_effect_vfx = Sprite2D.new()
-	_effect_vfx.texture = SpriteGenerator.get_texture("beacon_blue")
+	_effect_vfx.texture = _tex_beacon_blue
 	_effect_vfx.modulate = color
 	_effect_vfx.z_index = -1
 	add_child(_effect_vfx)
-	var tween = _effect_vfx.create_tween().set_loops()
-	tween.tween_property(_effect_vfx, "modulate:a", color.a * 0.3, 0.4)
-	tween.tween_property(_effect_vfx, "modulate:a", color.a, 0.4)
+	if _effect_vfx_tween and _effect_vfx_tween.is_valid():
+		_effect_vfx_tween.kill()
+	_effect_vfx_tween = _effect_vfx.create_tween().set_loops()
+	_effect_vfx_tween.tween_property(_effect_vfx, "modulate:a", color.a * 0.3, 0.4)
+	_effect_vfx_tween.tween_property(_effect_vfx, "modulate:a", color.a, 0.4)
 	# Auto-cleanup after duration
 	var cleanup_tween = create_tween()
 	cleanup_tween.tween_interval(duration)
@@ -450,6 +480,9 @@ func _spawn_effect_label(text: String, color: Color) -> void:
 	tween.tween_callback(label.queue_free)
 
 func _clear_effect_vfx() -> void:
+	if _effect_vfx_tween and _effect_vfx_tween.is_valid():
+		_effect_vfx_tween.kill()
+		_effect_vfx_tween = null
 	if _effect_vfx and is_instance_valid(_effect_vfx):
 		_effect_vfx.queue_free()
 		_effect_vfx = null
@@ -663,8 +696,9 @@ func _execute_dash_strike(attack_dir: Vector2) -> void:
 	var end_pos = start_pos + dir * dash_distance
 	var dash_targets: Array[Node2D] = []
 	# Collect all enemies near the dash path (in range or along the path)
-	for enemy in get_tree().get_nodes_in_group("enemies"):
-		if not is_instance_valid(enemy) or enemy.get("_is_dead"):
+	_enemies_in_range = _enemies_in_range.filter(func(e): return is_instance_valid(e) and not e.get("_is_dead"))
+	for enemy in _enemies_in_range:
+		if not is_instance_valid(enemy):
 			continue
 		# Check if enemy is close to the dash line segment
 		var dist_to_path = _point_to_segment_dist(enemy.global_position, start_pos, end_pos)
@@ -755,14 +789,16 @@ func _find_best_target(dir: Vector2) -> Node2D:
 func _start_charge_vfx() -> void:
 	_stop_charge_vfx()
 	_charge_vfx = Sprite2D.new()
-	_charge_vfx.texture = SpriteGenerator.get_texture("beacon_blue")
+	_charge_vfx.texture = _tex_beacon_blue
 	_charge_vfx.modulate = Color(1.0, 0.8, 0.2, 0.0)
 	_charge_vfx.z_index = -1
 	add_child(_charge_vfx)
 	# Glow intensifies as you charge
-	var tween = _charge_vfx.create_tween().set_loops()
-	tween.tween_property(_charge_vfx, "modulate:a", 0.7, 0.3)
-	tween.tween_property(_charge_vfx, "modulate:a", 0.3, 0.3)
+	if _charge_vfx_tween and _charge_vfx_tween.is_valid():
+		_charge_vfx_tween.kill()
+	_charge_vfx_tween = _charge_vfx.create_tween().set_loops()
+	_charge_vfx_tween.tween_property(_charge_vfx, "modulate:a", 0.7, 0.3)
+	_charge_vfx_tween.tween_property(_charge_vfx, "modulate:a", 0.3, 0.3)
 	# Also vibrate sprite to show charge tension
 	if _charge_shake_tween and _charge_shake_tween.is_valid():
 		_charge_shake_tween.kill()
@@ -774,6 +810,9 @@ func _start_charge_vfx() -> void:
 
 func _stop_charge_vfx() -> void:
 	_stop_charge_sfx()
+	if _charge_vfx_tween and _charge_vfx_tween.is_valid():
+		_charge_vfx_tween.kill()
+		_charge_vfx_tween = null
 	if _charge_shake_tween and _charge_shake_tween.is_valid():
 		_charge_shake_tween.kill()
 		_charge_shake_tween = null
@@ -891,8 +930,8 @@ func _execute_aoe_ability(ability_data: Dictionary, aim_dir: Vector2) -> void:
 
 	_spawn_slash_vfx(aim_dir, radius, 1.5)
 
-	var enemies = get_tree().get_nodes_in_group("enemies")
-	for enemy in enemies:
+	_enemies_in_range = _enemies_in_range.filter(func(e): return is_instance_valid(e) and not e.get("_is_dead"))
+	for enemy in _enemies_in_range:
 		if not is_instance_valid(enemy) or not enemy.has_method("take_damage"):
 			continue
 		var to_enemy = enemy.global_position - global_position
@@ -1225,7 +1264,7 @@ func _do_ranged_attack(target: Node2D, result: Dictionary) -> void:
 
 func _spawn_slash_vfx(direction: Vector2, radius: float, scale_mult: float) -> void:
 	var slash = Sprite2D.new()
-	slash.texture = SpriteGenerator.get_texture("slash_arc")
+	slash.texture = _tex_slash_arc
 	slash.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	slash.global_position = global_position + direction * radius * 0.5
 	slash.rotation = direction.angle()
@@ -1241,11 +1280,12 @@ func _spawn_slash_vfx(direction: Vector2, radius: float, scale_mult: float) -> v
 	tween.tween_callback(slash.queue_free)
 
 func _spawn_impact_vfx(pos: Vector2, is_crit: bool = false) -> void:
-	var spark_count = 6 if is_crit else 3
+	var spark_count = 4 if is_crit else 2
 	var spread = 28.0 if is_crit else 18.0
+	var world = _get_world_node()
 	for i in range(spark_count):
 		var spark = Sprite2D.new()
-		spark.texture = SpriteGenerator.get_texture("crystal_white")
+		spark.texture = _tex_crystal_white
 		spark.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		spark.global_position = pos
 		var sc = randf_range(0.3, 0.7) if not is_crit else randf_range(0.5, 1.0)
@@ -1255,7 +1295,7 @@ func _spawn_impact_vfx(pos: Vector2, is_crit: bool = false) -> void:
 		var g = randf_range(0.2, 0.5) if not is_crit else randf_range(0.6, 0.9)
 		spark.modulate = Color(r, g, 0.1, 1.0)
 		spark.z_index = 12
-		_get_world_node().add_child(spark)
+		world.add_child(spark)
 		var dir = Vector2.from_angle(randf() * TAU) * randf_range(spread * 0.4, spread)
 		var dur = randf_range(0.12, 0.22)
 		var tween = spark.create_tween()
@@ -1268,13 +1308,13 @@ func _spawn_impact_vfx(pos: Vector2, is_crit: bool = false) -> void:
 
 	# White flash ring at impact centre
 	var flash = Sprite2D.new()
-	flash.texture = SpriteGenerator.get_texture("selection_red")
+	flash.texture = _tex_selection_red
 	flash.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	flash.modulate = Color(1.0, 0.9, 0.5, 0.9) if not is_crit else Color(1.0, 0.3, 0.1, 1.0)
 	flash.scale = Vector2(0.2, 0.2)
 	flash.z_index = 13
 	flash.global_position = pos
-	_get_world_node().add_child(flash)
+	world.add_child(flash)
 	var ft = flash.create_tween()
 	ft.set_parallel(true)
 	ft.tween_property(flash, "scale", Vector2(1.2, 1.2) if not is_crit else Vector2(2.0, 2.0), 0.1)
@@ -1296,16 +1336,9 @@ func _do_hit_freeze(is_crit: bool) -> void:
 	_hit_freeze_active = false
 
 func _do_screen_shake(intensity: float) -> void:
-	# Kill any running shake so they don't fight over the offset
-	if _shake_tween and _shake_tween.is_valid():
-		_shake_tween.kill()
-		camera.offset = Vector2.ZERO
-	_shake_tween = create_tween()
-	for i in range(4):
-		var decay = 1.0 - float(i) / 4.0
-		var shake = Vector2(randf_range(-1, 1), randf_range(-1, 1)).normalized() * intensity * decay
-		_shake_tween.tween_property(camera, "offset", shake, 0.02)
-	_shake_tween.tween_property(camera, "offset", Vector2.ZERO, 0.03)
+	# Procedural shake — driven by _physics_process, no tween allocation
+	_shake_intensity = intensity
+	_shake_time_left = SHAKE_DURATION
 
 func _spawn_auto_attack_projectile(target: Node2D) -> void:
 	pass  # Handled by _do_ranged_attack now
@@ -1336,7 +1369,7 @@ func _on_pickup_area_area_entered(area: Area2D) -> void:
 
 func _spawn_buff_vfx(color: Color, duration: float) -> void:
 	var vfx = Sprite2D.new()
-	vfx.texture = SpriteGenerator.get_texture("beacon_blue")
+	vfx.texture = _tex_beacon_blue
 	vfx.modulate = color
 	vfx.z_index = -1
 	add_child(vfx)
@@ -1358,10 +1391,14 @@ func _spawn_move_indicator(pos: Vector2) -> void:
 	tween.tween_callback(indicator.queue_free)
 
 func _get_world_node() -> Node:
+	if _world_node and is_instance_valid(_world_node):
+		return _world_node
 	var world = get_tree().get_nodes_in_group("world")
 	if world.size() > 0:
-		return world[0]
-	return get_tree().current_scene
+		_world_node = world[0]
+	else:
+		_world_node = get_tree().current_scene
+	return _world_node
 
 func get_stats_dict() -> Dictionary:
 	return stats.get_stats_dict()

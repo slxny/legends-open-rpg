@@ -123,26 +123,33 @@ var _alive_count: int = 0
 var _respawn_timer: float = 0.0
 var _waiting_respawn: bool = false
 var _times_respawned: int = 0
+var _cached_player: Node2D = null
+var _player_check_timer: float = 0.0
+const PLAYER_CHECK_INTERVAL: float = 0.5  # Only check player proximity twice per second
 
 func _ready() -> void:
 	_spawn_enemies(false)
 
 func _process(delta: float) -> void:
-	if _waiting_respawn:
-		# Never respawn while player is on screen (within view distance)
+	if not _waiting_respawn:
+		return
+	# Throttle player proximity checks to twice per second
+	_player_check_timer -= delta
+	if _player_check_timer <= 0.0:
+		_player_check_timer = PLAYER_CHECK_INTERVAL
 		if _is_player_nearby():
 			return
-		_respawn_timer -= delta
-		if _respawn_timer <= 0:
-			_waiting_respawn = false
-			_spawn_enemies(true)
+	_respawn_timer -= delta
+	if _respawn_timer <= 0:
+		_waiting_respawn = false
+		_spawn_enemies(true)
 
 func _is_player_nearby() -> bool:
-	var players = get_tree().get_nodes_in_group("player")
-	for player in players:
-		if is_instance_valid(player):
-			if global_position.distance_to(player.global_position) < 600.0:
-				return true
+	if not _cached_player or not is_instance_valid(_cached_player):
+		var players = get_tree().get_nodes_in_group("player")
+		_cached_player = players[0] if players.size() > 0 else null
+	if _cached_player and is_instance_valid(_cached_player):
+		return global_position.distance_squared_to(_cached_player.global_position) < 360000.0  # 600^2
 	return false
 
 func _spawn_enemies(is_respawn: bool) -> void:
@@ -189,9 +196,11 @@ func _spawn_enemies(is_respawn: bool) -> void:
 
 func _on_enemy_died(enemy: Node2D, xp_reward: int, gold_reward: int) -> void:
 	GameManager.record_kill(enemy.enemy_name)
-	var players = get_tree().get_nodes_in_group("player")
-	if players.size() > 0:
-		var player = players[0]
+	if not _cached_player or not is_instance_valid(_cached_player):
+		var players = get_tree().get_nodes_in_group("player")
+		_cached_player = players[0] if players.size() > 0 else null
+	var player = _cached_player
+	if player and is_instance_valid(player):
 		if player.stats:
 			player.stats.add_xp(xp_reward)
 

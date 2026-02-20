@@ -25,20 +25,27 @@ func _ready() -> void:
 func get_sfx(sfx_name: String) -> AudioStreamWAV:
 	return _sfx_cache.get(sfx_name)
 
+var _next_sfx_player: int = 0  # Round-robin index for SFX pool
+
 func play_sfx(sfx_name: String, volume_offset: float = 0.0) -> void:
 	var stream = _sfx_cache.get(sfx_name)
 	if not stream:
 		return
-	for p in _sfx_players:
+	# Quick check from round-robin position for an idle player
+	for _i in range(SFX_POOL_SIZE):
+		var p = _sfx_players[_next_sfx_player]
+		_next_sfx_player = (_next_sfx_player + 1) % SFX_POOL_SIZE
 		if not p.playing:
 			p.stream = stream
 			p.volume_db = _sfx_volume_db + volume_offset
 			p.play()
 			return
-	# All players busy — steal the first
-	_sfx_players[0].stream = stream
-	_sfx_players[0].volume_db = _sfx_volume_db + volume_offset
-	_sfx_players[0].play()
+	# All players busy — steal the next in round-robin
+	var p = _sfx_players[_next_sfx_player]
+	_next_sfx_player = (_next_sfx_player + 1) % SFX_POOL_SIZE
+	p.stream = stream
+	p.volume_db = _sfx_volume_db + volume_offset
+	p.play()
 
 func play_music(music_name: String) -> void:
 	var stream = _music_cache.get(music_name)

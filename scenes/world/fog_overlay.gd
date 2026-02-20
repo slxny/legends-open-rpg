@@ -9,15 +9,16 @@ var _camera: Camera2D = null
 func _ready() -> void:
 	z_index = 100  # Render on top of everything
 	FogOfWarManager.fog_updated.connect(_on_fog_updated)
+	# Cache camera reference once instead of every frame
+	call_deferred("_cache_camera")
 
-func _on_fog_updated() -> void:
-	queue_redraw()
-
-func _process(_delta: float) -> void:
-	# Follow camera
+func _cache_camera() -> void:
 	var players = get_tree().get_nodes_in_group("player")
 	if players.size() > 0 and is_instance_valid(players[0]):
 		_camera = players[0].get_node_or_null("Camera2D")
+
+func _on_fog_updated() -> void:
+	queue_redraw()
 
 func _draw() -> void:
 	if not _camera:

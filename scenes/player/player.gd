@@ -21,8 +21,8 @@ var _is_moving_to_target: bool = false
 var _shadow: Sprite2D = null
 
 # Smooth movement
-const ACCEL: float = 1200.0  # Pixels/sec² — how fast we reach top speed
-const FRICTION: float = 1800.0  # Pixels/sec² — how fast we stop (snappier than accel)
+const ACCEL: float = 900.0  # Pixels/sec² — how fast we reach top speed
+const FRICTION: float = 1400.0  # Pixels/sec² — how fast we stop
 
 # Walk animation — 4-frame cycle per direction: idle, stride1, passing, stride2
 # Stored as: _walk_frames[dir_key] = [frame1, frame2, frame3]  (idle = _dir_textures[dir_key])

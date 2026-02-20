@@ -34,6 +34,8 @@ const WALK_FPS: float = 8.0  # Frames per second for walk cycle
 # Attack state
 var _is_attack_animating: bool = false
 var _attack_cooldown: float = 0.0
+var _hit_freeze_active: bool = false  # Guard against overlapping hit freezes
+var _shake_tween: Tween = null  # Track screen shake to prevent overlap
 
 # Status effects applied by enemies
 var _is_paralyzed: bool = false
@@ -1180,7 +1182,7 @@ func _spawn_slash_vfx(direction: Vector2, radius: float, scale_mult: float) -> v
 	tween.tween_callback(slash.queue_free)
 
 func _spawn_impact_vfx(pos: Vector2, is_crit: bool = false) -> void:
-	var spark_count = 12 if is_crit else 8
+	var spark_count = 6 if is_crit else 3
 	var spread = 28.0 if is_crit else 18.0
 	for i in range(spark_count):
 		var spark = Sprite2D.new()
@@ -1222,21 +1224,29 @@ func _spawn_impact_vfx(pos: Vector2, is_crit: bool = false) -> void:
 	ft.tween_callback(flash.queue_free)
 
 func _do_hit_freeze(is_crit: bool) -> void:
-	# Brief time-scale dip for punch impact feel
-	var freeze_dur = 0.06 if not is_crit else 0.12
-	Engine.time_scale = 0.05
-	await get_tree().create_timer(freeze_dur * 0.05).timeout
+	if _hit_freeze_active:
+		return  # Don't stack freezes
+	_hit_freeze_active = true
+	# Brief time-scale dip — 1-2 real frames, not seconds
+	Engine.time_scale = 0.1
+	var freeze_dur = 0.03 if not is_crit else 0.05
+	# process_always so the timer isn't dilated by the time_scale we just set
+	var timer = get_tree().create_timer(freeze_dur, true, false, true)
+	await timer.timeout
 	Engine.time_scale = 1.0
+	_hit_freeze_active = false
 
 func _do_screen_shake(intensity: float) -> void:
-	var original_offset = camera.offset
-	var tween = create_tween()
-	# Fast burst of shakes then settle
-	for i in range(6):
-		var decay = 1.0 - float(i) / 6.0
+	# Kill any running shake so they don't fight over the offset
+	if _shake_tween and _shake_tween.is_valid():
+		_shake_tween.kill()
+		camera.offset = Vector2.ZERO
+	_shake_tween = create_tween()
+	for i in range(4):
+		var decay = 1.0 - float(i) / 4.0
 		var shake = Vector2(randf_range(-1, 1), randf_range(-1, 1)).normalized() * intensity * decay
-		tween.tween_property(camera, "offset", original_offset + shake, 0.025)
-	tween.tween_property(camera, "offset", original_offset, 0.04)
+		_shake_tween.tween_property(camera, "offset", shake, 0.02)
+	_shake_tween.tween_property(camera, "offset", Vector2.ZERO, 0.03)
 
 func _spawn_auto_attack_projectile(target: Node2D) -> void:
 	pass  # Handled by _do_ranged_attack now

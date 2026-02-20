@@ -236,12 +236,19 @@ func _update_walk_bob(delta: float) -> void:
 		var squash = 1.0 + sin(_walk_bob_time) * 0.02 * speed_ratio
 		sprite.scale = Vector2(1.0 / squash, squash)
 	else:
-		# Settle back to idle smoothly
+		# Settle back to idle — snap once close enough to stop sub-pixel jitter
 		_walk_bob_time = 0.0
-		sprite.offset.y = lerp(sprite.offset.y, -20.0, 12.0 * delta)
-		sprite.offset.x = lerp(sprite.offset.x, 0.0, 12.0 * delta)
-		sprite.rotation = lerp(sprite.rotation, 0.0, 12.0 * delta)
-		sprite.scale = sprite.scale.lerp(Vector2.ONE, 12.0 * delta)
+		if abs(sprite.offset.y - (-20.0)) < 0.05 and abs(sprite.offset.x) < 0.05 \
+				and abs(sprite.rotation) < 0.001 and sprite.scale.distance_to(Vector2.ONE) < 0.001:
+			sprite.offset.y = -20.0
+			sprite.offset.x = 0.0
+			sprite.rotation = 0.0
+			sprite.scale = Vector2.ONE
+		else:
+			sprite.offset.y = lerp(sprite.offset.y, -20.0, 12.0 * delta)
+			sprite.offset.x = lerp(sprite.offset.x, 0.0, 12.0 * delta)
+			sprite.rotation = lerp(sprite.rotation, 0.0, 12.0 * delta)
+			sprite.scale = sprite.scale.lerp(Vector2.ONE, 12.0 * delta)
 
 const ZOOM_MIN := Vector2(1.5, 1.5)
 const ZOOM_MAX := Vector2(5.0, 5.0)

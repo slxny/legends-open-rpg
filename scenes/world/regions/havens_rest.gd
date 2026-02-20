@@ -98,6 +98,35 @@ func _generate_terrain() -> void:
 	for camp_pos in _camp_positions:
 		_add_creep_ground(camp_pos, randf_range(140, 200))
 
+	# --- Large terrain variation overlays: tinted blobs that break up repetition ---
+	var blob_rng = RandomNumberGenerator.new()
+	blob_rng.seed = 777
+	# Variety of earth/green tints that blend naturally with jungle ground
+	var blob_tints = [
+		Color(0.15, 0.25, 0.1, 1.0),  # Darker green (dense canopy)
+		Color(0.12, 0.22, 0.08, 1.0), # Deep moss
+		Color(0.2, 0.3, 0.12, 1.0),   # Lighter clearing
+		Color(0.18, 0.15, 0.08, 1.0), # Brown-earth
+		Color(0.1, 0.2, 0.15, 1.0),   # Blue-green (damp area)
+		Color(0.22, 0.2, 0.1, 1.0),   # Dry patch
+		Color(0.08, 0.18, 0.06, 1.0), # Very dark (shadow)
+		Color(0.16, 0.28, 0.1, 1.0),  # Bright grass
+	]
+	for _i in range(45):
+		var pos = Vector2(blob_rng.randf_range(-5800, 5800), blob_rng.randf_range(-4300, 4300))
+		if pos.length() < 500:
+			continue  # Skip town area
+		var blob = Sprite2D.new()
+		blob.texture = SpriteGenerator.get_texture("terrain_blob")
+		blob.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		blob.position = pos
+		var s = blob_rng.randf_range(3.0, 8.0)
+		blob.scale = Vector2(s, s * blob_rng.randf_range(0.6, 1.4))
+		blob.rotation = blob_rng.randf_range(0, TAU)
+		blob.modulate = blob_tints[blob_rng.randi() % blob_tints.size()]
+		blob.z_index = -9
+		add_child(blob)
+
 	# Scattered dirt patches across the expanded map
 	var rng = RandomNumberGenerator.new()
 	rng.seed = 555

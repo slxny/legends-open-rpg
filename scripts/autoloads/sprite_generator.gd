@@ -55,7 +55,7 @@ func _init_asset_dirs() -> void:
 	for n in ["tree_jungle", "tree_small", "tree_dead", "rock", "rock_large",
 			"bush", "flowers", "grass_tuft", "grass_tuft_tall",
 			"mushroom_cluster", "fallen_log", "vines", "ground_debris",
-			"dirt_patch", "cliff_face", "icicles"]:
+			"dirt_patch", "terrain_blob", "cliff_face", "icicles"]:
 		_asset_dirs[n] = "environment"
 	# Buildings
 	for n in ["shop_building", "armory_building", "town_hall", "landing_pad", "hatchery",
@@ -163,6 +163,7 @@ func _generate_all() -> void:
 	_gen_or_load("vines")
 	_gen_or_load("ground_debris")
 	_gen_or_load("dirt_patch")
+	_gen_or_load("terrain_blob")
 	# UI
 	_gen_or_load("skull_icon")
 	# Selection / VFX
@@ -1834,13 +1835,54 @@ func _gen_town_wall_h() -> void:
 	textures["town_wall_h"] = ImageTexture.create_from_image(img)
 
 func _gen_town_grass() -> void:
-	var img = Image.create(16, 16, false, Image.FORMAT_RGBA8)
+	var size = 64
+	var img = Image.create(size, size, false, Image.FORMAT_RGBA8)
 	# Maintained grass — brighter green with subtle variation
 	img.fill(Color(0.22, 0.45, 0.15))
-	for y in range(16):
-		for x in range(16):
-			var v = (hash(x * 17 + y * 31) % 100) / 1000.0 - 0.05
-			img.set_pixel(x, y, Color(0.22 + v, 0.45 + v * 1.5, 0.15 + v * 0.5))
+	var rng = RandomNumberGenerator.new()
+	rng.seed = 300
+
+	# Gentle mowing-pattern stripes (alternating slightly lighter/darker rows)
+	for y in range(size):
+		var stripe = 0.01 * sin(float(y) / 4.0 * TAU)
+		for x in range(size):
+			var base = img.get_pixel(x, y)
+			img.set_pixel(x, y, Color(base.r + stripe, base.g + stripe * 1.5, base.b + stripe * 0.5))
+
+	# Soft elliptical patches for natural variation
+	for _i in range(20):
+		var cx = rng.randi_range(0, size - 1)
+		var cy = rng.randi_range(0, size - 1)
+		var rx = rng.randi_range(4, 14)
+		var ry = rng.randi_range(3, 10)
+		var shade = rng.randf_range(0.0, 1.0)
+		var c: Color
+		if shade < 0.4:
+			c = Color(rng.randf_range(0.18, 0.24), rng.randf_range(0.4, 0.5), rng.randf_range(0.12, 0.18))
+		elif shade < 0.7:
+			c = Color(rng.randf_range(0.24, 0.3), rng.randf_range(0.48, 0.56), rng.randf_range(0.16, 0.22))
+		else:
+			c = Color(rng.randf_range(0.2, 0.26), rng.randf_range(0.42, 0.52), rng.randf_range(0.13, 0.19))
+		_fill_ellipse(img, cx, cy, rx, ry, c)
+
+	# Fine per-pixel noise
+	for y in range(size):
+		for x in range(size):
+			var v = (hash(x * 17 + y * 31 + 7) % 100) / 1200.0 - 0.04
+			var existing = img.get_pixel(x, y)
+			img.set_pixel(x, y, Color(
+				clampf(existing.r + v, 0.14, 0.34),
+				clampf(existing.g + v * 1.5, 0.35, 0.6),
+				clampf(existing.b + v * 0.5, 0.1, 0.25)))
+
+	# Tiny flower specks (white, yellow, purple)
+	for _i in range(8):
+		var x = rng.randi_range(1, size - 2)
+		var y = rng.randi_range(1, size - 2)
+		var flower_colors = [Color(0.9, 0.9, 0.85), Color(0.9, 0.85, 0.3), Color(0.7, 0.4, 0.8)]
+		var fc = flower_colors[rng.randi() % flower_colors.size()]
+		img.set_pixel(x, y, fc)
+
 	textures["town_grass"] = ImageTexture.create_from_image(img)
 
 func _gen_town_hall() -> void:
@@ -2059,81 +2101,136 @@ func _gen_stone_floor() -> void:
 	textures["stone_floor"] = ImageTexture.create_from_image(img)
 
 # ============================================================
-# RICH GROUND TILES (128x128 — SC:BW jungle terrain)
+# RICH GROUND TILES (SC:BW jungle terrain)
 # ============================================================
 
 func _gen_ground_jungle() -> void:
-	var size = 128
+	var size = 512
 	var img = Image.create(size, size, false, Image.FORMAT_RGBA8)
 	# Base dark jungle green
 	img.fill(Color(0.06, 0.14, 0.04))
 
-	# Simulate noise-like variation with overlapping patches
 	var rng = RandomNumberGenerator.new()
-	rng.seed = 42  # Deterministic for consistent look
+	rng.seed = 42
 
-	# Large terrain patches (dirt/darker grass areas)
-	for _i in range(18):
-		var cx = rng.randi_range(0, size - 1)
-		var cy = rng.randi_range(0, size - 1)
-		var rx = rng.randi_range(8, 25)
-		var ry = rng.randi_range(6, 20)
-		var shade = rng.randf_range(0.0, 1.0)
-		var patch_color: Color
-		if shade < 0.3:
-			# Dirt patch
-			patch_color = Color(
-				rng.randf_range(0.12, 0.18),
-				rng.randf_range(0.08, 0.12),
-				rng.randf_range(0.03, 0.06))
-		elif shade < 0.6:
-			# Dark green
-			patch_color = Color(
-				rng.randf_range(0.04, 0.08),
-				rng.randf_range(0.1, 0.18),
-				rng.randf_range(0.03, 0.06))
-		else:
-			# Slightly lighter green
-			patch_color = Color(
-				rng.randf_range(0.07, 0.12),
-				rng.randf_range(0.16, 0.24),
-				rng.randf_range(0.04, 0.08))
-		_fill_ellipse(img, cx, cy, rx, ry, patch_color)
-
-	# Medium detail patches
+	# --- Large biome-scale patches for macro variation ---
+	# These create distinct zones so each 128px section looks different
 	for _i in range(40):
 		var cx = rng.randi_range(0, size - 1)
 		var cy = rng.randi_range(0, size - 1)
-		var rx = rng.randi_range(3, 10)
-		var ry = rng.randi_range(2, 8)
-		var c = Color(
-			rng.randf_range(0.05, 0.14),
-			rng.randf_range(0.1, 0.22),
-			rng.randf_range(0.03, 0.08))
+		var rx = rng.randi_range(30, 100)
+		var ry = rng.randi_range(25, 80)
+		var shade = rng.randf_range(0.0, 1.0)
+		var patch_color: Color
+		if shade < 0.2:
+			# Dirt/mud patch
+			patch_color = Color(
+				rng.randf_range(0.12, 0.2),
+				rng.randf_range(0.08, 0.14),
+				rng.randf_range(0.03, 0.07))
+		elif shade < 0.4:
+			# Deep dark green (dense canopy shadow)
+			patch_color = Color(
+				rng.randf_range(0.03, 0.06),
+				rng.randf_range(0.08, 0.14),
+				rng.randf_range(0.02, 0.05))
+		elif shade < 0.6:
+			# Medium green (open clearing)
+			patch_color = Color(
+				rng.randf_range(0.08, 0.14),
+				rng.randf_range(0.18, 0.28),
+				rng.randf_range(0.05, 0.1))
+		elif shade < 0.8:
+			# Mossy green-brown
+			patch_color = Color(
+				rng.randf_range(0.1, 0.16),
+				rng.randf_range(0.14, 0.2),
+				rng.randf_range(0.04, 0.08))
+		else:
+			# Lighter grass area
+			patch_color = Color(
+				rng.randf_range(0.1, 0.16),
+				rng.randf_range(0.22, 0.32),
+				rng.randf_range(0.06, 0.1))
+		_fill_ellipse(img, cx, cy, rx, ry, patch_color)
+
+	# --- Medium detail patches for mid-range texture ---
+	for _i in range(120):
+		var cx = rng.randi_range(0, size - 1)
+		var cy = rng.randi_range(0, size - 1)
+		var rx = rng.randi_range(6, 25)
+		var ry = rng.randi_range(4, 20)
+		var shade = rng.randf_range(0.0, 1.0)
+		var c: Color
+		if shade < 0.3:
+			c = Color(
+				rng.randf_range(0.05, 0.12),
+				rng.randf_range(0.1, 0.2),
+				rng.randf_range(0.03, 0.07))
+		elif shade < 0.5:
+			# Small dirt spots
+			c = Color(
+				rng.randf_range(0.13, 0.19),
+				rng.randf_range(0.1, 0.14),
+				rng.randf_range(0.05, 0.08))
+		else:
+			c = Color(
+				rng.randf_range(0.06, 0.14),
+				rng.randf_range(0.12, 0.24),
+				rng.randf_range(0.03, 0.09))
 		_fill_ellipse(img, cx, cy, rx, ry, c)
 
-	# Fine pixel noise for texture
-	for _i in range(600):
+	# --- Small rocky/pebble clusters ---
+	for _i in range(30):
+		var cx = rng.randi_range(0, size - 1)
+		var cy = rng.randi_range(0, size - 1)
+		var rx = rng.randi_range(2, 6)
+		var ry = rng.randi_range(2, 5)
+		var c = Color(
+			rng.randf_range(0.16, 0.24),
+			rng.randf_range(0.14, 0.2),
+			rng.randf_range(0.1, 0.14))
+		_fill_ellipse(img, cx, cy, rx, ry, c)
+
+	# --- Winding path-like trails (connect random points) ---
+	for _trail in range(5):
+		var px = rng.randf_range(0, size)
+		var py = rng.randf_range(0, size)
+		var trail_color = Color(
+			rng.randf_range(0.14, 0.2),
+			rng.randf_range(0.1, 0.15),
+			rng.randf_range(0.05, 0.08))
+		for _step in range(rng.randi_range(40, 100)):
+			px += rng.randf_range(-4, 4)
+			py += rng.randf_range(-4, 4)
+			px = fmod(px + size, size)
+			py = fmod(py + size, size)
+			var ix = int(px) % size
+			var iy = int(py) % size
+			_fill_ellipse(img, ix, iy, rng.randi_range(2, 5), rng.randi_range(1, 4), trail_color)
+
+	# Fine pixel noise for texture grain
+	for _i in range(3000):
 		var x = rng.randi_range(0, size - 1)
 		var y = rng.randi_range(0, size - 1)
 		var existing = img.get_pixel(x, y)
 		var variation = rng.randf_range(-0.03, 0.03)
 		img.set_pixel(x, y, Color(
-			clampf(existing.r + variation, 0.02, 0.2),
-			clampf(existing.g + variation * 1.5, 0.06, 0.28),
-			clampf(existing.b + variation * 0.5, 0.01, 0.1)))
+			clampf(existing.r + variation, 0.02, 0.25),
+			clampf(existing.g + variation * 1.5, 0.06, 0.35),
+			clampf(existing.b + variation * 0.5, 0.01, 0.12)))
 
-	# Occasional tiny bright green specks (grass tips)
-	for _i in range(80):
+	# Bright green specks (grass tips catching light)
+	for _i in range(400):
 		var x = rng.randi_range(0, size - 1)
 		var y = rng.randi_range(0, size - 1)
 		img.set_pixel(x, y, Color(
-			rng.randf_range(0.12, 0.2),
-			rng.randf_range(0.28, 0.4),
-			rng.randf_range(0.06, 0.12)))
+			rng.randf_range(0.12, 0.22),
+			rng.randf_range(0.28, 0.42),
+			rng.randf_range(0.06, 0.14)))
 
-	# Tiny dark shadow spots
-	for _i in range(30):
+	# Tiny dark shadow spots (root shadows, leaf litter)
+	for _i in range(150):
 		var x = rng.randi_range(0, size - 2)
 		var y = rng.randi_range(0, size - 2)
 		var dark = Color(0.03, 0.06, 0.02)
@@ -2189,7 +2286,7 @@ func _gen_ground_creep() -> void:
 	textures["ground_creep"] = ImageTexture.create_from_image(img)
 
 func _gen_ground_stone() -> void:
-	var size = 128
+	var size = 256
 	var img = Image.create(size, size, false, Image.FORMAT_RGBA8)
 	# Stone floor for town area
 	img.fill(Color(0.28, 0.26, 0.22))
@@ -2197,42 +2294,64 @@ func _gen_ground_stone() -> void:
 	var rng = RandomNumberGenerator.new()
 	rng.seed = 77
 
-	# Stone block grid lines
+	# Stone block grid lines (16px blocks, brick pattern)
 	for x in range(size):
-		for y_line in [0, 16, 32, 48, 64, 80, 96, 112]:
-			if y_line < size:
-				var existing = img.get_pixel(x, y_line)
-				img.set_pixel(x, y_line, existing.darkened(0.25))
+		for y_line in range(0, size, 16):
+			var existing = img.get_pixel(x, y_line)
+			img.set_pixel(x, y_line, existing.darkened(0.25))
 	for y in range(size):
-		# Offset every other row for brick pattern
 		var row = y / 16
 		var x_offset = 8 if row % 2 == 1 else 0
-		for x_line in [0, 16, 32, 48, 64, 80, 96, 112]:
+		for x_line in range(0, size, 16):
 			var actual_x = (x_line + x_offset) % size
-			if actual_x < size:
-				var existing = img.get_pixel(actual_x, y)
-				img.set_pixel(actual_x, y, existing.darkened(0.2))
+			var existing = img.get_pixel(actual_x, y)
+			img.set_pixel(actual_x, y, existing.darkened(0.2))
 
-	# Subtle color variation per "stone block"
-	for _i in range(30):
+	# Per-brick color variation (each block gets a unique shade)
+	for by in range(0, size, 16):
+		for bx in range(0, size, 16):
+			var row = by / 16
+			var x_off = 8 if row % 2 == 1 else 0
+			var block_x = bx + x_off
+			var v = rng.randf_range(-0.06, 0.06)
+			var block_color = Color(0.28 + v, 0.26 + v * 0.8, 0.22 + v * 0.4)
+			for py in range(by + 1, min(by + 16, size)):
+				for px in range(block_x + 1, min(block_x + 16, size)):
+					var actual_px = px % size
+					var existing = img.get_pixel(actual_px, py)
+					img.set_pixel(actual_px, py, existing.lerp(block_color, 0.4))
+
+	# Weathering stains and cracks
+	for _i in range(40):
 		var cx = rng.randi_range(0, size - 1)
 		var cy = rng.randi_range(0, size - 1)
-		var rx = rng.randi_range(3, 7)
-		var ry = rng.randi_range(3, 7)
-		var v = rng.randf_range(-0.04, 0.04)
-		_fill_ellipse(img, cx, cy, rx, ry, Color(
-			0.28 + v, 0.26 + v, 0.22 + v * 0.5))
+		var rx = rng.randi_range(3, 10)
+		var ry = rng.randi_range(3, 10)
+		var stain = Color(
+			rng.randf_range(0.22, 0.32),
+			rng.randf_range(0.2, 0.28),
+			rng.randf_range(0.16, 0.24))
+		_fill_ellipse(img, cx, cy, rx, ry, stain)
+
+	# Moss growing between some bricks (green tint in grout lines)
+	for _i in range(25):
+		var x = rng.randi_range(0, size - 1)
+		var y_line = rng.randi_range(0, size / 16 - 1) * 16
+		for dx in range(rng.randi_range(3, 12)):
+			var px = (x + dx) % size
+			if y_line < size:
+				img.set_pixel(px, y_line, Color(0.15, 0.22, 0.1))
 
 	# Pixel noise for weathered look
-	for _i in range(300):
+	for _i in range(800):
 		var x = rng.randi_range(0, size - 1)
 		var y = rng.randi_range(0, size - 1)
 		var existing = img.get_pixel(x, y)
 		var v = rng.randf_range(-0.03, 0.03)
 		img.set_pixel(x, y, Color(
-			clampf(existing.r + v, 0.18, 0.38),
-			clampf(existing.g + v, 0.16, 0.36),
-			clampf(existing.b + v, 0.12, 0.32)))
+			clampf(existing.r + v, 0.15, 0.4),
+			clampf(existing.g + v, 0.14, 0.38),
+			clampf(existing.b + v, 0.1, 0.34)))
 
 	textures["ground_stone"] = ImageTexture.create_from_image(img)
 
@@ -2361,6 +2480,23 @@ func _gen_dirt_patch() -> void:
 	_fill_ellipse(img, 14, 11, 11, 8, Color(0.16, 0.12, 0.07, 0.6))
 	_fill_ellipse(img, 18, 13, 8, 6, Color(0.18, 0.14, 0.08, 0.5))
 	textures["dirt_patch"] = ImageTexture.create_from_image(img)
+
+func _gen_terrain_blob() -> void:
+	# Large soft radial blob for terrain color variation overlays.
+	# White center fading to transparent edges — tinted via modulate at placement.
+	var size = 128
+	var img = Image.create(size, size, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var center = Vector2(size / 2.0, size / 2.0)
+	var radius = size / 2.0
+	for y in range(size):
+		for x in range(size):
+			var dist = Vector2(x, y).distance_to(center) / radius
+			if dist < 1.0:
+				# Smooth falloff: cubic for soft edges
+				var alpha = (1.0 - dist * dist) * (1.0 - dist * dist)
+				img.set_pixel(x, y, Color(1.0, 1.0, 1.0, alpha * 0.45))
+	textures["terrain_blob"] = ImageTexture.create_from_image(img)
 
 func _gen_skull_icon() -> void:
 	var img = Image.create(12, 12, false, Image.FORMAT_RGBA8)

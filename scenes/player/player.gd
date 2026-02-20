@@ -73,6 +73,7 @@ var _tap_resolved: bool = true    # True once resolved (allows hold-to-attack to
 var _charge_time: float = 0.0    # How long attack key has been held continuously
 var _is_charging: bool = false    # Whether charge VFX is showing
 var _charge_vfx: Sprite2D = null  # Glow VFX while charging
+var _charge_shake_tween: Tween = null  # Sprite shake during charge
 const TAP_RESOLVE_TIME: float = 0.12  # 120ms buffer — ~7 frames, barely perceptible
 const CHARGE_THRESHOLD: float = 1.5   # Hold 1.5s for charged slash
 
@@ -252,18 +253,6 @@ func _update_walk_anim(delta: float) -> void:
 				2: sprite.texture = frames[1]
 				3: sprite.texture = frames[2]
 	else:
-		# Settle back to idle — snap once close enough to stop sub-pixel jitter
-		if abs(sprite.offset.y - (-20.0)) < 0.05 and abs(sprite.offset.x) < 0.05 \
-				and abs(sprite.rotation) < 0.001 and sprite.scale.distance_to(Vector2.ONE) < 0.001:
-			sprite.offset.y = -20.0
-			sprite.offset.x = 0.0
-			sprite.rotation = 0.0
-			sprite.scale = Vector2.ONE
-		else:
-			sprite.offset.y = lerp(sprite.offset.y, -20.0, 12.0 * delta)
-			sprite.offset.x = lerp(sprite.offset.x, 0.0, 12.0 * delta)
-			sprite.rotation = lerp(sprite.rotation, 0.0, 12.0 * delta)
-			sprite.scale = sprite.scale.lerp(Vector2.ONE, 12.0 * delta)
 		# Stopped — return to idle pose
 		if _walk_anim_frame != -1:
 			_walk_anim_frame = -1
@@ -726,12 +715,17 @@ func _start_charge_vfx() -> void:
 	tween.tween_property(_charge_vfx, "modulate:a", 0.7, 0.3)
 	tween.tween_property(_charge_vfx, "modulate:a", 0.3, 0.3)
 	# Also vibrate sprite to show charge tension
-	var shake_tween = create_tween().set_loops()
-	shake_tween.set_meta("charge_shake", true)
-	shake_tween.tween_property(sprite, "offset:x", sprite.offset.x + 1.5, 0.03)
-	shake_tween.tween_property(sprite, "offset:x", sprite.offset.x - 1.5, 0.03)
+	if _charge_shake_tween and _charge_shake_tween.is_valid():
+		_charge_shake_tween.kill()
+	_charge_shake_tween = create_tween().set_loops()
+	_charge_shake_tween.tween_property(sprite, "offset:x", sprite.offset.x + 1.5, 0.03)
+	_charge_shake_tween.tween_property(sprite, "offset:x", sprite.offset.x - 1.5, 0.03)
 
 func _stop_charge_vfx() -> void:
+	if _charge_shake_tween and _charge_shake_tween.is_valid():
+		_charge_shake_tween.kill()
+		_charge_shake_tween = null
+		sprite.offset.x = 0.0
 	if _charge_vfx and is_instance_valid(_charge_vfx):
 		_charge_vfx.queue_free()
 		_charge_vfx = null

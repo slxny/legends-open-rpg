@@ -204,16 +204,20 @@ func _generate_all_sfx() -> void:
 	_sfx_cache["player_hurt"] = _gen_player_hurt()
 
 func _gen_sword_swing() -> AudioStreamWAV:
-	# Crisp whoosh — bright airy sweep, satisfying and clean
-	var samples = _make_samples(0.13)
-	# Airy high-mid noise for the "cut" feel
-	_add_pitched_noise(samples, 3000.0, 2000.0, 0.3)
-	_add_pitched_noise(samples, 1600.0, 1000.0, 0.25)
-	# Warm mid-range body so it doesn't sound thin
-	_pitch_sweep_sine(samples, 500.0, 250.0, 0.15)
-	_pitch_sweep_sine(samples, 1000.0, 500.0, 0.06)
-	_apply_envelope(samples, 0.005, 0.02, 0.10)
-	_soft_clip(samples, 1.2)
+	# Blade slash — metallic "shing" ring with airy swoosh
+	var samples = _make_samples(0.16)
+	# Metallic ring — inharmonic overtones that sound like steel
+	_add_sine(samples, 1800.0, 0.25)
+	_add_sine(samples, 2900.0, 0.18)
+	_add_sine(samples, 4200.0, 0.08)
+	# Slight descending pitch on the ring for realism
+	_pitch_sweep_sine(samples, 1400.0, 900.0, 0.12)
+	# Airy swoosh underneath
+	_add_pitched_noise(samples, 2500.0, 1600.0, 0.18)
+	# Warm body so it's not all treble
+	_pitch_sweep_sine(samples, 500.0, 300.0, 0.1)
+	_apply_envelope(samples, 0.004, 0.02, 0.14)
+	_soft_clip(samples, 1.3)
 	return _to_stream(samples)
 
 func _gen_hit_impact() -> AudioStreamWAV:

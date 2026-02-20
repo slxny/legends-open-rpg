@@ -66,13 +66,14 @@ var _combo_index: int = 0       # Which swing we're on in the current combo
 var _combo_timer: float = 0.0   # Time since last hit — resets combo if too long
 const COMBO_WINDOW: float = 1.8 # Seconds before combo resets
 
-# Special attack tracking — layered on top of normal attacks, never blocks them
-# Recent press timestamps: checked when an attack fires to detect rapid taps
-var _press_times: Array[float] = []
-var _charge_time: float = 0.0   # How long attack key has been held continuously
-var _is_charging: bool = false   # Whether charge VFX is showing
-var _charge_vfx: Sprite2D = null # Glow VFX while charging
-const MULTI_TAP_WINDOW: float = 0.22  # Presses must be THIS fast to count as multi-tap
+# Special attack input — short buffer so rapid taps resolve BEFORE basic attack fires
+var _tap_count: int = 0           # Taps accumulated during resolve window
+var _tap_resolve_timer: float = 0.0  # Countdown — when it hits 0, resolve the sequence
+var _tap_resolved: bool = true    # True once resolved (allows hold-to-attack to resume)
+var _charge_time: float = 0.0    # How long attack key has been held continuously
+var _is_charging: bool = false    # Whether charge VFX is showing
+var _charge_vfx: Sprite2D = null  # Glow VFX while charging
+const TAP_RESOLVE_TIME: float = 0.12  # 120ms buffer — ~7 frames, barely perceptible
 const CHARGE_THRESHOLD: float = 1.5   # Hold 1.5s for charged slash
 
 # Special attack type for current attack
@@ -195,19 +196,32 @@ func _physics_process(delta: float) -> void:
 			_combo_timer = 0.0
 			_last_dir_category = ""
 
-	# --- Attack input (hold or mash space — always works) ---
-	if not _is_paralyzed:
+	# --- Tap resolve: wait 0.12s after last press to see if more taps come ---
+	if _tap_count > 0 and not _tap_resolved and not _is_paralyzed:
+		_tap_resolve_timer -= delta
+		if _tap_resolve_timer <= 0.0:
+			# Resolve the tap sequence
+			var taps = _tap_count
+			_tap_count = 0
+			_tap_resolved = true
+			if taps >= 3:
+				_try_special_attack(SpecialAttack.WHIRLWIND)
+			elif taps >= 2:
+				_try_special_attack(SpecialAttack.POWER_STRIKE)
+			else:
+				# Single tap — fire normal attack immediately
+				_try_manual_attack()
+
+	# --- Hold-to-attack: only after tap sequence resolved ---
+	if not _is_paralyzed and _tap_resolved:
 		if Input.is_action_pressed("attack"):
-			# Track how long attack is held for charged slash
 			_charge_time += delta
 			if _charge_time >= CHARGE_THRESHOLD and not _is_charging and not _is_attack_animating:
 				_is_charging = true
 				_start_charge_vfx()
-			# Normal auto-attack while not in charged state
 			if not _is_charging:
 				_try_manual_attack()
 		else:
-			# Released — fire charged slash if held long enough
 			if _is_charging and not _is_attack_animating:
 				_is_charging = false
 				_stop_charge_vfx()
@@ -290,13 +304,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		else:
 			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
 
-	# Record spacebar press timestamps for multi-tap detection
+	# Tap buffering: each press restarts the short resolve timer
 	if event.is_action_pressed("attack") and not _is_paralyzed:
-		var now = Time.get_ticks_msec() / 1000.0
-		_press_times.append(now)
-		# Keep only recent presses (last 0.5s)
-		while _press_times.size() > 0 and now - _press_times[0] > 0.5:
-			_press_times.remove_at(0)
+		_tap_count += 1
+		_tap_resolve_timer = TAP_RESOLVE_TIME  # Reset window on each new tap
+		_tap_resolved = false
 
 	# Abilities (Q and E)
 	if event.is_action_pressed("ability_1"):
@@ -313,17 +325,6 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _try_manual_attack() -> void:
 	if _is_attack_animating or _attack_cooldown > 0.0:
-		return
-
-	# Check for rapid multi-tap → upgrade to special attack
-	var rapid_taps = _count_rapid_taps()
-	if rapid_taps >= 3:
-		_press_times.clear()
-		_try_special_attack(SpecialAttack.WHIRLWIND)
-		return
-	elif rapid_taps >= 2:
-		_press_times.clear()
-		_try_special_attack(SpecialAttack.POWER_STRIKE)
 		return
 
 	_attack_cooldown = 0.5 / stats.attack_speed
@@ -364,21 +365,6 @@ func _try_manual_attack() -> void:
 		_perform_attack(hit_target, attack_dir)
 	else:
 		_perform_swing_no_target(attack_dir)
-
-func _count_rapid_taps() -> int:
-	# Count how many very fast presses happened within the multi-tap window.
-	# Only consecutive presses where EACH gap is < MULTI_TAP_WINDOW count.
-	if _press_times.size() < 2:
-		return _press_times.size()
-	var count := 1
-	# Walk backwards from the most recent press
-	for i in range(_press_times.size() - 1, 0, -1):
-		var gap = _press_times[i] - _press_times[i - 1]
-		if gap <= MULTI_TAP_WINDOW:
-			count += 1
-		else:
-			break
-	return count
 
 func _process_status_effects(delta: float) -> void:
 	if _is_paralyzed:

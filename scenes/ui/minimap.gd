@@ -13,11 +13,14 @@ const FOG_CELL_SIZE_ON_MAP := Vector2(
 var _player: Node2D = null
 var _redraw_timer: float = 0.0
 const REDRAW_INTERVAL: float = 0.25  # Redraw 4 times per second, not 60
+var _cached_enemies: Array = []  # Cached enemy positions for minimap dots
+var _cached_explored_rects: Array = []  # Pre-built fog overlay rects
+var _fog_dirty: bool = true  # Rebuild fog cache on next draw
 
 func _ready() -> void:
 	custom_minimum_size = MINIMAP_SIZE
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	FogOfWarManager.fog_updated.connect(queue_redraw)
+	FogOfWarManager.fog_updated.connect(func(): _fog_dirty = true)
 
 func setup(player: Node2D) -> void:
 	_player = player
@@ -37,6 +40,12 @@ func _process(delta: float) -> void:
 	_redraw_timer -= delta
 	if _redraw_timer <= 0.0:
 		_redraw_timer = REDRAW_INTERVAL
+		# Snapshot enemy positions now instead of in _draw()
+		_cached_enemies.clear()
+		var enemies = get_tree().get_nodes_in_group("enemies")
+		for enemy in enemies:
+			if is_instance_valid(enemy) and FogOfWarManager.is_visible(enemy.global_position):
+				_cached_enemies.append(_world_to_minimap(enemy.global_position))
 		queue_redraw()
 
 func _draw() -> void:
@@ -73,12 +82,9 @@ func _draw() -> void:
 			var mpos = _world_to_minimap(camp_pos)
 			draw_circle(mpos, 2.5, Color(0.8, 0.2, 0.2, 0.7))
 
-	# Enemy dots (live enemies) — only if currently visible
-	var enemies = get_tree().get_nodes_in_group("enemies")
-	for enemy in enemies:
-		if is_instance_valid(enemy) and FogOfWarManager.is_visible(enemy.global_position):
-			var epos = _world_to_minimap(enemy.global_position)
-			draw_circle(epos, 1.5, Color(1.0, 0.3, 0.3, 0.8))
+	# Enemy dots (from cached snapshot, no group scan in _draw)
+	for epos in _cached_enemies:
+		draw_circle(epos, 1.5, Color(1.0, 0.3, 0.3, 0.8))
 
 	# Shop marker (yellow) — only if explored
 	var shop_world_pos = Vector2(260, -100)
@@ -93,17 +99,22 @@ func _draw() -> void:
 		draw_circle(ppos, 3.0, Color(1.0, 1.0, 1.0, blink))
 
 func _draw_fog_overlay() -> void:
-	# Draw explored/visible areas as colored cells
-	for cell in FogOfWarManager.explored_tiles:
-		var world_pos = Vector2(cell.x * 64, cell.y * 64)
-		var minimap_pos = _world_to_minimap(world_pos)
-		var is_vis = FogOfWarManager.visible_tiles.has(cell)
+	# Rebuild fog cache only when fog data actually changes
+	if _fog_dirty:
+		_fog_dirty = false
+		_cached_explored_rects.clear()
+		for cell in FogOfWarManager.explored_tiles:
+			var minimap_pos = _world_to_minimap(Vector2(cell.x * 64, cell.y * 64))
+			var is_vis = FogOfWarManager.visible_tiles.has(cell)
+			_cached_explored_rects.append([minimap_pos, is_vis])
+
+	for entry in _cached_explored_rects:
 		var color: Color
-		if is_vis:
-			color = Color(0.1, 0.2, 0.1, 0.9)  # Visible: full bright
+		if entry[1]:
+			color = Color(0.1, 0.2, 0.1, 0.9)
 		else:
-			color = Color(0.06, 0.1, 0.06, 0.9)  # Explored: dim
-		draw_rect(Rect2(minimap_pos, FOG_CELL_SIZE_ON_MAP), color)
+			color = Color(0.06, 0.1, 0.06, 0.9)
+		draw_rect(Rect2(entry[0], FOG_CELL_SIZE_ON_MAP), color)
 
 func _world_to_minimap(world_pos: Vector2) -> Vector2:
 	var normalized = (world_pos + WORLD_SIZE / 2.0) / WORLD_SIZE

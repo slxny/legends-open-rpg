@@ -42,6 +42,10 @@ var _patrol_speed_factor: float = 0.65  # Patrol at 65% of move speed — more a
 var _effect_chance: float = 0.0  # Overall chance this unit has any effect
 var _effect_type: String = ""    # "knockback", "paralyze", or "slow"
 
+# Pre-allocated label settings for damage numbers (avoid LabelSettings.new() per hit)
+static var _dmg_settings_normal: LabelSettings = null
+static var _dmg_settings_crit: LabelSettings = null
+
 func _ready() -> void:
 	add_to_group("enemies")
 	home_position = global_position
@@ -50,6 +54,19 @@ func _ready() -> void:
 		sprite.texture = tex
 	hp_bar.visible = false
 	name_label.visible = false
+	# Initialize shared label settings once (static, shared across all enemies)
+	if not _dmg_settings_normal:
+		_dmg_settings_normal = LabelSettings.new()
+		_dmg_settings_normal.font_size = 14
+		_dmg_settings_normal.font_color = Color.WHITE
+		_dmg_settings_normal.outline_size = 2
+		_dmg_settings_normal.outline_color = Color.BLACK
+	if not _dmg_settings_crit:
+		_dmg_settings_crit = LabelSettings.new()
+		_dmg_settings_crit.font_size = 28
+		_dmg_settings_crit.font_color = Color(1.0, 0.95, 0.1)
+		_dmg_settings_crit.outline_size = 3
+		_dmg_settings_crit.outline_color = Color.BLACK
 
 	# Shadow
 	_shadow = Sprite2D.new()
@@ -370,8 +387,8 @@ func _spawn_blood_splatter() -> void:
 	var blood_tex = SpriteGenerator.get_texture("blood_splatter")
 	if not blood_tex:
 		return
-	# Spawn 2-4 blood splatters around the death position
-	for _i in range(randi_range(2, 4)):
+	# Spawn 1-2 blood splatters around the death position
+	for _i in range(randi_range(1, 2)):
 		var blood = Sprite2D.new()
 		blood.texture = blood_tex
 		blood.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -455,12 +472,7 @@ func _spawn_damage_number(amount: int, is_crit: bool) -> void:
 	var label = Label.new()
 	label.text = str(amount) + ("!" if is_crit else "")
 	label.position = Vector2(randf_range(-10, 10) if not is_crit else randf_range(-6, 6), -30)
-	var settings = LabelSettings.new()
-	settings.font_size = 14 if not is_crit else 28
-	settings.font_color = Color.WHITE if not is_crit else Color(1.0, 0.95, 0.1)
-	settings.outline_size = 2 if not is_crit else 3
-	settings.outline_color = Color.BLACK
-	label.label_settings = settings
+	label.label_settings = _dmg_settings_crit if is_crit else _dmg_settings_normal
 	add_child(label)
 	var tween = create_tween()
 	if is_crit:

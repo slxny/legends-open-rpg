@@ -5,11 +5,12 @@ extends Node2D
 ## Updated by FogOfWarManager every trigger tick.
 
 var _camera: Camera2D = null
+const _FOG_DIM := Color(0.0, 0.0, 0.0, 0.5)
+const _FOG_BLACK := Color(0.0, 0.0, 0.0, 0.95)
 
 func _ready() -> void:
 	z_index = 100  # Render on top of everything
 	FogOfWarManager.fog_updated.connect(_on_fog_updated)
-	# Cache camera reference once instead of every frame
 	call_deferred("_cache_camera")
 
 func _cache_camera() -> void:
@@ -21,10 +22,11 @@ func _on_fog_updated() -> void:
 	queue_redraw()
 
 func _draw() -> void:
-	if not _camera:
-		return
+	if not _camera or not is_instance_valid(_camera):
+		_cache_camera()
+		if not _camera:
+			return
 
-	# Only draw fog for tiles visible on screen (performance)
 	var viewport_size = get_viewport_rect().size
 	var cam_pos = _camera.global_position
 	var zoom = _camera.zoom
@@ -33,21 +35,26 @@ func _draw() -> void:
 	var min_world = cam_pos - half_view - Vector2(128, 128)
 	var max_world = cam_pos + half_view + Vector2(128, 128)
 
-	var cell_size = FogOfWarManager.CELL_SIZE
-	var min_cell = Vector2i(int(floor(min_world.x / cell_size)), int(floor(min_world.y / cell_size)))
-	var max_cell = Vector2i(int(ceil(max_world.x / cell_size)), int(ceil(max_world.y / cell_size)))
+	var cell_size_f = float(FogOfWarManager.CELL_SIZE)
+	var min_cx = int(floor(min_world.x / cell_size_f))
+	var min_cy = int(floor(min_world.y / cell_size_f))
+	var max_cx = int(ceil(max_world.x / cell_size_f))
+	var max_cy = int(ceil(max_world.y / cell_size_f))
 
-	for cx in range(min_cell.x, max_cell.x + 1):
-		for cy in range(min_cell.y, max_cell.y + 1):
-			var cell = Vector2i(cx, cy)
-			var world_pos = Vector2(cx * cell_size, cy * cell_size)
-			var rect = Rect2(world_pos, Vector2(cell_size, cell_size))
+	var cell_vec = Vector2(cell_size_f, cell_size_f)
+	var visible = FogOfWarManager.visible_tiles
+	var explored = FogOfWarManager.explored_tiles
+	var cell = Vector2i()
 
-			if FogOfWarManager.visible_tiles.has(cell):
-				continue  # Fully visible — no overlay
-			elif FogOfWarManager.explored_tiles.has(cell):
-				# Explored but not visible — dim overlay
-				draw_rect(rect, Color(0.0, 0.0, 0.0, 0.5))
+	for cx in range(min_cx, max_cx + 1):
+		cell.x = cx
+		var wx = cx * cell_size_f
+		for cy in range(min_cy, max_cy + 1):
+			cell.y = cy
+			if visible.has(cell):
+				continue
+			var rect = Rect2(wx, cy * cell_size_f, cell_size_f, cell_size_f)
+			if explored.has(cell):
+				draw_rect(rect, _FOG_DIM)
 			else:
-				# Unexplored — solid black
-				draw_rect(rect, Color(0.0, 0.0, 0.0, 0.95))
+				draw_rect(rect, _FOG_BLACK)

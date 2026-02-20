@@ -9,21 +9,24 @@ const RESPAWN_DELAY := 3.0  # Seconds before respawn
 
 var _respawn_timers: Dictionary = {}  # player_id -> timer
 
+func _ready() -> void:
+	set_process(false)  # Only process when there are active respawn timers
+
 func request_respawn(player_id: int = 0) -> void:
 	if _respawn_timers.has(player_id):
 		return  # Already respawning
 	DeathCounterSystem.set_value("respawn_timer_p%d" % player_id, int(RESPAWN_DELAY))
 	_respawn_timers[player_id] = RESPAWN_DELAY
+	set_process(true)
 
 func _process(delta: float) -> void:
-	var to_remove: Array = []
-	for pid in _respawn_timers:
+	for pid in _respawn_timers.keys():
 		_respawn_timers[pid] -= delta
 		if _respawn_timers[pid] <= 0:
 			_execute_respawn(pid)
-			to_remove.append(pid)
-	for pid in to_remove:
-		_respawn_timers.erase(pid)
+			_respawn_timers.erase(pid)
+	if _respawn_timers.is_empty():
+		set_process(false)
 
 func _execute_respawn(player_id: int) -> void:
 	DeathCounterSystem.set_value("respawn_timer_p%d" % player_id, 0)

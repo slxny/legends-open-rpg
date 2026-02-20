@@ -21,6 +21,8 @@ func _ready() -> void:
 	_label_settings.outline_color = Color(0, 0, 0)
 
 func set_value(current: float, maximum: float) -> void:
+	if current_val == current and max_val == maximum:
+		return  # No change — skip expensive redraw
 	current_val = current
 	max_val = maximum
 	queue_redraw()

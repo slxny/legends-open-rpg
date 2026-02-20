@@ -84,6 +84,9 @@ var _tex_slash_arc: Texture2D = null
 var _tex_crystal_white: Texture2D = null
 var _tex_selection_red: Texture2D = null
 var _tex_beacon_blue: Texture2D = null
+# Pre-allocated label settings for player damage numbers
+var _player_dmg_normal: LabelSettings = null
+var _player_dmg_crit: LabelSettings = null
 const CHARGE_GRACE: float = 0.15  # Hold this long before suppressing basic attacks
 const TAP_RESOLVE_TIME: float = 0.12  # 120ms buffer — ~7 frames, barely perceptible
 const CHARGE_THRESHOLD: float = 1.5   # Hold 1.5s for charged slash
@@ -151,6 +154,17 @@ func _ready() -> void:
 	_tex_crystal_white = SpriteGenerator.get_texture("crystal_white")
 	_tex_selection_red = SpriteGenerator.get_texture("selection_red")
 	_tex_beacon_blue = SpriteGenerator.get_texture("beacon_blue")
+	# Pre-allocate damage label settings (avoids LabelSettings.new() per hit)
+	_player_dmg_normal = LabelSettings.new()
+	_player_dmg_normal.font_size = 14
+	_player_dmg_normal.font_color = Color(1.0, 0.3, 0.3)
+	_player_dmg_normal.outline_size = 2
+	_player_dmg_normal.outline_color = Color.BLACK
+	_player_dmg_crit = LabelSettings.new()
+	_player_dmg_crit.font_size = 22
+	_player_dmg_crit.font_color = Color(1.0, 0.1, 0.1)
+	_player_dmg_crit.outline_size = 2
+	_player_dmg_crit.outline_color = Color.BLACK
 
 	# Sync initial state to DeathCounterSystem
 	_sync_to_death_counters()
@@ -1413,12 +1427,7 @@ func _spawn_damage_number(amount: int, is_crit: bool) -> void:
 	var label = Label.new()
 	label.text = str(amount) + ("!" if is_crit else "")
 	label.position = Vector2(randf_range(-10, 10), -35)
-	var settings = LabelSettings.new()
-	settings.font_size = 14 if not is_crit else 22
-	settings.font_color = Color(1.0, 0.3, 0.3) if not is_crit else Color(1.0, 0.1, 0.1)
-	settings.outline_size = 2
-	settings.outline_color = Color.BLACK
-	label.label_settings = settings
+	label.label_settings = _player_dmg_crit if is_crit else _player_dmg_normal
 	add_child(label)
 	var tween = create_tween()
 	tween.tween_property(label, "position:y", label.position.y - 30, 0.6)

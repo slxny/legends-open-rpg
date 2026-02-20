@@ -1,0 +1,389 @@
+extends Node
+
+## Procedural audio manager — generates all SFX and music from code.
+## No external audio files needed.
+
+const SAMPLE_RATE = 22050
+const SFX_POOL_SIZE = 8
+
+var _sfx_cache: Dictionary = {}   # name -> AudioStreamWAV
+var _music_cache: Dictionary = {}  # name -> AudioStreamWAV
+var _sfx_players: Array[AudioStreamPlayer] = []
+var _music_player: AudioStreamPlayer
+var _music_volume_db: float = -10.0
+var _sfx_volume_db: float = 0.0
+
+func _ready() -> void:
+	_generate_all_sfx()
+	_generate_all_music()
+	_create_players()
+
+# ============================================================
+# PUBLIC API
+# ============================================================
+
+func play_sfx(sfx_name: String, volume_offset: float = 0.0) -> void:
+	var stream = _sfx_cache.get(sfx_name)
+	if not stream:
+		return
+	for p in _sfx_players:
+		if not p.playing:
+			p.stream = stream
+			p.volume_db = _sfx_volume_db + volume_offset
+			p.play()
+			return
+	# All players busy — steal the first
+	_sfx_players[0].stream = stream
+	_sfx_players[0].volume_db = _sfx_volume_db + volume_offset
+	_sfx_players[0].play()
+
+func play_music(music_name: String) -> void:
+	var stream = _music_cache.get(music_name)
+	if not stream:
+		return
+	if _music_player.stream == stream and _music_player.playing:
+		return
+	_music_player.stream = stream
+	_music_player.volume_db = _music_volume_db
+	_music_player.play()
+
+func stop_music() -> void:
+	_music_player.stop()
+
+# ============================================================
+# PLAYER SETUP
+# ============================================================
+
+func _create_players() -> void:
+	for i in range(SFX_POOL_SIZE):
+		var p = AudioStreamPlayer.new()
+		p.bus = "Master"
+		add_child(p)
+		_sfx_players.append(p)
+	_music_player = AudioStreamPlayer.new()
+	_music_player.bus = "Master"
+	_music_player.volume_db = _music_volume_db
+	add_child(_music_player)
+
+# ============================================================
+# WAVEFORM HELPERS
+# ============================================================
+
+func _make_samples(duration: float) -> Array[float]:
+	var count = int(SAMPLE_RATE * duration)
+	var arr: Array[float] = []
+	arr.resize(count)
+	arr.fill(0.0)
+	return arr
+
+func _add_sine(samples: Array[float], freq: float, volume: float = 1.0, start: float = 0.0) -> void:
+	var start_idx = int(start * SAMPLE_RATE)
+	for i in range(start_idx, samples.size()):
+		var t = float(i) / SAMPLE_RATE
+		samples[i] += sin(t * freq * TAU) * volume
+
+func _add_sine_segment(samples: Array[float], freq: float, volume: float, start: float, duration: float) -> void:
+	var s = int(start * SAMPLE_RATE)
+	var e = min(s + int(duration * SAMPLE_RATE), samples.size())
+	for i in range(s, e):
+		var t = float(i) / SAMPLE_RATE
+		var local_t = float(i - s) / max(e - s, 1)
+		# Quick fade in/out to avoid clicks
+		var env = min(local_t * 20.0, 1.0) * min((1.0 - local_t) * 20.0, 1.0)
+		samples[i] += sin(t * freq * TAU) * volume * env
+
+func _add_noise(samples: Array[float], volume: float = 1.0, start: float = 0.0) -> void:
+	var start_idx = int(start * SAMPLE_RATE)
+	for i in range(start_idx, samples.size()):
+		samples[i] += randf_range(-1.0, 1.0) * volume
+
+func _apply_envelope(samples: Array[float], attack: float, sustain: float, release: float) -> void:
+	var total = samples.size()
+	var a_samples = int(attack * SAMPLE_RATE)
+	var s_samples = int(sustain * SAMPLE_RATE)
+	var r_samples = int(release * SAMPLE_RATE)
+	for i in range(total):
+		var env: float
+		if i < a_samples:
+			env = float(i) / max(a_samples, 1)
+		elif i < a_samples + s_samples:
+			env = 1.0
+		else:
+			var ri = i - a_samples - s_samples
+			env = max(0.0, 1.0 - float(ri) / max(r_samples, 1))
+		samples[i] *= env
+
+func _apply_decay(samples: Array[float], decay_time: float) -> void:
+	for i in range(samples.size()):
+		var t = float(i) / SAMPLE_RATE
+		samples[i] *= max(0.0, 1.0 - t / decay_time)
+
+func _mix_into(dest: Array[float], src: Array[float], offset: int = 0) -> void:
+	for i in range(src.size()):
+		var di = i + offset
+		if di >= 0 and di < dest.size():
+			dest[di] += src[i]
+
+func _normalize(samples: Array[float], peak: float = 0.9) -> void:
+	var max_val = 0.0
+	for s in samples:
+		max_val = max(max_val, absf(s))
+	if max_val > 0.001:
+		var scale = peak / max_val
+		for i in range(samples.size()):
+			samples[i] *= scale
+
+func _to_stream(samples: Array[float], loop: bool = false) -> AudioStreamWAV:
+	_normalize(samples)
+	var data = PackedByteArray()
+	data.resize(samples.size() * 2)
+	for i in range(samples.size()):
+		var val = clampi(int(samples[i] * 32767.0), -32768, 32767)
+		data[i * 2] = val & 0xFF
+		data[i * 2 + 1] = (val >> 8) & 0xFF
+	var stream = AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = SAMPLE_RATE
+	stream.stereo = false
+	stream.data = data
+	if loop:
+		stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+		stream.loop_begin = 0
+		stream.loop_end = samples.size()
+	return stream
+
+# ============================================================
+# SFX GENERATION
+# ============================================================
+
+func _generate_all_sfx() -> void:
+	_sfx_cache["sword_swing"] = _gen_sword_swing()
+	_sfx_cache["hit_impact"] = _gen_hit_impact()
+	_sfx_cache["crit_hit"] = _gen_crit_hit()
+	_sfx_cache["enemy_death"] = _gen_enemy_death()
+	_sfx_cache["gold_pickup"] = _gen_gold_pickup()
+	_sfx_cache["item_pickup"] = _gen_item_pickup()
+	_sfx_cache["level_up"] = _gen_level_up()
+	_sfx_cache["dash_swoosh"] = _gen_dash_swoosh()
+	_sfx_cache["ability_whoosh"] = _gen_ability_whoosh()
+	_sfx_cache["power_strike"] = _gen_power_strike()
+	_sfx_cache["whirlwind"] = _gen_whirlwind()
+	_sfx_cache["player_hurt"] = _gen_player_hurt()
+
+func _gen_sword_swing() -> AudioStreamWAV:
+	# Short whoosh — filtered noise with quick decay
+	var samples = _make_samples(0.15)
+	_add_noise(samples, 0.6)
+	# Simulate high-pass by mixing in a descending tone
+	_add_sine(samples, 800.0, 0.15)
+	_add_sine(samples, 1200.0, 0.1)
+	_apply_envelope(samples, 0.01, 0.02, 0.12)
+	return _to_stream(samples)
+
+func _gen_hit_impact() -> AudioStreamWAV:
+	# Meaty thud — low sine burst + noise
+	var samples = _make_samples(0.12)
+	_add_sine(samples, 120.0, 0.7)
+	_add_sine(samples, 80.0, 0.3)
+	_add_noise(samples, 0.3)
+	_apply_envelope(samples, 0.005, 0.02, 0.10)
+	return _to_stream(samples)
+
+func _gen_crit_hit() -> AudioStreamWAV:
+	# Punchier hit with high "ting"
+	var samples = _make_samples(0.18)
+	_add_sine(samples, 100.0, 0.6)
+	_add_sine(samples, 60.0, 0.3)
+	_add_noise(samples, 0.35)
+	_add_sine(samples, 900.0, 0.25)
+	_add_sine(samples, 1400.0, 0.15)
+	_apply_envelope(samples, 0.005, 0.03, 0.15)
+	return _to_stream(samples)
+
+func _gen_enemy_death() -> AudioStreamWAV:
+	# Low thud with longer tail
+	var samples = _make_samples(0.25)
+	_add_sine(samples, 70.0, 0.6)
+	_add_sine(samples, 50.0, 0.4)
+	_add_noise(samples, 0.25)
+	_apply_envelope(samples, 0.005, 0.04, 0.20)
+	return _to_stream(samples)
+
+func _gen_gold_pickup() -> AudioStreamWAV:
+	# Ascending coin chime: C5, E5, G5
+	var samples = _make_samples(0.25)
+	_add_sine_segment(samples, 523.0, 0.5, 0.0, 0.08)
+	_add_sine_segment(samples, 659.0, 0.5, 0.06, 0.08)
+	_add_sine_segment(samples, 784.0, 0.6, 0.12, 0.13)
+	_apply_decay(samples, 0.3)
+	return _to_stream(samples)
+
+func _gen_item_pickup() -> AudioStreamWAV:
+	# Bright crystal ding
+	var samples = _make_samples(0.3)
+	_add_sine(samples, 880.0, 0.4)
+	_add_sine(samples, 1320.0, 0.2)
+	_add_sine(samples, 1760.0, 0.1)
+	_apply_envelope(samples, 0.005, 0.05, 0.25)
+	return _to_stream(samples)
+
+func _gen_level_up() -> AudioStreamWAV:
+	# Triumphant ascending arpeggio: C4 -> E4 -> G4 -> C5
+	var samples = _make_samples(0.7)
+	_add_sine_segment(samples, 261.6, 0.5, 0.0, 0.18)
+	_add_sine_segment(samples, 329.6, 0.5, 0.13, 0.18)
+	_add_sine_segment(samples, 392.0, 0.55, 0.26, 0.18)
+	_add_sine_segment(samples, 523.0, 0.6, 0.39, 0.31)
+	# Add harmonics to the final note for richness
+	_add_sine_segment(samples, 1046.0, 0.15, 0.39, 0.31)
+	_add_sine_segment(samples, 784.0, 0.2, 0.39, 0.31)
+	_apply_decay(samples, 0.8)
+	return _to_stream(samples)
+
+func _gen_dash_swoosh() -> AudioStreamWAV:
+	# Fast descending noise sweep
+	var samples = _make_samples(0.2)
+	_add_noise(samples, 0.5)
+	# Descending tone to suggest motion
+	for i in range(samples.size()):
+		var t = float(i) / SAMPLE_RATE
+		var freq = lerpf(1500.0, 300.0, t / 0.2)
+		samples[i] += sin(t * freq * TAU) * 0.2
+	_apply_envelope(samples, 0.01, 0.03, 0.16)
+	return _to_stream(samples)
+
+func _gen_ability_whoosh() -> AudioStreamWAV:
+	# Mid-range magical whoosh
+	var samples = _make_samples(0.3)
+	_add_noise(samples, 0.35)
+	for i in range(samples.size()):
+		var t = float(i) / SAMPLE_RATE
+		var freq = lerpf(400.0, 1200.0, t / 0.3)
+		samples[i] += sin(t * freq * TAU) * 0.3
+	_apply_envelope(samples, 0.02, 0.06, 0.22)
+	return _to_stream(samples)
+
+func _gen_power_strike() -> AudioStreamWAV:
+	# Heavy wind-up slam — low whoosh then impact
+	var samples = _make_samples(0.25)
+	# Wind-up
+	for i in range(samples.size()):
+		var t = float(i) / SAMPLE_RATE
+		var freq = lerpf(200.0, 600.0, t / 0.25)
+		samples[i] += sin(t * freq * TAU) * 0.3
+	# Impact at ~0.15s
+	var impact = _make_samples(0.1)
+	_add_sine(impact, 90.0, 0.7)
+	_add_noise(impact, 0.4)
+	_apply_envelope(impact, 0.005, 0.02, 0.08)
+	_mix_into(samples, impact, int(0.15 * SAMPLE_RATE))
+	_apply_envelope(samples, 0.02, 0.06, 0.17)
+	return _to_stream(samples)
+
+func _gen_whirlwind() -> AudioStreamWAV:
+	# Spinning wind — oscillating noise
+	var samples = _make_samples(0.4)
+	_add_noise(samples, 0.4)
+	# Modulate with spinning feel
+	for i in range(samples.size()):
+		var t = float(i) / SAMPLE_RATE
+		var mod = 0.5 + 0.5 * sin(t * 25.0)  # Fast oscillation
+		samples[i] *= mod
+		samples[i] += sin(t * 300.0 * TAU) * 0.15
+	_apply_envelope(samples, 0.03, 0.15, 0.22)
+	return _to_stream(samples)
+
+func _gen_player_hurt() -> AudioStreamWAV:
+	# Quick low thud
+	var samples = _make_samples(0.1)
+	_add_sine(samples, 150.0, 0.5)
+	_add_noise(samples, 0.3)
+	_apply_envelope(samples, 0.005, 0.02, 0.08)
+	return _to_stream(samples)
+
+# ============================================================
+# MUSIC GENERATION
+# ============================================================
+
+func _generate_all_music() -> void:
+	_music_cache["town"] = _gen_town_music()
+
+# A minor pentatonic frequencies
+const PENTA = {
+	"A2": 110.0, "C3": 130.81, "D3": 146.83, "E3": 164.81, "G3": 196.0,
+	"A3": 220.0, "C4": 261.63, "D4": 293.66, "E4": 329.63, "G4": 392.0,
+	"A4": 440.0, "C5": 523.25, "D5": 587.33, "E5": 659.25, "G5": 784.0,
+}
+
+func _gen_town_music() -> AudioStreamWAV:
+	# Calm ambient fantasy loop — ~24 seconds
+	var duration = 24.0
+	var samples = _make_samples(duration)
+
+	# Layer 1: Deep bass drone on A2, slowly modulated
+	for i in range(samples.size()):
+		var t = float(i) / SAMPLE_RATE
+		var amp = 0.12 + 0.03 * sin(t * 0.4)  # Gentle amplitude wobble
+		samples[i] += sin(t * PENTA["A2"] * TAU) * amp
+		# Sub-octave rumble
+		samples[i] += sin(t * 55.0 * TAU) * amp * 0.4
+
+	# Layer 2: Slow pad — A3 + E4 fifth, fading in and out
+	for i in range(samples.size()):
+		var t = float(i) / SAMPLE_RATE
+		# Slow swell every ~8 seconds
+		var pad_env = 0.5 + 0.5 * sin(t * TAU / 8.0 - PI / 2.0)
+		pad_env = pow(pad_env, 2.0) * 0.08
+		samples[i] += sin(t * PENTA["A3"] * TAU) * pad_env
+		samples[i] += sin(t * PENTA["E4"] * TAU) * pad_env * 0.7
+		samples[i] += sin(t * PENTA["C4"] * TAU) * pad_env * 0.3
+
+	# Layer 3: Gentle arpeggio melody
+	var melody_notes = [
+		PENTA["A4"], PENTA["C5"], PENTA["E5"], PENTA["D5"],
+		PENTA["C5"], PENTA["A4"], PENTA["G4"], PENTA["E4"],
+		PENTA["D4"], PENTA["E4"], PENTA["G4"], PENTA["A4"],
+		PENTA["C5"], PENTA["D5"], PENTA["E5"], PENTA["C5"],
+		PENTA["A4"], PENTA["G4"], PENTA["E4"], PENTA["D4"],
+		PENTA["C4"], PENTA["D4"], PENTA["E4"], PENTA["G4"],
+	]
+	var note_dur = 1.0  # 1 second per note
+	for n in range(melody_notes.size()):
+		var start_time = n * note_dur
+		if start_time >= duration:
+			break
+		var freq = melody_notes[n]
+		# Each note: soft attack, gentle decay
+		var note_samples = _make_samples(min(note_dur * 1.5, duration - start_time))
+		for i in range(note_samples.size()):
+			var t = float(i) / SAMPLE_RATE
+			# Soft sine with slight detune for warmth
+			note_samples[i] = sin(t * freq * TAU) * 0.06
+			note_samples[i] += sin(t * freq * 1.003 * TAU) * 0.03
+			note_samples[i] += sin(t * freq * 2.0 * TAU) * 0.015  # Octave harmonic
+		_apply_envelope(note_samples, 0.08, note_dur * 0.4, note_dur * 0.8)
+		_mix_into(samples, note_samples, int(start_time * SAMPLE_RATE))
+
+	# Layer 4: Very sparse high twinkles
+	var rng = RandomNumberGenerator.new()
+	rng.seed = 42
+	var twinkle_notes = [PENTA["E5"], PENTA["G5"], PENTA["A4"], PENTA["D5"], PENTA["C5"]]
+	var twinkle_time = 2.5
+	while twinkle_time < duration - 1.0:
+		var freq = twinkle_notes[rng.randi() % twinkle_notes.size()]
+		var twinkle = _make_samples(0.5)
+		for i in range(twinkle.size()):
+			var t = float(i) / SAMPLE_RATE
+			twinkle[i] = sin(t * freq * TAU) * 0.035
+		_apply_envelope(twinkle, 0.01, 0.05, 0.44)
+		_mix_into(samples, twinkle, int(twinkle_time * SAMPLE_RATE))
+		twinkle_time += rng.randf_range(2.5, 4.5)
+
+	# Gentle crossfade at loop boundary (last 0.5s fades out, matches start)
+	var fade_len = int(0.5 * SAMPLE_RATE)
+	for i in range(fade_len):
+		var frac = float(i) / fade_len
+		# Fade out the end
+		samples[samples.size() - fade_len + i] *= (1.0 - frac)
+
+	return _to_stream(samples, true)

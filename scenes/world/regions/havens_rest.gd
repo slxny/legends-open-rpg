@@ -31,6 +31,7 @@ var _camp_positions := [
 func _ready() -> void:
 	GameManager.game_message.emit("Welcome to Haven's Rest", Color(1, 1, 1))
 	GameManager.game_message.emit("Level 1-5 Zone", Color(0.7, 0.7, 0.7))
+	AudioManager.play_music("town")
 
 	heal_beacon.activated.connect(_on_heal_beacon)
 	info_beacon.activated.connect(_on_info_beacon)

@@ -372,6 +372,7 @@ func _try_manual_attack() -> void:
 	if hit_target:
 		_perform_attack(hit_target, attack_dir)
 	else:
+		AudioManager.play_sfx("sword_swing")
 		_perform_swing_no_target(attack_dir)
 
 func _process_status_effects(delta: float) -> void:
@@ -512,6 +513,7 @@ func _execute_power_strike(attack_dir: Vector2) -> void:
 		else:
 			_spawn_slash_vfx(dir, 50.0, 1.8)
 			_do_screen_shake(3.0)
+		AudioManager.play_sfx("power_strike")
 		_spawn_effect_label("POWER STRIKE!", Color(1.0, 0.85, 0.2))
 	)
 	tween.tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.08)
@@ -571,6 +573,7 @@ func _execute_whirlwind(attack_dir: Vector2) -> void:
 			_do_hit_freeze(true)
 		else:
 			_do_screen_shake(3.0)
+		AudioManager.play_sfx("whirlwind")
 		_spawn_effect_label("WHIRLWIND!", Color(0.8, 0.5, 1.0))
 	)
 	# Unwind
@@ -624,6 +627,7 @@ func _execute_charged_slash(attack_dir: Vector2) -> void:
 			_do_hit_freeze(true)
 		else:
 			_do_screen_shake(5.0)
+		AudioManager.play_sfx("power_strike")
 		_spawn_effect_label("CHARGED SLASH!", Color(1.0, 0.9, 0.3))
 	)
 	tween.tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.1)
@@ -698,6 +702,7 @@ func _execute_dash_strike(attack_dir: Vector2) -> void:
 			_do_hit_freeze(false)
 		else:
 			_do_screen_shake(2.0)
+		AudioManager.play_sfx("dash_swoosh")
 		_spawn_effect_label("DASH STRIKE!", Color(0.4, 0.9, 1.0))
 	)
 	tween.tween_property(sprite, "rotation", 0.0, 0.08)
@@ -835,6 +840,7 @@ func _use_ability(ability_key: String) -> void:
 
 	# SC:BW trigger delay feel
 	await get_tree().create_timer(0.3).timeout
+	AudioManager.play_sfx("ability_whoosh")
 	if ability_data.has("damage_multiplier") and ability_data.has("radius"):
 		_execute_aoe_ability(ability_data, aim_dir)
 	elif ability_data.has("projectile_count"):
@@ -920,6 +926,7 @@ func _perform_attack(target: Node2D, attack_dir: Vector2 = Vector2.RIGHT) -> voi
 	_is_attack_animating = true
 	attacked.emit(target)
 
+	AudioManager.play_sfx("sword_swing")
 	var hero_data = HeroData.get_hero(hero_class)
 	if hero_data.get("primary_stat") == "agility":
 		var result = CombatManager.calculate_damage(stats.get_stats_dict(), target.get_stats_dict())
@@ -1288,10 +1295,12 @@ func _on_pickup_area_area_entered(area: Area2D) -> void:
 		if item.get("id") == "_gold":
 			GameManager.add_gold(item.get("gold_amount", 0))
 			GameManager.game_message.emit("+ %s" % item.get("name", "Gold"), Color(0.3, 0.6, 1.0))
+			AudioManager.play_sfx("gold_pickup", -3.0)
 			area.queue_free()
 			return
 		if inventory.add_item(item):
 			GameManager.game_message.emit("+ %s" % item.get("name", "Item"), Color(0.2, 1.0, 0.2))
+			AudioManager.play_sfx("item_pickup")
 			area.queue_free()
 
 func _spawn_buff_vfx(color: Color, duration: float) -> void:
@@ -1330,6 +1339,7 @@ func take_damage(amount: int, is_crit: bool = false) -> void:
 	stats.take_damage(amount)
 	_spawn_damage_number(amount, is_crit)
 	_do_hit_flash()
+	AudioManager.play_sfx("player_hurt", -4.0)
 
 func _spawn_damage_number(amount: int, is_crit: bool) -> void:
 	var label = Label.new()
@@ -1364,6 +1374,7 @@ func _on_level_up_sprite_upgrade(new_level: int) -> void:
 		_current_sprite_tier = tier
 		_apply_sprite_upgrade(tier)
 		GameManager.game_message.emit("LEVEL UP!", Color(1.0, 0.9, 0.2))
+		AudioManager.play_sfx("level_up")
 
 func _apply_sprite_upgrade(tier: int) -> void:
 	# Try to load tier-specific texture: e.g. blade_knight_t2

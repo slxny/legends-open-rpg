@@ -295,6 +295,10 @@ func take_damage(amount: int, is_crit: bool = false) -> void:
 	name_label.visible = true
 	_spawn_damage_number(amount, is_crit)
 	_do_hit_flash()
+	if is_crit:
+		AudioManager.play_sfx("crit_hit")
+	else:
+		AudioManager.play_sfx("hit_impact", -2.0)
 
 	if stats.current_hp <= 0:
 		_die()
@@ -308,6 +312,7 @@ func _die() -> void:
 	_is_dead = true
 	collision_layer = 0
 	collision_mask = 0
+	AudioManager.play_sfx("enemy_death", -3.0)
 	died.emit(self, xp_reward, gold_reward)
 	_spawn_gold_drop(gold_reward)
 	_spawn_blood_splatter()

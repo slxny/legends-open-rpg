@@ -312,9 +312,9 @@ func _die() -> void:
 	_spawn_gold_drop(gold_reward)
 	_spawn_blood_splatter()
 	if not drop_table.is_empty():
-		var item_id = ItemData.roll_drop(drop_table)
-		if not item_id.is_empty():
-			_spawn_item_drop(item_id)
+		var item = ItemData.roll_item_drop(drop_table)
+		if not item.is_empty():
+			_spawn_item_drop_dict(item)
 	# Death animation: pop, fall, fade
 	hp_bar.visible = false
 	name_label.visible = false
@@ -409,7 +409,9 @@ func _spawn_item_drop(item_id: String) -> void:
 	var item = ItemData.get_item(item_id)
 	if item.is_empty():
 		return
+	_spawn_item_drop_dict(item)
 
+func _spawn_item_drop_dict(item: Dictionary) -> void:
 	var drop = Area2D.new()
 	drop.position = global_position + Vector2(randf_range(-10, 10), randf_range(-10, 10))
 	drop.collision_layer = 32
@@ -435,6 +437,12 @@ func _spawn_item_drop(item_id: String) -> void:
 	float_tween.tween_property(visual, "position:y", 0.0, 0.6).set_trans(Tween.TRANS_SINE)
 
 	_get_world_node().add_child(drop)
+
+	# Announce rare+ drops
+	var rarity_name = ItemData.RARITY_NAMES.get(rarity, "")
+	if rarity >= ItemData.Rarity.RARE:
+		var color = ItemData.RARITY_COLORS.get(rarity, Color.WHITE)
+		GameManager.game_message.emit("%s %s dropped!" % [rarity_name, item.get("name", "Item")], color)
 
 func _spawn_damage_number(amount: int, is_crit: bool) -> void:
 	var label = Label.new()

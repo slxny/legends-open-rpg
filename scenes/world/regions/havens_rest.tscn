@@ -195,6 +195,131 @@ position = Vector2(-3800, 3500)
 camp_type = "bandit"
 enemy_count = 7
 
+[node name="SkeletonCamp1" parent="." instance=ExtResource("2_camp")]
+position = Vector2(-900, -1200)
+camp_type = "skeleton"
+enemy_count = 5
+
+[node name="SkeletonCamp2" parent="." instance=ExtResource("2_camp")]
+position = Vector2(1400, -600)
+camp_type = "skeleton"
+enemy_count = 6
+
+[node name="SkeletonCamp3" parent="." instance=ExtResource("2_camp")]
+position = Vector2(-600, 1400)
+camp_type = "skeleton"
+enemy_count = 5
+
+[node name="SkeletonCamp4" parent="." instance=ExtResource("2_camp")]
+position = Vector2(800, -1800)
+camp_type = "skeleton"
+enemy_count = 6
+
+[node name="SkeletonCamp5" parent="." instance=ExtResource("2_camp")]
+position = Vector2(-1500, 900)
+camp_type = "skeleton"
+enemy_count = 5
+
+[node name="SkeletonCamp6" parent="." instance=ExtResource("2_camp")]
+position = Vector2(2000, 600)
+camp_type = "skeleton"
+enemy_count = 4
+
+[node name="SpiderCamp1" parent="." instance=ExtResource("2_camp")]
+position = Vector2(-1900, -1400)
+camp_type = "spider"
+enemy_count = 5
+
+[node name="SpiderCamp2" parent="." instance=ExtResource("2_camp")]
+position = Vector2(2200, -1200)
+camp_type = "spider"
+enemy_count = 4
+
+[node name="SpiderCamp3" parent="." instance=ExtResource("2_camp")]
+position = Vector2(-2400, 800)
+camp_type = "spider"
+enemy_count = 5
+
+[node name="SpiderCamp4" parent="." instance=ExtResource("2_camp")]
+position = Vector2(1600, 1400)
+camp_type = "spider"
+enemy_count = 6
+
+[node name="SpiderCamp5" parent="." instance=ExtResource("2_camp")]
+position = Vector2(-800, -2400)
+camp_type = "spider"
+enemy_count = 4
+
+[node name="SpiderCamp6" parent="." instance=ExtResource("2_camp")]
+position = Vector2(200, 2600)
+camp_type = "spider"
+enemy_count = 5
+
+[node name="TrollCamp1" parent="." instance=ExtResource("2_camp")]
+position = Vector2(-3200, 1400)
+camp_type = "troll"
+enemy_count = 4
+
+[node name="TrollCamp2" parent="." instance=ExtResource("2_camp")]
+position = Vector2(3400, -2200)
+camp_type = "troll"
+enemy_count = 3
+
+[node name="TrollCamp3" parent="." instance=ExtResource("2_camp")]
+position = Vector2(-2600, -2000)
+camp_type = "troll"
+enemy_count = 4
+
+[node name="TrollCamp4" parent="." instance=ExtResource("2_camp")]
+position = Vector2(2800, 2200)
+camp_type = "troll"
+enemy_count = 3
+
+[node name="DarkMageCamp1" parent="." instance=ExtResource("2_camp")]
+position = Vector2(-3800, -1600)
+camp_type = "dark_mage"
+enemy_count = 4
+
+[node name="DarkMageCamp2" parent="." instance=ExtResource("2_camp")]
+position = Vector2(4000, 1200)
+camp_type = "dark_mage"
+enemy_count = 3
+
+[node name="DarkMageCamp3" parent="." instance=ExtResource("2_camp")]
+position = Vector2(-4400, 2800)
+camp_type = "dark_mage"
+enemy_count = 4
+
+[node name="DarkMageCamp4" parent="." instance=ExtResource("2_camp")]
+position = Vector2(3600, -3000)
+camp_type = "dark_mage"
+enemy_count = 3
+
+[node name="OgreCamp1" parent="." instance=ExtResource("2_camp")]
+position = Vector2(-5000, -2800)
+camp_type = "ogre"
+enemy_count = 3
+
+[node name="OgreCamp2" parent="." instance=ExtResource("2_camp")]
+position = Vector2(5000, 2800)
+camp_type = "ogre"
+enemy_count = 3
+
+[node name="OgreCamp3" parent="." instance=ExtResource("2_camp")]
+position = Vector2(-4800, 3200)
+camp_type = "ogre"
+enemy_count = 2
+
+[node name="OgreBoss1" parent="." instance=ExtResource("2_camp")]
+position = Vector2(5200, -3500)
+camp_type = "ogre_boss"
+enemy_count = 2
+
+[node name="OgreBoss2" parent="." instance=ExtResource("2_camp")]
+position = Vector2(-5400, -3800)
+camp_type = "ogre_boss"
+enemy_count = 1
+
 [node name="Walls" type="Node2D" parent="."]
 
 [node name="WallTop" type="StaticBody2D" parent="Walls"]

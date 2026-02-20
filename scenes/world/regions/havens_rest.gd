@@ -12,6 +12,20 @@ var _camp_positions := [
 	# Bandits (far out)
 	Vector2(3000, 1600), Vector2(-3500, -700), Vector2(3800, -1500),
 	Vector2(-2800, 2400), Vector2(-4200, -2500), Vector2(4400, 3000),
+	# Skeletons (inner-mid)
+	Vector2(-900, -1200), Vector2(1400, -600), Vector2(-600, 1400),
+	Vector2(800, -1800), Vector2(-1500, 900), Vector2(2000, 600),
+	# Spiders (mid)
+	Vector2(-1900, -1400), Vector2(2200, -1200), Vector2(-2400, 800),
+	Vector2(1600, 1400), Vector2(-800, -2400), Vector2(200, 2600),
+	# Trolls (outer)
+	Vector2(-3200, 1400), Vector2(3400, -2200), Vector2(-2600, -2000), Vector2(2800, 2200),
+	# Dark Mages (outer)
+	Vector2(-3800, -1600), Vector2(4000, 1200), Vector2(-4400, 2800), Vector2(3600, -3000),
+	# Ogres (far)
+	Vector2(-5000, -2800), Vector2(5000, 2800), Vector2(-4800, 3200),
+	# Ogre Bosses (edge)
+	Vector2(5200, -3500), Vector2(-5400, -3800),
 ]
 
 func _ready() -> void:
@@ -387,6 +401,37 @@ func _generate_decorations() -> void:
 	_add_camp_marker(deco_layer, Vector2(-2800, 2360), "Bandits Lv3-5")
 	_add_camp_marker(deco_layer, Vector2(-4200, -2460), "Bandits Lv3-5")
 	_add_camp_marker(deco_layer, Vector2(4400, 2960), "Bandits Lv3-5")
+	# Skeletons
+	_add_camp_marker(deco_layer, Vector2(-900, -1160), "Skeletons Lv2-4")
+	_add_camp_marker(deco_layer, Vector2(1400, -560), "Skeletons Lv2-4")
+	_add_camp_marker(deco_layer, Vector2(-600, 1360), "Skeletons Lv2-4")
+	_add_camp_marker(deco_layer, Vector2(800, -1760), "Skeletons Lv2-4")
+	_add_camp_marker(deco_layer, Vector2(-1500, 860), "Skeletons Lv2-4")
+	_add_camp_marker(deco_layer, Vector2(2000, 560), "Skeletons Lv2-4")
+	# Spiders
+	_add_camp_marker(deco_layer, Vector2(-1900, -1360), "Spiders Lv3-5")
+	_add_camp_marker(deco_layer, Vector2(2200, -1160), "Spiders Lv3-5")
+	_add_camp_marker(deco_layer, Vector2(-2400, 760), "Spiders Lv3-5")
+	_add_camp_marker(deco_layer, Vector2(1600, 1360), "Spiders Lv3-5")
+	_add_camp_marker(deco_layer, Vector2(-800, -2360), "Spiders Lv3-5")
+	_add_camp_marker(deco_layer, Vector2(200, 2560), "Spiders Lv3-5")
+	# Trolls
+	_add_camp_marker(deco_layer, Vector2(-3200, 1360), "Trolls Lv5-7")
+	_add_camp_marker(deco_layer, Vector2(3400, -2160), "Trolls Lv5-7")
+	_add_camp_marker(deco_layer, Vector2(-2600, -1960), "Trolls Lv5-7")
+	_add_camp_marker(deco_layer, Vector2(2800, 2160), "Trolls Lv5-7")
+	# Dark Mages
+	_add_camp_marker(deco_layer, Vector2(-3800, -1560), "Dark Mages Lv5-8")
+	_add_camp_marker(deco_layer, Vector2(4000, 1160), "Dark Mages Lv5-8")
+	_add_camp_marker(deco_layer, Vector2(-4400, 2760), "Dark Mages Lv5-8")
+	_add_camp_marker(deco_layer, Vector2(3600, -2960), "Dark Mages Lv5-8")
+	# Ogres
+	_add_camp_marker(deco_layer, Vector2(-5000, -2760), "Ogres Lv7-10")
+	_add_camp_marker(deco_layer, Vector2(5000, 2760), "Ogres Lv7-10")
+	_add_camp_marker(deco_layer, Vector2(-4800, 3160), "Ogres Lv7-10")
+	# Ogre Bosses
+	_add_camp_marker(deco_layer, Vector2(5200, -3460), "OGRE WARLORD Lv10-12")
+	_add_camp_marker(deco_layer, Vector2(-5400, -3760), "OGRE WARLORD Lv10-12")
 
 	# ---- Dense grass tufts scattered everywhere ----
 	for i in range(400):

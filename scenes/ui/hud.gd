@@ -20,6 +20,7 @@ extends CanvasLayer
 # Command card refs (3x3 grid)
 @onready var ability_1_btn: Button = $BottomPanel/HBox/CommandCard/Grid/Ability1
 @onready var ability_2_btn: Button = $BottomPanel/HBox/CommandCard/Grid/Ability2
+@onready var log_btn: Button = $BottomPanel/HBox/CommandCard/Grid/Slot3
 @onready var save_btn: Button = $BottomPanel/HBox/CommandCard/Grid/Save
 @onready var load_btn: Button = $BottomPanel/HBox/CommandCard/Grid/Load
 
@@ -49,7 +50,10 @@ func setup(player: Node2D) -> void:
 		if ab.has("ability_2"):
 			ability_2_btn.text = "E\n" + ab["ability_2"]["name"]
 
-	# Connect save/load buttons
+	# Connect command card buttons
+	log_btn.text = "F1\nLog"
+	log_btn.disabled = false
+	log_btn.pressed.connect(_on_changelog_pressed)
 	save_btn.pressed.connect(_on_save_pressed)
 	load_btn.pressed.connect(_on_load_pressed)
 
@@ -63,9 +67,11 @@ func setup(player: Node2D) -> void:
 	_update_alignment_display()
 
 func _unhandled_input(event: InputEvent) -> void:
-	# F5 = Save, F9 = Load
+	# F1 = Changelog, F5 = Save, F9 = Load
 	if event is InputEventKey and event.pressed:
-		if event.keycode == KEY_F5:
+		if event.keycode == KEY_F1:
+			_on_changelog_pressed()
+		elif event.keycode == KEY_F5:
 			_on_save_pressed()
 		elif event.keycode == KEY_F9:
 			_on_load_pressed()
@@ -131,6 +137,15 @@ func _on_ability_cooldown(index: int, remaining: float, total: float) -> void:
 	else:
 		btn.disabled = false
 		btn.tooltip_text = "Ready"
+
+func _on_changelog_pressed() -> void:
+	var dialogs = get_tree().get_nodes_in_group("changelog_dialog")
+	if dialogs.size() > 0:
+		var dlg = dialogs[0]
+		if dlg._is_visible:
+			dlg.close()
+		else:
+			dlg.open()
 
 func _on_save_pressed() -> void:
 	SaveLoadManager.save_game()

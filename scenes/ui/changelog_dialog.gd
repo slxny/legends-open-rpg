@@ -8,9 +8,20 @@ extends CanvasLayer
 
 var _is_visible: bool = false
 
-const GAME_VERSION := "v0.13.0"
+const GAME_VERSION := "v0.14.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.14.0",
+		"title": "Clickable Tree Harvesting",
+		"entries": [
+			"Left-click trees to walk to them and auto-chop — no more mashing spacebar",
+			"Harvestable trees now glow with a green outline on mouse hover",
+			"Right-click any tree to inspect its wood yield before chopping",
+			"Wood yields increased 5x: small ~15, medium ~30, large ~60",
+			"Each tree has a randomized wood amount that varies by size",
+		]
+	},
 	{
 		"version": "v0.13.0",
 		"title": "Enemy Overhaul",

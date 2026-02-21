@@ -19,6 +19,10 @@ var _rotation_index: int = 0
 var _rotation_timer: Timer
 var _rotation_active: bool = false
 
+# Background thread for expensive music generation
+var _music_gen_thread: Thread = null
+var _music_gen_queued: String = ""
+
 func _ready() -> void:
 	_create_players()
 	_pregenerate_async()
@@ -38,16 +42,50 @@ func _ensure_sfx(sfx_name: String) -> AudioStreamWAV:
 		return stream
 	return null
 
-func _ensure_music(music_name: String) -> AudioStreamWAV:
-	var cached = _music_cache.get(music_name)
-	if cached:
-		return cached
+## Generate a music track on a background thread and play it when done.
+## If a thread is already running, queues the request.
+func _play_or_gen_music(music_name: String) -> void:
+	var stream = _music_cache.get(music_name)
+	if stream:
+		_music_player.stream = stream
+		_music_player.volume_db = _music_volume_db
+		_music_player.play()
+		return
+	if not has_method("_gen_" + music_name):
+		return
+	# If a generation thread is already running, queue this track
+	if _music_gen_thread != null:
+		_music_gen_queued = music_name
+		return
+	_music_gen_thread = Thread.new()
+	_music_gen_thread.start(_threaded_gen_music.bind(music_name))
+
+func _threaded_gen_music(music_name: String) -> void:
 	var method_name = "_gen_" + music_name
 	if has_method(method_name):
 		var stream = call(method_name)
 		_music_cache[music_name] = stream
-		return stream
-	return null
+	call_deferred("_on_threaded_music_done", music_name)
+
+func _on_threaded_music_done(music_name: String) -> void:
+	if _music_gen_thread:
+		_music_gen_thread.wait_to_finish()
+	_music_gen_thread = null
+	var stream = _music_cache.get(music_name)
+	if stream:
+		_music_player.stream = stream
+		_music_player.volume_db = _music_volume_db
+		_music_player.play()
+	# Process queued track
+	if not _music_gen_queued.is_empty():
+		var next = _music_gen_queued
+		_music_gen_queued = ""
+		_play_or_gen_music(next)
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PREDELETE:
+		if _music_gen_thread and _music_gen_thread.is_started():
+			_music_gen_thread.wait_to_finish()
 
 func get_sfx(sfx_name: String) -> AudioStreamWAV:
 	return _ensure_sfx(sfx_name)
@@ -75,14 +113,10 @@ func play_sfx(sfx_name: String, volume_offset: float = 0.0) -> void:
 	p.play()
 
 func play_music(music_name: String) -> void:
-	var stream = _ensure_music(music_name)
-	if not stream:
+	var stream = _music_cache.get(music_name)
+	if stream and _music_player.stream == stream and _music_player.playing:
 		return
-	if _music_player.stream == stream and _music_player.playing:
-		return
-	_music_player.stream = stream
-	_music_player.volume_db = _music_volume_db
-	_music_player.play()
+	_play_or_gen_music(music_name)
 
 func stop_music() -> void:
 	_music_player.stop()
@@ -127,12 +161,7 @@ func _on_rotation_tick() -> void:
 
 func play_music_direct(music_name: String) -> void:
 	## Like play_music but always restarts even if same track
-	var stream = _ensure_music(music_name)
-	if not stream:
-		return
-	_music_player.stream = stream
-	_music_player.volume_db = _music_volume_db
-	_music_player.play()
+	_play_or_gen_music(music_name)
 
 var _saved_rotation_tracks: Array[String] = []
 var _saved_rotation_active: bool = false
@@ -179,10 +208,11 @@ func _create_players() -> void:
 	_music_player.volume_db = _music_volume_db
 	add_child(_music_player)
 
-## Background pre-generation: SFX are small so batch them, music tracks
-## are huge (60s each at 22050Hz) so generate one per frame.
+## Background pre-generation for lightweight SFX only.
+## Music tracks generate on a background Thread when first played
+## (see _play_or_gen_music) — each is 60s+ of PCM at 22050Hz, far too
+## heavy for the main thread even spread across frames.
 func _pregenerate_async() -> void:
-	# SFX are lightweight — generate 4 per frame
 	var sfx_names = ["sword_swing", "hit_impact", "crit_hit", "enemy_death",
 		"gold_pickup", "item_pickup", "level_up", "dash_swoosh",
 		"ability_whoosh", "power_strike", "whirlwind", "player_hurt",
@@ -194,18 +224,9 @@ func _pregenerate_async() -> void:
 			continue
 		_ensure_sfx(sfx_name)
 		batch += 1
-		if batch >= 4:
+		if batch >= 3:
 			batch = 0
 			await get_tree().process_frame
-	# Music tracks are expensive — one per frame
-	var music_names = ["war_drums", "crystal_caves", "pirate_jig",
-		"dark_cathedral", "desert_caravan", "boss_encounter",
-		"boss_idle", "boss_victory", "wave_warning"]
-	for music_name in music_names:
-		if _music_cache.has(music_name):
-			continue
-		_ensure_music(music_name)
-		await get_tree().process_frame
 
 # ============================================================
 # WAVEFORM HELPERS

@@ -177,5 +177,6 @@ func _get_active_tavern_buff() -> Dictionary:
 	return {}
 
 func _unhandled_input(event: InputEvent) -> void:
-	if _is_visible and event.is_action_pressed("ui_cancel"):
+	if _is_visible and (event.is_action_pressed("ui_cancel") or event.is_action_pressed("ability_1")):
 		close()
+		get_viewport().set_input_as_handled()

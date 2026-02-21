@@ -22,6 +22,9 @@ func setup(player: Node2D) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("toggle_inventory"):
 		toggle()
+	elif _is_visible and (event.is_action_pressed("ui_cancel") or event.is_action_pressed("ability_1")):
+		toggle()
+		get_viewport().set_input_as_handled()
 
 func toggle() -> void:
 	_is_visible = !_is_visible

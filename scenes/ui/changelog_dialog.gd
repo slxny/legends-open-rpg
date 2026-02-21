@@ -17,6 +17,9 @@ const CHANGELOG: Array[Dictionary] = [
 		"title": "Mobile Text Scaling",
 		"date": "2026-02-21",
 		"entries": [
+			"Enemy name labels doubled for mobile (9px → 18px)",
+			"Enemy damage numbers doubled for mobile (14px → 28px normal, 28px → 44px crit)",
+			"Enemy info popup text doubled for mobile (11px → 22px)",
 			"Shop dialog: item names, prices, and Buy/Sell buttons doubled for mobile",
 			"Inventory: equipment/bag buttons and stats text doubled for mobile",
 			"Tavern dialog: all text and buttons doubled for mobile",

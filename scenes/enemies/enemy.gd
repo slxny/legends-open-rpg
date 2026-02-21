@@ -288,6 +288,12 @@ func _physics_process(delta: float) -> void:
 		_knockback_velocity = _knockback_velocity.lerp(Vector2.ZERO, delta * 14.0)
 		move_and_slide()
 		return
+	# After knockback ends, if we were fighting, extend chase range so we don't
+	# immediately deaggro just because knockback pushed us far from home
+	if _knockback_velocity != Vector2.ZERO and (current_state == State.CHASE or current_state == State.ATTACK):
+		var dist_sq_from_home = global_position.distance_squared_to(home_position)
+		if dist_sq_from_home > _chase_range_sq * 0.8:
+			_chase_range_sq = dist_sq_from_home + _aggro_range_sq
 	_knockback_velocity = Vector2.ZERO
 
 	match current_state:
@@ -465,6 +471,16 @@ func _process_return(delta: float) -> void:
 		if not _is_selected:
 			name_label.visible = false
 		return
+
+	# Re-aggro if player walks into aggro range while returning
+	var player = _get_player()
+	if player:
+		var dist_sq_to_player = global_position.distance_squared_to(player.global_position)
+		if dist_sq_to_player < _aggro_range_sq:
+			target = player
+			current_state = State.CHASE
+			name_label.visible = true
+			return
 
 	var dir = (home_position - global_position).normalized()
 	if dir.x < -0.1:
@@ -988,7 +1004,7 @@ func _update_sleep_state() -> void:
 			visible = true
 	else:
 		# Fall asleep when player is far away (only if not in combat)
-		if dist_sq > SLEEP_DISTANCE_SQ and current_state != State.CHASE and current_state != State.ATTACK:
+		if dist_sq > SLEEP_DISTANCE_SQ and current_state != State.CHASE and current_state != State.ATTACK and current_state != State.RETURN:
 			_is_sleeping = true
 			visible = false
 			velocity = Vector2.ZERO

@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.22.0"
+const GAME_VERSION := "v0.23.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.23.0",
+		"title": "Enemy AI Aggro Fixes",
+		"date": "2026-02-21",
+		"entries": [
+			"Fixed enemies ignoring the player while walking home (RETURN state now re-aggros)",
+			"Fixed knockback pushing enemies past chase range causing them to go passive",
+			"Fixed enemies falling asleep mid-walk during RETURN state",
+		]
+	},
 	{
 		"version": "v0.22.0",
 		"title": "Mobile UI Overhaul",

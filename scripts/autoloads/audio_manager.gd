@@ -21,6 +21,7 @@ var _rotation_active: bool = false
 
 func _ready() -> void:
 	_create_players()
+	_pregenerate_async()
 
 # ============================================================
 # PUBLIC API
@@ -177,6 +178,34 @@ func _create_players() -> void:
 	_music_player.bus = "Master"
 	_music_player.volume_db = _music_volume_db
 	add_child(_music_player)
+
+## Background pre-generation: SFX are small so batch them, music tracks
+## are huge (60s each at 22050Hz) so generate one per frame.
+func _pregenerate_async() -> void:
+	# SFX are lightweight — generate 4 per frame
+	var sfx_names = ["sword_swing", "hit_impact", "crit_hit", "enemy_death",
+		"gold_pickup", "item_pickup", "level_up", "dash_swoosh",
+		"ability_whoosh", "power_strike", "whirlwind", "player_hurt",
+		"charge_loop", "charge_ready", "charge_release", "tree_chop",
+		"tree_fall"]
+	var batch: int = 0
+	for sfx_name in sfx_names:
+		if _sfx_cache.has(sfx_name):
+			continue
+		_ensure_sfx(sfx_name)
+		batch += 1
+		if batch >= 4:
+			batch = 0
+			await get_tree().process_frame
+	# Music tracks are expensive — one per frame
+	var music_names = ["war_drums", "crystal_caves", "pirate_jig",
+		"dark_cathedral", "desert_caravan", "boss_encounter",
+		"boss_idle", "boss_victory", "wave_warning"]
+	for music_name in music_names:
+		if _music_cache.has(music_name):
+			continue
+		_ensure_music(music_name)
+		await get_tree().process_frame
 
 # ============================================================
 # WAVEFORM HELPERS

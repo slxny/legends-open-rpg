@@ -12,14 +12,76 @@ var _asset_dirs: Dictionary = {}
 
 func _ready() -> void:
 	_init_asset_dirs()
+	_pregenerate_async()
 
 func get_texture(name: String) -> ImageTexture:
 	var cached = textures.get(name, null)
 	if cached != null:
 		return cached
-	# Lazy generation: produce the sprite on first access
+	# Lazy fallback: generate immediately if background hasn't reached it yet
 	_gen_or_load(name)
 	return textures.get(name, null)
+
+## Background pre-generation: spreads work across frames during the hero
+## select screen so everything is cached before the world loads.
+func _pregenerate_async() -> void:
+	var batch: int = 0
+	const PER_FRAME: int = 6  # Generate 6 sprites per frame
+	for sprite_name in _all_sprite_names():
+		if textures.has(sprite_name):
+			continue
+		_gen_or_load(sprite_name)
+		batch += 1
+		if batch >= PER_FRAME:
+			batch = 0
+			await get_tree().process_frame
+
+func _all_sprite_names() -> Array[String]:
+	var names: Array[String] = []
+	# Terrain & ground (needed first when world loads)
+	names.append_array(["ground_jungle", "ground_creep", "ground_stone",
+		"ground_snow", "ground_dirt", "town_grass", "grass_dark", "grass_light",
+		"dirt", "dirt_path", "water", "stone_floor", "snow", "ice",
+		"terrain_blob", "dirt_patch"])
+	# Buildings & town structures
+	names.append_array(["town_wall_h", "watch_tower", "town_fountain",
+		"shop_building", "armory_building", "inn_building", "barracks_building",
+		"stable_building", "chapel_building", "tavern_building",
+		"crate_stack", "barrel", "well", "lamp_post", "woodworking_bench",
+		"town_hall", "landing_pad"])
+	# Environment decorations
+	names.append_array(["tree_jungle", "tree_small", "tree_dead", "rock",
+		"rock_large", "bush", "flowers", "grass_tuft", "grass_tuft_tall",
+		"mushroom_cluster", "fallen_log", "vines", "ground_debris",
+		"cliff_face", "icicles",
+		"tree_harvest_small", "tree_harvest_medium", "tree_harvest_large",
+		"tree_stump", "wood_log"])
+	# VFX & UI (needed by player/enemies)
+	names.append_array(["selection_green", "selection_red", "iso_shadow",
+		"slash_arc", "arrow_projectile", "blood_splatter", "skull_icon"])
+	# Beacons & items
+	names.append_array(["beacon_green", "beacon_yellow", "beacon_blue",
+		"beacon_red", "beacon_cyan",
+		"crystal_blue", "crystal_white", "crystal_teal"])
+	# Heroes (all frames)
+	for hero in ["blade_knight", "shadow_ranger"]:
+		names.append(hero)
+		for dir_key in ["down", "up", "side"]:
+			names.append("%s_dir_%s" % [hero, dir_key])
+		for dir_key in ["down", "up", "side"]:
+			for frame in [1, 2, 3]:
+				names.append("%s_walk_%s_%d" % [hero, dir_key, frame])
+		for frame in [1, 2, 3]:
+			names.append("%s_pickaxe%d" % [hero, frame])
+	for swing in ["a", "b", "c", "d", "e"]:
+		for frame in [1, 2, 3]:
+			names.append("blade_knight_atk%s%d" % [swing, frame])
+	# Enemies
+	names.append_array(["rat", "goblin", "wolf", "bandit", "skeleton",
+		"spider", "troll", "dark_mage", "ogre", "ogre_boss",
+		"demon_knight", "ancient_golem", "shadow_wraith", "dragon_whelp",
+		"infernal"])
+	return names
 
 ## Try loading a PNG from res://assets/sprites/<subdir>/<name>.png
 ## Returns true if loaded successfully, false to fall back to procedural.

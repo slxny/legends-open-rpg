@@ -182,7 +182,7 @@ const CAMP_TYPES = {
 		"aggro_range": 200.0,
 		"xp_reward": 200,
 		"gold_reward": 100,
-		"drop_table": "ogre_boss",
+		"drop_table": "mini_boss_ravager",
 		"is_mini_boss": true,
 	},
 	"mini_boss_dread_knight": {
@@ -194,7 +194,7 @@ const CAMP_TYPES = {
 		"aggro_range": 200.0,
 		"xp_reward": 350,
 		"gold_reward": 150,
-		"drop_table": "ogre_boss",
+		"drop_table": "mini_boss_dread_knight",
 		"is_mini_boss": true,
 	},
 	"mini_boss_elder_drake": {
@@ -206,7 +206,7 @@ const CAMP_TYPES = {
 		"aggro_range": 220.0,
 		"xp_reward": 500,
 		"gold_reward": 250,
-		"drop_table": "ogre_boss",
+		"drop_table": "mini_boss_elder_drake",
 		"is_mini_boss": true,
 	},
 	"mini_boss_abyssal_lord": {
@@ -218,7 +218,7 @@ const CAMP_TYPES = {
 		"aggro_range": 240.0,
 		"xp_reward": 750,
 		"gold_reward": 400,
-		"drop_table": "ogre_boss",
+		"drop_table": "mini_boss_abyssal_lord",
 		"is_mini_boss": true,
 	},
 }
@@ -353,6 +353,9 @@ func _instantiate_enemy(pending: Dictionary) -> void:
 		enemy.stats.attack_damage = int(enemy.stats.attack_damage * 1.5)
 		enemy.sprite.scale = Vector2(1.5, 1.5)
 		enemy.sprite.modulate = Color(1.2, 0.8, 0.8)  # Reddish tint
+		enemy._base_scale = Vector2(1.5, 1.5)
+		enemy._base_modulate = Color(1.2, 0.8, 0.8)
+		enemy.start_boss_pulse()
 	if is_respawn and weakness_factor < 1.0:
 		enemy.stats.max_hp = int(enemy.stats.max_hp * weakness_factor)
 		enemy.stats.current_hp = enemy.stats.max_hp

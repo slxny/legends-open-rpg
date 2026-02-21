@@ -124,6 +124,31 @@ const ITEMS = {
 		"stats": {"attack_damage": 28, "strength": 6, "max_hp": 30},
 		"description": "The earth trembles at each swing.",
 	},
+	# Mini-boss exclusive weapons
+	"ravagers_cleaver": {
+		"name": "Ravager's Cleaver", "slot": Slot.WEAPON, "rarity": Rarity.EPIC,
+		"level_req": 8, "buy_price": 350,
+		"stats": {"attack_damage": 18, "strength": 5, "max_hp": 25},
+		"description": "Crude but devastating. Torn from a Ravager's grip.",
+	},
+	"dread_edge": {
+		"name": "Dread Edge", "slot": Slot.WEAPON, "rarity": Rarity.EPIC,
+		"level_req": 14, "buy_price": 500,
+		"stats": {"attack_damage": 24, "strength": 4, "agility": 4, "move_speed": 10},
+		"description": "A cursed blade that hungers for battle.",
+	},
+	"drakes_fury": {
+		"name": "Drake's Fury", "slot": Slot.WEAPON, "rarity": Rarity.LEGENDARY,
+		"level_req": 20, "buy_price": 1200,
+		"stats": {"attack_damage": 35, "agility": 6, "strength": 4, "max_hp": 40},
+		"description": "Forged in dragonfire, sharp as a fang.",
+	},
+	"abyssal_scepter": {
+		"name": "Abyssal Scepter", "slot": Slot.WEAPON, "rarity": Rarity.LEGENDARY,
+		"level_req": 26, "buy_price": 1800,
+		"stats": {"attack_damage": 42, "intelligence": 8, "strength": 6, "max_hp": 50, "max_mana": 40},
+		"description": "Channels the void between worlds.",
+	},
 
 	# ==================== ARMOR ====================
 	"cloth_tunic": {
@@ -174,6 +199,19 @@ const ITEMS = {
 		"stats": {"armor": 14, "max_hp": 50, "strength": 4},
 		"description": "Scales of an ancient wyrm, nearly indestructible.",
 	},
+	# Mini-boss exclusive armor
+	"ravager_hide": {
+		"name": "Ravager Hide", "slot": Slot.ARMOR, "rarity": Rarity.EPIC,
+		"level_req": 8, "buy_price": 380,
+		"stats": {"armor": 8, "max_hp": 35, "strength": 3},
+		"description": "Thick beast hide, still warm from the kill.",
+	},
+	"abyssal_plate": {
+		"name": "Abyssal Plate", "slot": Slot.ARMOR, "rarity": Rarity.LEGENDARY,
+		"level_req": 26, "buy_price": 1600,
+		"stats": {"armor": 18, "max_hp": 70, "strength": 6, "agility": 3},
+		"description": "Armor from beyond the veil, darker than shadow.",
+	},
 
 	# ==================== HELMS ====================
 	"leather_cap": {
@@ -205,6 +243,13 @@ const ITEMS = {
 		"level_req": 8, "buy_price": 280,
 		"stats": {"armor": 5, "max_hp": 25, "strength": 3, "intelligence": 2},
 		"description": "Power demands sacrifice.",
+	},
+	# Mini-boss exclusive helm
+	"abyssal_crown": {
+		"name": "Abyssal Crown", "slot": Slot.HELM, "rarity": Rarity.LEGENDARY,
+		"level_req": 26, "buy_price": 1400,
+		"stats": {"armor": 8, "max_hp": 45, "strength": 5, "intelligence": 5, "agility": 3},
+		"description": "The weight of the abyss presses down, yet empowers.",
 	},
 
 	# ==================== BOOTS ====================
@@ -275,6 +320,13 @@ const ITEMS = {
 		"level_req": 12, "buy_price": 700,
 		"stats": {"strength": 5, "agility": 5, "intelligence": 5, "max_hp": 30},
 		"description": "Forged before memory, holds all power.",
+	},
+	# Mini-boss exclusive ring
+	"infernal_signet": {
+		"name": "Infernal Signet", "slot": Slot.RING, "rarity": Rarity.LEGENDARY,
+		"level_req": 26, "buy_price": 1500,
+		"stats": {"strength": 7, "agility": 5, "attack_damage": 10, "max_hp": 40},
+		"description": "Burns the finger, empowers the fist.",
 	},
 
 	# ==================== AMULETS ====================
@@ -476,6 +528,27 @@ const DROP_TABLES = {
 		"drop_chance": 0.70,
 		"items": ["doomhammer", "dragon_scale", "shadowstep_boots", "band_of_ancients", "heart_of_the_world", "health_potion_large"],
 		"weights": [15, 15, 14, 14, 14, 28],
+	},
+	# ---- Mini-boss drop tables (guaranteed drops, boss-exclusive loot) ----
+	"mini_boss_ravager": {
+		"drop_chance": 1.0,
+		"items": ["ravagers_cleaver", "ravager_hide", "flamebrand", "crown_of_thorns", "ring_of_power", "windwalkers"],
+		"weights": [22, 22, 16, 14, 14, 12],
+	},
+	"mini_boss_dread_knight": {
+		"drop_chance": 1.0,
+		"items": ["dread_edge", "shadow_cloak", "stormbringer", "amulet_of_fury", "shadowstep_boots", "doomhammer"],
+		"weights": [25, 15, 15, 15, 15, 15],
+	},
+	"mini_boss_elder_drake": {
+		"drop_chance": 1.0,
+		"items": ["drakes_fury", "dragon_scale", "doomhammer", "band_of_ancients", "heart_of_the_world", "shadowstep_boots"],
+		"weights": [25, 18, 15, 14, 14, 14],
+	},
+	"mini_boss_abyssal_lord": {
+		"drop_chance": 1.0,
+		"items": ["abyssal_scepter", "abyssal_plate", "abyssal_crown", "infernal_signet", "drakes_fury", "band_of_ancients"],
+		"weights": [20, 18, 18, 18, 13, 13],
 	},
 }
 

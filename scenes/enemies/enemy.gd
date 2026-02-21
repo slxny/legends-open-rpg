@@ -32,6 +32,8 @@ var _is_selected: bool = false
 var _knockback_velocity: Vector2 = Vector2.ZERO
 var _cached_player: Node2D = null  # Cached player reference to avoid per-frame group lookups
 var _cached_world_node: Node = null  # Cached world node for VFX spawning
+var _base_scale: Vector2 = Vector2(1.0, 1.0)  # Resting sprite scale (1.5 for mini-bosses)
+var _base_modulate: Color = Color.WHITE  # Resting sprite tint (reddish for mini-bosses)
 
 # Distance-based sleep/wake — enemies far from the player disable physics processing
 var _is_sleeping: bool = false
@@ -431,6 +433,9 @@ func _die() -> void:
 
 	if sprite_type == "skeleton":
 		_die_crumble()
+	elif is_mini_boss:
+		_spawn_blood_splatter()
+		_die_boss()
 	else:
 		_spawn_blood_splatter()
 		_die_default()
@@ -465,6 +470,38 @@ func _die_crumble() -> void:
 	# Fade the flattened remains
 	tween.tween_property(sprite, "modulate:a", 0.0, 0.3)
 	tween.tween_callback(queue_free)
+
+func _die_boss() -> void:
+	# Dramatic mini-boss death: expand, flash bright, shake violently, explode outward
+	var base_pos = sprite.position
+	var sx = _base_scale.x
+	var sy = _base_scale.y
+	var tween = create_tween()
+	# Flash bright and swell
+	tween.tween_property(sprite, "modulate", Color(2.0, 2.0, 2.0), 0.08)
+	tween.parallel().tween_property(sprite, "scale", Vector2(sx * 1.4, sy * 1.4), 0.08)
+	# Violent shake (6 jitters)
+	for i in range(6):
+		tween.tween_property(sprite, "position", base_pos + Vector2(randf_range(-6, 6), randf_range(-4, 4)), 0.03)
+	# Pulsing flash — alternate bright/dim
+	tween.tween_property(sprite, "modulate", Color(1.5, 0.5, 0.3), 0.06)
+	tween.tween_property(sprite, "modulate", Color(2.5, 2.0, 1.5), 0.06)
+	# Explode outward — scale up fast then shrink to nothing
+	tween.tween_property(sprite, "scale", Vector2(sx * 2.0, sy * 2.0), 0.08).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.parallel().tween_property(sprite, "modulate:a", 0.0, 0.25)
+	tween.parallel().tween_property(sprite, "position", base_pos, 0.08)
+	tween.tween_property(sprite, "scale", Vector2(sx * 0.1, sy * 0.1), 0.15).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tween.tween_callback(queue_free)
+
+func start_boss_pulse() -> void:
+	# Looping idle breathing animation for mini-bosses — subtle scale + modulate pulse
+	var sx = _base_scale.x
+	var sy = _base_scale.y
+	var tween = create_tween().set_loops()
+	tween.tween_property(sprite, "scale", Vector2(sx * 1.06, sy * 0.96), 0.8).set_trans(Tween.TRANS_SINE)
+	tween.parallel().tween_property(sprite, "modulate", Color(_base_modulate.r * 1.1, _base_modulate.g * 0.9, _base_modulate.b * 0.9), 0.8).set_trans(Tween.TRANS_SINE)
+	tween.tween_property(sprite, "scale", Vector2(sx * 0.96, sy * 1.06), 0.8).set_trans(Tween.TRANS_SINE)
+	tween.parallel().tween_property(sprite, "modulate", _base_modulate, 0.8).set_trans(Tween.TRANS_SINE)
 
 func _spawn_bone_fragments() -> void:
 	var bone_tex = SpriteGenerator.get_texture("bone_fragment")
@@ -501,18 +538,33 @@ func _do_hit_flash() -> void:
 	sprite.modulate = Color(1.5, 1.5, 1.5)
 	var tween = create_tween()
 	tween.set_parallel(true)
-	tween.tween_property(sprite, "modulate", Color.WHITE, 0.18)
+	tween.tween_property(sprite, "modulate", _base_modulate, 0.18)
 	# Squash: squeeze horizontally, stretch vertically, then bounce back
-	tween.tween_property(sprite, "scale", Vector2(1.3, 0.7), 0.05)
+	var sx = _base_scale.x
+	var sy = _base_scale.y
+	tween.tween_property(sprite, "scale", Vector2(sx * 1.3, sy * 0.7), 0.05)
 	tween.set_parallel(false)
-	tween.tween_property(sprite, "scale", Vector2(0.85, 1.2), 0.06)
-	tween.tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.08)
+	tween.tween_property(sprite, "scale", Vector2(sx * 0.85, sy * 1.2), 0.06)
+	tween.tween_property(sprite, "scale", _base_scale, 0.08)
 
 func _do_attack_lunge() -> void:
 	if not is_instance_valid(target):
 		return
 	var dir = (target.global_position - global_position).normalized()
 	var base_pos = sprite.position
+	if is_mini_boss:
+		match sprite_type:
+			"ogre_boss":
+				_anim_boss_ground_slam(dir, base_pos)
+			"demon_knight":
+				_anim_boss_charge_slash(dir, base_pos)
+			"dragon_whelp":
+				_anim_boss_fire_breath(dir, base_pos)
+			"infernal":
+				_anim_boss_doom_strike(dir, base_pos)
+			_:
+				_anim_boss_ground_slam(dir, base_pos)
+		return
 	match sprite_type:
 		"rat":
 			_anim_rat_bite(dir, base_pos)
@@ -576,6 +628,100 @@ func _anim_generic_lunge(dir: Vector2, base_pos: Vector2) -> void:
 	# Return
 	tween.tween_property(sprite, "position", base_pos, 0.08)
 	tween.parallel().tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.08)
+
+# ---- Mini-boss attack animations ----
+
+func _anim_boss_ground_slam(dir: Vector2, base_pos: Vector2) -> void:
+	# Ravager / Ogre Boss: rear up high, slam the ground with a shockwave squash
+	var sx = _base_scale.x
+	var sy = _base_scale.y
+	var tween = create_tween()
+	# Wind-up — rear back and stretch tall
+	tween.tween_property(sprite, "position", base_pos - dir * 6.0 + Vector2(0, -10), 0.12)
+	tween.parallel().tween_property(sprite, "scale", Vector2(sx * 0.8, sy * 1.35), 0.12)
+	# Hang at apex briefly
+	tween.tween_interval(0.06)
+	# Slam down — fast, heavy
+	tween.tween_property(sprite, "position", base_pos + dir * 14.0 + Vector2(0, 4), 0.06)
+	tween.parallel().tween_property(sprite, "scale", Vector2(sx * 1.5, sy * 0.6), 0.06).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+	tween.parallel().tween_property(sprite, "modulate", Color(1.4, 1.0, 0.7), 0.06)
+	# Impact — screen-shake feel via rapid position jitter
+	for i in range(3):
+		tween.tween_property(sprite, "position", base_pos + dir * 14.0 + Vector2(randf_range(-4, 4), randf_range(-2, 2)), 0.02)
+	# Recover
+	tween.tween_property(sprite, "position", base_pos, 0.12)
+	tween.parallel().tween_property(sprite, "scale", _base_scale, 0.12)
+	tween.parallel().tween_property(sprite, "modulate", _base_modulate, 0.12)
+
+func _anim_boss_charge_slash(dir: Vector2, base_pos: Vector2) -> void:
+	# Dread Knight: fast charge forward with sweeping rotation slash
+	var sx = _base_scale.x
+	var sy = _base_scale.y
+	var tween = create_tween()
+	# Coil — pull back, lean into direction
+	tween.tween_property(sprite, "position", base_pos - dir * 8.0, 0.08)
+	tween.parallel().tween_property(sprite, "scale", Vector2(sx * 1.2, sy * 0.85), 0.08)
+	tween.parallel().tween_property(sprite, "modulate", Color(1.0, 0.7, 0.7), 0.08)
+	# Dash forward — explosive speed
+	tween.tween_property(sprite, "position", base_pos + dir * 20.0, 0.06).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
+	tween.parallel().tween_property(sprite, "scale", Vector2(sx * 0.7, sy * 1.3), 0.06)
+	tween.parallel().tween_property(sprite, "rotation", dir.angle() * 0.4, 0.06)
+	# Sweeping slash arc — rotate through
+	tween.tween_property(sprite, "rotation", -dir.angle() * 0.3, 0.08)
+	tween.parallel().tween_property(sprite, "modulate", Color(1.5, 0.9, 0.9), 0.04)
+	# Skid to a stop
+	tween.tween_property(sprite, "position", base_pos + dir * 10.0, 0.06)
+	tween.parallel().tween_property(sprite, "modulate", _base_modulate, 0.06)
+	# Return
+	tween.tween_property(sprite, "position", base_pos, 0.1)
+	tween.parallel().tween_property(sprite, "scale", _base_scale, 0.1)
+	tween.parallel().tween_property(sprite, "rotation", 0.0, 0.1)
+
+func _anim_boss_fire_breath(dir: Vector2, base_pos: Vector2) -> void:
+	# Elder Drake: rear up, puff out, lunge with fiery tint
+	var sx = _base_scale.x
+	var sy = _base_scale.y
+	var tween = create_tween()
+	# Rear up — inhale
+	tween.tween_property(sprite, "position", base_pos + Vector2(0, -8), 0.1)
+	tween.parallel().tween_property(sprite, "scale", Vector2(sx * 1.15, sy * 1.25), 0.1)
+	# Puff — swell out
+	tween.tween_property(sprite, "scale", Vector2(sx * 1.4, sy * 1.1), 0.06)
+	tween.parallel().tween_property(sprite, "modulate", Color(1.5, 0.8, 0.3), 0.06)
+	# Breath lunge — snap forward with fire tint
+	tween.tween_property(sprite, "position", base_pos + dir * 16.0, 0.07).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
+	tween.parallel().tween_property(sprite, "scale", Vector2(sx * 0.85, sy * 1.3), 0.07)
+	tween.parallel().tween_property(sprite, "modulate", Color(1.8, 0.6, 0.2), 0.07)
+	# Hold the flame
+	tween.tween_interval(0.08)
+	# Cool down — pull back, tint fades
+	tween.tween_property(sprite, "position", base_pos, 0.14)
+	tween.parallel().tween_property(sprite, "scale", _base_scale, 0.14)
+	tween.parallel().tween_property(sprite, "modulate", _base_modulate, 0.14)
+
+func _anim_boss_doom_strike(dir: Vector2, base_pos: Vector2) -> void:
+	# Abyssal Lord: spin-up whirlwind then devastating overhead slam
+	var sx = _base_scale.x
+	var sy = _base_scale.y
+	var tween = create_tween()
+	# Spin-up — rapid full rotations with growing intensity
+	tween.tween_property(sprite, "rotation", TAU, 0.15)
+	tween.parallel().tween_property(sprite, "modulate", Color(1.0, 0.4, 0.8), 0.15)
+	tween.parallel().tween_property(sprite, "scale", Vector2(sx * 1.3, sy * 1.3), 0.15)
+	tween.tween_property(sprite, "rotation", TAU * 2.0, 0.12)
+	tween.parallel().tween_property(sprite, "modulate", Color(1.4, 0.3, 1.0), 0.12)
+	# Release — slam forward
+	tween.tween_property(sprite, "position", base_pos + dir * 18.0, 0.05).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
+	tween.parallel().tween_property(sprite, "scale", Vector2(sx * 1.6, sy * 0.5), 0.05)
+	tween.parallel().tween_property(sprite, "rotation", TAU * 2.0 + dir.angle() * 0.3, 0.05)
+	# Impact jitter
+	for i in range(4):
+		tween.tween_property(sprite, "position", base_pos + dir * 18.0 + Vector2(randf_range(-5, 5), randf_range(-3, 3)), 0.02)
+	# Recover
+	tween.tween_property(sprite, "position", base_pos, 0.14)
+	tween.parallel().tween_property(sprite, "scale", _base_scale, 0.14)
+	tween.parallel().tween_property(sprite, "rotation", 0.0, 0.14)
+	tween.parallel().tween_property(sprite, "modulate", _base_modulate, 0.14)
 
 func _spawn_blood_splatter() -> void:
 	var blood_tex = SpriteGenerator.get_texture("blood_splatter")

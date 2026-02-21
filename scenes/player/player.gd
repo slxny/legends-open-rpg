@@ -275,9 +275,10 @@ func _physics_process(delta: float) -> void:
 				var dir = (_target_enemy.global_position - global_position).normalized()
 				_set_facing(dir)
 				_try_manual_attack()
-		elif _is_moving_to_target:
-			# Keep following the moving enemy
+		else:
+			# Target moved out of range — chase them
 			_move_target = _target_enemy.global_position
+			_is_moving_to_target = true
 	elif _target_enemy:
 		_target_enemy = null  # Enemy died or became invalid
 
@@ -430,7 +431,7 @@ func _unhandled_input(event: InputEvent) -> void:
 					_is_chopping_tree = false
 					_target_tree = null
 					if lclick_enemy in _enemies_in_range:
-						_target_enemy = null
+						_target_enemy = lclick_enemy
 						_try_manual_attack()
 					else:
 						_target_enemy = lclick_enemy
@@ -532,6 +533,7 @@ func _try_manual_attack() -> void:
 					hit_target = enemy
 
 	if hit_target:
+		_target_enemy = hit_target
 		_perform_attack(hit_target, attack_dir)
 	else:
 		# No enemy — check for a harvestable tree in swing direction

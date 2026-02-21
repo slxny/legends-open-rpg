@@ -75,6 +75,7 @@ func equip_from_bag(bag_index: int) -> void:
 		return
 	# Check level requirement
 	if stats_component and item.get("level_req", 1) > stats_component.level:
+		GameManager.game_message.emit("Requires level %d to equip!" % item["level_req"], Color(1.0, 0.3, 0.3))
 		return
 	# Swap with current equipment
 	var old_item = equipment[slot_name]

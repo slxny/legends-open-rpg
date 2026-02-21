@@ -127,7 +127,7 @@ const ITEMS = {
 	# Mini-boss exclusive weapons
 	"ravagers_cleaver": {
 		"name": "Ravager's Cleaver", "slot": Slot.WEAPON, "rarity": Rarity.EPIC,
-		"level_req": 8, "buy_price": 350,
+		"level_req": 1, "buy_price": 350,
 		"stats": {"attack_damage": 18, "strength": 5, "max_hp": 25},
 		"description": "Crude but devastating. Torn from a Ravager's grip.",
 	},

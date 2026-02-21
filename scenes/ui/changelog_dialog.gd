@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.19.0"
+const GAME_VERSION := "v0.20.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.20.0",
+		"title": "Massive Text Size Increase",
+		"date": "2026-02-21",
+		"entries": [
+			"Changelog headers and entry text are now 2x bigger on both desktop and mobile",
+			"Version Log button on hero select is 3x bigger on mobile",
+			"Changelog title bar, close button, and version label scaled up to match",
+			"Desktop changelog panel enlarged to fit the bigger text",
+		]
+	},
 	{
 		"version": "v0.19.0",
 		"title": "Full Cache-Busting",
@@ -241,20 +252,20 @@ func open() -> void:
 func _resize_panel(vp_size: Vector2) -> void:
 	if _is_mobile:
 		# Fill most of the screen on mobile
-		var margin = 20.0
+		var margin = 10.0
 		panel.offset_left = -vp_size.x / 2.0 + margin
 		panel.offset_right = vp_size.x / 2.0 - margin
 		panel.offset_top = -vp_size.y / 2.0 + margin
 		panel.offset_bottom = vp_size.y / 2.0 - margin
-		close_button.custom_minimum_size = Vector2(120, 44)
-		close_button.add_theme_font_size_override("font_size", 18)
-		version_label.add_theme_font_size_override("font_size", 16)
-		$Panel/MarginContainer/VBox/TopBar/Title.add_theme_font_size_override("font_size", 26)
+		close_button.custom_minimum_size = Vector2(200, 64)
+		close_button.add_theme_font_size_override("font_size", 36)
+		version_label.add_theme_font_size_override("font_size", 32)
+		$Panel/MarginContainer/VBox/TopBar/Title.add_theme_font_size_override("font_size", 52)
 	else:
-		panel.offset_left = -320.0
-		panel.offset_right = 320.0
-		panel.offset_top = -300.0
-		panel.offset_bottom = 300.0
+		panel.offset_left = -420.0
+		panel.offset_right = 420.0
+		panel.offset_top = -380.0
+		panel.offset_bottom = 380.0
 
 func close() -> void:
 	_is_visible = false
@@ -264,9 +275,9 @@ func _build_entries() -> void:
 	for child in entries_container.get_children():
 		child.queue_free()
 
-	var header_size = 22 if _is_mobile else 16
-	var entry_size = 17 if _is_mobile else 12
-	var spacer_height = 10 if _is_mobile else 6
+	var header_size = 44 if _is_mobile else 32
+	var entry_size = 34 if _is_mobile else 24
+	var spacer_height = 20 if _is_mobile else 12
 
 	for patch in CHANGELOG:
 		# Version header with date

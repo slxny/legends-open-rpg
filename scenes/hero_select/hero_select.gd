@@ -331,10 +331,10 @@ func _build_version_button() -> void:
 	bottom_bar.alignment = BoxContainer.ALIGNMENT_CENTER
 
 	var version_btn = Button.new()
-	version_btn.text = "Version Log (v0.19.0)"
-	var ver_btn_w = 160 if _is_mobile else 200
-	var ver_btn_h = 32 if _is_mobile else 36
-	var ver_font_size = 11 if _is_mobile else 13
+	version_btn.text = "Version Log (v0.20.0)"
+	var ver_btn_w = 480 if _is_mobile else 200
+	var ver_btn_h = 96 if _is_mobile else 36
+	var ver_font_size = 33 if _is_mobile else 13
 	version_btn.custom_minimum_size = Vector2(ver_btn_w, ver_btn_h)
 	version_btn.add_theme_font_size_override("font_size", ver_font_size)
 	version_btn.pressed.connect(_on_version_log_pressed)

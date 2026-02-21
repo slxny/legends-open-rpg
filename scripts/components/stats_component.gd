@@ -45,6 +45,12 @@ var armory_weapon_bonus: int = 0
 var armory_armor_bonus: int = 0
 var armory_hp_bonus: int = 0
 
+# Woodworking upgrade bonuses
+var woodwork_attack_bonus: int = 0
+var woodwork_armor_bonus: int = 0
+var woodwork_hp_bonus: int = 0
+var woodwork_xp_mult: float = 0.0  # Extra XP multiplier from watchtower
+
 # Temporary buffs
 var temp_armor: int = 0
 var temp_dodge: float = 0.0
@@ -76,20 +82,20 @@ func initialize_from_hero(hero_class_key: String) -> void:
 	_emit_all()
 
 func get_total_armor() -> int:
-	return armor + bonus_armor + temp_armor + armory_armor_bonus
+	return armor + bonus_armor + temp_armor + armory_armor_bonus + woodwork_armor_bonus
 
 func get_total_move_speed() -> float:
 	return move_speed + bonus_move_speed
 
 func get_total_max_hp() -> int:
-	return max_hp + bonus_max_hp + armory_hp_bonus
+	return max_hp + bonus_max_hp + armory_hp_bonus + woodwork_hp_bonus
 
 func get_total_max_mana() -> int:
 	return max_mana + bonus_max_mana
 
 func get_stats_dict() -> Dictionary:
 	return {
-		"attack_damage": attack_damage + weapon_damage + armory_weapon_bonus,
+		"attack_damage": attack_damage + weapon_damage + armory_weapon_bonus + woodwork_attack_bonus,
 		"weapon_damage": weapon_damage,
 		"armor": get_total_armor(),
 		"strength": strength + bonus_strength,
@@ -125,7 +131,11 @@ func restore_mana(amount: int) -> void:
 	mana_changed.emit(current_mana, get_total_max_mana())
 
 func add_xp(amount: int) -> void:
-	xp += amount
+	# Woodwork watchtower bonus: extra XP %
+	var effective = amount
+	if woodwork_xp_mult > 0.0:
+		effective = int(amount * (1.0 + woodwork_xp_mult))
+	xp += effective
 	var xp_needed = get_xp_to_next_level()
 	while xp >= xp_needed and level < 50:
 		xp -= xp_needed

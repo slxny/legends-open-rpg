@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3 uid="uid://bhavensrest"]
+[gd_scene load_steps=9 format=3 uid="uid://bhavensrest"]
 
 [ext_resource type="Script" path="res://scenes/world/regions/havens_rest.gd" id="1_region"]
 [ext_resource type="PackedScene" uid="uid://bcreepcmp" path="res://scenes/enemies/creep_camp.tscn" id="2_camp"]
@@ -6,6 +6,7 @@
 [ext_resource type="PackedScene" uid="uid://bbeaconscn" path="res://scenes/npcs/beacon.tscn" id="4_beacon"]
 [ext_resource type="PackedScene" uid="uid://barmornpc" path="res://scenes/npcs/npc_armorer.tscn" id="5_armorer"]
 [ext_resource type="PackedScene" uid="uid://btavernnpc" path="res://scenes/npcs/npc_tavern.tscn" id="6_tavern"]
+[ext_resource type="PackedScene" uid="uid://bwoodworknpc" path="res://scenes/npcs/npc_woodworker.tscn" id="7_woodworker"]
 
 [sub_resource type="RectangleShape2D" id="wall_h"]
 size = Vector2(12000, 20)
@@ -43,6 +44,9 @@ position = Vector2(-260, -100)
 
 [node name="Tavern" parent="." instance=ExtResource("6_tavern")]
 position = Vector2(0, -250)
+
+[node name="Woodworker" parent="." instance=ExtResource("7_woodworker")]
+position = Vector2(-160, 200)
 
 [node name="RatSwarm1" parent="." instance=ExtResource("2_camp")]
 position = Vector2(500, 400)

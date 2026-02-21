@@ -61,7 +61,8 @@ func _init_asset_dirs() -> void:
 	for n in ["shop_building", "armory_building", "town_hall", "landing_pad", "hatchery",
 			"barracks_building", "inn_building", "watch_tower", "town_fountain",
 			"stable_building", "chapel_building", "tavern_building",
-			"crate_stack", "barrel", "well", "lamp_post", "town_wall_h"]:
+			"crate_stack", "barrel", "well", "lamp_post", "town_wall_h",
+			"woodworking_bench"]:
 		_asset_dirs[n] = "buildings"
 	# Beacons
 	for n in ["beacon_green", "beacon_yellow", "beacon_blue", "beacon_red", "beacon_cyan"]:
@@ -134,6 +135,7 @@ func _generate_all() -> void:
 	_gen_or_load("well")
 	_gen_or_load("lamp_post")
 	_gen_or_load("town_wall_h")
+	_gen_or_load("woodworking_bench")
 	_gen_or_load("town_grass")
 	_gen_or_load("landing_pad")
 	# Beacons
@@ -1868,6 +1870,39 @@ func _gen_town_wall_h() -> void:
 	# Mortar lines
 	_fill_rect(img, 0, 8, 40, 1, Color(0.38, 0.36, 0.32))
 	textures["town_wall_h"] = ImageTexture.create_from_image(img)
+
+func _gen_woodworking_bench() -> void:
+	var img = Image.create(44, 44, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	# Shadow
+	_fill_rect(img, 4, 38, 36, 5, Color(0, 0, 0, 0.2))
+	# Workbench base — warm wood
+	_fill_rect(img, 3, 22, 38, 18, Color(0.45, 0.3, 0.15))
+	_fill_rect(img, 4, 23, 36, 16, Color(0.55, 0.38, 0.2))
+	# Bench top — lighter plank
+	_fill_rect(img, 2, 18, 40, 6, Color(0.6, 0.45, 0.25))
+	_fill_rect(img, 3, 19, 38, 4, Color(0.65, 0.5, 0.3))
+	# Wood grain lines
+	_fill_rect(img, 4, 20, 36, 1, Color(0.55, 0.4, 0.22))
+	# Legs
+	_fill_rect(img, 6, 35, 4, 5, Color(0.4, 0.28, 0.12))
+	_fill_rect(img, 34, 35, 4, 5, Color(0.4, 0.28, 0.12))
+	# Saw on the bench (tool)
+	_fill_rect(img, 8, 16, 10, 2, Color(0.55, 0.55, 0.6))
+	_fill_rect(img, 6, 14, 4, 4, Color(0.45, 0.3, 0.15))
+	# Wood shavings / pile on right side
+	_fill_rect(img, 28, 16, 8, 4, Color(0.7, 0.55, 0.3))
+	_fill_rect(img, 30, 15, 6, 2, Color(0.65, 0.5, 0.28))
+	# Log leaning against bench
+	_fill_rect(img, 36, 26, 5, 12, Color(0.5, 0.35, 0.18))
+	_fill_rect(img, 37, 27, 3, 10, Color(0.55, 0.4, 0.22))
+	# Small finished items on shelf (carved totem, bow)
+	_fill_rect(img, 10, 10, 3, 6, Color(0.5, 0.35, 0.15))  # Totem
+	_fill_rect(img, 10, 8, 3, 2, Color(0.4, 0.55, 0.3))     # Totem top
+	_fill_rect(img, 22, 10, 8, 2, Color(0.5, 0.35, 0.18))   # Bow
+	_fill_rect(img, 21, 8, 2, 6, Color(0.45, 0.3, 0.15))    # Bow curve
+	_fill_rect(img, 30, 8, 2, 6, Color(0.45, 0.3, 0.15))    # Bow curve
+	textures["woodworking_bench"] = ImageTexture.create_from_image(img)
 
 func _gen_town_grass() -> void:
 	var size = 64

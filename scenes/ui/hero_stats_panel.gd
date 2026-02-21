@@ -45,7 +45,7 @@ func _refresh() -> void:
 
 func _refresh_stats() -> void:
 	var s = _player.stats
-	var total_atk = s.attack_damage + s.weapon_damage + s.armory_weapon_bonus
+	var total_atk = s.attack_damage + s.weapon_damage + s.armory_weapon_bonus + s.woodwork_attack_bonus
 	stats_label.text = """Level %d  |  %s
 
 HP: %d / %d
@@ -57,7 +57,8 @@ Intelligence: %d%s
 Armor:        %d
 Attack:       %d
 Speed:        %.0f
-Dodge:        %d%%""" % [
+Dodge:        %d%%
+XP Bonus:     +%d%%""" % [
 		s.level, _player.hero_class.replace("_", " ").capitalize(),
 		s.current_hp, s.get_total_max_hp(),
 		s.current_mana, s.get_total_max_mana(),
@@ -68,6 +69,7 @@ Dodge:        %d%%""" % [
 		total_atk,
 		s.get_total_move_speed(),
 		int(s.temp_dodge * 100),
+		int(s.woodwork_xp_mult * 100),
 	]
 
 func _bonus_text(bonus: int) -> String:

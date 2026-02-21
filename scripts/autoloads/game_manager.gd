@@ -27,6 +27,12 @@ var found_artifacts: Array[String] = []
 var weapon_upgrade_level: int = 0
 var armor_upgrade_level: int = 0
 
+# Woodworking upgrade levels (0 = no upgrades)
+var woodwork_bow_level: int = 0      # Reinforced Bow: +attack damage
+var woodwork_shield_level: int = 0   # Wooden Bulwark: +armor, +HP
+var woodwork_totem_level: int = 0    # Totem of Vigor: +regen, +stats
+var woodwork_watchtower_level: int = 0  # Watchtower: +XP gain
+
 func get_upgrade_cost(current_level: int) -> int:
 	return int(10 * pow(current_level + 1, 1.5))
 
@@ -41,6 +47,12 @@ func add_gold(amount: int) -> void:
 
 func add_wood(amount: int) -> void:
 	wood += amount
+
+func spend_wood(amount: int) -> bool:
+	if wood >= amount:
+		wood -= amount
+		return true
+	return false
 
 func spend_gold(amount: int) -> bool:
 	if gold >= amount:

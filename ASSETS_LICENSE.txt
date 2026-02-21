@@ -1,0 +1,55 @@
+PROPRIETARY ASSETS LICENSE
+
+Copyright (c) 2026 Steven Levine. All Rights Reserved.
+
+All game assets contained in this repository are the exclusive intellectual
+property of Steven Levine and are protected by copyright law. These assets
+are NOT open source and are NOT covered by any open source license that may
+apply to the source code in this repository.
+
+COVERED ASSETS
+
+This license applies to all files and content in the following categories,
+regardless of their location within the repository:
+
+  1. VISUAL ASSETS: All artwork, sprites, textures, tilesets, images,
+     icons, UI graphics, animations, and any other visual media in any
+     format (including but not limited to .png, .jpg, .svg, .gif, .webp,
+     .bmp, .tres, .res, and sprite sheets).
+
+  2. AUDIO ASSETS: All music, sound effects, ambient audio, voice
+     recordings, and any other audio media in any format (including but
+     not limited to .wav, .ogg, .mp3, .flac, and procedurally generated
+     audio definitions).
+
+  3. CHARACTER IP: All character designs, names, likenesses, backstories,
+     abilities, and related creative elements.
+
+  4. NARRATIVE CONTENT: All story content, dialogue, lore, quest designs,
+     world-building material, and game design documents.
+
+  5. BRANDING: The project name "Legends Open RPG", all logos, trade names,
+     visual identity elements, and associated domain names.
+
+RESTRICTIONS
+
+You may NOT, without prior written permission from Steven Levine:
+
+  - Copy, reproduce, or duplicate any covered asset
+  - Distribute, publish, or share any covered asset
+  - Modify, adapt, or create derivative works from any covered asset
+  - Use any covered asset in another project, product, or service
+  - Sell, sublicense, lease, or commercially exploit any covered asset
+  - Use any covered asset for machine learning or AI training purposes
+
+PERMITTED USE
+
+You may view the assets solely for the purpose of evaluating or playing the
+game as intended by the copyright holder.
+
+ENFORCEMENT
+
+Any unauthorized use of the covered assets constitutes copyright
+infringement and may result in legal action.
+
+For licensing inquiries or permission requests, contact Steven Levine.

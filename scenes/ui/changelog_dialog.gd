@@ -9,9 +9,21 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.20.0"
+const GAME_VERSION := "v0.21.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.21.0",
+		"title": "Licensing & IP Protection",
+		"date": "2026-02-21",
+		"entries": [
+			"Added All Rights Reserved LICENSE for full project protection",
+			"Added MIT + Proprietary Assets dual-license option (LICENSE-MIT)",
+			"Added ASSETS_LICENSE.txt covering all art, music, characters, and branding",
+			"Added CONTRIBUTING.md with IP ownership terms for contributors",
+			"Updated README with clear licensing section",
+		]
+	},
 	{
 		"version": "v0.20.0",
 		"title": "Massive Text Size Increase",

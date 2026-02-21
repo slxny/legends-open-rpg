@@ -331,7 +331,7 @@ func _build_version_button() -> void:
 	bottom_bar.alignment = BoxContainer.ALIGNMENT_CENTER
 
 	var version_btn = Button.new()
-	version_btn.text = "Version Log (v0.20.0)"
+	version_btn.text = "Version Log (v0.21.0)"
 	var ver_btn_w = 480 if _is_mobile else 200
 	var ver_btn_h = 96 if _is_mobile else 36
 	var ver_font_size = 33 if _is_mobile else 13

@@ -58,7 +58,7 @@ jobs:
           # Godot 4 HTML5 exports need SharedArrayBuffer, which requires
           # cross-origin isolation headers. GitHub Pages doesn't support
           # custom headers, so we use a service worker workaround.
-          wget -q https://raw.githubusercontent.com/nickvdp/coi-serviceworker/main/coi-serviceworker.min.js \
+          wget -q https://raw.githubusercontent.com/gzuidhof/coi-serviceworker/main/coi-serviceworker.min.js \
             -O build/web/coi-serviceworker.min.js
 
           # Inject the service worker script into the HTML before </head>

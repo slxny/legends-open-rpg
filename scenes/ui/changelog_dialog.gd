@@ -9,9 +9,22 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.21.0"
+const GAME_VERSION := "v0.22.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.22.0",
+		"title": "Mobile UI Overhaul",
+		"date": "2026-02-21",
+		"entries": [
+			"Hero select title and subtitle are now much larger on mobile (52px / 28px)",
+			"Hero card names scaled up to 52px, type tags to 32px on mobile",
+			"SELECT buttons are now 110px tall with 40px font for easy tapping",
+			"Card padding, borders, and corner radius increased for mobile",
+			"Cards expand to fill screen width on mobile (up to 900px)",
+			"Touch targets on cards now include cursor hint for pointer devices",
+		]
+	},
 	{
 		"version": "v0.21.0",
 		"title": "Licensing & IP Protection",

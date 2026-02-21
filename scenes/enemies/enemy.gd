@@ -23,6 +23,7 @@ var xp_reward: int = 15
 var gold_reward: int = 5
 var drop_table: String = ""
 var sprite_type: String = "goblin"
+var is_mini_boss: bool = false
 
 var _attack_timer: float = 0.0
 var _is_dead: bool = false
@@ -120,6 +121,7 @@ func initialize(config: Dictionary) -> void:
 	gold_reward = config.get("gold_reward", 5)
 	drop_table = config.get("drop_table", "")
 	sprite_type = config.get("sprite_type", "goblin")
+	is_mini_boss = config.get("is_mini_boss", false)
 
 	stats.max_hp = 30 + enemy_level * 15
 	stats.current_hp = stats.max_hp

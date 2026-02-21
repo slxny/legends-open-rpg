@@ -116,7 +116,114 @@ const CAMP_TYPES = {
 		"gold_reward": 50,
 		"drop_table": "ogre_boss",
 	},
+	# --- Higher-tier enemies (progressive spawns) ---
+	"demon_knight": {
+		"name": "Demon Knight",
+		"level_range": [12, 15],
+		"sprite_type": "demon_knight",
+		"move_speed": 75.0,
+		"attack_range": 40.0,
+		"aggro_range": 140.0,
+		"xp_reward": 80,
+		"gold_reward": 30,
+		"drop_table": "dark_mage",
+	},
+	"ancient_golem": {
+		"name": "Ancient Golem",
+		"level_range": [15, 18],
+		"sprite_type": "ancient_golem",
+		"move_speed": 40.0,
+		"attack_range": 50.0,
+		"aggro_range": 110.0,
+		"xp_reward": 110,
+		"gold_reward": 40,
+		"drop_table": "ogre",
+	},
+	"shadow_wraith": {
+		"name": "Shadow Wraith",
+		"level_range": [18, 22],
+		"sprite_type": "shadow_wraith",
+		"move_speed": 100.0,
+		"attack_range": 35.0,
+		"aggro_range": 160.0,
+		"xp_reward": 140,
+		"gold_reward": 50,
+		"drop_table": "ogre_boss",
+	},
+	"dragon_whelp": {
+		"name": "Dragon Whelp",
+		"level_range": [22, 26],
+		"sprite_type": "dragon_whelp",
+		"move_speed": 90.0,
+		"attack_range": 45.0,
+		"aggro_range": 150.0,
+		"xp_reward": 180,
+		"gold_reward": 65,
+		"drop_table": "ogre_boss",
+	},
+	"infernal": {
+		"name": "Infernal",
+		"level_range": [26, 30],
+		"sprite_type": "infernal",
+		"move_speed": 55.0,
+		"attack_range": 55.0,
+		"aggro_range": 130.0,
+		"xp_reward": 220,
+		"gold_reward": 80,
+		"drop_table": "ogre_boss",
+	},
+	# --- Mini-Boss types ---
+	"mini_boss_ravager": {
+		"name": "Ravager",
+		"level_range": [8, 10],
+		"sprite_type": "ogre_boss",
+		"move_speed": 65.0,
+		"attack_range": 50.0,
+		"aggro_range": 200.0,
+		"xp_reward": 200,
+		"gold_reward": 100,
+		"drop_table": "ogre_boss",
+		"is_mini_boss": true,
+	},
+	"mini_boss_dread_knight": {
+		"name": "Dread Knight",
+		"level_range": [14, 18],
+		"sprite_type": "demon_knight",
+		"move_speed": 70.0,
+		"attack_range": 45.0,
+		"aggro_range": 200.0,
+		"xp_reward": 350,
+		"gold_reward": 150,
+		"drop_table": "ogre_boss",
+		"is_mini_boss": true,
+	},
+	"mini_boss_elder_drake": {
+		"name": "Elder Drake",
+		"level_range": [22, 26],
+		"sprite_type": "dragon_whelp",
+		"move_speed": 80.0,
+		"attack_range": 55.0,
+		"aggro_range": 220.0,
+		"xp_reward": 500,
+		"gold_reward": 250,
+		"drop_table": "ogre_boss",
+		"is_mini_boss": true,
+	},
+	"mini_boss_abyssal_lord": {
+		"name": "Abyssal Lord",
+		"level_range": [28, 32],
+		"sprite_type": "infernal",
+		"move_speed": 60.0,
+		"attack_range": 60.0,
+		"aggro_range": 240.0,
+		"xp_reward": 750,
+		"gold_reward": 400,
+		"drop_table": "ogre_boss",
+		"is_mini_boss": true,
+	},
 }
+
+signal mini_boss_died(boss_name: String, position: Vector2)
 
 var _enemy_scene: PackedScene = preload("res://scenes/enemies/enemy.tscn")
 var _alive_count: int = 0
@@ -221,6 +328,7 @@ func _instantiate_enemy(pending: Dictionary) -> void:
 	var level = pending["level"]
 	var weakness_factor = pending["weakness_factor"]
 	var is_respawn = pending["is_respawn"]
+	var is_mini_boss = type_data.get("is_mini_boss", false)
 
 	var config = {
 		"name": type_data["name"],
@@ -233,10 +341,18 @@ func _instantiate_enemy(pending: Dictionary) -> void:
 		"gold_reward": int((type_data["gold_reward"] + (level - 1) * 2) * weakness_factor),
 		"drop_table": type_data["drop_table"],
 		"weakness_factor": weakness_factor,
+		"is_mini_boss": is_mini_boss,
 	}
 
 	add_child(enemy)
 	enemy.initialize(config)
+	if is_mini_boss:
+		# Mini-bosses get 3x HP, 1.5x damage, larger sprite
+		enemy.stats.max_hp = int(enemy.stats.max_hp * 3.0)
+		enemy.stats.current_hp = enemy.stats.max_hp
+		enemy.stats.attack_damage = int(enemy.stats.attack_damage * 1.5)
+		enemy.sprite.scale = Vector2(1.5, 1.5)
+		enemy.sprite.modulate = Color(1.2, 0.8, 0.8)  # Reddish tint
 	if is_respawn and weakness_factor < 1.0:
 		enemy.stats.max_hp = int(enemy.stats.max_hp * weakness_factor)
 		enemy.stats.current_hp = enemy.stats.max_hp
@@ -252,6 +368,10 @@ func _on_enemy_died(enemy: Node2D, xp_reward: int, gold_reward: int) -> void:
 	if player and is_instance_valid(player):
 		if player.stats:
 			player.stats.add_xp(xp_reward)
+
+	# Check if this was a mini-boss
+	if enemy.is_mini_boss:
+		mini_boss_died.emit(enemy.enemy_name, enemy.global_position)
 
 	_alive_count -= 1
 	if _alive_count <= 0:

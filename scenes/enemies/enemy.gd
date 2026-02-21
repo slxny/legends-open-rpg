@@ -35,6 +35,11 @@ var _cached_world_node: Node = null  # Cached world node for VFX spawning
 var _base_scale: Vector2 = Vector2(1.0, 1.0)  # Resting sprite scale (1.5 for mini-bosses)
 var _base_modulate: Color = Color.WHITE  # Resting sprite tint (reddish for mini-bosses)
 
+# Outline shader for hover highlighting (shared across all enemies)
+static var _outline_shader: Shader = null
+static var _info_label_settings: LabelSettings = null
+var _info_label: Label = null
+
 # Distance-based sleep/wake — enemies far from the player disable physics processing
 var _is_sleeping: bool = false
 var _sleep_check_timer: float = 0.0
@@ -105,6 +110,53 @@ func _ready() -> void:
 	add_child(_shadow)
 	_shadow.move_to_front()
 	move_child(_shadow, 0)
+
+	# Enable mouse hover/click detection
+	input_pickable = true
+	# Outline shader (shared across all enemies, initialized once)
+	if not _outline_shader:
+		_outline_shader = Shader.new()
+		_outline_shader.code = "shader_type canvas_item;
+uniform bool enabled = false;
+uniform vec4 line_color : source_color = vec4(1.0, 0.3, 0.3, 0.85);
+void fragment() {
+	vec4 tex = texture(TEXTURE, UV);
+	if (enabled && tex.a < 0.1) {
+		vec2 ps = TEXTURE_PIXEL_SIZE;
+		float a = 0.0;
+		a += texture(TEXTURE, UV + vec2(ps.x, 0.0)).a;
+		a += texture(TEXTURE, UV + vec2(-ps.x, 0.0)).a;
+		a += texture(TEXTURE, UV + vec2(0.0, ps.y)).a;
+		a += texture(TEXTURE, UV + vec2(0.0, -ps.y)).a;
+		a += texture(TEXTURE, UV + vec2(ps.x, ps.y)).a;
+		a += texture(TEXTURE, UV + vec2(-ps.x, ps.y)).a;
+		a += texture(TEXTURE, UV + vec2(ps.x, -ps.y)).a;
+		a += texture(TEXTURE, UV + vec2(-ps.x, -ps.y)).a;
+		if (a > 0.0) {
+			COLOR = line_color;
+		} else {
+			COLOR = tex;
+		}
+	} else {
+		COLOR = tex;
+	}
+}
+"
+	if not _info_label_settings:
+		_info_label_settings = LabelSettings.new()
+		_info_label_settings.font_size = 11
+		_info_label_settings.font_color = Color(1.0, 0.6, 0.6)
+		_info_label_settings.outline_size = 2
+		_info_label_settings.outline_color = Color.BLACK
+	# Apply outline material to sprite
+	var outline_mat = ShaderMaterial.new()
+	outline_mat.shader = _outline_shader
+	outline_mat.set_shader_parameter("enabled", false)
+	outline_mat.set_shader_parameter("line_color", Color(1.0, 0.3, 0.3, 0.85))
+	sprite.material = outline_mat
+	# Connect mouse hover signals for outline
+	mouse_entered.connect(_on_mouse_entered)
+	mouse_exited.connect(_on_mouse_exited)
 
 	# Start with a short random idle delay before first patrol
 	_patrol_wait_timer = randf_range(0.3, 1.5)
@@ -178,6 +230,43 @@ func hide_selection() -> void:
 	if stats.current_hp >= stats.max_hp and current_state == State.IDLE:
 		hp_bar.visible = false
 		name_label.visible = false
+
+func _on_mouse_entered() -> void:
+	if not _is_dead and sprite and sprite.material:
+		sprite.material.set_shader_parameter("enabled", true)
+
+func _on_mouse_exited() -> void:
+	if sprite and sprite.material:
+		sprite.material.set_shader_parameter("enabled", false)
+
+func show_info() -> void:
+	if _is_dead:
+		return
+	# Show name + HP bar
+	show_selection()
+	# Remove existing info label if any
+	if _info_label and is_instance_valid(_info_label):
+		_info_label.queue_free()
+	_info_label = Label.new()
+	var info_parts: Array[String] = []
+	info_parts.append("HP %d/%d  ATK %d  ARM %d" % [stats.current_hp, stats.max_hp, stats.attack_damage, stats.armor])
+	if _effect_type != "":
+		info_parts.append("Effect: %s" % _effect_type.capitalize())
+	_info_label.text = "\n".join(info_parts)
+	_info_label.label_settings = _info_label_settings
+	_info_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_info_label.position = Vector2(-55, -58)
+	add_child(_info_label)
+	# Fade out after a moment
+	var tween = create_tween()
+	tween.tween_interval(3.0)
+	tween.tween_property(_info_label, "modulate:a", 0.0, 0.5)
+	tween.tween_callback(func():
+		if _info_label and is_instance_valid(_info_label):
+			_info_label.queue_free()
+			_info_label = null
+		hide_selection()
+	)
 
 func _physics_process(delta: float) -> void:
 	if _is_dead:
@@ -419,6 +508,9 @@ func _die() -> void:
 	_is_dead = true
 	collision_layer = 0
 	collision_mask = 0
+	input_pickable = false
+	if sprite and sprite.material:
+		sprite.material.set_shader_parameter("enabled", false)
 	AudioManager.play_sfx("enemy_death", -3.0)
 	died.emit(self, xp_reward, gold_reward)
 	_spawn_gold_drop(gold_reward)

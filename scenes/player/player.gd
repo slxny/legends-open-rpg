@@ -15,6 +15,7 @@ var player_id: int = 0
 var _enemies_in_range: Array[Node2D] = []
 var _trees_in_range: Array[Node2D] = []
 var _target_tree: Node2D = null  # Tree targeted by click-to-harvest
+var _target_enemy: Node2D = null  # Enemy targeted by left-click-to-attack
 var _is_chopping_tree: bool = false  # When true, spacebar hold = repeat chop (no charge/specials)
 
 # Click-to-move
@@ -229,6 +230,7 @@ func _physics_process(delta: float) -> void:
 	if has_input:
 		_is_moving_to_target = false
 		_target_tree = null  # Cancel tree targeting when manually moving
+		_target_enemy = null  # Cancel enemy targeting when manually moving
 		_is_chopping_tree = false  # Disengage chopping on movement
 		desired_velocity = input_dir * max_speed
 	elif _is_moving_to_target:
@@ -264,6 +266,20 @@ func _physics_process(delta: float) -> void:
 				_perform_tree_chop(_target_tree, dir)
 	elif _target_tree:
 		_target_tree = null  # Tree was chopped or became invalid
+
+	# Auto-attack: when player reaches a left-clicked enemy, attack it
+	if _target_enemy and is_instance_valid(_target_enemy) and not _target_enemy.get("_is_dead"):
+		if _target_enemy in _enemies_in_range:
+			_is_moving_to_target = false
+			if not _is_attack_animating and _attack_cooldown <= 0.0 and not _is_paralyzed:
+				var dir = (_target_enemy.global_position - global_position).normalized()
+				_set_facing(dir)
+				_try_manual_attack()
+		elif _is_moving_to_target:
+			# Keep following the moving enemy
+			_move_target = _target_enemy.global_position
+	elif _target_enemy:
+		_target_enemy = null  # Enemy died or became invalid
 
 	# Combo timer — reset combo if no attack within window
 	if _combo_index > 0:
@@ -396,21 +412,36 @@ func _unhandled_input(event: InputEvent) -> void:
 				if global_position.distance_squared_to(mouse_world) < 625.0:  # 25^2
 					_toggle_hero_stats_panel()
 					return
+				# Right-click on enemy = show info
 				var enemy_target = _get_enemy_at_mouse()
-				if enemy_target and not _is_paralyzed:
-					_is_chopping_tree = false
-					_target_tree = null
-					_try_manual_attack()
+				if enemy_target:
+					if enemy_target.has_method("show_info"):
+						enemy_target.show_info()
 					return
 				# Right-click on tree = show wood info
 				var rclick_tree = _get_tree_at_mouse()
 				if rclick_tree and rclick_tree.has_method("show_wood_info"):
 					rclick_tree.show_wood_info()
 					return
-			# Left-click on tree = move to it and auto-chop
 			if event.button_index == MOUSE_BUTTON_LEFT:
+				# Left-click on enemy = attack (in range) or move-to-attack
+				var lclick_enemy = _get_enemy_at_mouse()
+				if lclick_enemy and not _is_paralyzed:
+					_is_chopping_tree = false
+					_target_tree = null
+					if lclick_enemy in _enemies_in_range:
+						_target_enemy = null
+						_try_manual_attack()
+					else:
+						_target_enemy = lclick_enemy
+						_move_target = lclick_enemy.global_position
+						_is_moving_to_target = true
+						_spawn_move_indicator(_move_target)
+					return
+				# Left-click on tree = move to it and auto-chop
 				var lclick_tree = _get_tree_at_mouse()
 				if lclick_tree:
+					_target_enemy = null
 					_target_tree = lclick_tree
 					_move_target = lclick_tree.global_position
 					_is_moving_to_target = true
@@ -418,6 +449,7 @@ func _unhandled_input(event: InputEvent) -> void:
 					return
 			# Both mouse buttons move to clicked position
 			_target_tree = null
+			_target_enemy = null
 			_is_chopping_tree = false
 			var clicked = _get_clickable_at_mouse()
 			if clicked and clicked.has_method("interact"):

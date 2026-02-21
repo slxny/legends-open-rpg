@@ -55,18 +55,16 @@ jobs:
 
       - name: Cache-bust exported assets
         run: |
-          # Append short git hash to .js, .wasm, .pck filenames so browsers
-          # always fetch fresh files after each deploy.
+          # Godot bakes the .pck filename into the .wasm binary, so we
+          # cannot rename .pck or .wasm files. Instead, inject a version
+          # query string into the JS loader so browsers fetch fresh assets.
           HASH=$(git rev-parse --short HEAD)
           cd build/web
-          for f in *.js *.wasm *.pck; do
+          # Add cache-bust query param to .pck and .wasm URLs in the JS
+          for f in *.js; do
             [ -f "$f" ] || continue
-            EXT="${f##*.}"
-            BASE="${f%.*}"
-            NEW="${BASE}.${HASH}.${EXT}"
-            mv "$f" "$NEW"
-            # Update all references in HTML and JS files
-            sed -i "s|${f}|${NEW}|g" *.html *.js 2>/dev/null || true
+            sed -i "s|\.pck|.pck?v=${HASH}|g" "$f"
+            sed -i "s|\.wasm|.wasm?v=${HASH}|g" "$f"
           done
           cd ../..
 

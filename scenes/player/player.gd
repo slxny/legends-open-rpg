@@ -99,6 +99,11 @@ var _player_dmg_crit: LabelSettings = null
 # Cached physics query params (avoids allocation per click)
 var _enemy_query_params: PhysicsPointQueryParameters2D = null
 var _clickable_query_params: PhysicsPointQueryParameters2D = null
+# Shape-based click queries — generous radius for easy clicking/tapping
+var _click_circle: CircleShape2D = null
+var _enemy_shape_query: PhysicsShapeQueryParameters2D = null
+var _tree_shape_query: PhysicsShapeQueryParameters2D = null
+const CLICK_RADIUS: float = 30.0  # Generous click detection radius
 # Damage label pool (avoids Label.new() per hit on player)
 var _player_dmg_pool: Array[Label] = []
 const PLAYER_DMG_POOL_MAX: int = 10
@@ -194,6 +199,16 @@ func _ready() -> void:
 	_enemy_query_params.collision_mask = 2  # Enemies only
 	_clickable_query_params = PhysicsPointQueryParameters2D.new()
 	_clickable_query_params.collision_mask = 4  # NPCs only
+
+	# Shape-based click queries — circle area instead of exact point for forgiving clicks
+	_click_circle = CircleShape2D.new()
+	_click_circle.radius = CLICK_RADIUS
+	_enemy_shape_query = PhysicsShapeQueryParameters2D.new()
+	_enemy_shape_query.collision_mask = 2  # Enemies
+	_enemy_shape_query.shape = _click_circle
+	_tree_shape_query = PhysicsShapeQueryParameters2D.new()
+	_tree_shape_query.collision_mask = 4  # Environment (trees)
+	_tree_shape_query.shape = _click_circle
 
 	# Sync initial state to DeathCounterSystem
 	_sync_to_death_counters()
@@ -1375,13 +1390,26 @@ func _get_world_mouse_pos() -> Vector2:
 func _get_enemy_at_mouse() -> Node2D:
 	var mouse_pos = _get_world_mouse_pos()
 	var space = get_world_2d().direct_space_state
+	# First try exact point hit for precision
 	_enemy_query_params.position = mouse_pos
-	var results = space.intersect_point(_enemy_query_params, 1)
-	if results.size() > 0:
-		var col = results[0]["collider"]
+	var point_results = space.intersect_point(_enemy_query_params, 1)
+	if point_results.size() > 0:
+		var col = point_results[0]["collider"]
 		if col.is_in_group("enemies") and not col.get("_is_dead"):
 			return col
-	return null
+	# Fall back to generous shape query — find nearest enemy within click radius
+	_enemy_shape_query.transform = Transform2D(0, mouse_pos)
+	var results = space.intersect_shape(_enemy_shape_query, 8)
+	var best: Node2D = null
+	var best_dist_sq: float = INF
+	for r in results:
+		var col = r["collider"]
+		if col.is_in_group("enemies") and not col.get("_is_dead"):
+			var d = mouse_pos.distance_squared_to(col.global_position)
+			if d < best_dist_sq:
+				best_dist_sq = d
+				best = col
+	return best
 
 func _get_clickable_at_mouse() -> Node2D:
 	var mouse_pos = _get_world_mouse_pos()
@@ -1395,13 +1423,26 @@ func _get_clickable_at_mouse() -> Node2D:
 func _get_tree_at_mouse() -> Node2D:
 	var mouse_pos = _get_world_mouse_pos()
 	var space = get_world_2d().direct_space_state
+	# First try exact point hit
 	_clickable_query_params.position = mouse_pos
-	var results = space.intersect_point(_clickable_query_params, 4)
-	for result in results:
+	var point_results = space.intersect_point(_clickable_query_params, 4)
+	for result in point_results:
 		var col = result["collider"]
 		if col.is_in_group("harvestable_trees") and not col.get("_is_chopped"):
 			return col
-	return null
+	# Fall back to generous shape query — find nearest tree within click radius
+	_tree_shape_query.transform = Transform2D(0, mouse_pos)
+	var results = space.intersect_shape(_tree_shape_query, 8)
+	var best: Node2D = null
+	var best_dist_sq: float = INF
+	for r in results:
+		var col = r["collider"]
+		if col.is_in_group("harvestable_trees") and not col.get("_is_chopped"):
+			var d = mouse_pos.distance_squared_to(col.global_position)
+			if d < best_dist_sq:
+				best_dist_sq = d
+				best = col
+	return best
 
 func _set_facing(dir: Vector2) -> void:
 	_facing = dir

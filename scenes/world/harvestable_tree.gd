@@ -91,11 +91,11 @@ func _ready() -> void:
 	var shape = CircleShape2D.new()
 	match tree_size:
 		TreeSize.SMALL:
-			shape.radius = 8.0
+			shape.radius = 14.0
 		TreeSize.MEDIUM:
-			shape.radius = 12.0
+			shape.radius = 18.0
 		TreeSize.LARGE:
-			shape.radius = 16.0
+			shape.radius = 22.0
 	col.shape = shape
 	add_child(col)
 

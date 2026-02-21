@@ -9,9 +9,26 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.23.0"
+const GAME_VERSION := "v0.24.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.24.0",
+		"title": "Mobile Text Scaling",
+		"date": "2026-02-21",
+		"entries": [
+			"Shop dialog: item names, prices, and Buy/Sell buttons doubled for mobile",
+			"Inventory: equipment/bag buttons and stats text doubled for mobile",
+			"Tavern dialog: all text and buttons doubled for mobile",
+			"Armory dialog: upgrade text, costs, and buttons doubled for mobile",
+			"Woodworking dialog: all upgrade text and buttons doubled for mobile",
+			"Hero stats panel: all stats, buff entries, and timers doubled for mobile",
+			"Town NPC name labels and beacon labels doubled for mobile",
+			"Game messages and dramatic center messages doubled for mobile",
+			"HP/Mana/XP bar label text doubled for mobile",
+			"All dialog panels now expand to near-fullscreen on mobile",
+		]
+	},
 	{
 		"version": "v0.23.0",
 		"title": "Enemy AI Aggro Fixes",

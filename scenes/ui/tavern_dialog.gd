@@ -9,6 +9,7 @@ signal closed
 
 var _player: Node2D = null
 var _is_visible: bool = false
+var _is_mobile: bool = false
 const VISIT_COST: int = 50
 
 # Buffs: { id, name, description, stat, amount, duration, color }
@@ -43,7 +44,22 @@ func open() -> void:
 		return
 	_is_visible = true
 	panel.visible = true
+	_detect_mobile()
 	_refresh()
+
+func _detect_mobile() -> void:
+	var vp_size = get_viewport().get_visible_rect().size
+	_is_mobile = vp_size.x < 700 or (vp_size.x < vp_size.y)
+	if _is_mobile:
+		var margin = 10.0
+		panel.offset_left = -vp_size.x / 2.0 + margin
+		panel.offset_right = vp_size.x / 2.0 - margin
+		panel.offset_top = -vp_size.y / 2.0 + margin
+		panel.offset_bottom = vp_size.y / 2.0 - margin
+		$Panel/MarginContainer/VBox/TopBar/Title.add_theme_font_size_override("font_size", 40)
+		gold_label.add_theme_font_size_override("font_size", 32)
+		close_button.add_theme_font_size_override("font_size", 28)
+		close_button.custom_minimum_size = Vector2(180, 60)
 
 func close() -> void:
 	_is_visible = false
@@ -59,14 +75,14 @@ func _refresh() -> void:
 	# Flavorful header
 	var header = Label.new()
 	header.text = "The Lusty Wench"
-	header.add_theme_font_size_override("font_size", 18)
+	header.add_theme_font_size_override("font_size", 36 if _is_mobile else 18)
 	header.add_theme_color_override("font_color", Color(0.9, 0.4, 0.5))
 	header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	content.add_child(header)
 
 	var desc = Label.new()
 	desc.text = "A dimly lit establishment of... companionship.\nPay gold to spend time with one of the wenches.\nYou might gain a useful skill... or catch something."
-	desc.add_theme_font_size_override("font_size", 12)
+	desc.add_theme_font_size_override("font_size", 24 if _is_mobile else 12)
 	desc.add_theme_color_override("font_color", Color(0.7, 0.65, 0.6))
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content.add_child(desc)
@@ -84,7 +100,7 @@ func _refresh() -> void:
 			var secs = int(active["time_left"]) % 60
 			var buff_type = "Affliction" if active["is_debuff"] else "Blessing"
 			active_label.text = "Active %s: %s (%d:%02d remaining)" % [buff_type, active["id"].replace("tavern_", "").capitalize(), mins, secs]
-			active_label.add_theme_font_size_override("font_size", 12)
+			active_label.add_theme_font_size_override("font_size", 24 if _is_mobile else 12)
 			active_label.add_theme_color_override("font_color", Color(1, 0.3, 0.3) if active["is_debuff"] else Color(0.3, 1, 0.5))
 			content.add_child(active_label)
 
@@ -97,7 +113,7 @@ func _refresh() -> void:
 
 	var cost_info = Label.new()
 	cost_info.text = "Spend a night: %dg" % VISIT_COST
-	cost_info.add_theme_font_size_override("font_size", 14)
+	cost_info.add_theme_font_size_override("font_size", 28 if _is_mobile else 14)
 	cost_info.add_theme_color_override("font_color", Color(1, 0.85, 0.2))
 	hbox.add_child(cost_info)
 
@@ -107,7 +123,9 @@ func _refresh() -> void:
 
 	var visit_btn = Button.new()
 	visit_btn.text = "Visit the Wench"
-	visit_btn.custom_minimum_size = Vector2(130, 36)
+	visit_btn.custom_minimum_size = Vector2(260, 72) if _is_mobile else Vector2(130, 36)
+	if _is_mobile:
+		visit_btn.add_theme_font_size_override("font_size", 26)
 	visit_btn.pressed.connect(_on_visit)
 	if GameManager.gold < VISIT_COST:
 		visit_btn.disabled = true
@@ -117,7 +135,7 @@ func _refresh() -> void:
 	# Odds hint
 	var odds = Label.new()
 	odds.text = "80% chance of a blessing, 20% chance of... complications."
-	odds.add_theme_font_size_override("font_size", 10)
+	odds.add_theme_font_size_override("font_size", 20 if _is_mobile else 10)
 	odds.add_theme_color_override("font_color", Color(0.5, 0.45, 0.4))
 	content.add_child(odds)
 

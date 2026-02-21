@@ -43,6 +43,9 @@ func _ready() -> void:
 
 	if not beacon_label.is_empty():
 		label.text = beacon_label
+		var vp_size = get_viewport().get_visible_rect().size
+		if vp_size.x < 700 or (vp_size.x < vp_size.y):
+			label.add_theme_font_size_override("font_size", 20)
 	else:
 		label.visible = false
 

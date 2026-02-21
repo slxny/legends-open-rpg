@@ -17,10 +17,12 @@ func _on_game_message(text: String, color: Color = Color.WHITE) -> void:
 	var label = Label.new()
 	label.text = text
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var vp_size = get_viewport().get_visible_rect().size
+	var is_mobile = vp_size.x < 700 or (vp_size.x < vp_size.y)
 	var settings = LabelSettings.new()
-	settings.font_size = 18
+	settings.font_size = 36 if is_mobile else 18
 	settings.font_color = color
-	settings.outline_size = 3
+	settings.outline_size = 5 if is_mobile else 3
 	settings.outline_color = Color.BLACK
 	label.label_settings = settings
 

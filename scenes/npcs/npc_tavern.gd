@@ -9,6 +9,9 @@ extends StaticBody2D
 func _ready() -> void:
 	add_to_group("npcs")
 	name_label.text = tavern_name
+	var vp_size = get_viewport().get_visible_rect().size
+	if vp_size.x < 700 or (vp_size.x < vp_size.y):
+		name_label.add_theme_font_size_override("font_size", 22)
 	beacon.activated.connect(_on_beacon_activated)
 	var tex = SpriteGenerator.get_texture("tavern_building")
 	if tex:

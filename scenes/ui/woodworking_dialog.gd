@@ -9,6 +9,7 @@ signal closed
 
 var _player: Node2D = null
 var _is_visible: bool = false
+var _is_mobile: bool = false
 
 # Four upgrade tracks — each costs wood and improves a different axis
 # Costs scale: base * (level + 1)^1.3
@@ -54,7 +55,22 @@ func setup(player: Node2D) -> void:
 func open() -> void:
 	_is_visible = true
 	panel.visible = true
+	_detect_mobile()
 	_refresh()
+
+func _detect_mobile() -> void:
+	var vp_size = get_viewport().get_visible_rect().size
+	_is_mobile = vp_size.x < 700 or (vp_size.x < vp_size.y)
+	if _is_mobile:
+		var margin = 10.0
+		panel.offset_left = -vp_size.x / 2.0 + margin
+		panel.offset_right = vp_size.x / 2.0 - margin
+		panel.offset_top = -vp_size.y / 2.0 + margin
+		panel.offset_bottom = vp_size.y / 2.0 - margin
+		$Panel/MarginContainer/VBox/TopBar/Title.add_theme_font_size_override("font_size", 40)
+		wood_label.add_theme_font_size_override("font_size", 32)
+		close_button.add_theme_font_size_override("font_size", 28)
+		close_button.custom_minimum_size = Vector2(180, 60)
 
 func close() -> void:
 	_is_visible = false
@@ -112,21 +128,21 @@ func _add_upgrade_row(key: String) -> void:
 	# Header
 	var header = Label.new()
 	header.text = info["title"]
-	header.add_theme_font_size_override("font_size", 15)
+	header.add_theme_font_size_override("font_size", 30 if _is_mobile else 15)
 	header.add_theme_color_override("font_color", info["color"])
 	section.add_child(header)
 
 	# Description
 	var desc = Label.new()
 	desc.text = info["desc"]
-	desc.add_theme_font_size_override("font_size", 11)
+	desc.add_theme_font_size_override("font_size", 22 if _is_mobile else 11)
 	desc.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
 	section.add_child(desc)
 
 	# Current bonus
 	var bonus = Label.new()
 	bonus.text = "Lv %d/%d — %s" % [level, max_lvl, _get_bonus_text(key, level)]
-	bonus.add_theme_font_size_override("font_size", 12)
+	bonus.add_theme_font_size_override("font_size", 24 if _is_mobile else 12)
 	bonus.add_theme_color_override("font_color", Color(0.6, 0.85, 0.6))
 	section.add_child(bonus)
 
@@ -135,7 +151,7 @@ func _add_upgrade_row(key: String) -> void:
 		# Next level
 		var next = Label.new()
 		next.text = "Next: %s" % _get_bonus_text(key, level + 1)
-		next.add_theme_font_size_override("font_size", 11)
+		next.add_theme_font_size_override("font_size", 22 if _is_mobile else 11)
 		next.add_theme_color_override("font_color", Color(0.5, 0.7, 1.0))
 		section.add_child(next)
 
@@ -143,7 +159,7 @@ func _add_upgrade_row(key: String) -> void:
 		var hbox = HBoxContainer.new()
 		var cost_lbl = Label.new()
 		cost_lbl.text = "%d wood" % cost
-		cost_lbl.add_theme_font_size_override("font_size", 13)
+		cost_lbl.add_theme_font_size_override("font_size", 26 if _is_mobile else 13)
 		cost_lbl.add_theme_color_override("font_color", Color(0.65, 0.45, 0.2))
 		hbox.add_child(cost_lbl)
 
@@ -153,7 +169,9 @@ func _add_upgrade_row(key: String) -> void:
 
 		var btn = Button.new()
 		btn.text = "Build"
-		btn.custom_minimum_size = Vector2(80, 30)
+		btn.custom_minimum_size = Vector2(160, 60) if _is_mobile else Vector2(80, 30)
+		if _is_mobile:
+			btn.add_theme_font_size_override("font_size", 26)
 		var k = key
 		btn.pressed.connect(func(): _do_upgrade(k))
 		if GameManager.wood < cost:
@@ -163,7 +181,7 @@ func _add_upgrade_row(key: String) -> void:
 	else:
 		var max_label = Label.new()
 		max_label.text = "MAX LEVEL"
-		max_label.add_theme_font_size_override("font_size", 13)
+		max_label.add_theme_font_size_override("font_size", 26 if _is_mobile else 13)
 		max_label.add_theme_color_override("font_color", Color(1.0, 0.6, 0.1))
 		section.add_child(max_label)
 

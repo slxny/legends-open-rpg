@@ -9,6 +9,7 @@ extends CanvasLayer
 
 var _player: Node2D = null
 var _is_visible: bool = false
+var _is_mobile: bool = false
 
 func _ready() -> void:
 	panel.visible = false
@@ -30,7 +31,25 @@ func toggle() -> void:
 	_is_visible = !_is_visible
 	panel.visible = _is_visible
 	if _is_visible:
+		_detect_mobile()
 		_refresh()
+
+func _detect_mobile() -> void:
+	var vp_size = get_viewport().get_visible_rect().size
+	_is_mobile = vp_size.x < 700 or (vp_size.x < vp_size.y)
+	if _is_mobile:
+		var margin = 10.0
+		panel.offset_left = -vp_size.x / 2.0 + margin
+		panel.offset_right = vp_size.x / 2.0 - margin
+		panel.offset_top = -vp_size.y / 2.0 + margin
+		panel.offset_bottom = vp_size.y / 2.0 - margin
+		$Panel/MarginContainer/VBox/TopBar/Title.add_theme_font_size_override("font_size", 36)
+		$Panel/MarginContainer/VBox/TopBar/CloseHint.add_theme_font_size_override("font_size", 26)
+		$Panel/MarginContainer/VBox/HBox/EquipmentPanel/Title.add_theme_font_size_override("font_size", 32)
+		$Panel/MarginContainer/VBox/HBox/BagPanel/Title.add_theme_font_size_override("font_size", 32)
+		$Panel/MarginContainer/VBox/HBox/StatsPanel/Title.add_theme_font_size_override("font_size", 32)
+		stats_label.add_theme_font_size_override("font_size", 26)
+		tooltip_label.add_theme_font_size_override("font_size", 26)
 
 func _refresh() -> void:
 	if not _player:
@@ -49,7 +68,9 @@ func _refresh_equipment() -> void:
 	for slot_name in slot_names:
 		var item = inv.equipment.get(slot_name, {})
 		var btn = Button.new()
-		btn.custom_minimum_size = Vector2(100, 40)
+		btn.custom_minimum_size = Vector2(200, 80) if _is_mobile else Vector2(100, 40)
+		if _is_mobile:
+			btn.add_theme_font_size_override("font_size", 22)
 		if item.is_empty():
 			btn.text = "[%s]" % slot_name.capitalize()
 			btn.modulate = Color(0.5, 0.5, 0.5)
@@ -70,7 +91,9 @@ func _refresh_bag() -> void:
 	for i in range(inv.bag.size()):
 		var item = inv.bag[i]
 		var btn = Button.new()
-		btn.custom_minimum_size = Vector2(90, 36)
+		btn.custom_minimum_size = Vector2(180, 72) if _is_mobile else Vector2(90, 36)
+		if _is_mobile:
+			btn.add_theme_font_size_override("font_size", 22)
 		btn.text = item.get("name", "?")
 		var rarity = item.get("rarity", 0)
 		btn.add_theme_color_override("font_color", ItemData.RARITY_COLORS.get(rarity, Color.WHITE))
@@ -83,7 +106,9 @@ func _refresh_bag() -> void:
 	# Fill remaining slots with empty
 	for i in range(inv.bag.size(), InventoryComponent.MAX_BAG_SLOTS):
 		var btn = Button.new()
-		btn.custom_minimum_size = Vector2(90, 36)
+		btn.custom_minimum_size = Vector2(180, 72) if _is_mobile else Vector2(90, 36)
+		if _is_mobile:
+			btn.add_theme_font_size_override("font_size", 22)
 		btn.text = "---"
 		btn.modulate = Color(0.4, 0.4, 0.4)
 		bag_grid.add_child(btn)

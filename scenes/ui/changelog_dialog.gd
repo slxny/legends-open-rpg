@@ -8,9 +8,19 @@ extends CanvasLayer
 
 var _is_visible: bool = false
 
-const GAME_VERSION := "v0.15.0"
+const GAME_VERSION := "v0.16.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.16.0",
+		"title": "Mobile Tap Targeting",
+		"entries": [
+			"Enemy and tree click/tap targets are now much more forgiving on mobile",
+			"Added expanded touch areas around enemies for easier tapping",
+			"Added expanded touch areas around harvestable trees for easier tapping",
+			"Physics queries now use area overlap instead of point intersection for fat-finger tolerance",
+		]
+	},
 	{
 		"version": "v0.15.0",
 		"title": "Combat & Equipment Fixes",

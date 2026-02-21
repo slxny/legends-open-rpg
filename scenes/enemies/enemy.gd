@@ -196,7 +196,7 @@ func initialize(config: Dictionary) -> void:
 	_aggro_range_sq = aggro_range * aggro_range
 	_chase_range_sq = chase_range * chase_range
 	_attack_range_sq = stats.attack_range * stats.attack_range
-	var disengage = stats.attack_range * 1.5
+	var disengage = stats.attack_range * 2.5
 	_attack_disengage_sq = disengage * disengage
 	var alert_range = aggro_range * ALERT_RANGE_MULTIPLIER
 	_alert_range_sq = alert_range * alert_range
@@ -427,8 +427,13 @@ func _process_attack(delta: float) -> void:
 	elif to_target.x > 0.1:
 		sprite.flip_h = false
 
-	# Keep enemies spread apart even while attacking
-	velocity = _get_separation_push()
+	# Keep enemies spread apart and maintain distance from target
+	var push = _get_separation_push()
+	var dist = to_target.length()
+	var min_dist = stats.attack_range * 0.5
+	if dist < min_dist and dist > 0.1:
+		push -= to_target.normalized() * stats.move_speed * 0.5
+	velocity = push
 	move_and_slide()
 
 	_attack_timer -= delta
@@ -498,7 +503,7 @@ func take_damage(amount: int, is_crit: bool = false) -> void:
 
 	if stats.current_hp <= 0:
 		_die()
-	elif current_state == State.IDLE or current_state == State.PATROL:
+	elif current_state == State.IDLE or current_state == State.PATROL or current_state == State.RETURN:
 		var player = _get_player()
 		if player:
 			target = player

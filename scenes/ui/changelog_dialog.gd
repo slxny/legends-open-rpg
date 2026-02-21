@@ -17,6 +17,9 @@ const CHANGELOG: Array[Dictionary] = [
 		"entries": [
 			"Clicking or spacebar-attacking an enemy now auto-attacks until you move or act",
 			"Player automatically chases target if it walks out of melee range",
+			"Fixed enemies gluing onto hero and moving in sync during combat",
+			"Fixed rats and small enemies freezing instead of attacking in groups",
+			"Enemies hit while retreating home now fight back instead of ignoring you",
 			"Equipping items now shows an error message when level requirement is not met",
 			"Ravager's Cleaver can now be equipped immediately after dropping",
 		]

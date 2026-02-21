@@ -4,20 +4,27 @@ extends CanvasLayer
 ## 3x3 command card, alignment display, and save/load buttons.
 
 # Top bar refs
+@onready var top_bar: HBoxContainer = $TopBar
 @onready var gold_label: Label = $TopBar/GoldLabel
 @onready var wood_label: Label = $TopBar/WoodLabel
 @onready var alignment_label: Label = $TopBar/AlignmentLabel
 
 # Bottom console panel refs
+@onready var bottom_panel: PanelContainer = $BottomPanel
+@onready var bottom_hbox: HBoxContainer = $BottomPanel/HBox
 @onready var hp_bar: SCBar = $BottomPanel/HBox/UnitInfo/HPBar
 @onready var mana_bar: SCBar = $BottomPanel/HBox/UnitInfo/ManaBar
 @onready var level_label: Label = $BottomPanel/HBox/UnitInfo/InfoLine
 @onready var xp_bar: SCBar = $BottomPanel/HBox/UnitInfo/XPBar
+@onready var unit_info: VBoxContainer = $BottomPanel/HBox/UnitInfo
 
 # Minimap
 @onready var minimap: Control = $BottomPanel/HBox/Minimap
 
 # Command card refs (3x3 grid)
+@onready var command_card: VBoxContainer = $BottomPanel/HBox/CommandCard
+@onready var command_label: Label = $BottomPanel/HBox/CommandCard/Label
+@onready var command_grid: GridContainer = $BottomPanel/HBox/CommandCard/Grid
 @onready var ability_1_btn: Button = $BottomPanel/HBox/CommandCard/Grid/Ability1
 @onready var ability_2_btn: Button = $BottomPanel/HBox/CommandCard/Grid/Ability2
 @onready var log_btn: Button = $BottomPanel/HBox/CommandCard/Grid/Slot3
@@ -25,6 +32,7 @@ extends CanvasLayer
 @onready var load_btn: Button = $BottomPanel/HBox/CommandCard/Grid/Load
 
 var _player: Node2D = null
+var _is_mobile: bool = false
 
 # Ability tooltip panel
 var _tooltip_panel: PanelContainer = null
@@ -41,8 +49,47 @@ var _hint_timer: Timer = null
 var _hint_showing: bool = false
 
 func _ready() -> void:
+	_detect_mobile()
+	if _is_mobile:
+		_apply_mobile_layout()
 	_create_tooltip_panel()
 	_create_hint_panel()
+
+func _detect_mobile() -> void:
+	var vp_size = get_viewport().get_visible_rect().size
+	_is_mobile = vp_size.x < 700 or (vp_size.x < vp_size.y)
+
+func _apply_mobile_layout() -> void:
+	# ── Top bar: double font sizes ──
+	top_bar.offset_bottom = 56
+	gold_label.add_theme_font_size_override("font_size", 32)
+	wood_label.add_theme_font_size_override("font_size", 32)
+	alignment_label.add_theme_font_size_override("font_size", 28)
+
+	# ── Bottom panel: grow taller ──
+	bottom_panel.offset_top = -330
+	bottom_hbox.add_theme_constant_override("separation", 20)
+
+	# ── Unit info: bigger text and bars ──
+	level_label.add_theme_font_size_override("font_size", 36)
+	hp_bar.custom_minimum_size.y = 50
+	mana_bar.custom_minimum_size.y = 50
+	xp_bar.custom_minimum_size.y = 36
+	unit_info.add_theme_constant_override("separation", 8)
+
+	# ── Minimap: scale up ──
+	minimap.custom_minimum_size = Vector2(240, 200)
+
+	# ── Command card: double button sizes and fonts ──
+	command_card.custom_minimum_size.x = 460
+	command_label.add_theme_font_size_override("font_size", 26)
+	command_grid.add_theme_constant_override("h_separation", 4)
+	command_grid.add_theme_constant_override("v_separation", 4)
+
+	for child in command_grid.get_children():
+		if child is Button:
+			child.custom_minimum_size = Vector2(144, 90)
+			child.add_theme_font_size_override("font_size", 22)
 
 func setup(player: Node2D) -> void:
 	_player = player
@@ -201,11 +248,16 @@ func _create_tooltip_panel() -> void:
 	_tooltip_label.bbcode_enabled = true
 	_tooltip_label.fit_content = true
 	_tooltip_label.scroll_active = false
-	_tooltip_label.custom_minimum_size = Vector2(240, 0)
 	_tooltip_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_tooltip_label.add_theme_font_size_override("normal_font_size", 13)
-	_tooltip_label.add_theme_font_size_override("bold_font_size", 14)
 	_tooltip_label.add_theme_color_override("default_color", Color(0.9, 0.88, 0.8))
+	if _is_mobile:
+		_tooltip_label.custom_minimum_size = Vector2(420, 0)
+		_tooltip_label.add_theme_font_size_override("normal_font_size", 26)
+		_tooltip_label.add_theme_font_size_override("bold_font_size", 28)
+	else:
+		_tooltip_label.custom_minimum_size = Vector2(240, 0)
+		_tooltip_label.add_theme_font_size_override("normal_font_size", 13)
+		_tooltip_label.add_theme_font_size_override("bold_font_size", 14)
 	_tooltip_panel.add_child(_tooltip_label)
 
 	# Timer for delayed show
@@ -307,11 +359,16 @@ func _create_hint_panel() -> void:
 	_hint_label.bbcode_enabled = true
 	_hint_label.fit_content = true
 	_hint_label.scroll_active = false
-	_hint_label.custom_minimum_size = Vector2(500, 0)
 	_hint_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_hint_label.add_theme_font_size_override("normal_font_size", 14)
-	_hint_label.add_theme_font_size_override("bold_font_size", 15)
 	_hint_label.add_theme_color_override("default_color", Color(0.85, 0.85, 0.8))
+	if _is_mobile:
+		_hint_label.custom_minimum_size = Vector2(600, 0)
+		_hint_label.add_theme_font_size_override("normal_font_size", 28)
+		_hint_label.add_theme_font_size_override("bold_font_size", 30)
+	else:
+		_hint_label.custom_minimum_size = Vector2(500, 0)
+		_hint_label.add_theme_font_size_override("normal_font_size", 14)
+		_hint_label.add_theme_font_size_override("bold_font_size", 15)
 	_hint_panel.add_child(_hint_label)
 
 	_hint_timer = Timer.new()
@@ -401,7 +458,8 @@ func _show_next_hint() -> void:
 	await get_tree().process_frame
 	var screen_w = get_viewport().get_visible_rect().size.x
 	var panel_w = _hint_panel.size.x
-	_hint_panel.position = Vector2((screen_w - panel_w) / 2.0, -175.0 - _hint_panel.size.y - 10)
+	var bottom_offset = -340.0 if _is_mobile else -175.0
+	_hint_panel.position = Vector2((screen_w - panel_w) / 2.0, bottom_offset - _hint_panel.size.y - 10)
 
 	# Fade in
 	var tween = create_tween()

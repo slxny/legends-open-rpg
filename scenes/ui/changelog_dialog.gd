@@ -17,12 +17,12 @@ const CHANGELOG: Array[Dictionary] = [
 		"title": "Mobile UI Overhaul",
 		"date": "2026-02-21",
 		"entries": [
-			"Hero select title and subtitle are now much larger on mobile (52px / 28px)",
-			"Hero card names scaled up to 52px, type tags to 32px on mobile",
-			"SELECT buttons are now 110px tall with 40px font for easy tapping",
-			"Card padding, borders, and corner radius increased for mobile",
-			"Cards expand to fill screen width on mobile (up to 900px)",
-			"Touch targets on cards now include cursor hint for pointer devices",
+			"Hero select: title/subtitle, card names, type tags, and SELECT buttons all doubled for mobile",
+			"In-game HUD: command card buttons doubled from 68x44 to 144x90 with 22px font",
+			"HUD top bar resource labels doubled to 32px on mobile",
+			"HP/Mana/XP bars, unit info, and minimap all scaled up for mobile",
+			"Ability tooltips and tutorial hints scaled to 26-30px font on mobile",
+			"All command buttons are now large enough to tap comfortably on phones",
 		]
 	},
 	{

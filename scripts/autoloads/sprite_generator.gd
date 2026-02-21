@@ -58,7 +58,8 @@ func _all_sprite_names() -> Array[String]:
 		"tree_stump", "wood_log"])
 	# VFX & UI (needed by player/enemies)
 	names.append_array(["selection_green", "selection_red", "iso_shadow",
-		"slash_arc", "arrow_projectile", "blood_splatter", "skull_icon"])
+		"slash_arc", "arrow_projectile", "blood_splatter", "skull_icon",
+		"bone_fragment"])
 	# Beacons & items
 	names.append_array(["beacon_green", "beacon_yellow", "beacon_blue",
 		"beacon_red", "beacon_cyan",
@@ -3594,6 +3595,18 @@ func _gen_skull_icon() -> void:
 	_fill_rect(img, 7, 9, 1, 1, Color(0.2, 0.15, 0.1))
 
 	textures["skull_icon"] = ImageTexture.create_from_image(img)
+
+func _gen_bone_fragment() -> void:
+	# Small bone chip/fragment for skeleton crumble death effect
+	var img = Image.create(6, 6, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var bone = Color(0.85, 0.82, 0.72)
+	var bone_dark = Color(0.65, 0.60, 0.50)
+	_fill_rect(img, 1, 2, 4, 2, bone)
+	_fill_rect(img, 2, 1, 2, 4, bone)
+	img.set_pixel(1, 2, bone_dark)
+	img.set_pixel(4, 3, bone_dark)
+	textures["bone_fragment"] = ImageTexture.create_from_image(img)
 
 # ============================================================
 # SELECTION CIRCLES & VFX

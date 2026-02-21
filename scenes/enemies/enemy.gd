@@ -420,16 +420,23 @@ func _die() -> void:
 	AudioManager.play_sfx("enemy_death", -3.0)
 	died.emit(self, xp_reward, gold_reward)
 	_spawn_gold_drop(gold_reward)
-	_spawn_blood_splatter()
 	if not drop_table.is_empty():
 		var item = ItemData.roll_item_drop(drop_table)
 		if not item.is_empty():
 			_spawn_item_drop_dict(item)
-	# Death animation: pop, fall, fade
 	hp_bar.visible = false
 	name_label.visible = false
 	if _shadow:
 		_shadow.visible = false
+
+	if sprite_type == "skeleton":
+		_die_crumble()
+	else:
+		_spawn_blood_splatter()
+		_die_default()
+
+func _die_default() -> void:
+	# Death animation: pop, fall, fade
 	var tween = create_tween()
 	# Brief upward pop
 	tween.tween_property(sprite, "position", sprite.position + Vector2(0, -6), 0.05)
@@ -442,6 +449,47 @@ func _die() -> void:
 	tween.tween_property(sprite, "scale", Vector2(0.8, 0.8), 0.35)
 	tween.set_parallel(false)
 	tween.tween_callback(queue_free)
+
+func _die_crumble() -> void:
+	# Skeleton crumble: shake, squash down, scatter bone fragments
+	_spawn_bone_fragments()
+	var base_pos = sprite.position
+	var tween = create_tween()
+	# Rapid shake (3 oscillations)
+	for i in range(3):
+		var offset = Vector2(randf_range(-3, 3), 0)
+		tween.tween_property(sprite, "position", base_pos + offset, 0.03)
+	# Squash down — skeleton collapses into a pile
+	tween.tween_property(sprite, "scale", Vector2(1.4, 0.3), 0.15).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tween.parallel().tween_property(sprite, "position", base_pos + Vector2(0, 8), 0.15).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	# Fade the flattened remains
+	tween.tween_property(sprite, "modulate:a", 0.0, 0.3)
+	tween.tween_callback(queue_free)
+
+func _spawn_bone_fragments() -> void:
+	var bone_tex = SpriteGenerator.get_texture("bone_fragment")
+	if not bone_tex:
+		return
+	var world = _get_world_node()
+	for i in range(randi_range(4, 7)):
+		var bone = Sprite2D.new()
+		bone.texture = bone_tex
+		bone.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		bone.global_position = global_position + Vector2(randf_range(-6, 6), randf_range(-8, 4))
+		bone.rotation = randf() * TAU
+		bone.z_index = -1
+		world.add_child(bone)
+		# Scatter outward then fade
+		var dir = Vector2(randf_range(-1, 1), randf_range(-1, 1)).normalized()
+		var dest = bone.global_position + dir * randf_range(10, 25) + Vector2(0, randf_range(2, 8))
+		var t = bone.create_tween()
+		t.set_parallel(true)
+		t.tween_property(bone, "global_position", dest, randf_range(0.25, 0.4)).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		t.tween_property(bone, "rotation", bone.rotation + randf_range(-4.0, 4.0), 0.4)
+		t.set_parallel(false)
+		t.tween_interval(randf_range(0.8, 1.5))
+		t.tween_property(bone, "modulate:a", 0.0, 0.5)
+		t.tween_callback(bone.queue_free)
 
 func apply_knockback(dir: Vector2, force: float) -> void:
 	if _is_dead:

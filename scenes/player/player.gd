@@ -82,6 +82,7 @@ var _charge_vfx: Sprite2D = null  # Glow VFX while charging
 var _charge_shake_tween: Tween = null  # Sprite shake during charge
 var _charge_sfx_player: AudioStreamPlayer = null  # Looping charge sound
 var _charge_vfx_tween: Tween = null  # Looping glow tween during charge
+var _is_auto_attacking: bool = false  # True during auto-attack — forces basic swings only
 var _effect_vfx_tween: Tween = null  # Looping pulse tween for status effect
 var _world_node: Node = null  # Cached world node for VFX spawning
 # Cached VFX textures to avoid per-spawn lookups
@@ -548,10 +549,10 @@ func _do_basic_auto_attack(dir: Vector2) -> void:
 	# Plain basic attack only — no dash strikes, no combo progression.
 	# Used by the auto-attack loop so held keys don't accidentally trigger specials.
 	_attack_cooldown = 0.5 / stats.attack_speed
-	_combo_index = 0
 	_combo_timer = 0.0
-	_last_dir_category = ""
+	_is_auto_attacking = true
 	_perform_attack(_target_enemy, dir)
+	_is_auto_attacking = false
 
 func _process_status_effects(delta: float) -> void:
 	if _is_paralyzed:
@@ -1315,11 +1316,19 @@ func _do_melee_attack(target: Node2D, result: Dictionary, attack_dir: Vector2 = 
 	var base_pos = sprite.position
 
 	# Direction-based combo selection
-	var cur_cat = _get_dir_category(dir)
-	var swing_idx = _pick_combo_swing(cur_cat)
-	_last_dir_category = cur_cat
-	_combo_index += 1
-	_combo_timer = 0.0
+	var swing_idx: int
+	if _is_auto_attacking:
+		# Auto-attack: alternate between basic left/right slashes only (0 and 1)
+		swing_idx = _combo_index % 2
+		_combo_index += 1
+		_combo_timer = 0.0
+		_last_dir_category = ""
+	else:
+		var cur_cat = _get_dir_category(dir)
+		swing_idx = _pick_combo_swing(cur_cat)
+		_last_dir_category = cur_cat
+		_combo_index += 1
+		_combo_timer = 0.0
 
 	var has_frames = swing_idx < _combo_swings.size()
 	var frames = _combo_swings[swing_idx] if has_frames else []

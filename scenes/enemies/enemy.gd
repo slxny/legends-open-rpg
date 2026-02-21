@@ -427,12 +427,18 @@ func _process_attack(delta: float) -> void:
 	elif to_target.x > 0.1:
 		sprite.flip_h = false
 
-	# Keep enemies spread apart and maintain distance from target
+	# Keep enemies spread apart and maintain comfortable combat distance
 	var push = _get_separation_push()
 	var dist = to_target.length()
-	var min_dist = stats.attack_range * 0.5
-	if dist < min_dist and dist > 0.1:
-		push -= to_target.normalized() * stats.move_speed * 0.5
+	var ideal_dist = stats.attack_range * 0.7
+	if dist > 0.1:
+		var dir_from_target = -to_target.normalized()
+		if dist < ideal_dist:
+			# Too close — back away
+			push += dir_from_target * stats.move_speed * 0.5
+		elif dist > stats.attack_range * 1.2:
+			# Drifting too far — step back in
+			push -= dir_from_target * stats.move_speed * 0.3
 	velocity = push
 	move_and_slide()
 

@@ -66,6 +66,19 @@ jobs:
             sed -i "s|\.pck|.pck?v=${HASH}|g" "$f"
             sed -i "s|\.wasm|.wasm?v=${HASH}|g" "$f"
           done
+          # Cache-bust all JS/CSS/PNG references in index.html
+          for f in *.js; do
+            [ -f "$f" ] || continue
+            sed -i "s|${f}|${f}?v=${HASH}|g" index.html
+          done
+          for f in *.css; do
+            [ -f "$f" ] || continue
+            sed -i "s|${f}|${f}?v=${HASH}|g" index.html
+          done
+          for f in *.png; do
+            [ -f "$f" ] || continue
+            sed -i "s|${f}|${f}?v=${HASH}|g" index.html
+          done
           cd ../..
 
       - name: Add coi-serviceworker
@@ -76,9 +89,11 @@ jobs:
           wget -q https://raw.githubusercontent.com/gzuidhof/coi-serviceworker/master/coi-serviceworker.min.js \
             -O build/web/coi-serviceworker.min.js
 
+          HASH=$(git rev-parse --short HEAD)
           # Inject the service worker script into the HTML before </head>
           # Also add no-cache meta tags to prevent stale HTML
-          sed -i 's|</head>|<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/><meta http-equiv="Pragma" content="no-cache"/><meta http-equiv="Expires" content="0"/><script src="coi-serviceworker.min.js"></script></head>|' build/web/index.html
+          # The SW script also gets a cache-bust query string
+          sed -i "s|</head>|<meta http-equiv=\"Cache-Control\" content=\"no-cache, no-store, must-revalidate\"/><meta http-equiv=\"Pragma\" content=\"no-cache\"/><meta http-equiv=\"Expires\" content=\"0\"/><script src=\"coi-serviceworker.min.js?v=${HASH}\"></script></head>|" build/web/index.html
 
       - name: Setup Pages
         uses: actions/configure-pages@v4

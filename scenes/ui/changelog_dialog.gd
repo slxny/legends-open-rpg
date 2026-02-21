@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.18.0"
+const GAME_VERSION := "v0.19.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.19.0",
+		"title": "Full Cache-Busting",
+		"date": "2026-02-21",
+		"entries": [
+			"All JS, CSS, and image assets in the web build are now cache-busted with a git hash",
+			"Service worker script is also cache-busted to prevent stale cross-origin isolation",
+			"Fixes browsers showing outdated versions after new deploys",
+		]
+	},
 	{
 		"version": "v0.18.0",
 		"title": "Mobile Changelog Readability",

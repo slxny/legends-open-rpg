@@ -163,6 +163,15 @@ func _create_mobile_hero_card(hero_key: String, data: Dictionary) -> PanelContai
 	card_vbox.add_child(button)
 
 	panel.add_child(card_vbox)
+
+	# Tapping anywhere on the card selects the hero — not just the button
+	panel.gui_input.connect(func(event: InputEvent):
+		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			_on_hero_selected(hero_key)
+		elif event is InputEventScreenTouch and event.pressed:
+			_on_hero_selected(hero_key)
+	)
+
 	return panel
 
 func _create_desktop_hero_card(hero_key: String, data: Dictionary) -> PanelContainer:
@@ -291,21 +300,30 @@ func _create_desktop_hero_card(hero_key: String, data: Dictionary) -> PanelConta
 	button.add_theme_font_size_override("font_size", btn_font_size)
 	button.pressed.connect(_on_hero_selected.bind(hero_key))
 
-	# Hover effects
-	button.mouse_entered.connect(func():
+	card_vbox.add_child(button)
+
+	panel.add_child(card_vbox)
+
+	# Hover effects on entire card, not just the button
+	panel.mouse_entered.connect(func():
 		style.border_color = data.get("color", Color.WHITE)
 		style.border_width_top = 3
 		style.border_width_bottom = 3
 		style.border_width_left = 3
 		style.border_width_right = 3
 	)
-	button.mouse_exited.connect(func():
+	panel.mouse_exited.connect(func():
 		style.border_color = data.get("color", Color.WHITE).darkened(0.3)
 		style.set_border_width_all(2)
 	)
-	card_vbox.add_child(button)
 
-	panel.add_child(card_vbox)
+	# Clicking anywhere on the card selects the hero — not just the button
+	panel.gui_input.connect(func(event: InputEvent):
+		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			_on_hero_selected(hero_key)
+	)
+	panel.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+
 	return panel
 
 func _build_version_button() -> void:
@@ -313,7 +331,7 @@ func _build_version_button() -> void:
 	bottom_bar.alignment = BoxContainer.ALIGNMENT_CENTER
 
 	var version_btn = Button.new()
-	version_btn.text = "Version Log (v0.14.0)"
+	version_btn.text = "Version Log (v0.16.0)"
 	var ver_btn_w = 160 if _is_mobile else 200
 	var ver_btn_h = 32 if _is_mobile else 36
 	var ver_font_size = 11 if _is_mobile else 13

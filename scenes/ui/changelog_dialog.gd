@@ -19,6 +19,8 @@ const CHANGELOG: Array[Dictionary] = [
 			"Added expanded touch areas around enemies for easier tapping",
 			"Added expanded touch areas around harvestable trees for easier tapping",
 			"Physics queries now use area overlap instead of point intersection for fat-finger tolerance",
+			"Hero select cards are now fully tappable — tap anywhere on the card, not just the SELECT button",
+			"Card hover highlight now triggers on the entire card on desktop",
 		]
 	},
 	{

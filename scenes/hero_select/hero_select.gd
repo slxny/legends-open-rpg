@@ -4,11 +4,14 @@ signal hero_chosen(hero_class: String)
 
 @onready var hero_container: HBoxContainer = $MarginContainer/VBoxContainer/HeroContainer
 @onready var title_label: Label = $MarginContainer/VBoxContainer/TitleLabel
+@onready var vbox: VBoxContainer = $MarginContainer/VBoxContainer
 
 var _cards: Dictionary = {}
+var _changelog_dialog: CanvasLayer = null
 
 func _ready() -> void:
 	_build_hero_cards()
+	_build_version_button()
 
 func _build_hero_cards() -> void:
 	for key in HeroData.get_all_hero_keys():
@@ -134,6 +137,26 @@ func _create_hero_card(hero_key: String, data: Dictionary) -> PanelContainer:
 
 	panel.add_child(vbox)
 	return panel
+
+func _build_version_button() -> void:
+	var bottom_bar = HBoxContainer.new()
+	bottom_bar.alignment = BoxContainer.ALIGNMENT_CENTER
+
+	var version_btn = Button.new()
+	version_btn.text = "Version Log (v0.13.0)"
+	version_btn.custom_minimum_size = Vector2(200, 36)
+	version_btn.add_theme_font_size_override("font_size", 13)
+	version_btn.pressed.connect(_on_version_log_pressed)
+	bottom_bar.add_child(version_btn)
+
+	vbox.add_child(bottom_bar)
+
+func _on_version_log_pressed() -> void:
+	if _changelog_dialog == null:
+		var scene = load("res://scenes/ui/changelog_dialog.tscn")
+		_changelog_dialog = scene.instantiate()
+		add_child(_changelog_dialog)
+	_changelog_dialog.open()
 
 func _on_hero_selected(hero_key: String) -> void:
 	GameManager.select_hero(hero_key)

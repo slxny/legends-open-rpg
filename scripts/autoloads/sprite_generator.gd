@@ -46,6 +46,10 @@ func _init_asset_dirs() -> void:
 		for dir_key in ["down", "up", "side"]:
 			for frame in [1, 2, 3]:
 				hero_names.append("%s_walk_%s_%d" % [hero, dir_key, frame])
+	# Pickaxe animation frames for tree chopping (3 frames per hero)
+	for hero in ["blade_knight", "shadow_ranger"]:
+		for frame in [1, 2, 3]:
+			hero_names.append("%s_pickaxe%d" % [hero, frame])
 	for n in hero_names:
 		_asset_dirs[n] = "heroes"
 	# Enemies
@@ -90,6 +94,10 @@ func _generate_all() -> void:
 		for frame in [1, 2, 3]:
 			_gen_or_load("blade_knight_atk%s%d" % [swing, frame])
 	_gen_or_load("shadow_ranger")
+	# Pickaxe chop frames for tree chopping (3 frames per hero)
+	for hero in ["blade_knight", "shadow_ranger"]:
+		for frame in [1, 2, 3]:
+			_gen_or_load("%s_pickaxe%d" % [hero, frame])
 	# Directional idle sprites for heroes
 	for hero in ["blade_knight", "shadow_ranger"]:
 		for dir_key in ["down", "up", "side"]:
@@ -411,6 +419,139 @@ func _gen_blade_knight_atkc3() -> void:
 	_fill_rect(img, 25, 20, 1, 16, c["sword_trail"])
 	_fill_rect(img, 22, 16, 5, 8, c["armor_mid"])
 	textures["blade_knight_atkc3"] = ImageTexture.create_from_image(img)
+
+# ---- Pickaxe chop for tree chopping (blade_knight) ----
+# Pickaxe colors shared across frames
+func _pickaxe_colors() -> Dictionary:
+	return {
+		"handle": Color(0.55, 0.38, 0.2),
+		"head": Color(0.6, 0.6, 0.65),
+		"head_shine": Color(0.78, 0.8, 0.85),
+	}
+
+func _gen_blade_knight_pickaxe1() -> void:
+	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = _bk_colors()
+	_bk_draw_body(img, c, -1)
+	var p = _pickaxe_colors()
+	# Pickaxe raised above head — handle vertical, head at top
+	_fill_rect(img, 14, 0, 3, 14, p["handle"])  # Shaft above head
+	_fill_rect(img, 10, 0, 3, 4, p["head"])     # Pick head left
+	_fill_rect(img, 19, 0, 3, 4, p["head"])     # Pick head right
+	_fill_rect(img, 10, 0, 3, 2, p["head_shine"])
+	_fill_rect(img, 13, 12, 5, 4, c["armor_dark"])  # Grip
+	textures["blade_knight_pickaxe1"] = ImageTexture.create_from_image(img)
+
+func _gen_blade_knight_pickaxe2() -> void:
+	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = _bk_colors()
+	_bk_draw_body(img, c, 2)
+	var p = _pickaxe_colors()
+	# Pickaxe mid-swing — angled diagonally downward
+	_fill_rect(img, 22, 4, 3, 16, p["handle"])   # Shaft angled
+	_fill_rect(img, 19, 2, 4, 4, p["head"])      # Pick head left
+	_fill_rect(img, 25, 2, 4, 4, p["head"])      # Pick head right
+	_fill_rect(img, 25, 2, 4, 2, p["head_shine"])
+	_fill_rect(img, 21, 18, 5, 4, c["armor_dark"])  # Grip
+	textures["blade_knight_pickaxe2"] = ImageTexture.create_from_image(img)
+
+func _gen_blade_knight_pickaxe3() -> void:
+	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = _bk_colors()
+	_bk_draw_body(img, c, 3)
+	var p = _pickaxe_colors()
+	# Pickaxe struck into target — head at bottom, handle angled up
+	_fill_rect(img, 24, 16, 3, 20, p["handle"])  # Shaft pointing down
+	_fill_rect(img, 21, 34, 4, 4, p["head"])     # Pick head left
+	_fill_rect(img, 27, 34, 4, 4, p["head"])     # Pick head right
+	_fill_rect(img, 27, 34, 4, 2, p["head_shine"])
+	_fill_rect(img, 23, 14, 5, 4, c["armor_dark"])  # Grip
+	textures["blade_knight_pickaxe3"] = ImageTexture.create_from_image(img)
+
+# ---- Pickaxe chop for tree chopping (shadow_ranger) ----
+func _gen_shadow_ranger_pickaxe1() -> void:
+	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = _sr_colors()
+	var p = _pickaxe_colors()
+	# Body (no bow — holding pickaxe)
+	_fill_rect(img, 8, 44, 16, 4, c["shadow"])
+	_fill_rect(img, 10, 40, 5, 6, c["boot"])
+	_fill_rect(img, 17, 40, 5, 6, c["boot"])
+	_fill_rect(img, 11, 33, 4, 8, c["cloak_dark"])
+	_fill_rect(img, 17, 33, 4, 8, c["cloak_dark"])
+	_fill_rect(img, 8, 16, 16, 18, c["cloak_mid"])
+	_fill_rect(img, 9, 17, 14, 16, c["cloak_light"])
+	_fill_rect(img, 8, 30, 16, 2, c["quiver"])
+	_fill_rect(img, 10, 6, 12, 11, c["hood"])
+	_fill_rect(img, 11, 7, 10, 9, c["cloak_dark"])
+	_fill_rect(img, 13, 10, 6, 5, c["skin"])
+	_fill_rect(img, 14, 11, 2, 2, c["eyes"])
+	_fill_rect(img, 18, 11, 2, 2, c["eyes"])
+	# Pickaxe raised above head
+	_fill_rect(img, 14, 0, 3, 14, p["handle"])
+	_fill_rect(img, 10, 0, 3, 4, p["head"])
+	_fill_rect(img, 19, 0, 3, 4, p["head"])
+	_fill_rect(img, 10, 0, 3, 2, p["head_shine"])
+	_fill_rect(img, 13, 12, 5, 4, c["cloak_dark"])
+	textures["shadow_ranger_pickaxe1"] = ImageTexture.create_from_image(img)
+
+func _gen_shadow_ranger_pickaxe2() -> void:
+	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = _sr_colors()
+	var p = _pickaxe_colors()
+	# Body leaning forward
+	_fill_rect(img, 8, 44, 16, 4, c["shadow"])
+	_fill_rect(img, 12, 40, 5, 6, c["boot"])
+	_fill_rect(img, 19, 40, 5, 6, c["boot"])
+	_fill_rect(img, 13, 33, 4, 8, c["cloak_dark"])
+	_fill_rect(img, 19, 33, 4, 8, c["cloak_dark"])
+	_fill_rect(img, 10, 16, 16, 18, c["cloak_mid"])
+	_fill_rect(img, 11, 17, 14, 16, c["cloak_light"])
+	_fill_rect(img, 10, 30, 16, 2, c["quiver"])
+	_fill_rect(img, 12, 6, 12, 11, c["hood"])
+	_fill_rect(img, 13, 7, 10, 9, c["cloak_dark"])
+	_fill_rect(img, 15, 10, 6, 5, c["skin"])
+	_fill_rect(img, 16, 11, 2, 2, c["eyes"])
+	_fill_rect(img, 20, 11, 2, 2, c["eyes"])
+	# Pickaxe mid-swing
+	_fill_rect(img, 24, 4, 3, 16, p["handle"])
+	_fill_rect(img, 21, 2, 4, 4, p["head"])
+	_fill_rect(img, 27, 2, 4, 4, p["head"])
+	_fill_rect(img, 27, 2, 4, 2, p["head_shine"])
+	_fill_rect(img, 23, 18, 5, 4, c["cloak_dark"])
+	textures["shadow_ranger_pickaxe2"] = ImageTexture.create_from_image(img)
+
+func _gen_shadow_ranger_pickaxe3() -> void:
+	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = _sr_colors()
+	var p = _pickaxe_colors()
+	# Body leaning further forward
+	_fill_rect(img, 8, 44, 16, 4, c["shadow"])
+	_fill_rect(img, 13, 40, 5, 6, c["boot"])
+	_fill_rect(img, 20, 40, 5, 6, c["boot"])
+	_fill_rect(img, 14, 33, 4, 8, c["cloak_dark"])
+	_fill_rect(img, 20, 33, 4, 8, c["cloak_dark"])
+	_fill_rect(img, 11, 16, 16, 18, c["cloak_mid"])
+	_fill_rect(img, 12, 17, 14, 16, c["cloak_light"])
+	_fill_rect(img, 11, 30, 16, 2, c["quiver"])
+	_fill_rect(img, 13, 6, 12, 11, c["hood"])
+	_fill_rect(img, 14, 7, 10, 9, c["cloak_dark"])
+	_fill_rect(img, 16, 10, 6, 5, c["skin"])
+	_fill_rect(img, 17, 11, 2, 2, c["eyes"])
+	_fill_rect(img, 21, 11, 2, 2, c["eyes"])
+	# Pickaxe struck into target
+	_fill_rect(img, 26, 16, 3, 20, p["handle"])
+	_fill_rect(img, 23, 34, 4, 4, p["head"])
+	_fill_rect(img, 29, 34, 3, 4, p["head"])
+	_fill_rect(img, 29, 34, 3, 2, p["head_shine"])
+	_fill_rect(img, 25, 14, 5, 4, c["cloak_dark"])
+	textures["shadow_ranger_pickaxe3"] = ImageTexture.create_from_image(img)
 
 # ---- Swing D: Upward thrust / uppercut ----
 func _gen_blade_knight_atkd1() -> void:

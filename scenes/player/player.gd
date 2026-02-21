@@ -63,6 +63,7 @@ var _last_dir_category: String = ""        # "horizontal" | "up" | "down" | "dia
 #                d=upward thrust, e=spin slash
 # Each swing has 3 frames [wind-up, mid-swing, follow-through]
 var _combo_swings: Array = []  # Array of Arrays: [[f1,f2,f3], [f1,f2,f3], ...]
+var _pickaxe_frames: Array = []  # [wind-up, mid-swing, follow-through] for tree chopping
 var _idle_texture: Texture2D = null
 var _combo_index: int = 0       # Which swing we're on in the current combo
 var _combo_timer: float = 0.0   # Time since last hit — resets combo if too long
@@ -147,6 +148,13 @@ func _ready() -> void:
 		var f3 = SpriteGenerator.get_texture(hero_class + "_atk" + swing_key + "3")
 		if f1 and f2 and f3:
 			_combo_swings.append([f1, f2, f3])
+
+	# Cache pickaxe frames for tree chopping
+	var pf1 = SpriteGenerator.get_texture(hero_class + "_pickaxe1")
+	var pf2 = SpriteGenerator.get_texture(hero_class + "_pickaxe2")
+	var pf3 = SpriteGenerator.get_texture(hero_class + "_pickaxe3")
+	if pf1 and pf2 and pf3:
+		_pickaxe_frames = [pf1, pf2, pf3]
 
 	var shape = attack_area.get_node("CollisionShape2D")
 	if shape and shape.shape is CircleShape2D:
@@ -1432,8 +1440,8 @@ func _perform_tree_chop(tree: Node2D, attack_dir: Vector2) -> void:
 	var dir = attack_dir
 	var base_pos = sprite.position
 
-	# Pick overhead chop frames for tree chopping
-	var frames = _combo_swings[2] if _combo_swings.size() > 2 else []
+	# Use pickaxe frames for tree chopping, fall back to overhead chop if unavailable
+	var frames = _pickaxe_frames if _pickaxe_frames.size() == 3 else (_combo_swings[2] if _combo_swings.size() > 2 else [])
 
 	var tween = create_tween()
 	# Wind-up

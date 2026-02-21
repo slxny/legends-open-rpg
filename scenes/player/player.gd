@@ -274,7 +274,7 @@ func _physics_process(delta: float) -> void:
 			if not _is_attack_animating and _attack_cooldown <= 0.0 and not _is_paralyzed:
 				var dir = (_target_enemy.global_position - global_position).normalized()
 				_set_facing(dir)
-				_try_manual_attack()
+				_do_basic_auto_attack(dir)
 		else:
 			# Target moved out of range — chase them
 			_move_target = _target_enemy.global_position
@@ -543,6 +543,15 @@ func _try_manual_attack() -> void:
 		else:
 			AudioManager.play_sfx("sword_swing")
 			_perform_swing_no_target(attack_dir)
+
+func _do_basic_auto_attack(dir: Vector2) -> void:
+	# Plain basic attack only — no dash strikes, no combo progression.
+	# Used by the auto-attack loop so held keys don't accidentally trigger specials.
+	_attack_cooldown = 0.5 / stats.attack_speed
+	_combo_index = 0
+	_combo_timer = 0.0
+	_last_dir_category = ""
+	_perform_attack(_target_enemy, dir)
 
 func _process_status_effects(delta: float) -> void:
 	if _is_paralyzed:

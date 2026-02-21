@@ -16,6 +16,7 @@ const CHANGELOG: Array[Dictionary] = [
 		"title": "Combat & Equipment Fixes",
 		"entries": [
 			"Clicking or spacebar-attacking an enemy now auto-attacks until you move or act",
+			"Auto-attacks are always plain basic swings — no combos or specials",
 			"Player automatically chases target if it walks out of melee range",
 			"Fixed enemies gluing onto hero and moving in sync during combat",
 			"Fixed rats and small enemies freezing instead of attacking in groups",

@@ -8,12 +8,22 @@ extends CanvasLayer
 
 var _is_visible: bool = false
 
-const GAME_VERSION := "v0.16.0"
+const GAME_VERSION := "v0.17.0"
 
 const CHANGELOG: Array[Dictionary] = [
 	{
+		"version": "v0.17.0",
+		"title": "Changelog Timestamps",
+		"date": "2026-02-21",
+		"entries": [
+			"All changelog entries now display the date they were released",
+			"Version bump to v0.17.0",
+		]
+	},
+	{
 		"version": "v0.16.0",
 		"title": "Mobile Tap Targeting",
+		"date": "2026-02-21",
 		"entries": [
 			"Enemy and tree click/tap targets are now much more forgiving on mobile",
 			"Added expanded touch areas around enemies for easier tapping",
@@ -26,6 +36,7 @@ const CHANGELOG: Array[Dictionary] = [
 	{
 		"version": "v0.15.0",
 		"title": "Combat & Equipment Fixes",
+		"date": "2026-02-21",
 		"entries": [
 			"Clicking or spacebar-attacking an enemy now auto-attacks until you move or act",
 			"Auto-attacks are always plain basic swings — no combos or specials",
@@ -40,6 +51,7 @@ const CHANGELOG: Array[Dictionary] = [
 	{
 		"version": "v0.14.0",
 		"title": "Clickable Tree Harvesting",
+		"date": "2026-02-21",
 		"entries": [
 			"Left-click trees to walk to them and auto-chop — no more mashing spacebar",
 			"Harvestable trees now glow with a green outline on mouse hover",
@@ -51,6 +63,7 @@ const CHANGELOG: Array[Dictionary] = [
 	{
 		"version": "v0.13.0",
 		"title": "Enemy Overhaul",
+		"date": "2026-02-21",
 		"entries": [
 			"Rats now aggressively pursue players with increased aggro range",
 			"Rats randomly alert to player presence even outside direct detection",
@@ -61,6 +74,7 @@ const CHANGELOG: Array[Dictionary] = [
 	{
 		"version": "v0.12.0",
 		"title": "Music & Crafting",
+		"date": "2026-02-21",
 		"entries": [
 			"Town music now rotates between 5 completely different tracks every minute",
 			"Expanded town theme to 3:12 with 8 distinct sections",
@@ -71,6 +85,7 @@ const CHANGELOG: Array[Dictionary] = [
 	{
 		"version": "v0.11.0",
 		"title": "Buildings & Resources",
+		"date": "2026-02-20",
 		"entries": [
 			"Added tree chopping system with wood resource collection",
 			"Added tavern building with wench visit mechanic (buff/debuff system)",
@@ -82,6 +97,7 @@ const CHANGELOG: Array[Dictionary] = [
 	{
 		"version": "v0.10.0",
 		"title": "Performance & World",
+		"date": "2026-02-20",
 		"entries": [
 			"Massive performance overhaul across entire codebase",
 			"Fixed remaining performance hotspots across UI and gameplay systems",
@@ -93,6 +109,7 @@ const CHANGELOG: Array[Dictionary] = [
 	{
 		"version": "v0.9.0",
 		"title": "Audio System",
+		"date": "2026-02-20",
 		"entries": [
 			"Added procedural audio system with SFX and ambient soundtrack",
 			"Overhauled attack SFX — replaced hollow sine waves with richer sounds",
@@ -103,6 +120,7 @@ const CHANGELOG: Array[Dictionary] = [
 	{
 		"version": "v0.8.0",
 		"title": "Items & Combat",
+		"date": "2026-02-20",
 		"entries": [
 			"Simplified dash strike: diagonal keys + space",
 			"Massively expanded items, affixes, enemy types, and map population",
@@ -112,6 +130,7 @@ const CHANGELOG: Array[Dictionary] = [
 	{
 		"version": "v0.7.0",
 		"title": "Smoothness & Polish",
+		"date": "2026-02-20",
 		"entries": [
 			"Added large rat swarms near town as starter mobs (15-20 per group)",
 			"Fixed hero jitter when idle and during charge attacks",
@@ -123,6 +142,7 @@ const CHANGELOG: Array[Dictionary] = [
 	{
 		"version": "v0.6.0",
 		"title": "Combat Expansion",
+		"date": "2026-02-20",
 		"entries": [
 			"Added unit effects, right-click attack, and improved minion AI",
 			"Added special attack system: double-tap, triple-tap, charge, dash strike",
@@ -133,6 +153,7 @@ const CHANGELOG: Array[Dictionary] = [
 	{
 		"version": "v0.5.0",
 		"title": "Movement & Animation",
+		"date": "2026-02-20",
 		"entries": [
 			"Smooth player movement with acceleration, walk bob, and lean",
 			"Added proper walk cycle animation replacing programmatic bob",
@@ -143,6 +164,7 @@ const CHANGELOG: Array[Dictionary] = [
 	{
 		"version": "v0.4.0",
 		"title": "Controls",
+		"date": "2026-02-20",
 		"entries": [
 			"Arrow key direction now used for abilities (Q/E), not just mouse",
 			"Hold Space to auto-attack at normal cooldown rate",
@@ -153,6 +175,7 @@ const CHANGELOG: Array[Dictionary] = [
 	{
 		"version": "v0.3.0",
 		"title": "World Expansion",
+		"date": "2026-02-20",
 		"entries": [
 			"Enlarged map to 12000x9000",
 			"Added enemy patrol behavior",
@@ -161,6 +184,7 @@ const CHANGELOG: Array[Dictionary] = [
 	{
 		"version": "v0.2.0",
 		"title": "Core Architecture",
+		"date": "2026-02-20",
 		"entries": [
 			"Implemented SC:BW-style deterministic architecture with full game systems",
 			"Fixed parser and trigger system errors",
@@ -169,6 +193,7 @@ const CHANGELOG: Array[Dictionary] = [
 	{
 		"version": "v0.1.0",
 		"title": "Initial Release",
+		"date": "2026-02-20",
 		"entries": [
 			"Fixed crash with Control nodes in Godot 4",
 			"Switched from isometric to simple top-down 2D",
@@ -197,9 +222,13 @@ func _build_entries() -> void:
 		child.queue_free()
 
 	for patch in CHANGELOG:
-		# Version header
+		# Version header with date
 		var header = Label.new()
-		header.text = "%s — %s" % [patch["version"], patch["title"]]
+		var date_str: String = patch.get("date", "")
+		if date_str != "":
+			header.text = "%s — %s  (%s)" % [patch["version"], patch["title"], date_str]
+		else:
+			header.text = "%s — %s" % [patch["version"], patch["title"]]
 		header.add_theme_font_size_override("font_size", 16)
 		header.add_theme_color_override("font_color", Color(0.4, 0.75, 1.0))
 		entries_container.add_child(header)

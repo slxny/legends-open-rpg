@@ -35,6 +35,11 @@ Godot 4.x isometric pixel-art RPG. Looks/plays like StarCraft Brood War UMS maps
 ## IMPORTANT: Combat
 - damage = ATK - ARMOR (min 1). Zones have FIXED enemy levels. No scaling.
 
+## IMPORTANT: Version & Changelog (do this on EVERY commit)
+- **Always** bump the patch version in `scenes/ui/changelog_dialog.gd` (`GAME_VERSION`) and `scenes/hero_select/hero_select.gd` (version button text)
+- **Always** add a new entry to the `CHANGELOG` array at the top with a summary of changes
+- **Always** include a `"date"` field with today's date (YYYY-MM-DD) on every new changelog entry
+
 ## Do NOT
 - Use smooth/vector art
 - Add quest markers or waypoints

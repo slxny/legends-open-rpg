@@ -112,7 +112,8 @@ var _shake_time_left: float = 0.0
 const SHAKE_DURATION: float = 0.11
 
 # Special attack type for current attack
-enum SpecialAttack { NONE, POWER_STRIKE, WHIRLWIND, CHARGED_SLASH, DASH_STRIKE }
+enum SpecialAttack { NONE, POWER_STRIKE, WHIRLWIND, CHARGED_SLASH, DASH_STRIKE,
+	PIERCING_SHOT, ARROW_RAIN, SNIPER_SHOT, SHADOW_STEP }
 
 func _ready() -> void:
 	add_to_group("player")
@@ -303,11 +304,11 @@ func _physics_process(delta: float) -> void:
 				Input.get_axis("move_left", "move_right"),
 				Input.get_axis("move_up", "move_down")
 			)
+			var is_ranged = hero_class == "shadow_ranger"
 			if taps >= 3:
-				_try_special_attack(SpecialAttack.WHIRLWIND)
+				_try_special_attack(SpecialAttack.ARROW_RAIN if is_ranged else SpecialAttack.WHIRLWIND)
 			elif taps >= 2 and move_input.length() > 0.25:
-				# Double-tap + direction held = power strike
-				_try_special_attack(SpecialAttack.POWER_STRIKE)
+				_try_special_attack(SpecialAttack.PIERCING_SHOT if is_ranged else SpecialAttack.POWER_STRIKE)
 			else:
 				# Single tap, or double-tap without direction = normal attack
 				_try_manual_attack()
@@ -345,7 +346,8 @@ func _physics_process(delta: float) -> void:
 			if _is_charging and not _is_attack_animating:
 				_is_charging = false
 				_stop_charge_vfx()
-				_try_special_attack(SpecialAttack.CHARGED_SLASH)
+				var is_ranged = hero_class == "shadow_ranger"
+				_try_special_attack(SpecialAttack.SNIPER_SHOT if is_ranged else SpecialAttack.CHARGED_SLASH)
 			_charge_time = 0.0
 
 	# Procedural screen shake tick
@@ -510,9 +512,12 @@ func _try_manual_attack() -> void:
 	# Update facing to match attack direction
 	_set_facing(attack_dir)
 
-	# Diagonal keys + attack = dash strike
+	# Diagonal keys + attack = dash strike / shadow step
 	if abs(input_raw.x) > 0.3 and abs(input_raw.y) > 0.3:
-		_execute_dash_strike(attack_dir)
+		if hero_class == "shadow_ranger":
+			_execute_shadow_step(attack_dir)
+		else:
+			_execute_dash_strike(attack_dir)
 		return
 
 	_enemies_in_range = _enemies_in_range.filter(func(e): return is_instance_valid(e) and not e.get("_is_dead"))
@@ -650,6 +655,14 @@ func _try_special_attack(special: SpecialAttack) -> void:
 			_execute_charged_slash(attack_dir)
 		SpecialAttack.DASH_STRIKE:
 			_execute_dash_strike(attack_dir)
+		SpecialAttack.PIERCING_SHOT:
+			_execute_piercing_shot(attack_dir)
+		SpecialAttack.ARROW_RAIN:
+			_execute_arrow_rain(attack_dir)
+		SpecialAttack.SNIPER_SHOT:
+			_execute_sniper_shot(attack_dir)
+		SpecialAttack.SHADOW_STEP:
+			_execute_shadow_step(attack_dir)
 
 func _execute_power_strike(attack_dir: Vector2) -> void:
 	# Double-tap: Heavy single-target hit, 1.4x damage, dramatic wind-up
@@ -988,6 +1001,292 @@ func _execute_dash_strike(attack_dir: Vector2) -> void:
 	)
 	tween.tween_property(sprite, "rotation", 0.0, 0.08)
 	tween.tween_interval(0.05)
+	_anim_return_to_idle(tween, base_pos)
+
+# --- Shadow Ranger Special Attacks (ranged, lower damage than melee) ---
+
+func _execute_piercing_shot(attack_dir: Vector2) -> void:
+	# Double-tap: Piercing arrow that passes through all enemies in a line. 1.2x damage.
+	_is_attack_animating = true
+	_attack_cooldown = 0.6 / stats.attack_speed
+	var dir = attack_dir
+	var base_pos = sprite.position
+	var dmg_mult := 1.2
+	var pierce_range := stats.attack_range * 2.5
+
+	# Bow draw animation
+	var tween = create_tween()
+	tween.tween_callback(func(): sprite.modulate = Color(1.0, 1.1, 0.7))
+	tween.tween_property(sprite, "scale", Vector2(0.85, 1.15), 0.1)
+	tween.tween_property(sprite, "position", base_pos - dir * 4.0, 0.08)
+	# Release
+	tween.tween_property(sprite, "scale", Vector2(1.1, 0.9), 0.04)
+	tween.tween_property(sprite, "position", base_pos + dir * 3.0, 0.04)
+	tween.tween_callback(func():
+		sprite.modulate = Color.WHITE
+		# Spawn piercing projectile (passes through enemies, doesn't stop on first hit)
+		var projectile = Area2D.new()
+		projectile.position = global_position
+		projectile.collision_layer = 0
+		projectile.collision_mask = 2
+
+		var shape_node = CollisionShape2D.new()
+		var circle = CircleShape2D.new()
+		circle.radius = 6.0
+		shape_node.shape = circle
+		projectile.add_child(shape_node)
+
+		var visual = Sprite2D.new()
+		visual.texture = SpriteGenerator.get_texture("arrow_projectile")
+		visual.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		visual.modulate = Color(1.0, 0.9, 0.4)
+		visual.scale = Vector2(1.5, 1.5)
+		projectile.add_child(visual)
+
+		# Trail glow
+		var trail = Sprite2D.new()
+		trail.texture = _tex_slash_arc
+		trail.modulate = Color(1.0, 0.8, 0.3, 0.5)
+		trail.scale = Vector2(1.2, 0.4)
+		trail.rotation = PI
+		projectile.add_child(trail)
+
+		projectile.rotation = dir.angle()
+		_get_world_node().add_child(projectile)
+
+		var end_pos = global_position + dir * pierce_range
+		var travel_time = pierce_range / 500.0
+		var proj_tween = projectile.create_tween()
+		proj_tween.tween_property(projectile, "position", end_pos, travel_time)
+		proj_tween.tween_callback(projectile.queue_free)
+
+		# Track already-hit enemies so each is only hit once
+		var hit_enemies: Array[Node2D] = []
+		projectile.body_entered.connect(func(body: Node2D):
+			if body.is_in_group("enemies") and body.has_method("take_damage") and body not in hit_enemies:
+				hit_enemies.append(body)
+				var result = CombatManager.calculate_damage(stats.get_stats_dict(), body.get_stats_dict(), dmg_mult)
+				body.take_damage(result["damage"], result["is_crit"])
+				body.apply_knockback(dir, 30.0)
+				_spawn_impact_vfx(body.global_position, result["is_crit"])
+				_do_screen_shake(3.0)
+		)
+		AudioManager.play_sfx("power_strike")
+		_spawn_effect_label("PIERCING SHOT!", Color(1.0, 0.85, 0.3))
+	)
+	tween.tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.08)
+	tween.tween_interval(0.06)
+	_anim_return_to_idle(tween, base_pos)
+
+func _execute_arrow_rain(attack_dir: Vector2) -> void:
+	# Triple-tap: Rain of arrows in a target area. 1.0x damage, AoE.
+	_is_attack_animating = true
+	_attack_cooldown = 0.9 / stats.attack_speed
+	var dir = attack_dir
+	var base_pos = sprite.position
+	var dmg_mult := 1.0
+	var rain_center = global_position + dir * 120.0
+	var rain_radius := 70.0
+	var arrow_count := 6
+
+	# Dramatic bow raise animation
+	var tween = create_tween()
+	tween.tween_callback(func(): sprite.modulate = Color(0.8, 0.9, 1.3))
+	tween.tween_property(sprite, "position", base_pos + Vector2(0, -6), 0.1)
+	tween.tween_property(sprite, "scale", Vector2(0.9, 1.15), 0.06)
+	# Fire upward
+	tween.tween_property(sprite, "scale", Vector2(1.1, 0.9), 0.04)
+	tween.tween_callback(func():
+		sprite.modulate = Color.WHITE
+		AudioManager.play_sfx("whirlwind")
+		_spawn_effect_label("ARROW RAIN!", Color(0.6, 0.8, 1.0))
+
+		# Spawn arrows raining down with staggered timing
+		var world = _get_world_node()
+		for i in range(arrow_count):
+			var delay = i * 0.06
+			get_tree().create_timer(delay).timeout.connect(func():
+				# Random position within radius
+				var offset = Vector2(randf_range(-rain_radius, rain_radius), randf_range(-rain_radius, rain_radius))
+				if offset.length() > rain_radius:
+					offset = offset.normalized() * rain_radius
+				var land_pos = rain_center + offset
+				var start_pos = land_pos + Vector2(randf_range(-20, 20), -80)
+
+				# Arrow visual
+				var arrow = _get_pooled_vfx()
+				arrow.texture = SpriteGenerator.get_texture("arrow_projectile")
+				arrow.global_position = start_pos
+				arrow.rotation = (land_pos - start_pos).angle()
+				arrow.modulate = Color(0.8, 0.9, 1.0, 0.9)
+				world.add_child(arrow)
+
+				var atween = arrow.create_tween()
+				atween.tween_property(arrow, "global_position", land_pos, 0.12)
+				atween.tween_callback(func():
+					# Impact VFX
+					_spawn_impact_vfx(land_pos, false)
+					# Damage enemies near this arrow
+					for enemy in get_tree().get_nodes_in_group("enemies"):
+						if is_instance_valid(enemy) and not enemy.get("_is_dead") and enemy.has_method("take_damage"):
+							if enemy.global_position.distance_to(land_pos) <= 25.0:
+								var result = CombatManager.calculate_damage(stats.get_stats_dict(), enemy.get_stats_dict(), dmg_mult)
+								enemy.take_damage(result["damage"], result["is_crit"])
+								var kb_dir = (enemy.global_position - land_pos).normalized()
+								enemy.apply_knockback(kb_dir, 25.0)
+				)
+				atween.tween_property(arrow, "modulate:a", 0.0, 0.15)
+				atween.tween_callback(_recycle_vfx.bind(arrow))
+			)
+		# Screen shake after the volley
+		_do_screen_shake(5.0)
+	)
+	tween.tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.08)
+	tween.tween_interval(0.4)  # Wait for arrows to land
+	_anim_return_to_idle(tween, base_pos)
+
+func _execute_sniper_shot(attack_dir: Vector2) -> void:
+	# Hold 1.5s: Long-range precision shot. 1.3x damage, huge range, knockback.
+	_is_attack_animating = true
+	_attack_cooldown = 0.8 / stats.attack_speed
+	var dir = attack_dir
+	var base_pos = sprite.position
+	var dmg_mult := 1.3
+	var snipe_range := stats.attack_range * 4.0
+
+	# Find the best target along the snipe line
+	var start_pos_world = global_position
+	var end_pos_world = start_pos_world + dir * snipe_range
+	var best_target: Node2D = null
+	var best_dist := INF
+	for enemy in get_tree().get_nodes_in_group("enemies"):
+		if not is_instance_valid(enemy) or enemy.get("_is_dead") or not enemy.has_method("take_damage"):
+			continue
+		var dist_to_path = _point_to_segment_dist(enemy.global_position, start_pos_world, end_pos_world)
+		if dist_to_path <= 25.0:
+			var to_enemy = enemy.global_position - start_pos_world
+			if dir.dot(to_enemy) > 0.0:
+				var d = to_enemy.length()
+				if d < best_dist:
+					best_dist = d
+					best_target = enemy
+
+	# Dramatic aim animation
+	var tween = create_tween()
+	tween.tween_callback(func(): sprite.modulate = Color(1.3, 1.0, 0.6))
+	tween.tween_property(sprite, "position", base_pos - dir * 6.0, 0.12)
+	tween.tween_property(sprite, "scale", Vector2(0.85, 1.2), 0.08)
+	# Flash on release
+	tween.tween_callback(func(): sprite.modulate = Color(2.0, 1.8, 1.0))
+	tween.tween_property(sprite, "position", base_pos + dir * 4.0, 0.03)
+	tween.tween_property(sprite, "scale", Vector2(1.15, 0.85), 0.03)
+	tween.tween_callback(func():
+		sprite.modulate = Color.WHITE
+		# Spawn fast sniper projectile with trail
+		var projectile = Area2D.new()
+		projectile.position = global_position
+		projectile.collision_layer = 0
+		projectile.collision_mask = 2
+
+		var shape_node = CollisionShape2D.new()
+		var circle = CircleShape2D.new()
+		circle.radius = 5.0
+		shape_node.shape = circle
+		projectile.add_child(shape_node)
+
+		var visual = Sprite2D.new()
+		visual.texture = SpriteGenerator.get_texture("arrow_projectile")
+		visual.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		visual.modulate = Color(1.0, 0.9, 0.3)
+		visual.scale = Vector2(2.0, 1.5)
+		projectile.add_child(visual)
+
+		projectile.rotation = dir.angle()
+		_get_world_node().add_child(projectile)
+
+		# Afterimage trail during flight
+		var ghost_count := 5
+		var ghost_interval = snipe_range / 700.0 / float(ghost_count)
+		var ghost_tw = projectile.create_tween()
+		for _k in range(ghost_count):
+			ghost_tw.tween_callback(func():
+				var ghost = _get_pooled_vfx()
+				ghost.texture = SpriteGenerator.get_texture("arrow_projectile")
+				ghost.global_position = projectile.global_position
+				ghost.rotation = projectile.rotation
+				ghost.scale = Vector2(1.5, 1.0)
+				ghost.modulate = Color(1.0, 0.8, 0.3, 0.4)
+				_get_world_node().add_child(ghost)
+				var gt = ghost.create_tween()
+				gt.tween_property(ghost, "modulate:a", 0.0, 0.15)
+				gt.tween_callback(_recycle_vfx.bind(ghost))
+			)
+			ghost_tw.tween_interval(ghost_interval)
+
+		var end_pos = global_position + dir * snipe_range
+		var travel_time = snipe_range / 700.0
+		var proj_tween = projectile.create_tween()
+		proj_tween.tween_property(projectile, "position", end_pos, travel_time)
+		proj_tween.tween_callback(projectile.queue_free)
+
+		# Hit the pre-selected target for guaranteed damage
+		if best_target and is_instance_valid(best_target):
+			var hit_delay = best_dist / 700.0
+			get_tree().create_timer(hit_delay).timeout.connect(func():
+				if is_instance_valid(best_target) and not best_target.get("_is_dead"):
+					var result = CombatManager.calculate_damage(stats.get_stats_dict(), best_target.get_stats_dict(), dmg_mult)
+					best_target.take_damage(result["damage"], result["is_crit"])
+					best_target.apply_knockback(dir, 120.0)
+					_spawn_impact_vfx(best_target.global_position, true)
+					_do_screen_shake(8.0)
+					_do_hit_freeze(true)
+			)
+		else:
+			_do_screen_shake(3.0)
+
+		AudioManager.play_sfx("charge_release")
+		_spawn_effect_label("SNIPER SHOT!", Color(1.0, 0.9, 0.3))
+	)
+	tween.tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.08)
+	tween.tween_interval(0.06)
+	_anim_return_to_idle(tween, base_pos)
+
+func _execute_shadow_step(attack_dir: Vector2) -> void:
+	# Diagonal + attack: Quick dodge-roll backward, then fire 3 arrows in a spread. 1.1x damage.
+	_is_attack_animating = true
+	_attack_cooldown = 0.6 / stats.attack_speed
+	var dir = attack_dir
+	var base_pos = sprite.position
+	var dmg_mult := 1.1
+	var dodge_distance := 50.0
+	var dodge_dir = -dir  # Roll AWAY from attack direction
+
+	# Dodge-roll animation
+	var tween = create_tween()
+	tween.tween_callback(func(): sprite.modulate = Color(0.6, 1.0, 0.8, 0.7))
+	# Roll backward
+	tween.set_parallel(true)
+	tween.tween_property(sprite, "rotation", -TAU, 0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.tween_property(self, "global_position", global_position + dodge_dir * dodge_distance, 0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.set_parallel(false)
+	# Quick aim after dodge
+	tween.tween_property(sprite, "rotation", 0.0, 0.04)
+	tween.tween_callback(func(): sprite.modulate = Color(1.2, 1.0, 0.8))
+	tween.tween_property(sprite, "scale", Vector2(0.9, 1.1), 0.04)
+	# Fire spread of 3 arrows
+	tween.tween_callback(func():
+		sprite.modulate = Color.WHITE
+		var spread_deg = deg_to_rad(25.0)
+		for i in range(3):
+			var angle_offset = lerp(-spread_deg / 2.0, spread_deg / 2.0, float(i) / 2.0)
+			var shot_dir = dir.rotated(angle_offset)
+			_spawn_projectile(shot_dir, 420.0, stats.attack_range * 2.0, dmg_mult)
+		AudioManager.play_sfx("dash_swoosh")
+		_spawn_effect_label("SHADOW STEP!", Color(0.4, 1.0, 0.7))
+		_do_screen_shake(4.0)
+	)
+	tween.tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.06)
+	tween.tween_interval(0.06)
 	_anim_return_to_idle(tween, base_pos)
 
 ## Distance from a point to a line segment (start -> end)

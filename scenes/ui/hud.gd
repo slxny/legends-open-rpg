@@ -330,32 +330,59 @@ func _start_tutorial_hints(hero_data: Dictionary) -> void:
 		if ab.has("ability_2"):
 			ab2_name = ab["ability_2"]["name"]
 
+	var is_ranged = _player and _player.hero_class == "shadow_ranger"
+
 	_hint_queue = [
 		{
 			"delay": 4.0,
 			"text": "[color=#f0d866]TIP:[/color]  Press [color=#66ccff][b]Q[/b][/color] for [color=#f0d866]%s[/color]  and  [color=#66ccff][b]E[/b][/color] for [color=#f0d866]%s[/color]" % [ab1_name, ab2_name],
 		},
-		{
-			"delay": 18.0,
-			"text": "[color=#f0d866]TIP:[/color]  [color=#ff9966][b]Double-tap SPACE[/b][/color] while moving for a [color=#ffcc44]Power Strike[/color] — heavy single-target hit!",
-		},
-		{
-			"delay": 18.0,
-			"text": "[color=#f0d866]TIP:[/color]  [color=#cc88ff][b]Triple-tap SPACE[/b][/color] for a [color=#cc88ff]Whirlwind[/color] — spin attack hitting all nearby enemies!",
-		},
-		{
-			"delay": 18.0,
-			"text": "[color=#f0d866]TIP:[/color]  [color=#ffdd55][b]Hold SPACE 1.5s[/b][/color] then release for a [color=#ffcc44]Charged Slash[/color] — dash through enemies!",
-		},
-		{
-			"delay": 18.0,
-			"text": "[color=#f0d866]TIP:[/color]  [color=#66eeff][b]Diagonal keys + SPACE[/b][/color] for a [color=#66eeff]Dash Strike[/color] — quick dash through foes!",
-		},
-		{
-			"delay": 18.0,
-			"text": "[color=#f0d866]TIP:[/color]  [color=#aaaaaa][b]Left-click[/b][/color] enemies to auto-attack  |  [color=#aaaaaa][b]Right-click[/b][/color] your hero for stats",
-		},
 	]
+
+	if is_ranged:
+		_hint_queue.append_array([
+			{
+				"delay": 18.0,
+				"text": "[color=#f0d866]TIP:[/color]  [color=#ff9966][b]Double-tap SPACE[/b][/color] while moving for a [color=#ffcc44]Piercing Shot[/color] — arrow passes through all enemies!",
+			},
+			{
+				"delay": 18.0,
+				"text": "[color=#f0d866]TIP:[/color]  [color=#6699ff][b]Triple-tap SPACE[/b][/color] for [color=#6699ff]Arrow Rain[/color] — arrows rain down on a target area!",
+			},
+			{
+				"delay": 18.0,
+				"text": "[color=#f0d866]TIP:[/color]  [color=#ffdd55][b]Hold SPACE 1.5s[/b][/color] then release for a [color=#ffcc44]Sniper Shot[/color] — long-range precision hit!",
+			},
+			{
+				"delay": 18.0,
+				"text": "[color=#f0d866]TIP:[/color]  [color=#66eebb][b]Diagonal keys + SPACE[/b][/color] for a [color=#66eebb]Shadow Step[/color] — dodge back and fire a spread!",
+			},
+		])
+	else:
+		_hint_queue.append_array([
+			{
+				"delay": 18.0,
+				"text": "[color=#f0d866]TIP:[/color]  [color=#ff9966][b]Double-tap SPACE[/b][/color] while moving for a [color=#ffcc44]Power Strike[/color] — heavy single-target hit!",
+			},
+			{
+				"delay": 18.0,
+				"text": "[color=#f0d866]TIP:[/color]  [color=#cc88ff][b]Triple-tap SPACE[/b][/color] for a [color=#cc88ff]Whirlwind[/color] — spin attack hitting all nearby enemies!",
+			},
+			{
+				"delay": 18.0,
+				"text": "[color=#f0d866]TIP:[/color]  [color=#ffdd55][b]Hold SPACE 1.5s[/b][/color] then release for a [color=#ffcc44]Charged Slash[/color] — dash through enemies!",
+			},
+			{
+				"delay": 18.0,
+				"text": "[color=#f0d866]TIP:[/color]  [color=#66eeff][b]Diagonal keys + SPACE[/b][/color] for a [color=#66eeff]Dash Strike[/color] — quick dash through foes!",
+			},
+		])
+
+	_hint_queue.append({
+		"delay": 18.0,
+		"text": "[color=#f0d866]TIP:[/color]  [color=#aaaaaa][b]Left-click[/b][/color] enemies to auto-attack  |  [color=#aaaaaa][b]Right-click[/b][/color] your hero for stats",
+	})
+
 	# Start the first hint after its delay
 	if _hint_queue.size() > 0:
 		_hint_timer.wait_time = _hint_queue[0]["delay"]

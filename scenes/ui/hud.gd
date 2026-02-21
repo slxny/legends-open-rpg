@@ -33,8 +33,16 @@ var _tooltip_timer: Timer = null
 var _tooltip_data: Dictionary = {}  # key -> formatted tooltip string
 var _hovered_btn: Button = null
 
+# Tutorial hint system
+var _hint_panel: PanelContainer = null
+var _hint_label: RichTextLabel = null
+var _hint_queue: Array[Dictionary] = []
+var _hint_timer: Timer = null
+var _hint_showing: bool = false
+
 func _ready() -> void:
 	_create_tooltip_panel()
+	_create_hint_panel()
 
 func setup(player: Node2D) -> void:
 	_player = player
@@ -87,6 +95,9 @@ func setup(player: Node2D) -> void:
 	_on_gold_changed(GameManager.gold)
 	_on_wood_changed(GameManager.wood)
 	_update_alignment_display()
+
+	# Start tutorial hints after a short delay
+	_start_tutorial_hints(hero_data)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed:
@@ -265,3 +276,117 @@ func _show_tooltip() -> void:
 	if y_pos < 4:
 		y_pos = btn_rect.position.y + btn_rect.size.y + 8.0
 	_tooltip_panel.position = Vector2(x_pos, y_pos)
+
+# ── Tutorial Hint System ────────────────────────────────────────────────
+
+func _create_hint_panel() -> void:
+	_hint_panel = PanelContainer.new()
+	_hint_panel.visible = false
+	_hint_panel.z_index = 50
+	_hint_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_hint_panel.anchors_preset = Control.PRESET_CENTER_BOTTOM
+	_hint_panel.anchor_left = 0.5
+	_hint_panel.anchor_right = 0.5
+	_hint_panel.anchor_top = 1.0
+	_hint_panel.anchor_bottom = 1.0
+	_hint_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.05, 0.06, 0.1, 0.92)
+	style.border_color = Color(0.35, 0.55, 0.8, 0.8)
+	style.set_border_width_all(1)
+	style.border_width_top = 2
+	style.set_corner_radius_all(6)
+	style.content_margin_left = 18
+	style.content_margin_right = 18
+	style.content_margin_top = 10
+	style.content_margin_bottom = 10
+	_hint_panel.add_theme_stylebox_override("panel", style)
+
+	_hint_label = RichTextLabel.new()
+	_hint_label.bbcode_enabled = true
+	_hint_label.fit_content = true
+	_hint_label.scroll_active = false
+	_hint_label.custom_minimum_size = Vector2(500, 0)
+	_hint_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_hint_label.add_theme_font_size_override("normal_font_size", 14)
+	_hint_label.add_theme_font_size_override("bold_font_size", 15)
+	_hint_label.add_theme_color_override("default_color", Color(0.85, 0.85, 0.8))
+	_hint_panel.add_child(_hint_label)
+
+	_hint_timer = Timer.new()
+	_hint_timer.one_shot = true
+	_hint_timer.timeout.connect(_show_next_hint)
+	add_child(_hint_timer)
+	add_child(_hint_panel)
+
+func _start_tutorial_hints(hero_data: Dictionary) -> void:
+	var ab1_name = "Ability 1"
+	var ab2_name = "Ability 2"
+	if hero_data.has("abilities"):
+		var ab = hero_data["abilities"]
+		if ab.has("ability_1"):
+			ab1_name = ab["ability_1"]["name"]
+		if ab.has("ability_2"):
+			ab2_name = ab["ability_2"]["name"]
+
+	_hint_queue = [
+		{
+			"delay": 4.0,
+			"text": "[color=#f0d866]TIP:[/color]  Press [color=#66ccff][b]Q[/b][/color] for [color=#f0d866]%s[/color]  and  [color=#66ccff][b]E[/b][/color] for [color=#f0d866]%s[/color]" % [ab1_name, ab2_name],
+		},
+		{
+			"delay": 18.0,
+			"text": "[color=#f0d866]TIP:[/color]  [color=#ff9966][b]Double-tap SPACE[/b][/color] while moving for a [color=#ffcc44]Power Strike[/color] — heavy single-target hit!",
+		},
+		{
+			"delay": 18.0,
+			"text": "[color=#f0d866]TIP:[/color]  [color=#cc88ff][b]Triple-tap SPACE[/b][/color] for a [color=#cc88ff]Whirlwind[/color] — spin attack hitting all nearby enemies!",
+		},
+		{
+			"delay": 18.0,
+			"text": "[color=#f0d866]TIP:[/color]  [color=#ffdd55][b]Hold SPACE 1.5s[/b][/color] then release for a [color=#ffcc44]Charged Slash[/color] — dash through enemies!",
+		},
+		{
+			"delay": 18.0,
+			"text": "[color=#f0d866]TIP:[/color]  [color=#66eeff][b]Diagonal keys + SPACE[/b][/color] for a [color=#66eeff]Dash Strike[/color] — quick dash through foes!",
+		},
+		{
+			"delay": 18.0,
+			"text": "[color=#f0d866]TIP:[/color]  [color=#aaaaaa][b]Left-click[/b][/color] enemies to auto-attack  |  [color=#aaaaaa][b]Right-click[/b][/color] your hero for stats",
+		},
+	]
+	# Start the first hint after its delay
+	if _hint_queue.size() > 0:
+		_hint_timer.wait_time = _hint_queue[0]["delay"]
+		_hint_timer.start()
+
+func _show_next_hint() -> void:
+	if _hint_queue.is_empty():
+		return
+
+	var hint = _hint_queue.pop_front()
+	_hint_label.text = hint["text"]
+	_hint_panel.visible = true
+	_hint_panel.modulate.a = 0.0
+
+	# Position above the bottom panel
+	await get_tree().process_frame
+	var screen_w = get_viewport().get_visible_rect().size.x
+	var panel_w = _hint_panel.size.x
+	_hint_panel.position = Vector2((screen_w - panel_w) / 2.0, -175.0 - _hint_panel.size.y - 10)
+
+	# Fade in
+	var tween = create_tween()
+	tween.tween_property(_hint_panel, "modulate:a", 1.0, 0.4)
+	# Hold for 6 seconds
+	tween.tween_interval(6.0)
+	# Fade out
+	tween.tween_property(_hint_panel, "modulate:a", 0.0, 0.6)
+	tween.tween_callback(func():
+		_hint_panel.visible = false
+		# Schedule the next hint
+		if not _hint_queue.is_empty():
+			_hint_timer.wait_time = _hint_queue[0]["delay"]
+			_hint_timer.start()
+	)

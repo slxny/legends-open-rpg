@@ -64,8 +64,8 @@ theme_override_colors/font_color = Color(0.5, 0.5, 0.6, 1)
 
 [node name="CloseButton" type="Button" parent="Panel/MarginContainer/VBox/TopBar"]
 layout_mode = 2
-text = "X"
-custom_minimum_size = Vector2(30, 30)
+text = "Close [Q]"
+custom_minimum_size = Vector2(90, 30)
 
 [node name="Separator" type="HSeparator" parent="Panel/MarginContainer/VBox"]
 layout_mode = 2

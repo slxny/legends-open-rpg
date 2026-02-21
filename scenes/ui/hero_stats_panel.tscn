@@ -45,8 +45,8 @@ size_flags_horizontal = 3
 
 [node name="CloseButton" type="Button" parent="Panel/MarginContainer/VBox/TopBar"]
 layout_mode = 2
-text = "X"
-custom_minimum_size = Vector2(30, 30)
+text = "Close [Q]"
+custom_minimum_size = Vector2(90, 30)
 
 [node name="StatsLabel" type="Label" parent="Panel/MarginContainer/VBox"]
 layout_mode = 2

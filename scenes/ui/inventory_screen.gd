@@ -1,9 +1,9 @@
 extends CanvasLayer
 
 @onready var panel: PanelContainer = $Panel
-@onready var equipment_grid: GridContainer = $Panel/MarginContainer/HBox/EquipmentPanel/EquipGrid
-@onready var bag_grid: GridContainer = $Panel/MarginContainer/HBox/BagPanel/BagGrid
-@onready var stats_label: Label = $Panel/MarginContainer/HBox/StatsPanel/StatsLabel
+@onready var equipment_grid: GridContainer = $Panel/MarginContainer/VBox/HBox/EquipmentPanel/EquipGrid
+@onready var bag_grid: GridContainer = $Panel/MarginContainer/VBox/HBox/BagPanel/BagGrid
+@onready var stats_label: Label = $Panel/MarginContainer/VBox/HBox/StatsPanel/StatsLabel
 @onready var item_tooltip: PanelContainer = $ItemTooltip
 @onready var tooltip_label: Label = $ItemTooltip/MarginContainer/TooltipLabel
 

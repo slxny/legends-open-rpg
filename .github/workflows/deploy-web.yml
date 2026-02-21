@@ -53,6 +53,23 @@ jobs:
           mkdir -p build/web
           godot --headless --export-release "Web" build/web/index.html
 
+      - name: Cache-bust exported assets
+        run: |
+          # Append short git hash to .js, .wasm, .pck filenames so browsers
+          # always fetch fresh files after each deploy.
+          HASH=$(git rev-parse --short HEAD)
+          cd build/web
+          for f in *.js *.wasm *.pck; do
+            [ -f "$f" ] || continue
+            EXT="${f##*.}"
+            BASE="${f%.*}"
+            NEW="${BASE}.${HASH}.${EXT}"
+            mv "$f" "$NEW"
+            # Update all references in HTML and JS files
+            sed -i "s|${f}|${NEW}|g" *.html *.js 2>/dev/null || true
+          done
+          cd ../..
+
       - name: Add coi-serviceworker
         run: |
           # Godot 4 HTML5 exports need SharedArrayBuffer, which requires
@@ -62,7 +79,8 @@ jobs:
             -O build/web/coi-serviceworker.min.js
 
           # Inject the service worker script into the HTML before </head>
-          sed -i 's|</head>|<script src="coi-serviceworker.min.js"></script></head>|' build/web/index.html
+          # Also add no-cache meta tags to prevent stale HTML
+          sed -i 's|</head>|<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/><meta http-equiv="Pragma" content="no-cache"/><meta http-equiv="Expires" content="0"/><script src="coi-serviceworker.min.js"></script></head>|' build/web/index.html
 
       - name: Setup Pages
         uses: actions/configure-pages@v4

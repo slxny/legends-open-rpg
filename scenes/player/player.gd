@@ -15,6 +15,7 @@ var player_id: int = 0
 var _enemies_in_range: Array[Node2D] = []
 var _trees_in_range: Array[Node2D] = []
 var _target_tree: Node2D = null  # Tree targeted by click-to-harvest
+var _is_chopping_tree: bool = false  # When true, spacebar hold = repeat chop (no charge/specials)
 
 # Click-to-move
 var _move_target: Vector2 = Vector2.ZERO
@@ -228,6 +229,7 @@ func _physics_process(delta: float) -> void:
 	if has_input:
 		_is_moving_to_target = false
 		_target_tree = null  # Cancel tree targeting when manually moving
+		_is_chopping_tree = false  # Disengage chopping on movement
 		desired_velocity = input_dir * max_speed
 	elif _is_moving_to_target:
 		var dist = global_position.distance_to(_move_target)
@@ -292,16 +294,35 @@ func _physics_process(delta: float) -> void:
 				# Single tap, or double-tap without direction = normal attack
 				_try_manual_attack()
 
+	# --- Update chopping state: active when trees are in range and we recently chopped one ---
+	if _is_chopping_tree:
+		_trees_in_range = _trees_in_range.filter(func(t): return is_instance_valid(t) and not t.get("_is_chopped"))
+		if _trees_in_range.is_empty() and (_target_tree == null or not is_instance_valid(_target_tree) or _target_tree.get("_is_chopped")):
+			_is_chopping_tree = false
+
 	# --- Hold-to-attack: only after tap sequence resolved ---
 	if not _is_paralyzed and _tap_resolved:
 		if Input.is_action_pressed("attack"):
-			_charge_time += delta
-			if _charge_time >= CHARGE_THRESHOLD and not _is_charging and not _is_attack_animating:
-				_is_charging = true
-				_start_charge_vfx()
-				AudioManager.play_sfx("charge_ready")
-			if not _is_charging and _charge_time < CHARGE_GRACE:
-				_try_manual_attack()
+			if _is_chopping_tree:
+				# In chopping mode: just keep chopping, no charge/specials
+				_charge_time = 0.0
+				if not _is_attack_animating and _attack_cooldown <= 0.0:
+					var chop_tree = _target_tree if (_target_tree and is_instance_valid(_target_tree) and not _target_tree.get("_is_chopped") and _target_tree in _trees_in_range) else _find_best_tree(_facing)
+					if chop_tree:
+						var dir = (chop_tree.global_position - global_position).normalized()
+						_set_facing(dir)
+						_perform_tree_chop(chop_tree, dir)
+					else:
+						_is_chopping_tree = false
+						_try_manual_attack()
+			else:
+				_charge_time += delta
+				if _charge_time >= CHARGE_THRESHOLD and not _is_charging and not _is_attack_animating:
+					_is_charging = true
+					_start_charge_vfx()
+					AudioManager.play_sfx("charge_ready")
+				if not _is_charging and _charge_time < CHARGE_GRACE:
+					_try_manual_attack()
 		else:
 			if _is_charging and not _is_attack_animating:
 				_is_charging = false
@@ -377,6 +398,8 @@ func _unhandled_input(event: InputEvent) -> void:
 					return
 				var enemy_target = _get_enemy_at_mouse()
 				if enemy_target and not _is_paralyzed:
+					_is_chopping_tree = false
+					_target_tree = null
 					_try_manual_attack()
 					return
 				# Right-click on tree = show wood info
@@ -395,6 +418,7 @@ func _unhandled_input(event: InputEvent) -> void:
 					return
 			# Both mouse buttons move to clicked position
 			_target_tree = null
+			_is_chopping_tree = false
 			var clicked = _get_clickable_at_mouse()
 			if clicked and clicked.has_method("interact"):
 				_move_target = clicked.global_position
@@ -1474,6 +1498,7 @@ func _find_best_tree(dir: Vector2) -> Node2D:
 	return best_tree
 
 func _perform_tree_chop(tree: Node2D, attack_dir: Vector2) -> void:
+	_is_chopping_tree = true
 	_is_attack_animating = true
 	_attack_cooldown = 0.5 / stats.attack_speed
 	var dir = attack_dir

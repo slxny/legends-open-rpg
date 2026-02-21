@@ -1,7 +1,8 @@
 extends StaticBody2D
 
-## Harvestable tree that can be chopped with normal attacks (spacebar).
-## Drops wood logs on death. Three sizes: small (3 wood), medium (6 wood), large (12 wood).
+## Harvestable tree that can be chopped by clicking or spacebar attacks.
+## Drops wood logs on death. Three sizes with varied yields (correlated by size).
+## Hover to see outline; right-click to inspect wood amount.
 
 signal chopped_down(tree: Node2D)
 
@@ -10,15 +11,18 @@ enum TreeSize { SMALL, MEDIUM, LARGE }
 var tree_size: TreeSize = TreeSize.MEDIUM
 var max_hp: int = 6
 var current_hp: int = 6
-var wood_yield: int = 6
+var wood_yield: int = 30
 
 var _is_chopped: bool = false
 var _sprite: Sprite2D = null
 var _hp_bar: SCBar = null
 var _shadow: Sprite2D = null
+var _info_label: Label = null
 
 # Pre-allocated label settings (shared across all trees)
 static var _dmg_label: LabelSettings = null
+static var _outline_shader: Shader = null
+static var _info_label_settings: LabelSettings = null
 
 func _init() -> void:
 	if not _dmg_label:
@@ -27,25 +31,60 @@ func _init() -> void:
 		_dmg_label.font_color = Color(0.65, 0.45, 0.2)
 		_dmg_label.outline_size = 2
 		_dmg_label.outline_color = Color.BLACK
+	if not _outline_shader:
+		_outline_shader = Shader.new()
+		_outline_shader.code = "shader_type canvas_item;
+uniform bool enabled = false;
+uniform vec4 line_color : source_color = vec4(0.3, 1.0, 0.4, 0.85);
+void fragment() {
+	vec4 tex = texture(TEXTURE, UV);
+	if (enabled && tex.a < 0.1) {
+		vec2 ps = TEXTURE_PIXEL_SIZE;
+		float a = 0.0;
+		a += texture(TEXTURE, UV + vec2(ps.x, 0.0)).a;
+		a += texture(TEXTURE, UV + vec2(-ps.x, 0.0)).a;
+		a += texture(TEXTURE, UV + vec2(0.0, ps.y)).a;
+		a += texture(TEXTURE, UV + vec2(0.0, -ps.y)).a;
+		a += texture(TEXTURE, UV + vec2(ps.x, ps.y)).a;
+		a += texture(TEXTURE, UV + vec2(-ps.x, ps.y)).a;
+		a += texture(TEXTURE, UV + vec2(ps.x, -ps.y)).a;
+		a += texture(TEXTURE, UV + vec2(-ps.x, -ps.y)).a;
+		if (a > 0.0) {
+			COLOR = line_color;
+		} else {
+			COLOR = tex;
+		}
+	} else {
+		COLOR = tex;
+	}
+}
+"
+	if not _info_label_settings:
+		_info_label_settings = LabelSettings.new()
+		_info_label_settings.font_size = 11
+		_info_label_settings.font_color = Color(0.9, 0.75, 0.4)
+		_info_label_settings.outline_size = 2
+		_info_label_settings.outline_color = Color.BLACK
 
 func setup(size: TreeSize) -> void:
 	tree_size = size
 	match size:
 		TreeSize.SMALL:
 			max_hp = 3
-			wood_yield = 3
+			wood_yield = randi_range(12, 18)   # ~15 avg (5x of old 3)
 		TreeSize.MEDIUM:
 			max_hp = 6
-			wood_yield = 6
+			wood_yield = randi_range(24, 36)   # ~30 avg (5x of old 6)
 		TreeSize.LARGE:
 			max_hp = 12
-			wood_yield = 12
+			wood_yield = randi_range(48, 72)   # ~60 avg (5x of old 12)
 	current_hp = max_hp
 
 func _ready() -> void:
 	add_to_group("harvestable_trees")
 	collision_layer = 4  # Environment layer
 	collision_mask = 0
+	input_pickable = true  # Enable mouse hover/click detection
 
 	# Collision shape based on tree size
 	var col = CollisionShape2D.new()
@@ -76,6 +115,14 @@ func _ready() -> void:
 	# Slight random tint variation
 	var v = randf_range(-0.04, 0.04)
 	_sprite.modulate = Color(1.0 + v, 1.0 + v * 0.5, 1.0 + v)
+
+	# Outline shader material
+	var mat = ShaderMaterial.new()
+	mat.shader = _outline_shader
+	mat.set_shader_parameter("enabled", false)
+	mat.set_shader_parameter("line_color", Color(0.3, 1.0, 0.4, 0.85))
+	_sprite.material = mat
+
 	add_child(_sprite)
 
 	# Shadow
@@ -103,6 +150,51 @@ func _ready() -> void:
 
 	_hp_bar.set_value(current_hp, max_hp)
 
+	# Connect mouse hover signals for outline
+	mouse_entered.connect(_on_mouse_entered)
+	mouse_exited.connect(_on_mouse_exited)
+
+func _on_mouse_entered() -> void:
+	if not _is_chopped and _sprite and _sprite.material:
+		_sprite.material.set_shader_parameter("enabled", true)
+
+func _on_mouse_exited() -> void:
+	if _sprite and _sprite.material:
+		_sprite.material.set_shader_parameter("enabled", false)
+
+func show_wood_info() -> void:
+	if _is_chopped:
+		return
+	# Remove existing info label if any
+	if _info_label and is_instance_valid(_info_label):
+		_info_label.queue_free()
+	_info_label = Label.new()
+	var size_name := ""
+	match tree_size:
+		TreeSize.SMALL: size_name = "Small"
+		TreeSize.MEDIUM: size_name = "Medium"
+		TreeSize.LARGE: size_name = "Large"
+	_info_label.text = "%s Tree — %d Wood" % [size_name, wood_yield]
+	_info_label.label_settings = _info_label_settings
+	_info_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	match tree_size:
+		TreeSize.SMALL:
+			_info_label.position = Vector2(-45, -48)
+		TreeSize.MEDIUM:
+			_info_label.position = Vector2(-45, -62)
+		TreeSize.LARGE:
+			_info_label.position = Vector2(-45, -76)
+	add_child(_info_label)
+	# Fade out after a moment
+	var tween = create_tween()
+	tween.tween_interval(2.5)
+	tween.tween_property(_info_label, "modulate:a", 0.0, 0.5)
+	tween.tween_callback(func():
+		if _info_label and is_instance_valid(_info_label):
+			_info_label.queue_free()
+			_info_label = null
+	)
+
 func take_damage(amount: int, _is_crit: bool = false) -> void:
 	if _is_chopped:
 		return
@@ -121,7 +213,11 @@ func take_damage(amount: int, _is_crit: bool = false) -> void:
 func _chop_down() -> void:
 	_is_chopped = true
 	collision_layer = 0
+	input_pickable = false
 	_hp_bar.visible = false
+	# Disable outline
+	if _sprite and _sprite.material:
+		_sprite.material.set_shader_parameter("enabled", false)
 	chopped_down.emit(self)
 
 	# Spawn wood drops

@@ -14,6 +14,7 @@ var hero_class: String = ""
 var player_id: int = 0
 var _enemies_in_range: Array[Node2D] = []
 var _trees_in_range: Array[Node2D] = []
+var _target_tree: Node2D = null  # Tree targeted by click-to-harvest
 
 # Click-to-move
 var _move_target: Vector2 = Vector2.ZERO
@@ -226,6 +227,7 @@ func _physics_process(delta: float) -> void:
 
 	if has_input:
 		_is_moving_to_target = false
+		_target_tree = null  # Cancel tree targeting when manually moving
 		desired_velocity = input_dir * max_speed
 	elif _is_moving_to_target:
 		var dist = global_position.distance_to(_move_target)
@@ -249,6 +251,17 @@ func _physics_process(delta: float) -> void:
 
 	if _attack_cooldown > 0.0:
 		_attack_cooldown -= delta
+
+	# Auto-chop: when player reaches a clicked tree, chop it automatically
+	if _target_tree and is_instance_valid(_target_tree) and not _target_tree.get("_is_chopped"):
+		if _target_tree in _trees_in_range:
+			_is_moving_to_target = false
+			if not _is_attack_animating and _attack_cooldown <= 0.0 and not _is_paralyzed:
+				var dir = (_target_tree.global_position - global_position).normalized()
+				_set_facing(dir)
+				_perform_tree_chop(_target_tree, dir)
+	elif _target_tree:
+		_target_tree = null  # Tree was chopped or became invalid
 
 	# Combo timer — reset combo if no attack within window
 	if _combo_index > 0:
@@ -366,7 +379,22 @@ func _unhandled_input(event: InputEvent) -> void:
 				if enemy_target and not _is_paralyzed:
 					_try_manual_attack()
 					return
+				# Right-click on tree = show wood info
+				var rclick_tree = _get_tree_at_mouse()
+				if rclick_tree and rclick_tree.has_method("show_wood_info"):
+					rclick_tree.show_wood_info()
+					return
+			# Left-click on tree = move to it and auto-chop
+			if event.button_index == MOUSE_BUTTON_LEFT:
+				var lclick_tree = _get_tree_at_mouse()
+				if lclick_tree:
+					_target_tree = lclick_tree
+					_move_target = lclick_tree.global_position
+					_is_moving_to_target = true
+					_spawn_move_indicator(_move_target)
+					return
 			# Both mouse buttons move to clicked position
+			_target_tree = null
 			var clicked = _get_clickable_at_mouse()
 			if clicked and clicked.has_method("interact"):
 				_move_target = clicked.global_position
@@ -900,6 +928,17 @@ func _get_clickable_at_mouse() -> Node2D:
 	var results = space.intersect_point(_clickable_query_params, 1)
 	if results.size() > 0:
 		return results[0]["collider"]
+	return null
+
+func _get_tree_at_mouse() -> Node2D:
+	var mouse_pos = _get_world_mouse_pos()
+	var space = get_world_2d().direct_space_state
+	_clickable_query_params.position = mouse_pos
+	var results = space.intersect_point(_clickable_query_params, 4)
+	for result in results:
+		var col = result["collider"]
+		if col.is_in_group("harvestable_trees") and not col.get("_is_chopped"):
+			return col
 	return null
 
 func _set_facing(dir: Vector2) -> void:

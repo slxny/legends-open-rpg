@@ -45,6 +45,13 @@ var _patrol_radius: float = 150.0
 var _patrol_wait_timer: float = 0.0
 var _patrol_speed_factor: float = 0.65  # Patrol at 65% of move speed — more active roaming
 
+# Random alert aggro — periodic chance to notice the player at extended range
+var _alert_check_timer: float = 0.0
+const ALERT_CHECK_INTERVAL: float = 1.5  # Roll alert every 1.5 seconds
+const ALERT_RANGE_MULTIPLIER: float = 2.0  # Alert detection at 2x normal aggro range
+const ALERT_CHANCE: float = 0.3  # 30% chance per check to aggro at extended range
+var _alert_range_sq: float = 0.0  # Pre-computed squared alert range
+
 # Pre-computed squared distances to avoid sqrt in hot path
 var _aggro_range_sq: float = 14400.0   # aggro_range^2
 var _chase_range_sq: float = 160000.0  # chase_range^2
@@ -101,6 +108,8 @@ func _ready() -> void:
 
 	# Stagger sleep checks so not all enemies check on the same frame
 	_sleep_check_timer = randf_range(0.0, SLEEP_CHECK_INTERVAL)
+	# Stagger alert checks across enemies
+	_alert_check_timer = randf_range(0.0, ALERT_CHECK_INTERVAL)
 
 
 func initialize(config: Dictionary) -> void:
@@ -133,6 +142,8 @@ func initialize(config: Dictionary) -> void:
 	_attack_range_sq = stats.attack_range * stats.attack_range
 	var disengage = stats.attack_range * 1.5
 	_attack_disengage_sq = disengage * disengage
+	var alert_range = aggro_range * ALERT_RANGE_MULTIPLIER
+	_alert_range_sq = alert_range * alert_range
 
 	# Randomly assign an effect to some units (~25% of enemies have an effect proc)
 	const EFFECT_TYPES = ["knockback", "paralyze", "slow"]
@@ -202,11 +213,16 @@ func _process_idle(delta: float) -> void:
 	velocity = Vector2.ZERO
 	# Check for player aggro (squared distance avoids sqrt)
 	var player = _get_player()
-	if player and global_position.distance_squared_to(player.global_position) < _aggro_range_sq:
-		target = player
-		current_state = State.CHASE
-		name_label.visible = true
-		return
+	if player:
+		var dist_sq = global_position.distance_squared_to(player.global_position)
+		if dist_sq < _aggro_range_sq:
+			target = player
+			current_state = State.CHASE
+			name_label.visible = true
+			return
+		# Random alert: chance to notice the player at extended range
+		if _try_alert_aggro(delta, player, dist_sq):
+			return
 
 	# Count down idle pause, then pick a patrol waypoint
 	_patrol_wait_timer -= delta
@@ -220,14 +236,33 @@ func _pick_patrol_target() -> void:
 	var dist = randf_range(_patrol_radius * 0.3, _patrol_radius)
 	_patrol_target = home_position + Vector2(cos(angle), sin(angle)) * dist
 
-func _process_patrol(delta: float) -> void:
-	# Check for player aggro even while patrolling (squared distance avoids sqrt)
-	var player = _get_player()
-	if player and global_position.distance_squared_to(player.global_position) < _aggro_range_sq:
+func _try_alert_aggro(delta: float, player: Node2D, dist_sq: float) -> bool:
+	# Periodic random chance to detect the player at extended range (2x aggro range).
+	# Creates unpredictable aggression — enemies sometimes notice you from further away.
+	_alert_check_timer -= delta
+	if _alert_check_timer > 0.0:
+		return false
+	_alert_check_timer = ALERT_CHECK_INTERVAL
+	if dist_sq < _alert_range_sq and randf() < ALERT_CHANCE:
 		target = player
 		current_state = State.CHASE
 		name_label.visible = true
-		return
+		return true
+	return false
+
+func _process_patrol(delta: float) -> void:
+	# Check for player aggro even while patrolling (squared distance avoids sqrt)
+	var player = _get_player()
+	if player:
+		var dist_sq = global_position.distance_squared_to(player.global_position)
+		if dist_sq < _aggro_range_sq:
+			target = player
+			current_state = State.CHASE
+			name_label.visible = true
+			return
+		# Random alert: chance to notice the player at extended range
+		if _try_alert_aggro(delta, player, dist_sq):
+			return
 
 	var dist_sq_to_target = global_position.distance_squared_to(_patrol_target)
 	if dist_sq_to_target < 64.0:  # 8^2

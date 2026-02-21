@@ -12,9 +12,11 @@ var _asset_dirs: Dictionary = {}
 
 func _ready() -> void:
 	_init_asset_dirs()
-	_generate_all()
+	_generate_critical()
 
 func get_texture(name: String) -> ImageTexture:
+	if not textures.has(name):
+		_gen_or_load(name)
 	return textures.get(name, null)
 
 ## Try loading a PNG from res://assets/sprites/<subdir>/<name>.png
@@ -84,116 +86,14 @@ func _init_asset_dirs() -> void:
 			"arrow_projectile", "blood_splatter"]:
 		_asset_dirs[n] = "vfx"
 
-func _generate_all() -> void:
-	# Heroes (+ attack combo frames: 5 swing types x 3 frames)
+func _generate_critical() -> void:
+	# Only generate sprites needed for the hero select screen and first frame.
+	# Everything else is lazy-loaded via get_texture() on first access.
 	_gen_or_load("blade_knight")
-	for swing in ["a", "b", "c", "d", "e"]:
-		for frame in [1, 2, 3]:
-			_gen_or_load("blade_knight_atk%s%d" % [swing, frame])
 	_gen_or_load("shadow_ranger")
-	# Directional idle sprites for heroes
-	for hero in ["blade_knight", "shadow_ranger"]:
-		for dir_key in ["down", "up", "side"]:
-			_gen_or_load("%s_dir_%s" % [hero, dir_key])
-	# Walk cycle frames for heroes
-	for hero in ["blade_knight", "shadow_ranger"]:
-		for dir_key in ["down", "up", "side"]:
-			for frame in [1, 2, 3]:
-				_gen_or_load("%s_walk_%s_%d" % [hero, dir_key, frame])
-	# Enemies
-	_gen_or_load("rat")
-	_gen_or_load("goblin")
-	_gen_or_load("wolf")
-	_gen_or_load("bandit")
-	_gen_or_load("skeleton")
-	_gen_or_load("spider")
-	_gen_or_load("troll")
-	_gen_or_load("dark_mage")
-	_gen_or_load("ogre")
-	_gen_or_load("ogre_boss")
-	# Higher-tier enemies
-	_gen_or_load("demon_knight")
-	_gen_or_load("ancient_golem")
-	_gen_or_load("shadow_wraith")
-	_gen_or_load("dragon_whelp")
-	_gen_or_load("infernal")
-	# Environment
-	_gen_or_load("tree_jungle")
-	_gen_or_load("tree_small")
-	_gen_or_load("tree_dead")
-	_gen_or_load("tree_harvest_small")
-	_gen_or_load("tree_harvest_medium")
-	_gen_or_load("tree_harvest_large")
-	_gen_or_load("tree_stump")
-	_gen_or_load("wood_log")
-	_gen_or_load("rock")
-	_gen_or_load("rock_large")
-	_gen_or_load("bush")
-	_gen_or_load("flowers")
-	_gen_or_load("cliff_face")
-	_gen_or_load("icicles")
-	# Buildings
-	_gen_or_load("shop_building")
-	_gen_or_load("armory_building")
-	_gen_or_load("town_hall")
-	_gen_or_load("barracks_building")
-	_gen_or_load("inn_building")
-	_gen_or_load("watch_tower")
-	_gen_or_load("town_fountain")
-	_gen_or_load("stable_building")
-	_gen_or_load("chapel_building")
-	_gen_or_load("tavern_building")
-	_gen_or_load("crate_stack")
-	_gen_or_load("barrel")
-	_gen_or_load("well")
-	_gen_or_load("lamp_post")
-	_gen_or_load("town_wall_h")
-	_gen_or_load("woodworking_bench")
-	_gen_or_load("town_grass")
-	_gen_or_load("landing_pad")
-	# Beacons
-	_gen_or_load("beacon_green")
-	_gen_or_load("beacon_yellow")
-	_gen_or_load("beacon_blue")
-	_gen_or_load("beacon_red")
-	_gen_or_load("beacon_cyan")
-	# Items
-	_gen_or_load("crystal_blue")
-	_gen_or_load("crystal_white")
-	_gen_or_load("crystal_teal")
-	# Terrain tiles
-	_gen_or_load("grass_dark")
-	_gen_or_load("grass_light")
-	_gen_or_load("dirt")
-	_gen_or_load("dirt_path")
-	_gen_or_load("water")
-	_gen_or_load("stone_floor")
-	_gen_or_load("snow")
-	_gen_or_load("ice")
-	# Rich ground tiles (SC:BW style)
-	_gen_or_load("ground_jungle")
-	_gen_or_load("ground_creep")
-	_gen_or_load("ground_stone")
-	_gen_or_load("ground_snow")
-	_gen_or_load("ground_dirt")
-	# Atmospheric decorations
-	_gen_or_load("grass_tuft")
-	_gen_or_load("grass_tuft_tall")
-	_gen_or_load("mushroom_cluster")
-	_gen_or_load("fallen_log")
-	_gen_or_load("vines")
-	_gen_or_load("ground_debris")
-	_gen_or_load("dirt_patch")
-	_gen_or_load("terrain_blob")
-	# UI
-	_gen_or_load("skull_icon")
-	# Selection / VFX
+	# Selection rings (used on hero select / player spawn)
 	_gen_or_load("selection_green")
-	_gen_or_load("selection_red")
 	_gen_or_load("iso_shadow")
-	_gen_or_load("slash_arc")
-	_gen_or_load("arrow_projectile")
-	_gen_or_load("blood_splatter")
 
 ## Try external PNG first; if not found, call the procedural generator.
 func _gen_or_load(sprite_name: String) -> void:

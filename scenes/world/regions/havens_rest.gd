@@ -86,8 +86,9 @@ func _ready() -> void:
 
 	_generate_terrain()
 	_generate_town()
-	_generate_decorations()
-	_generate_harvestable_trees()
+	# Spread heavy decoration work across frames to avoid blocking startup
+	_generate_decorations_deferred()
+	_generate_harvestable_trees_deferred()
 
 func _process(delta: float) -> void:
 	_elapsed_time += delta
@@ -439,19 +440,22 @@ func _add_building_label(parent: Node2D, pos: Vector2, text: String) -> void:
 # DECORATIONS: Dense SC:BW jungle foliage
 # ============================================================
 
-func _generate_decorations() -> void:
+func _generate_decorations_deferred() -> void:
 	var deco_layer = $Decorations
 
 	# ---- Border trees: dense double-row along all 4 walls ----
 	for x in range(-5950, 5951, 55):
 		_add_tree(deco_layer, Vector2(x + randf_range(-12, 12), -4420 + randf_range(-25, 25)))
 		_add_tree(deco_layer, Vector2(x + randf_range(-12, 12), -4350 + randf_range(-20, 20)))
+	await get_tree().process_frame
 	for x in range(-5950, 5951, 55):
 		_add_tree(deco_layer, Vector2(x + randf_range(-12, 12), 4420 + randf_range(-25, 25)))
 		_add_tree(deco_layer, Vector2(x + randf_range(-12, 12), 4350 + randf_range(-20, 20)))
+	await get_tree().process_frame
 	for y in range(-4400, 4401, 55):
 		_add_tree(deco_layer, Vector2(-5920 + randf_range(-15, 15), y + randf_range(-12, 12)))
 		_add_tree(deco_layer, Vector2(-5850 + randf_range(-15, 15), y + randf_range(-12, 12)))
+	await get_tree().process_frame
 	for y in range(-4400, 4401, 55):
 		_add_tree(deco_layer, Vector2(5920 + randf_range(-15, 15), y + randf_range(-12, 12)))
 		_add_tree(deco_layer, Vector2(5850 + randf_range(-15, 15), y + randf_range(-12, 12)))
@@ -503,6 +507,7 @@ func _generate_decorations() -> void:
 			_add_vines(deco_layer, center + Vector2(randf_range(-30, 30), randf_range(-20, 20)))
 		if randf() > 0.6:
 			_add_mushrooms(deco_layer, center + Vector2(randf_range(-40, 40), randf_range(-30, 30)))
+	await get_tree().process_frame
 
 	# ---- Rock formations ----
 	var rock_positions = [
@@ -529,6 +534,7 @@ func _generate_decorations() -> void:
 	]
 	for pos in rock_positions:
 		_add_rock(deco_layer, pos)
+	await get_tree().process_frame
 
 	# ---- Dirt paths radiating from town center (longer for bigger map) ----
 	var path_points = [
@@ -575,6 +581,7 @@ func _generate_decorations() -> void:
 	]
 	for pos in path_points:
 		_add_path_segment(deco_layer, pos)
+	await get_tree().process_frame
 
 	# ---- Camp skull markers (match new camp positions) ----
 	_add_camp_marker(deco_layer, Vector2(-1200, -860), "Goblins Lv1-2")
@@ -622,6 +629,7 @@ func _generate_decorations() -> void:
 	# Ogre Bosses
 	_add_camp_marker(deco_layer, Vector2(5200, -3460), "OGRE WARLORD Lv10-12")
 	_add_camp_marker(deco_layer, Vector2(-5400, -3760), "OGRE WARLORD Lv10-12")
+	await get_tree().process_frame
 
 	# ---- Grass tufts scattered (reduced for performance) ----
 	for i in range(150):
@@ -678,7 +686,7 @@ func _generate_decorations() -> void:
 # HARVESTABLE TREES: Choppable trees that drop wood
 # ============================================================
 
-func _generate_harvestable_trees() -> void:
+func _generate_harvestable_trees_deferred() -> void:
 	var tree_layer = $Decorations
 	var rng = RandomNumberGenerator.new()
 	rng.seed = 9876

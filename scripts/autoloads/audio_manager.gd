@@ -19,10 +19,45 @@ var _rotation_index: int = 0
 var _rotation_timer: Timer
 var _rotation_active: bool = false
 
+# Deferred music generation — one track per frame to avoid blocking startup
+var _music_gen_queue: Array[String] = []
+var _music_generators: Dictionary = {}  # name -> Callable
+
 func _ready() -> void:
 	_generate_all_sfx()
-	_generate_all_music()
 	_create_players()
+	_queue_music_generation()
+
+func _queue_music_generation() -> void:
+	_music_generators = {
+		"war_drums": _gen_war_drums,
+		"crystal_caves": _gen_crystal_caves,
+		"pirate_jig": _gen_pirate_jig,
+		"dark_cathedral": _gen_dark_cathedral,
+		"desert_caravan": _gen_desert_caravan,
+		"boss_encounter": _gen_boss_encounter,
+		"boss_idle": _gen_boss_idle,
+		"boss_victory": _gen_boss_victory,
+		"wave_warning": _gen_wave_warning,
+	}
+	_music_gen_queue = _music_generators.keys()
+
+func _process(_delta: float) -> void:
+	if _music_gen_queue.is_empty():
+		return
+	# Generate one music track per frame
+	var track_name = _music_gen_queue.pop_front()
+	_music_cache[track_name] = _music_generators[track_name].call()
+	# If rotation is active but nothing is playing, start playing now
+	if _rotation_active and not _music_player.playing:
+		for t in _rotation_tracks:
+			if _music_cache.has(t):
+				_music_player.stream = _music_cache[t]
+				_music_player.volume_db = _music_volume_db
+				_music_player.play()
+				break
+	if _music_gen_queue.is_empty():
+		_music_generators.clear()
 
 # ============================================================
 # PUBLIC API
@@ -53,10 +88,22 @@ func play_sfx(sfx_name: String, volume_offset: float = 0.0) -> void:
 	p.volume_db = _sfx_volume_db + volume_offset
 	p.play()
 
+func _ensure_music_generated(music_name: String) -> AudioStreamWAV:
+	## Forces immediate generation if not cached. Use for time-critical playback.
+	var stream = _music_cache.get(music_name)
+	if stream:
+		return stream
+	if _music_generators.has(music_name):
+		stream = _music_generators[music_name].call()
+		_music_cache[music_name] = stream
+		_music_gen_queue.erase(music_name)
+		return stream
+	return null
+
 func play_music(music_name: String) -> void:
 	var stream = _music_cache.get(music_name)
 	if not stream:
-		return
+		return  # Not ready yet — background generation will catch up
 	if _music_player.stream == stream and _music_player.playing:
 		return
 	_music_player.stream = stream
@@ -105,7 +152,8 @@ func _on_rotation_tick() -> void:
 	play_music_direct(_rotation_tracks[_rotation_index])
 
 func play_music_direct(music_name: String) -> void:
-	## Like play_music but always restarts even if same track
+	## Like play_music but always restarts even if same track.
+	## Skips if not yet generated — background gen will catch up on next rotation tick.
 	var stream = _music_cache.get(music_name)
 	if not stream:
 		return
@@ -117,20 +165,31 @@ var _saved_rotation_tracks: Array[String] = []
 var _saved_rotation_active: bool = false
 
 ## Temporarily override music (e.g. for boss fights). Pauses rotation.
+## Forces generation if needed since boss music is time-critical.
 func override_music(music_name: String) -> void:
 	if _rotation_active:
 		_saved_rotation_tracks = _rotation_tracks.duplicate()
 		_saved_rotation_active = true
 		stop_rotation()
-	play_music_direct(music_name)
+	var stream = _ensure_music_generated(music_name)
+	if stream:
+		_music_player.stream = stream
+		_music_player.volume_db = _music_volume_db
+		_music_player.play()
 
 ## Restore the normal rotation after a boss override. If oneshot_first plays a short track first (e.g. victory fanfare), then resumes.
 func restore_music(oneshot_first: String = "") -> void:
 	if oneshot_first != "":
-		play_music_direct(oneshot_first)
-		# After the oneshot track finishes, resume rotation
-		if not _music_player.finished.is_connected(_on_oneshot_done):
-			_music_player.finished.connect(_on_oneshot_done, CONNECT_ONE_SHOT)
+		var stream = _ensure_music_generated(oneshot_first)
+		if stream:
+			_music_player.stream = stream
+			_music_player.volume_db = _music_volume_db
+			_music_player.play()
+			# After the oneshot track finishes, resume rotation
+			if not _music_player.finished.is_connected(_on_oneshot_done):
+				_music_player.finished.connect(_on_oneshot_done, CONNECT_ONE_SHOT)
+		else:
+			_resume_rotation()
 	else:
 		_resume_rotation()
 
@@ -579,17 +638,6 @@ func _gen_tree_fall() -> AudioStreamWAV:
 # ============================================================
 # MUSIC GENERATION — 5 completely different tracks, rotated every minute
 # ============================================================
-
-func _generate_all_music() -> void:
-	_music_cache["war_drums"] = _gen_war_drums()
-	_music_cache["crystal_caves"] = _gen_crystal_caves()
-	_music_cache["pirate_jig"] = _gen_pirate_jig()
-	_music_cache["dark_cathedral"] = _gen_dark_cathedral()
-	_music_cache["desert_caravan"] = _gen_desert_caravan()
-	_music_cache["boss_encounter"] = _gen_boss_encounter()
-	_music_cache["boss_idle"] = _gen_boss_idle()
-	_music_cache["boss_victory"] = _gen_boss_victory()
-	_music_cache["wave_warning"] = _gen_wave_warning()
 
 # ---- Track 1: WAR DRUMS — Aggressive tribal percussion, deep bass, chanting ----
 func _gen_war_drums() -> AudioStreamWAV:

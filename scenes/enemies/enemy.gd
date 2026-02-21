@@ -213,6 +213,7 @@ func _physics_process(delta: float) -> void:
 
 func _process_idle(delta: float) -> void:
 	velocity = Vector2.ZERO
+	move_and_slide()
 	# Check for player aggro (squared distance avoids sqrt)
 	var player = _get_player()
 	if player:
@@ -270,6 +271,7 @@ func _process_patrol(delta: float) -> void:
 	if dist_sq_to_target < 64.0:  # 8^2
 		# Reached patrol waypoint — short pause then go idle
 		velocity = Vector2.ZERO
+		move_and_slide()
 		current_state = State.IDLE
 		_patrol_wait_timer = randf_range(0.5, 2.0)
 		return
@@ -327,13 +329,16 @@ func _process_attack(delta: float) -> void:
 		current_state = State.CHASE
 		return
 
+	# Face the target
+	var to_target = target.global_position - global_position
+	if to_target.x < -0.1:
+		sprite.flip_h = true
+	elif to_target.x > 0.1:
+		sprite.flip_h = false
+
 	# Keep enemies spread apart even while attacking
-	var sep = _get_separation_push()
-	if sep != Vector2.ZERO:
-		velocity = sep
-		move_and_slide()
-	else:
-		velocity = Vector2.ZERO
+	velocity = _get_separation_push()
+	move_and_slide()
 
 	_attack_timer -= delta
 	if _attack_timer <= 0:
@@ -350,6 +355,7 @@ func _process_return(delta: float) -> void:
 	var dist_sq = global_position.distance_squared_to(home_position)
 	if dist_sq < 25.0:  # 5^2
 		velocity = Vector2.ZERO
+		move_and_slide()
 		current_state = State.IDLE
 		stats.current_hp = stats.max_hp
 		_update_hp_bar()
@@ -459,9 +465,69 @@ func _do_attack_lunge() -> void:
 		return
 	var dir = (target.global_position - global_position).normalized()
 	var base_pos = sprite.position
+	match sprite_type:
+		"rat":
+			_anim_rat_bite(dir, base_pos)
+		"goblin":
+			_anim_goblin_swing(dir, base_pos)
+		_:
+			_anim_generic_lunge(dir, base_pos)
+
+func _anim_rat_bite(dir: Vector2, base_pos: Vector2) -> void:
+	# Quick coil-and-snap bite — rats are fast and twitchy
 	var tween = create_tween()
-	tween.tween_property(sprite, "position", base_pos + dir * 6.0, 0.06)
+	# Coil back and flatten
+	tween.tween_property(sprite, "position", base_pos - dir * 3.0, 0.04)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.25, 0.7), 0.04)
+	# Snap forward — fast lunging bite
+	tween.tween_property(sprite, "position", base_pos + dir * 10.0, 0.04)
+	tween.parallel().tween_property(sprite, "scale", Vector2(0.7, 1.3), 0.04)
+	# Tint red on contact
+	tween.tween_callback(func(): sprite.modulate = Color(1.3, 0.8, 0.8))
+	# Quick chomp — tiny oscillation at the bite point
+	tween.tween_property(sprite, "position", base_pos + dir * 8.0, 0.03)
+	tween.tween_property(sprite, "position", base_pos + dir * 10.0, 0.03)
+	# Recoil back
+	tween.tween_property(sprite, "position", base_pos - dir * 2.0, 0.06)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.1, 0.9), 0.06)
+	tween.parallel().tween_property(sprite, "modulate", Color.WHITE, 0.06)
+	# Settle
+	tween.tween_property(sprite, "position", base_pos, 0.05)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.05)
+
+func _anim_goblin_swing(dir: Vector2, base_pos: Vector2) -> void:
+	# Club overhead swing — wind up then slam down
+	var perp = Vector2(-dir.y, dir.x)
+	var tween = create_tween()
+	# Wind-up: pull back and stretch tall (raising club)
+	tween.tween_property(sprite, "position", base_pos - dir * 4.0 + Vector2(0, -3), 0.08)
+	tween.parallel().tween_property(sprite, "scale", Vector2(0.85, 1.2), 0.08)
+	# Slam forward — fast and heavy
+	tween.tween_callback(func(): sprite.modulate = Color(1.2, 1.1, 0.9))
+	tween.tween_property(sprite, "position", base_pos + dir * 12.0 + Vector2(0, 2), 0.05)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.25, 0.8), 0.05)
+	# Slight rotation on impact for follow-through
+	tween.parallel().tween_property(sprite, "rotation", dir.angle() * 0.15, 0.05)
+	# Impact bounce
+	tween.tween_property(sprite, "position", base_pos + dir * 8.0, 0.04)
+	tween.parallel().tween_property(sprite, "modulate", Color.WHITE, 0.04)
+	# Return to idle
+	tween.tween_property(sprite, "position", base_pos, 0.07)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.07)
+	tween.parallel().tween_property(sprite, "rotation", 0.0, 0.07)
+
+func _anim_generic_lunge(dir: Vector2, base_pos: Vector2) -> void:
+	# Standard lunge with squash-stretch for weight
+	var tween = create_tween()
+	# Brief anticipation
+	tween.tween_property(sprite, "position", base_pos - dir * 2.0, 0.04)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.1, 0.9), 0.04)
+	# Lunge
+	tween.tween_property(sprite, "position", base_pos + dir * 8.0, 0.06)
+	tween.parallel().tween_property(sprite, "scale", Vector2(0.9, 1.1), 0.06)
+	# Return
 	tween.tween_property(sprite, "position", base_pos, 0.08)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.08)
 
 func _spawn_blood_splatter() -> void:
 	var blood_tex = SpriteGenerator.get_texture("blood_splatter")

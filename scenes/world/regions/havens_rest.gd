@@ -33,7 +33,8 @@ const HarvestableTree = preload("res://scenes/world/harvestable_tree.gd")
 func _ready() -> void:
 	GameManager.game_message.emit("Welcome to Haven's Rest", Color(1, 1, 1))
 	GameManager.game_message.emit("Level 1-5 Zone", Color(0.7, 0.7, 0.7))
-	AudioManager.play_music("town")
+	var tracks: Array[String] = ["war_drums", "crystal_caves", "pirate_jig", "dark_cathedral", "desert_caravan"]
+	AudioManager.start_rotation(tracks, 60.0, 300.0)
 
 	heal_beacon.activated.connect(_on_heal_beacon)
 	info_beacon.activated.connect(_on_info_beacon)

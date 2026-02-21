@@ -13,6 +13,12 @@ var _music_player: AudioStreamPlayer
 var _music_volume_db: float = -10.0
 var _sfx_volume_db: float = 0.0
 
+# Music rotation system
+var _rotation_tracks: Array[String] = []
+var _rotation_index: int = 0
+var _rotation_timer: Timer
+var _rotation_active: bool = false
+
 func _ready() -> void:
 	_generate_all_sfx()
 	_generate_all_music()
@@ -59,6 +65,53 @@ func play_music(music_name: String) -> void:
 
 func stop_music() -> void:
 	_music_player.stop()
+	stop_rotation()
+
+func start_rotation(track_names: Array[String], interval: float = 60.0, total_duration: float = 300.0) -> void:
+	## Rotates through the given tracks, switching every `interval` seconds.
+	## Stops after `total_duration` seconds total.
+	stop_rotation()
+	_rotation_tracks = track_names
+	_rotation_index = 0
+	_rotation_active = true
+	# Play the first track immediately
+	play_music_direct(_rotation_tracks[0])
+	# Create the switch timer
+	_rotation_timer = Timer.new()
+	_rotation_timer.wait_time = interval
+	_rotation_timer.one_shot = false
+	_rotation_timer.timeout.connect(_on_rotation_tick)
+	add_child(_rotation_timer)
+	_rotation_timer.start()
+	# Create a one-shot timer to stop everything after total_duration
+	var stop_timer = Timer.new()
+	stop_timer.wait_time = total_duration
+	stop_timer.one_shot = true
+	stop_timer.timeout.connect(stop_rotation)
+	add_child(stop_timer)
+	stop_timer.start()
+
+func stop_rotation() -> void:
+	_rotation_active = false
+	if _rotation_timer and is_instance_valid(_rotation_timer):
+		_rotation_timer.stop()
+		_rotation_timer.queue_free()
+		_rotation_timer = null
+
+func _on_rotation_tick() -> void:
+	if not _rotation_active or _rotation_tracks.is_empty():
+		return
+	_rotation_index = (_rotation_index + 1) % _rotation_tracks.size()
+	play_music_direct(_rotation_tracks[_rotation_index])
+
+func play_music_direct(music_name: String) -> void:
+	## Like play_music but always restarts even if same track
+	var stream = _music_cache.get(music_name)
+	if not stream:
+		return
+	_music_player.stream = stream
+	_music_player.volume_db = _music_volume_db
+	_music_player.play()
 
 # ============================================================
 # PLAYER SETUP
@@ -494,417 +547,517 @@ func _gen_tree_fall() -> AudioStreamWAV:
 	return _to_stream(samples)
 
 # ============================================================
-# MUSIC GENERATION
+# MUSIC GENERATION — 5 completely different tracks, rotated every minute
 # ============================================================
 
 func _generate_all_music() -> void:
-	_music_cache["town"] = _gen_town_music()
+	_music_cache["war_drums"] = _gen_war_drums()
+	_music_cache["crystal_caves"] = _gen_crystal_caves()
+	_music_cache["pirate_jig"] = _gen_pirate_jig()
+	_music_cache["dark_cathedral"] = _gen_dark_cathedral()
+	_music_cache["desert_caravan"] = _gen_desert_caravan()
 
-# A minor pentatonic frequencies
-const PENTA = {
-	"A2": 110.0, "C3": 130.81, "D3": 146.83, "E3": 164.81, "G3": 196.0,
-	"A3": 220.0, "C4": 261.63, "D4": 293.66, "E4": 329.63, "G4": 392.0,
-	"A4": 440.0, "C5": 523.25, "D5": 587.33, "E5": 659.25, "G5": 784.0,
-}
-
-func _gen_town_music() -> AudioStreamWAV:
-	# Fantasy town theme — 8 sections (~3:12), rich timbres, full musical arc
-	# A: Dawn mist (0-24)      B: Morning market (24-48)
-	# C: Storyteller (48-72)   D: Forge & river (72-96)
-	# E: Afternoon shade (96-120)  F: Gathering storm (120-144)
-	# G: Celebration (144-168) H: Twilight return (168-192)
-	var duration = 192.0
-	var samples = _make_samples(duration)
+# ---- Track 1: WAR DRUMS — Aggressive tribal percussion, deep bass, chanting ----
+func _gen_war_drums() -> AudioStreamWAV:
+	var dur = 60.0
+	var samples = _make_samples(dur)
 	var rng = RandomNumberGenerator.new()
-	rng.seed = 7741
-	var section_dur = 24.0
-	var num_sections = 8
+	rng.seed = 3317
 
-	var N = {
-		"G2": 98.0, "Ab2": 103.83, "A2": 110.0, "Bb2": 116.54, "B2": 123.47,
-		"C3": 130.81, "D3": 146.83, "Eb3": 155.56, "E3": 164.81,
-		"F3": 174.61, "Fs3": 185.0, "G3": 196.0,
-		"A3": 220.0, "Bb3": 233.08, "B3": 246.94,
-		"C4": 261.63, "D4": 293.66, "Eb4": 311.13, "E4": 329.63,
-		"F4": 349.23, "Fs4": 369.99, "G4": 392.0, "Ab4": 415.30,
-		"A4": 440.0, "Bb4": 466.16, "B4": 493.88,
-		"C5": 523.25, "D5": 587.33, "Eb5": 622.25, "E5": 659.25,
-		"F5": 698.46, "Fs5": 739.99, "G5": 784.0, "Ab5": 830.61,
-		"A5": 880.0, "C6": 1046.5,
-	}
-
-	# Helper: render a note with timbre and expression into a buffer
-	# timbre: 0=flute 1=string 2=oboe 3=horn 4=harp
-	# expr: 0=normal 1=swell 2=fade 3=accent
-	var _render = func(freq: float, ndur: float, timbre: int, expr: int) -> Array:
-		var ns = _make_samples(ndur * 1.4)
-		for i in range(ns.size()):
-			var t = float(i) / SAMPLE_RATE
-			var nf = t / ndur
-			var vr = [5.2, 4.8, 5.8, 4.0, 0.0][timbre]
-			var vd = [0.003, 0.004, 0.005, 0.003, 0.0][timbre] * clampf(t - 0.12, 0.0, 1.0)
-			var f = freq * (1.0 + vd * sin(t * vr * TAU))
-			var ph = t * f * TAU
-			match timbre:
-				0:
-					ns[i] = sin(ph) * 0.050 + sin(ph * 3.0) * 0.013
-					ns[i] += sin(ph + sin(t * 1337.0) * 0.8) * 0.007
-				1:
-					ns[i] = sin(ph) * 0.030 + sin(ph * 2.0) * 0.011
-					ns[i] += sin(ph * 3.0) * 0.015 + sin(t * freq * 1.002 * TAU) * 0.011
-				2:
-					ns[i] = sin(ph) * 0.040 + sin(ph * 2.0) * 0.020
-					ns[i] += sin(ph * 3.0) * 0.025 + sin(ph * 5.0) * 0.012
-				3:
-					ns[i] = sin(ph) * 0.045 + sin(ph * 2.0) * 0.018
-					ns[i] += sin(t * freq * 1.001 * TAU) * 0.015
-				4:
-					ns[i] = sin(ph) * 0.045 + sin(t * freq * 2.003 * TAU) * 0.020
-					ns[i] += sin(t * freq * 3.008 * TAU) * 0.010
-					ns[i] *= exp(-t * 4.0)
-			match expr:
-				1: ns[i] *= 0.65 + 0.35 * sin(nf * PI)
-				2: ns[i] *= maxf(0.0, 1.0 - nf * 0.55)
-				3: ns[i] *= 1.0 + 0.4 * exp(-t * 8.0)
-		var atk = 0.005 if timbre == 4 else 0.07
-		_apply_envelope(ns, atk, ndur * 0.35, ndur * 0.75)
-		return ns
-
-	# ---- BASS: 4 notes per section = 32 total ----
-	var bass_prog = [
-		N["A2"], N["A2"], N["E3"], N["A2"],       # A: pedal
-		N["A2"], N["F3"], N["C3"], N["G3"],       # B: lively
-		N["A2"], N["D3"], N["E3"], N["A2"],       # C: storytelling
-		N["F3"], N["G3"], N["A2"], N["E3"],       # D: rhythmic
-		N["D3"], N["G3"], N["A2"], N["C3"],       # E: dorian
-		N["A2"], N["Eb3"], N["Bb2"], N["E3"],     # F: chromatic tension
-		N["F3"], N["G3"], N["C3"], N["A2"],       # G: triumphant
-		N["A2"], N["E3"], N["G2"], N["A2"],       # H: return
-	]
-	var bass_note_dur = duration / bass_prog.size()
-	var prev_bass_freq = bass_prog[0]
+	# Heavy kick drum pattern — driving 4/4 with syncopation
+	var kick_pattern = [0.0, 0.5, 0.75, 1.0, 1.5, 2.0, 2.25, 2.5, 3.0, 3.5]
+	var bar_len = 4.0  # 4 seconds per bar
 	for i in range(samples.size()):
 		var t = float(i) / SAMPLE_RATE
-		var prog_idx = int(t / bass_note_dur) % bass_prog.size()
-		var bass_freq = bass_prog[prog_idx]
-		var note_t = fmod(t, bass_note_dur)
-		var slide_frac = clampf(note_t / 0.15, 0.0, 1.0)
-		var eff_freq = lerpf(prev_bass_freq, bass_freq, slide_frac)
-		if note_t < 0.001:
-			prev_bass_freq = bass_prog[(prog_idx - 1 + bass_prog.size()) % bass_prog.size()]
-		var sec = int(t / section_dur)
-		var bvol = 0.08
-		if sec == 0 or sec == 7: bvol = 0.06
-		elif sec == 3 or sec == 5 or sec == 6: bvol = 0.10
-		var env = bvol * (0.6 + 0.4 * exp(-note_t * 1.2))
-		var phase = t * eff_freq * TAU
-		samples[i] += sin(phase) * env
-		samples[i] += sin(phase * 3.0) * env * 0.10
-		samples[i] += sin(phase * 5.0) * env * 0.03
-		samples[i] += sin(t * eff_freq * 0.5 * TAU) * env * 0.25
+		var bar_t = fmod(t, bar_len)
+		# Kick drums
+		for kick_t in kick_pattern:
+			var dt = bar_t - kick_t
+			if dt >= 0.0 and dt < 0.15:
+				var env = exp(-dt * 25.0) * 0.35
+				samples[i] += sin(t * 55.0 * TAU * (1.0 - dt * 3.0)) * env
+				samples[i] += sin(t * 110.0 * TAU) * env * 0.15
+		# Snare hits on beats 1.0 and 3.0
+		for snare_t in [1.0, 3.0]:
+			var sdt = bar_t - snare_t
+			if sdt >= 0.0 and sdt < 0.1:
+				var senv = exp(-sdt * 30.0) * 0.20
+				samples[i] += sin(t * 180.0 * TAU) * senv * 0.5
+		# Tom fills every other bar
+		if fmod(t, bar_len * 2.0) > bar_len:
+			for tom_off in [3.25, 3.5, 3.625, 3.75, 3.875]:
+				var tdt = bar_t - tom_off
+				if tdt >= 0.0 and tdt < 0.12:
+					var tom_freq = lerpf(200.0, 80.0, (tom_off - 3.25) / 0.625)
+					var tenv = exp(-tdt * 20.0) * 0.18
+					samples[i] += sin(t * tom_freq * TAU) * tenv
 
-	# ---- PAD CHORDS: 4 per section = 32 total ----
-	var pad_chords = [
-		[N["A3"], N["E4"]], [N["C4"], N["G4"]],
-		[N["E3"], N["B3"]], [N["A3"], N["E4"]],
-		[N["A3"], N["C4"], N["E4"]], [N["F3"], N["A3"], N["C4"]],
-		[N["C4"], N["E4"], N["G4"]], [N["G3"], N["B3"], N["D4"]],
-		[N["A3"], N["C4"], N["E4"]], [N["D4"], N["F4"], N["A4"]],
-		[N["E3"], N["G3"], N["B3"]], [N["A3"], N["C4"], N["G4"]],
-		[N["F3"], N["C4"]], [N["G3"], N["D4"]],
-		[N["A3"], N["E4"]], [N["E3"], N["B3"]],
-		[N["D4"], N["F4"], N["A4"]], [N["G3"], N["B3"], N["D4"]],
-		[N["A3"], N["C4"], N["E4"]], [N["C4"], N["E4"], N["G4"]],
-		[N["A3"], N["C4"], N["E4"]], [N["Eb4"], N["G4"], N["Bb4"]],
-		[N["Bb3"], N["D4"], N["F4"]], [N["E3"], N["B3"]],
-		[N["F3"], N["A3"], N["C4"], N["E4"]], [N["G3"], N["B3"], N["D4"], N["G4"]],
-		[N["C4"], N["E4"], N["G4"], N["C5"]], [N["A3"], N["C4"], N["E4"], N["A4"]],
-		[N["A3"], N["E4"], N["A4"]], [N["C4"], N["G4"]],
-		[N["G3"], N["D4"]], [N["A3"], N["E4"]],
-	]
-	var pad_dur = duration / pad_chords.size()
+	# Snare noise layer
+	var sn_rng = RandomNumberGenerator.new()
+	sn_rng.seed = 4401
 	for i in range(samples.size()):
 		var t = float(i) / SAMPLE_RATE
-		var chord_idx = int(t / pad_dur) % pad_chords.size()
-		var chord = pad_chords[chord_idx]
-		var chord_t = fmod(t, pad_dur) / pad_dur
-		var swell = sin(chord_t * PI)
-		var sec = int(t / section_dur)
-		var pvol = [0.04, 0.05, 0.05, 0.04, 0.055, 0.06, 0.065, 0.04][sec]
-		var bright = [0.06, 0.14, 0.10, 0.08, 0.12, 0.20, 0.18, 0.05][sec]
-		swell = pow(swell, 1.3) * pvol
-		for freq in chord:
-			var p1 = t * freq * TAU
-			samples[i] += sin(p1) * swell
-			samples[i] += sin(t * freq * 1.003 * TAU) * swell * 0.4
-			samples[i] += sin(t * freq * 0.997 * TAU) * swell * 0.4
-			samples[i] += sin(p1 * 2.0) * swell * bright
-			samples[i] += sin(p1 * 3.0) * swell * bright * 0.35
+		var bar_t = fmod(t, bar_len)
+		for snare_t in [1.0, 3.0]:
+			var sdt = bar_t - snare_t
+			if sdt >= 0.0 and sdt < 0.08:
+				var senv = exp(-sdt * 35.0) * 0.15
+				samples[i] += sn_rng.randf_range(-1.0, 1.0) * senv
 
-	# ---- 8 MELODIES — each with unique character and timbre ----
-	# [freq, dur, expr] | timbre per section: 0=flute 2=oboe 3=horn 1=string
-	var mA = [  # Dawn mist: flute, sparse
-		[N["E4"], 3.0, 0], [0, 2.0, 0], [N["A4"], 2.5, 1], [N["G4"], 1.8, 2],
-		[0, 1.2, 0], [N["E4"], 1.8, 0], [N["D4"], 3.0, 2], [0, 2.0, 0],
-		[N["C4"], 2.5, 1], [N["E4"], 1.8, 0], [N["A4"], 2.0, 2],
-	]
-	var mB = [  # Morning market: oboe, quick playful
-		[N["A4"], 0.5, 3], [N["B4"], 0.4, 0], [N["C5"], 0.6, 1],
-		[N["E5"], 0.5, 3], [N["D5"], 0.4, 0], [N["C5"], 0.6, 2],
-		[N["A4"], 0.5, 0], [N["G4"], 0.5, 0], [0, 0.5, 0],
-		[N["A4"], 0.4, 3], [N["C5"], 0.5, 0], [N["D5"], 0.6, 1],
-		[N["E5"], 0.4, 0], [N["C5"], 0.5, 0], [N["A4"], 0.8, 2], [0, 0.6, 0],
-		[N["G4"], 0.4, 0], [N["A4"], 0.4, 0], [N["B4"], 0.5, 1],
-		[N["C5"], 0.5, 3], [N["D5"], 0.4, 0], [N["E5"], 0.5, 1],
-		[N["D5"], 0.4, 0], [N["C5"], 0.5, 0], [N["B4"], 0.4, 0],
-		[N["A4"], 1.0, 2], [0, 0.6, 0],
-		[N["E5"], 0.5, 3], [N["D5"], 0.5, 0], [N["C5"], 0.5, 0],
-		[N["B4"], 0.5, 0], [N["A4"], 0.5, 0], [N["G4"], 0.5, 0],
-		[N["A4"], 1.5, 2],
-	]
-	var mC = [  # Storyteller: flute, lyrical
-		[N["A4"], 1.2, 1], [N["C5"], 1.0, 0], [N["E5"], 1.8, 1],
-		[N["D5"], 0.8, 0], [N["C5"], 1.5, 2], [0, 0.7, 0],
-		[N["B4"], 0.8, 0], [N["A4"], 1.0, 0], [N["G4"], 1.2, 1],
-		[N["A4"], 1.5, 2], [0, 0.8, 0],
-		[N["E4"], 0.8, 0], [N["G4"], 0.8, 1], [N["A4"], 1.2, 0],
-		[N["C5"], 1.5, 1], [N["D5"], 1.0, 0], [N["E5"], 2.0, 1],
-		[N["D5"], 1.0, 2], [N["C5"], 1.0, 0], [N["A4"], 2.0, 2],
-	]
-	var mD = [  # Forge & river: horn, rhythmic
-		[N["A4"], 0.6, 3], [0, 0.3, 0], [N["A4"], 0.6, 3], [0, 0.3, 0],
-		[N["C5"], 0.8, 1], [N["A4"], 0.5, 0], [0, 0.4, 0],
-		[N["G4"], 0.6, 3], [0, 0.3, 0], [N["G4"], 0.6, 3], [0, 0.3, 0],
-		[N["E4"], 0.8, 1], [N["G4"], 0.5, 0], [0, 0.4, 0],
-		[N["F4"], 0.6, 3], [N["G4"], 0.6, 0], [N["A4"], 1.2, 1],
-		[N["C5"], 1.0, 0], [N["B4"], 0.8, 0], [N["A4"], 1.5, 2], [0, 0.8, 0],
-		[N["E4"], 0.6, 3], [N["F4"], 0.5, 0], [N["G4"], 0.6, 0],
-		[N["A4"], 1.0, 1], [N["G4"], 0.8, 0], [N["E4"], 1.5, 2], [0, 0.5, 0],
-		[N["A4"], 0.6, 3], [N["C5"], 0.8, 1], [N["E5"], 1.2, 1],
-		[N["D5"], 0.8, 0], [N["C5"], 0.6, 0], [N["A4"], 1.5, 2],
-	]
-	var mE = [  # Afternoon shade: flute, dorian lazy
-		[N["D5"], 2.0, 1], [N["C5"], 1.2, 0], [N["A4"], 2.0, 2], [0, 1.0, 0],
-		[N["G4"], 1.5, 0], [N["A4"], 1.0, 0], [N["C5"], 1.8, 1],
-		[N["D5"], 1.2, 0], [N["E5"], 2.0, 2], [0, 1.0, 0],
-		[N["D5"], 1.5, 1], [N["C5"], 1.0, 0], [N["A4"], 1.8, 2], [0, 0.8, 0],
-		[N["Fs4"], 1.5, 1], [N["G4"], 1.0, 0], [N["A4"], 2.2, 2],
-	]
-	var mF = [  # Gathering storm: string, dramatic chromatic
-		[N["E5"], 1.5, 3], [N["Eb5"], 0.8, 0], [N["D5"], 1.5, 2],
-		[N["C5"], 0.6, 0], [N["B4"], 1.2, 2], [0, 0.5, 0],
-		[N["A4"], 0.8, 3], [N["Bb4"], 0.8, 0], [N["C5"], 1.2, 1],
-		[N["D5"], 1.5, 0], [N["Eb5"], 1.5, 1], [0, 0.5, 0],
-		[N["E5"], 1.0, 3], [N["D5"], 0.8, 0], [N["C5"], 0.8, 0],
-		[N["B4"], 0.8, 0], [N["A4"], 1.2, 2], [0, 0.6, 0],
-		[N["Ab4"], 1.2, 1], [N["A4"], 0.8, 0], [N["B4"], 1.0, 0],
-		[N["E5"], 2.0, 1], [N["E5"], 2.5, 2],
-	]
-	var mG = [  # Celebration: horn, triumphant major
-		[N["C5"], 0.8, 3], [N["E5"], 0.8, 3], [N["G5"], 1.5, 1],
-		[N["E5"], 0.8, 0], [N["C5"], 0.5, 0], [0, 0.4, 0],
-		[N["D5"], 0.8, 3], [N["F5"], 0.8, 0], [N["A5"], 1.5, 1],
-		[N["G5"], 0.8, 0], [N["E5"], 0.8, 0], [0, 0.4, 0],
-		[N["C5"], 0.6, 0], [N["D5"], 0.6, 0], [N["E5"], 0.8, 1],
-		[N["G5"], 1.2, 3], [N["A5"], 1.5, 1], [0, 0.5, 0],
-		[N["G5"], 0.8, 0], [N["E5"], 0.8, 0], [N["D5"], 0.8, 0],
-		[N["C5"], 1.2, 0], [N["E5"], 1.0, 1], [N["C5"], 2.5, 2],
-	]
-	var mH = [  # Twilight return: flute, reprises dawn
-		[N["E4"], 2.5, 0], [N["G4"], 1.0, 0], [0, 1.0, 0],
-		[N["A4"], 2.0, 1], [N["B4"], 0.8, 0], [N["A4"], 1.5, 2], [0, 1.0, 0],
-		[N["E4"], 1.5, 0], [N["D4"], 1.0, 0], [N["C4"], 2.5, 2], [0, 1.5, 0],
-		[N["E4"], 1.0, 0], [N["G4"], 1.0, 1], [N["A4"], 1.5, 0],
-		[N["C5"], 2.0, 1], [N["A4"], 2.5, 2],
-	]
-	var mel_timbres = [0, 2, 0, 3, 0, 1, 3, 0]
-	var all_mel = [mA, mB, mC, mD, mE, mF, mG, mH]
-	for s_idx in range(num_sections):
-		var mel = all_mel[s_idx]
-		var ss = s_idx * section_dur
-		var tmb = mel_timbres[s_idx]
-		var nt = 0.0
-		for e in mel:
-			if e[0] > 0 and nt + ss < duration:
-				var ns = _render.call(e[0], e[1], tmb, e[2])
-				_mix_into(samples, ns, int((nt + ss) * SAMPLE_RATE))
-			nt += e[1]
-
-	# ---- COUNTER-MELODIES in sections B, C, E, F, G ----
-	var cm_data = {
-		1: [[0,1.5],[N["E4"],0.5],[N["C4"],0.5],[N["A3"],0.8],[0,1.0],
-			[N["G4"],0.5],[N["E4"],0.5],[N["D4"],0.8],[0,0.8],
-			[N["C4"],0.5],[N["E4"],0.5],[N["A4"],0.8],[0,0.6],
-			[N["G4"],0.6],[N["E4"],0.6],[N["C4"],0.8],[0,0.5],
-			[N["D4"],0.5],[N["E4"],0.5],[N["G4"],0.8],[N["A4"],1.0],[0,0.8],
-			[N["E4"],0.5],[N["G4"],0.5],[N["A4"],0.8],[N["G4"],0.6],
-			[N["E4"],0.5],[N["C4"],0.8],[N["A3"],1.2]],
-		2: [[0,3.0],[N["E4"],1.5],[N["D4"],1.0],[N["C4"],1.5],[0,1.0],
-			[N["A3"],1.5],[N["C4"],1.0],[N["D4"],1.5],[0,1.0],
-			[N["E4"],1.5],[N["D4"],1.0],[N["C4"],2.0],[0,1.0],
-			[N["A3"],1.5],[N["G3"],1.0],[N["A3"],2.5]],
-		4: [[0,4.0],[N["A3"],2.0],[N["C4"],1.5],[0,1.0],
-			[N["D4"],2.0],[N["E4"],1.5],[N["D4"],1.5],[0,1.0],
-			[N["C4"],2.0],[N["A3"],1.5],[0,1.0],
-			[N["Fs3"],2.0],[N["G3"],1.5],[N["A3"],2.5]],
-		5: [[0,2.0],[N["A3"],1.0],[N["Bb3"],1.0],[N["C4"],1.5],
-			[N["D4"],1.5],[N["Eb4"],2.0],[0,1.0],
-			[N["E4"],1.5],[N["D4"],1.0],[N["C4"],1.0],
-			[N["B3"],1.5],[N["A3"],1.5],[0,1.0],
-			[N["A3"],1.5],[N["B3"],1.5],[N["E4"],2.5]],
-		6: [[0,2.0],[N["G4"],0.6],[N["E4"],0.6],[N["C4"],1.0],[0,0.8],
-			[N["A4"],0.6],[N["G4"],0.6],[N["E4"],1.0],[0,0.8],
-			[N["C5"],0.6],[N["A4"],0.6],[N["G4"],1.0],
-			[N["E4"],0.8],[N["G4"],1.0],[N["C5"],1.5],[0,0.5],
-			[N["A4"],0.6],[N["G4"],0.6],[N["E4"],0.8],
-			[N["C4"],0.8],[N["E4"],1.0],[N["G4"],1.5],[N["C5"],2.0]],
-	}
-	var cm_timbres = {1: 4, 2: 1, 4: 1, 5: 1, 6: 3}
-	for si in cm_data:
-		var cm = cm_data[si]
-		var ct = 0.0
-		var cs = si * section_dur
-		for np in cm:
-			if np[0] > 0 and ct + cs < duration:
-				var ns = _render.call(np[0], np[1], cm_timbres[si], 0)
-				for qi in range(ns.size()): ns[qi] *= 0.7
-				_mix_into(samples, ns, int((ct + cs) * SAMPLE_RATE))
-			ct += np[1]
-
-	# ---- HARP TWINKLES — follow harmony, vary density ----
-	var tw_pools = [
-		[N["E5"],N["A5"],N["C5"]],
-		[N["A4"],N["C5"],N["E5"],N["G5"]],
-		[N["E5"],N["G5"],N["A5"],N["D5"]],
-		[N["A4"],N["E5"],N["C5"]],
-		[N["D5"],N["Fs5"],N["A5"],N["C5"]],
-		[N["E5"],N["Ab5"],N["Bb4"]],
-		[N["C5"],N["E5"],N["G5"],N["A5"],N["C6"]],
-		[N["E5"],N["A5"],N["C5"],N["G5"]],
-	]
-	var tw_t = 3.0
-	while tw_t < duration - 1.0:
-		var si = int(tw_t / section_dur) % num_sections
-		var pool = tw_pools[si]
-		var freq = pool[rng.randi() % pool.size()]
-		var ns = _render.call(freq, 0.6, 4, 0)
-		for qi in range(ns.size()): ns[qi] *= 0.55
-		_mix_into(samples, ns, int(tw_t * SAMPLE_RATE))
-		match si:
-			0, 4, 7: tw_t += rng.randf_range(3.5, 6.5)
-			1, 6: tw_t += rng.randf_range(1.2, 2.5)
-			_: tw_t += rng.randf_range(2.0, 4.0)
-
-	# ---- WIND — breathes through entire piece ----
-	var wind = _make_samples(duration)
-	var w_rng = RandomNumberGenerator.new()
-	w_rng.seed = 9921
-	var w_st = 0.0
-	var w_pv = 0.0
-	for i in range(wind.size()):
-		var t = float(i) / SAMPLE_RATE
-		if i % 2205 == 0:
-			w_st += w_rng.randf_range(-0.02, 0.02)
-			w_st = clampf(w_st, -0.3, 0.3)
-		var sec = int(t / section_dur)
-		var wb = [0.016, 0.005, 0.008, 0.010, 0.008, 0.016, 0.005, 0.016][sec]
-		var we = (0.5 + 0.5 * sin(t * TAU / 15.0)) * wb + abs(w_st) * 0.006
-		var raw = w_rng.randf_range(-1.0, 1.0)
-		w_pv = w_pv * 0.93 + raw * 0.07
-		wind[i] = w_pv * we
-	_mix_into(samples, wind, 0)
-
-	# ---- PERCUSSION — different rhythm per section ----
+	# Deep war bass — menacing low drone that shifts
+	var bass_notes = [55.0, 55.0, 41.2, 49.0, 55.0, 61.7, 49.0, 55.0]
+	var bass_dur = dur / bass_notes.size()
 	for i in range(samples.size()):
 		var t = float(i) / SAMPLE_RATE
-		var sec = int(t / section_dur)
-		if sec == 0 or sec == 7: continue  # No perc in dawn/twilight
-		var bp = [0, 1.2, 1.8, 0.75, 2.0, 1.5, 1.0, 0][sec]
-		var vol = [0, 0.018, 0.015, 0.025, 0.012, 0.020, 0.022, 0][sec]
-		var beat_ph = fmod(t, bp)
-		if beat_ph < 0.06:
-			var p = beat_ph / 0.06
-			var env = sin(p * PI) * vol
-			var df = 200.0 if sec == 3 else 80.0
-			var dd = 50.0 if sec == 3 else 30.0
-			samples[i] += sin(t * df * TAU) * env * exp(-beat_ph * dd)
-			samples[i] += sin(t * N["A2"] * TAU) * env * 0.4
-		elif absf(beat_ph - bp * 0.5) < 0.04:
-			var ob = (beat_ph - bp * 0.5 + 0.04) / 0.08
-			var env = sin(clampf(ob, 0.0, 1.0) * PI) * vol * 0.35
-			samples[i] += sin(t * 130.0 * TAU) * env * exp(-absf(beat_ph - bp * 0.5) * 40.0)
+		var bi = int(t / bass_dur) % bass_notes.size()
+		var bf = bass_notes[bi]
+		var note_t = fmod(t, bass_dur)
+		var benv = 0.12 * (0.7 + 0.3 * exp(-note_t * 0.5))
+		samples[i] += sin(t * bf * TAU) * benv
+		samples[i] += sin(t * bf * 2.0 * TAU) * benv * 0.3
+		samples[i] += sin(t * bf * 3.0 * TAU) * benv * 0.08
 
-	# ---- NATURE: birds (A/E/H), water (D), crickets (H) ----
-	var bird_t = 4.0
-	while bird_t < duration:
-		var si = int(bird_t / section_dur)
-		if si == 0 or si == 4 or si == 7:
-			var cd = rng.randf_range(0.10, 0.18)
-			var sf = rng.randf_range(1800.0, 2800.0)
-			var ef = sf * rng.randf_range(0.6, 0.8)
-			var ch = _make_samples(cd)
-			var cp = 0.0
-			for i in range(ch.size()):
-				var t = float(i) / SAMPLE_RATE
-				var fr = t / cd
-				cp += lerpf(sf, ef, fr) / SAMPLE_RATE
-				ch[i] = sin(cp * TAU) * 0.010 * sin(fr * PI)
-			_mix_into(samples, ch, int(bird_t * SAMPLE_RATE))
-			if rng.randf() < 0.4:
-				var c2 = _make_samples(cd * 0.7)
-				var c2p = 0.0
-				for i in range(c2.size()):
-					var t = float(i) / SAMPLE_RATE
-					var fr = t / (cd * 0.7)
-					c2p += lerpf(sf * 1.08, ef * 1.12, fr) / SAMPLE_RATE
-					c2[i] = sin(c2p * TAU) * 0.007 * sin(fr * PI)
-				_mix_into(samples, c2, int((bird_t + cd + rng.randf_range(0.12, 0.22)) * SAMPLE_RATE))
-		bird_t += rng.randf_range(6.0, 14.0)
-
-	# Water gurgle in section D
-	var wt_rng = RandomNumberGenerator.new()
-	wt_rng.seed = 5533
-	var wp1 = 0.0
-	var wp2 = 0.0
+	# Tribal chant — parallel fifths droning
+	var chant_freqs = [220.0, 330.0]  # A3 + E4 (perfect fifth)
 	for i in range(samples.size()):
 		var t = float(i) / SAMPLE_RATE
-		if t < 72.0 or t >= 96.0: continue
-		var raw = wt_rng.randf_range(-1.0, 1.0)
-		wp1 = wp1 * 0.85 + raw * 0.15
-		wp2 = wp2 * 0.90 + wp1 * 0.10
-		var we = (0.5 + 0.5 * sin(t * TAU / 4.0)) * 0.008
-		we += (0.5 + 0.5 * sin(t * TAU / 7.3)) * 0.004
-		samples[i] += wp2 * we
+		var chant_pulse = 0.5 + 0.5 * sin(t * 2.5 * TAU)
+		var section = int(t / 15.0) % 4
+		var chant_vol = [0.0, 0.04, 0.06, 0.03][section]
+		for cf in chant_freqs:
+			var vib = 1.0 + 0.004 * sin(t * 5.5 * TAU)
+			samples[i] += sin(t * cf * vib * TAU) * chant_vol * chant_pulse
+			samples[i] += sin(t * cf * vib * 2.0 * TAU) * chant_vol * chant_pulse * 0.2
 
-	# Crickets in section H
-	for i in range(samples.size()):
-		var t = float(i) / SAMPLE_RATE
-		if t < 168.0: continue
-		var cp = fmod(t, 1.1)
-		if cp < 0.08:
-			var env = sin(cp / 0.08 * PI) * 0.006
-			samples[i] += sin(t * 4200.0 * TAU) * env * (0.5 + 0.5 * sin(t * 50.0 * TAU))
+	# War horn blasts at section transitions
+	for sec_start in [0.0, 15.0, 30.0, 45.0]:
+		var horn_start = int(sec_start * SAMPLE_RATE)
+		var horn_dur = int(3.0 * SAMPLE_RATE)
+		for i in range(horn_dur):
+			var di = horn_start + i
+			if di >= samples.size():
+				break
+			var t = float(di) / SAMPLE_RATE
+			var ht = float(i) / SAMPLE_RATE
+			var henv = sin(clampf(ht / 3.0, 0.0, 1.0) * PI) * 0.07
+			var hf = 146.83  # D3
+			samples[di] += sin(t * hf * TAU) * henv
+			samples[di] += sin(t * hf * 2.0 * TAU) * henv * 0.4
+			samples[di] += sin(t * hf * 3.0 * TAU) * henv * 0.15
 
-	# ---- SECTION TRANSITIONS: rising swells before boundaries ----
-	for sb in range(1, num_sections):
-		var bt = sb * section_dur
-		var ss = int((bt - 2.0) * SAMPLE_RATE)
-		var se = int(bt * SAMPLE_RATE)
-		if ss < 0: continue
-		for i in range(ss, mini(se, samples.size())):
-			var t = float(i) / SAMPLE_RATE
-			var sf = (t - (bt - 2.0)) / 2.0
-			var env = pow(sf, 2.0) * 0.025
-			var rf = N["E4"] * (1.0 + sf * 0.05)
-			samples[i] += sin(t * rf * TAU) * env
-			samples[i] += sin(t * rf * 1.5 * TAU) * env * 0.3
-
-	# ---- FINAL: soft clip + loop crossfade ----
-	_soft_clip(samples, 1.5)
-	var fade_len = int(3.0 * SAMPLE_RATE)
+	_soft_clip(samples, 2.0)
+	var fade_len = int(2.0 * SAMPLE_RATE)
 	for i in range(fade_len):
 		var frac = float(i) / fade_len
 		samples[samples.size() - fade_len + i] *= (1.0 - frac)
-		samples[i] *= frac * frac
+		samples[i] *= frac
+	return _to_stream(samples, true)
 
+# ---- Track 2: CRYSTAL CAVES — Ethereal bells, shimmering arpeggios, reverb-like delays ----
+func _gen_crystal_caves() -> AudioStreamWAV:
+	var dur = 60.0
+	var samples = _make_samples(dur)
+	var rng = RandomNumberGenerator.new()
+	rng.seed = 8832
+
+	# Crystalline arpeggio patterns — whole tone scale for otherworldly feel
+	var wt_scale = [261.6, 293.7, 329.6, 370.0, 415.3, 466.2, 523.3, 587.3, 659.3, 740.0]
+	var arp_speed = 0.3  # seconds per note
+	var arp_t = 0.0
+	while arp_t < dur:
+		var note_idx = rng.randi() % wt_scale.size()
+		var freq = wt_scale[note_idx]
+		var ndur = rng.randf_range(0.8, 2.0)
+		var bell = _make_samples(ndur)
+		for i in range(bell.size()):
+			var t = float(i) / SAMPLE_RATE
+			# Bell-like: fundamental + inharmonic partials
+			bell[i] = sin(t * freq * TAU) * 0.04 * exp(-t * 2.5)
+			bell[i] += sin(t * freq * 2.76 * TAU) * 0.02 * exp(-t * 4.0)
+			bell[i] += sin(t * freq * 5.4 * TAU) * 0.008 * exp(-t * 6.0)
+			bell[i] += sin(t * freq * 8.93 * TAU) * 0.003 * exp(-t * 8.0)
+		_mix_into(samples, bell, int(arp_t * SAMPLE_RATE))
+		# Echo/delay effect — repeat quieter
+		if arp_t + 0.4 < dur:
+			for qi in range(bell.size()):
+				bell[qi] *= 0.35
+			_mix_into(samples, bell, int((arp_t + 0.4) * SAMPLE_RATE))
+		if arp_t + 0.8 < dur:
+			for qi in range(bell.size()):
+				bell[qi] *= 0.4
+			_mix_into(samples, bell, int((arp_t + 0.8) * SAMPLE_RATE))
+		arp_t += rng.randf_range(0.2, 0.6)
+
+	# Deep cave drone — very low, slow-moving
+	for i in range(samples.size()):
+		var t = float(i) / SAMPLE_RATE
+		var drone_f = 65.0 + 5.0 * sin(t * 0.1 * TAU)
+		var drone_vol = 0.06 + 0.02 * sin(t * 0.07 * TAU)
+		samples[i] += sin(t * drone_f * TAU) * drone_vol
+		samples[i] += sin(t * drone_f * 1.5 * TAU) * drone_vol * 0.3
+
+	# Shimmering pad — high-frequency washing
+	for i in range(samples.size()):
+		var t = float(i) / SAMPLE_RATE
+		var shimmer_vol = 0.015 * (0.5 + 0.5 * sin(t * 0.15 * TAU))
+		# Cluster of close frequencies for chorus effect
+		samples[i] += sin(t * 880.0 * TAU) * shimmer_vol
+		samples[i] += sin(t * 882.5 * TAU) * shimmer_vol * 0.8
+		samples[i] += sin(t * 877.5 * TAU) * shimmer_vol * 0.8
+		samples[i] += sin(t * 1320.0 * TAU) * shimmer_vol * 0.4
+		samples[i] += sin(t * 1322.0 * TAU) * shimmer_vol * 0.3
+
+	# Water drops — random plinks
+	var drop_t = 2.0
+	while drop_t < dur - 1.0:
+		var dfreq = rng.randf_range(1200.0, 3000.0)
+		var ddur = rng.randf_range(0.15, 0.4)
+		var drop = _make_samples(ddur)
+		for i in range(drop.size()):
+			var t = float(i) / SAMPLE_RATE
+			drop[i] = sin(t * dfreq * TAU) * 0.02 * exp(-t * 10.0)
+			drop[i] += sin(t * dfreq * 0.5 * TAU) * 0.01 * exp(-t * 8.0)
+		_mix_into(samples, drop, int(drop_t * SAMPLE_RATE))
+		drop_t += rng.randf_range(1.5, 5.0)
+
+	_soft_clip(samples, 1.3)
+	var fade_len = int(2.0 * SAMPLE_RATE)
+	for i in range(fade_len):
+		var frac = float(i) / fade_len
+		samples[samples.size() - fade_len + i] *= (1.0 - frac)
+		samples[i] *= frac
+	return _to_stream(samples, true)
+
+# ---- Track 3: PIRATE JIG — Upbeat 6/8 bouncy dance, fiddle-like melody ----
+func _gen_pirate_jig() -> AudioStreamWAV:
+	var dur = 60.0
+	var samples = _make_samples(dur)
+	var rng = RandomNumberGenerator.new()
+	rng.seed = 5577
+
+	# D major scale for bright sea-faring feel
+	# D4=293.66, E4=329.63, Fs4=370.0, G4=392.0, A4=440.0, B4=493.88, Cs5=554.37, D5=587.33
+	var beat = 0.25  # Eighth note = 0.25s (fast jig tempo)
+	var bar = beat * 6.0  # 6/8 time
+
+	# Bouncy bass — root-fifth pattern in 6/8
+	var bass_prog_notes = [
+		[146.83, 220.0],  # D3, A3
+		[146.83, 220.0],
+		[196.0, 293.66],  # G3, D4
+		[164.81, 246.94],  # E3, B3
+		[174.61, 261.63],  # F3, C4
+		[130.81, 196.0],  # C3, G3
+		[146.83, 220.0],
+		[146.83, 220.0],
+	]
+	var bass_bar_dur = bar
+	for i in range(samples.size()):
+		var t = float(i) / SAMPLE_RATE
+		var bar_idx = int(t / bass_bar_dur) % bass_prog_notes.size()
+		var root = bass_prog_notes[bar_idx][0]
+		var fifth = bass_prog_notes[bar_idx][1]
+		var bar_t = fmod(t, bass_bar_dur)
+		# Beat pattern: root on 1, fifth on 4
+		var beat_in_bar = int(bar_t / beat) % 6
+		var cur_bass = root if beat_in_bar < 3 else fifth
+		var note_in_beat = fmod(bar_t, beat)
+		var benv = 0.10 * exp(-note_in_beat * 6.0)
+		samples[i] += sin(t * cur_bass * TAU) * benv
+		samples[i] += sin(t * cur_bass * 2.0 * TAU) * benv * 0.2
+
+	# "Accordion" chords — bright sustained chords with tremolo
+	var chord_prog = [
+		[293.66, 370.0, 440.0],   # D major
+		[293.66, 370.0, 440.0],
+		[392.0, 493.88, 587.33],  # G major
+		[329.63, 415.30, 493.88], # E minor
+		[349.23, 440.0, 523.25],  # F major
+		[261.63, 329.63, 392.0],  # C major
+		[293.66, 370.0, 440.0],
+		[293.66, 370.0, 440.0],
+	]
+	for i in range(samples.size()):
+		var t = float(i) / SAMPLE_RATE
+		var ci = int(t / bar) % chord_prog.size()
+		var chord = chord_prog[ci]
+		# Tremolo for accordion effect
+		var trem = 0.6 + 0.4 * sin(t * 12.0 * TAU)
+		var cvol = 0.025 * trem
+		for cf in chord:
+			samples[i] += sin(t * cf * TAU) * cvol
+			samples[i] += sin(t * cf * 1.002 * TAU) * cvol * 0.5  # Detuned for richness
+
+	# Fiddle melody — fast ornamental tune
+	var melody = [
+		# Bar 1-2: Opening phrase
+		[293.66, 1], [329.63, 1], [370.0, 1], [440.0, 2], [370.0, 1],
+		[440.0, 1], [493.88, 1], [440.0, 1], [370.0, 1], [329.63, 1], [293.66, 1],
+		# Bar 3-4
+		[392.0, 2], [440.0, 1], [493.88, 1], [587.33, 2],
+		[493.88, 1], [440.0, 1], [392.0, 1], [370.0, 1], [329.63, 1], [293.66, 1],
+		# Bar 5-6: Contrasting phrase
+		[349.23, 1], [440.0, 1], [523.25, 2], [440.0, 1], [349.23, 1],
+		[329.63, 1], [392.0, 1], [440.0, 1], [493.88, 2], [440.0, 1],
+		# Bar 7-8: Return
+		[587.33, 1], [493.88, 1], [440.0, 1], [370.0, 1], [329.63, 1], [293.66, 1],
+		[293.66, 2], [329.63, 1], [293.66, 3],
+	]
+	# Repeat melody to fill 60 seconds
+	var mel_t = 0.0
+	var mel_idx = 0
+	while mel_t < dur - 1.0:
+		var note = melody[mel_idx % melody.size()]
+		var freq = note[0]
+		var ndur_beats = note[1]
+		var ndur = ndur_beats * beat
+		var ns = _make_samples(ndur * 1.3)
+		for i in range(ns.size()):
+			var t = float(i) / SAMPLE_RATE
+			var nf = t / ndur
+			# Fiddle: bright sawtooth-ish with vibrato
+			var vib = 1.0 + 0.006 * sin(t * 6.0 * TAU) * clampf(t - 0.05, 0.0, 1.0)
+			var f = freq * vib
+			ns[i] = sin(t * f * TAU) * 0.04
+			ns[i] += sin(t * f * 2.0 * TAU) * 0.025
+			ns[i] += sin(t * f * 3.0 * TAU) * 0.015
+			ns[i] += sin(t * f * 4.0 * TAU) * 0.008
+			# Envelope
+			var env = min(t * 30.0, 1.0) * maxf(0.0, 1.0 - nf * 0.3)
+			ns[i] *= env
+		_mix_into(samples, ns, int(mel_t * SAMPLE_RATE))
+		mel_t += ndur
+		mel_idx += 1
+
+	# Percussion — jig rhythm: boom-chick-chick pattern
+	for i in range(samples.size()):
+		var t = float(i) / SAMPLE_RATE
+		var bar_t = fmod(t, bar)
+		var beat_pos = int(bar_t / beat) % 6
+		var bt = fmod(bar_t, beat)
+		if beat_pos == 0 and bt < 0.06:
+			# Kick on beat 1
+			var env = exp(-bt * 30.0) * 0.12
+			samples[i] += sin(t * 80.0 * TAU) * env
+		elif (beat_pos == 1 or beat_pos == 2 or beat_pos == 4 or beat_pos == 5) and bt < 0.04:
+			# Hi-hat on off-beats
+			var env = exp(-bt * 50.0) * 0.04
+			samples[i] += rng.randf_range(-1.0, 1.0) * env
+		elif beat_pos == 3 and bt < 0.05:
+			# Accent on beat 4
+			var env = exp(-bt * 35.0) * 0.10
+			samples[i] += sin(t * 120.0 * TAU) * env
+
+	_soft_clip(samples, 1.8)
+	var fade_len = int(2.0 * SAMPLE_RATE)
+	for i in range(fade_len):
+		var frac = float(i) / fade_len
+		samples[samples.size() - fade_len + i] *= (1.0 - frac)
+		samples[i] *= frac
+	return _to_stream(samples, true)
+
+# ---- Track 4: DARK CATHEDRAL — Deep organ drones, gothic choirs, ominous minor ----
+func _gen_dark_cathedral() -> AudioStreamWAV:
+	var dur = 60.0
+	var samples = _make_samples(dur)
+	var rng = RandomNumberGenerator.new()
+	rng.seed = 6613
+
+	# Organ drone — rich harmonic series like a pipe organ
+	var organ_prog = [
+		[65.41, 98.0],    # C2 + G2
+		[61.74, 92.50],   # B1 + Fs2
+		[55.0, 82.41],    # A1 + E2
+		[58.27, 87.31],   # Bb1 + F2
+	]
+	var organ_dur = dur / organ_prog.size()
+	for i in range(samples.size()):
+		var t = float(i) / SAMPLE_RATE
+		var oi = int(t / organ_dur) % organ_prog.size()
+		var note_t = fmod(t, organ_dur)
+		# Crossfade between organ notes
+		var xf = clampf(note_t / 2.0, 0.0, 1.0) * clampf((organ_dur - note_t) / 2.0, 0.0, 1.0)
+		for bf in organ_prog[oi]:
+			# Organ: many harmonics, slight detuning
+			var ovol = 0.06 * xf
+			for h in range(1, 9):
+				var hf = float(h)
+				var hvol = ovol / (hf * 0.7)
+				samples[i] += sin(t * bf * hf * TAU) * hvol
+				# Slight detuning for warmth
+				samples[i] += sin(t * bf * hf * 1.001 * TAU) * hvol * 0.3
+
+	# Gothic choir — sustained vowel-like tones (formant synthesis)
+	var choir_notes = [
+		# Phrase 1: descending minor
+		[261.63, 8.0], [246.94, 6.0], [220.0, 8.0], [196.0, 6.0],
+		# Phrase 2: chromatic tension
+		[207.65, 6.0], [220.0, 4.0], [233.08, 8.0], [220.0, 6.0],
+	]
+	var choir_t = 2.0
+	for cn in choir_notes:
+		if choir_t >= dur:
+			break
+		var freq = cn[0]
+		var ndur = cn[1]
+		var ns = _make_samples(ndur + 2.0)
+		for i in range(ns.size()):
+			var t = float(i) / SAMPLE_RATE
+			var nf = t / ndur
+			# "Ah" vowel formants: ~730Hz, ~1090Hz, ~2440Hz
+			var vib = 1.0 + 0.003 * sin(t * 5.0 * TAU) * clampf(t - 0.3, 0.0, 1.0)
+			var f = freq * vib
+			# Build harmonics and weight by formant proximity
+			var val = 0.0
+			for h in range(1, 16):
+				var hfreq = f * float(h)
+				# Formant weighting
+				var fw = 0.0
+				fw += exp(-pow((hfreq - 730.0) / 120.0, 2.0)) * 1.0
+				fw += exp(-pow((hfreq - 1090.0) / 150.0, 2.0)) * 0.7
+				fw += exp(-pow((hfreq - 2440.0) / 200.0, 2.0)) * 0.3
+				fw = maxf(fw, 0.05)
+				val += sin(t * hfreq * TAU) * fw / float(h)
+			var env = sin(clampf(nf, 0.0, 1.0) * PI) * 0.035
+			ns[i] = val * env
+		_mix_into(samples, ns, int(choir_t * SAMPLE_RATE))
+		choir_t += ndur - 1.0  # Overlap notes slightly
+
+	# Tolling bell — deep, resonant, every 8 seconds
+	var bell_t = 4.0
+	while bell_t < dur - 3.0:
+		var bell_f = 130.81  # C3
+		var bdur = 4.0
+		var bell = _make_samples(bdur)
+		for i in range(bell.size()):
+			var t = float(i) / SAMPLE_RATE
+			bell[i] = sin(t * bell_f * TAU) * 0.05 * exp(-t * 0.8)
+			bell[i] += sin(t * bell_f * 2.0 * TAU) * 0.03 * exp(-t * 1.2)
+			bell[i] += sin(t * bell_f * 3.76 * TAU) * 0.015 * exp(-t * 2.0)
+			bell[i] += sin(t * bell_f * 6.28 * TAU) * 0.005 * exp(-t * 3.0)
+		_mix_into(samples, bell, int(bell_t * SAMPLE_RATE))
+		bell_t += rng.randf_range(7.0, 10.0)
+
+	# Whispering wind layer
+	var w_rng = RandomNumberGenerator.new()
+	w_rng.seed = 2244
+	var wpv = 0.0
+	for i in range(samples.size()):
+		var t = float(i) / SAMPLE_RATE
+		var raw = w_rng.randf_range(-1.0, 1.0)
+		wpv = wpv * 0.95 + raw * 0.05
+		var wvol = (0.5 + 0.5 * sin(t * 0.08 * TAU)) * 0.012
+		samples[i] += wpv * wvol
+
+	_soft_clip(samples, 1.4)
+	var fade_len = int(2.0 * SAMPLE_RATE)
+	for i in range(fade_len):
+		var frac = float(i) / fade_len
+		samples[samples.size() - fade_len + i] *= (1.0 - frac)
+		samples[i] *= frac
+	return _to_stream(samples, true)
+
+# ---- Track 5: DESERT CARAVAN — Exotic scales, snake-charmer melody, hand drums ----
+func _gen_desert_caravan() -> AudioStreamWAV:
+	var dur = 60.0
+	var samples = _make_samples(dur)
+	var rng = RandomNumberGenerator.new()
+	rng.seed = 9944
+
+	# Phrygian dominant scale (Arabic/flamenco feel)
+	# E4, F4, Ab4, A4, B4, C5, D5, E5
+	var scale = [329.63, 349.23, 415.30, 440.0, 493.88, 523.25, 587.33, 659.25]
+	var scale_low = [164.81, 174.61, 207.65, 220.0, 246.94, 261.63, 293.66, 329.63]
+
+	# Sitar-like drone on root + fifth
+	for i in range(samples.size()):
+		var t = float(i) / SAMPLE_RATE
+		# Buzzy sitar drone: root E3 with sympathetic strings
+		var drone_e = 0.0
+		var df = 164.81
+		for h in range(1, 12):
+			var hf = df * float(h)
+			var hv = 0.025 / float(h) * (1.0 + 0.3 * sin(t * 0.2 * TAU))
+			drone_e += sin(t * hf * TAU) * hv
+		# Add buzz (modulated noise)
+		drone_e += sin(t * df * TAU + sin(t * df * 13.0 * TAU) * 0.3) * 0.015
+		var drone_vol = 0.5 + 0.3 * sin(t * 0.12 * TAU)
+		samples[i] += drone_e * drone_vol
+
+	# Snake charmer melody — ornamental, microtonal slides
+	var melody_phrases = [
+		# Phrase 1: ascending
+		[0, 2], [1, 1], [2, 2], [3, 1], [4, 3], [3, 1], [2, 2],
+		# Phrase 2: descending with ornament
+		[7, 2], [6, 1], [5, 1], [4, 2], [3, 1], [2, 2], [1, 1], [0, 3],
+		# Phrase 3: dancing
+		[2, 1], [4, 1], [2, 1], [4, 1], [5, 2], [4, 1], [3, 1], [2, 2], [0, 2],
+		# Phrase 4: climax
+		[4, 1], [5, 1], [6, 1], [7, 2], [6, 1], [5, 1], [4, 1],
+		[3, 1], [2, 1], [1, 1], [0, 3],
+	]
+	var note_dur = 0.35  # Base note duration
+	var mel_t = 1.0
+	var phrase_idx = 0
+	while mel_t < dur - 2.0:
+		var phrase = melody_phrases[phrase_idx % melody_phrases.size()]
+		var freq = scale[phrase[0]]
+		var ndur = phrase[1] * note_dur
+		var ns = _make_samples(ndur * 1.5)
+		for i in range(ns.size()):
+			var t = float(i) / SAMPLE_RATE
+			# Oboe-like nasal timbre for snake charmer
+			var vib = 1.0 + 0.008 * sin(t * 6.0 * TAU) * clampf(t - 0.08, 0.0, 1.0)
+			var f = freq * vib
+			ns[i] = sin(t * f * TAU) * 0.045
+			ns[i] += sin(t * f * 2.0 * TAU) * 0.030
+			ns[i] += sin(t * f * 3.0 * TAU) * 0.025
+			ns[i] += sin(t * f * 4.0 * TAU) * 0.015
+			ns[i] += sin(t * f * 5.0 * TAU) * 0.008
+			var nf = t / ndur
+			var env = min(t * 20.0, 1.0) * maxf(0.0, 1.0 - nf * 0.4)
+			ns[i] *= env
+		_mix_into(samples, ns, int(mel_t * SAMPLE_RATE))
+		mel_t += ndur
+		phrase_idx += 1
+		# Brief pause between phrases occasionally
+		if phrase_idx % melody_phrases.size() == 0:
+			mel_t += note_dur * 2.0
+
+	# Hand drum pattern — doumbek/tabla style
+	var beat = 0.5
+	for i in range(samples.size()):
+		var t = float(i) / SAMPLE_RATE
+		var cycle = fmod(t, beat * 8.0)
+		var beat_num = int(cycle / beat) % 8
+		var bt = fmod(cycle, beat)
+		# Doum (deep) on beats 0, 3, 6
+		if (beat_num == 0 or beat_num == 3 or beat_num == 6) and bt < 0.1:
+			var env = exp(-bt * 20.0) * 0.12
+			samples[i] += sin(t * 80.0 * TAU) * env
+			samples[i] += sin(t * 160.0 * TAU) * env * 0.3
+		# Tek (high) on beats 1, 2, 4, 5, 7
+		elif bt < 0.05:
+			var env = exp(-bt * 40.0) * 0.06
+			samples[i] += sin(t * 300.0 * TAU) * env
+			samples[i] += rng.randf_range(-1.0, 1.0) * env * 0.3
+
+	# Finger cymbals — zill accents
+	var zill_t = 3.0
+	while zill_t < dur - 1.0:
+		var zdur = 0.5
+		var zill = _make_samples(zdur)
+		for i in range(zill.size()):
+			var t = float(i) / SAMPLE_RATE
+			zill[i] = sin(t * 4200.0 * TAU) * 0.008 * exp(-t * 8.0)
+			zill[i] += sin(t * 5800.0 * TAU) * 0.004 * exp(-t * 10.0)
+		_mix_into(samples, zill, int(zill_t * SAMPLE_RATE))
+		zill_t += rng.randf_range(2.0, 5.0)
+
+	_soft_clip(samples, 1.6)
+	var fade_len = int(2.0 * SAMPLE_RATE)
+	for i in range(fade_len):
+		var frac = float(i) / fade_len
+		samples[samples.size() - fade_len + i] *= (1.0 - frac)
+		samples[i] *= frac
 	return _to_stream(samples, true)

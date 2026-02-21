@@ -2,16 +2,78 @@ extends Control
 
 signal hero_chosen(hero_class: String)
 
-@onready var hero_container: HBoxContainer = $MarginContainer/VBoxContainer/HeroContainer
-@onready var title_label: Label = $MarginContainer/VBoxContainer/TitleLabel
-@onready var vbox: VBoxContainer = $MarginContainer/VBoxContainer
+@onready var scroll: ScrollContainer = $ScrollContainer
+@onready var margin: MarginContainer = $ScrollContainer/MarginContainer
+@onready var hero_container: HBoxContainer = $ScrollContainer/MarginContainer/VBoxContainer/HeroContainer
+@onready var title_label: Label = $ScrollContainer/MarginContainer/VBoxContainer/TitleLabel
+@onready var subtitle_label: Label = $ScrollContainer/MarginContainer/VBoxContainer/SubtitleLabel
+@onready var vbox: VBoxContainer = $ScrollContainer/MarginContainer/VBoxContainer
 
 var _cards: Dictionary = {}
 var _changelog_dialog: CanvasLayer = null
+var _is_mobile: bool = false
 
 func _ready() -> void:
+	_detect_mobile()
+	_apply_responsive_layout()
 	_build_hero_cards()
 	_build_version_button()
+	# Re-layout on resize
+	get_viewport().size_changed.connect(_on_viewport_resized)
+
+func _detect_mobile() -> void:
+	var vp_size = get_viewport().get_visible_rect().size
+	_is_mobile = vp_size.x < 700 or (vp_size.x < vp_size.y)
+
+func _on_viewport_resized() -> void:
+	var was_mobile = _is_mobile
+	_detect_mobile()
+	if was_mobile != _is_mobile:
+		# Full rebuild on layout mode change
+		_apply_responsive_layout()
+		for child in hero_container.get_children():
+			child.queue_free()
+		_build_hero_cards()
+
+func _apply_responsive_layout() -> void:
+	if _is_mobile:
+		margin.add_theme_constant_override("margin_left", 12)
+		margin.add_theme_constant_override("margin_top", 16)
+		margin.add_theme_constant_override("margin_right", 12)
+		margin.add_theme_constant_override("margin_bottom", 16)
+		vbox.add_theme_constant_override("separation", 12)
+		title_label.add_theme_font_size_override("font_size", 22)
+		subtitle_label.add_theme_font_size_override("font_size", 12)
+		subtitle_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
+		hero_container.add_theme_constant_override("separation", 14)
+		# Switch to vertical layout for mobile
+		if hero_container is HBoxContainer:
+			_switch_to_vertical_layout()
+	else:
+		margin.add_theme_constant_override("margin_left", 40)
+		margin.add_theme_constant_override("margin_top", 30)
+		margin.add_theme_constant_override("margin_right", 40)
+		margin.add_theme_constant_override("margin_bottom", 30)
+		vbox.add_theme_constant_override("separation", 20)
+		title_label.add_theme_font_size_override("font_size", 36)
+		subtitle_label.add_theme_font_size_override("font_size", 16)
+		hero_container.add_theme_constant_override("separation", 30)
+
+func _switch_to_vertical_layout() -> void:
+	# Replace HBoxContainer with VBoxContainer for vertical card stacking
+	var new_container = VBoxContainer.new()
+	new_container.name = "HeroContainer"
+	new_container.layout_mode = 2
+	new_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	new_container.alignment = BoxContainer.ALIGNMENT_CENTER
+	new_container.add_theme_constant_override("separation", 14)
+	var parent = hero_container.get_parent()
+	var idx = hero_container.get_index()
+	parent.remove_child(hero_container)
+	hero_container.queue_free()
+	parent.add_child(new_container)
+	parent.move_child(new_container, idx)
+	hero_container = new_container
 
 func _build_hero_cards() -> void:
 	for key in HeroData.get_all_hero_keys():
@@ -21,7 +83,19 @@ func _build_hero_cards() -> void:
 
 func _create_hero_card(hero_key: String, data: Dictionary) -> PanelContainer:
 	var panel = PanelContainer.new()
-	panel.custom_minimum_size = Vector2(300, 440)
+
+	# Responsive card sizing
+	var card_min_w: float
+	var card_min_h: float
+	if _is_mobile:
+		var vp_w = get_viewport().get_visible_rect().size.x
+		card_min_w = clampf(vp_w - 48, 200, 400)  # Full width minus margins
+		card_min_h = 0  # Auto height
+	else:
+		card_min_w = 300
+		card_min_h = 440
+
+	panel.custom_minimum_size = Vector2(card_min_w, card_min_h)
 	_cards[hero_key] = panel
 
 	var style = StyleBoxFlat.new()
@@ -29,26 +103,47 @@ func _create_hero_card(hero_key: String, data: Dictionary) -> PanelContainer:
 	style.border_color = data.get("color", Color.WHITE).darkened(0.3)
 	style.set_border_width_all(2)
 	style.set_corner_radius_all(4)
-	style.set_content_margin_all(16)
+	var card_padding = 10 if _is_mobile else 16
+	style.set_content_margin_all(card_padding)
 	panel.add_theme_stylebox_override("panel", style)
 
-	var vbox = VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 10)
+	var card_vbox = VBoxContainer.new()
+	card_vbox.add_theme_constant_override("separation", 6 if _is_mobile else 10)
+
+	# Font sizes based on layout
+	var name_font_size = 18 if _is_mobile else 24
+	var desc_font_size = 12 if _is_mobile else 13
+	var icon_font_size = 10 if _is_mobile else 11
+	var stats_font_size = 11 if _is_mobile else 12
+	var ability_font_size = 10 if _is_mobile else 11
+	var btn_font_size = 13 if _is_mobile else 14
 
 	# Hero sprite preview area
 	var preview_bg = ColorRect.new()
-	preview_bg.custom_minimum_size = Vector2(0, 100)
+	var preview_h = 60 if _is_mobile else 100
+	preview_bg.custom_minimum_size = Vector2(0, preview_h)
 	preview_bg.color = Color(0.06, 0.06, 0.08)
-	vbox.add_child(preview_bg)
+	card_vbox.add_child(preview_bg)
 
-	# Hero figure centered in preview
+	# Hero figure centered in preview — position dynamically
 	var hero_fig = ColorRect.new()
-	hero_fig.custom_minimum_size = Vector2(24, 32)
+	var fig_w = 20 if _is_mobile else 24
+	var fig_h = 28 if _is_mobile else 32
+	hero_fig.custom_minimum_size = Vector2(fig_w, fig_h)
 	hero_fig.color = data.get("color", Color.WHITE)
-	hero_fig.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	# Add over the preview background
 	preview_bg.add_child(hero_fig)
-	hero_fig.position = Vector2(138, 30)  # roughly centered
+	# Center using deferred call so we know the actual preview size
+	preview_bg.resized.connect(func():
+		hero_fig.position = Vector2(
+			(preview_bg.size.x - fig_w) / 2.0,
+			(preview_bg.size.y - fig_h) / 2.0
+		)
+	)
+	# Initial centering fallback
+	hero_fig.position = Vector2(
+		(card_min_w - card_padding * 2 - fig_w) / 2.0,
+		(preview_h - fig_h) / 2.0
+	)
 
 	# Class icon indicator (weapon type)
 	var icon_label = Label.new()
@@ -58,30 +153,30 @@ func _create_hero_card(hero_key: String, data: Dictionary) -> PanelContainer:
 		"agility": icon_label.text = "[ RANGED ]"
 		"intelligence": icon_label.text = "[ CASTER ]"
 	icon_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	icon_label.add_theme_font_size_override("font_size", 11)
+	icon_label.add_theme_font_size_override("font_size", icon_font_size)
 	icon_label.add_theme_color_override("font_color", Color(0.5, 0.5, 0.6))
-	vbox.add_child(icon_label)
+	card_vbox.add_child(icon_label)
 
 	# Name
 	var name_label = Label.new()
 	name_label.text = data.get("name", "Unknown")
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	name_label.add_theme_font_size_override("font_size", 24)
+	name_label.add_theme_font_size_override("font_size", name_font_size)
 	name_label.add_theme_color_override("font_color", data.get("color", Color.WHITE).lightened(0.3))
-	vbox.add_child(name_label)
+	card_vbox.add_child(name_label)
 
 	# Description
 	var desc_label = Label.new()
 	desc_label.text = data.get("description", "")
 	desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD
 	desc_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	desc_label.add_theme_font_size_override("font_size", 13)
+	desc_label.add_theme_font_size_override("font_size", desc_font_size)
 	desc_label.add_theme_color_override("font_color", Color(0.65, 0.65, 0.65))
-	vbox.add_child(desc_label)
+	card_vbox.add_child(desc_label)
 
 	# Separator
 	var sep = HSeparator.new()
-	vbox.add_child(sep)
+	card_vbox.add_child(sep)
 
 	# Stats
 	var base = data.get("base_stats", {})
@@ -94,9 +189,9 @@ func _create_hero_card(hero_key: String, data: Dictionary) -> PanelContainer:
 	var stats_label = Label.new()
 	stats_label.text = stats_text
 	stats_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	stats_label.add_theme_font_size_override("font_size", 12)
+	stats_label.add_theme_font_size_override("font_size", stats_font_size)
 	stats_label.add_theme_color_override("font_color", Color(0.9, 0.85, 0.5))
-	vbox.add_child(stats_label)
+	card_vbox.add_child(stats_label)
 
 	# Abilities with descriptions
 	var abilities = data.get("abilities", {})
@@ -106,19 +201,22 @@ func _create_hero_card(hero_key: String, data: Dictionary) -> PanelContainer:
 		var ab_label = Label.new()
 		ab_label.text = "[%s] %s - %s" % [hotkey, ab.get("name", ""), ab.get("description", "")]
 		ab_label.autowrap_mode = TextServer.AUTOWRAP_WORD
-		ab_label.add_theme_font_size_override("font_size", 11)
+		ab_label.add_theme_font_size_override("font_size", ability_font_size)
 		ab_label.add_theme_color_override("font_color", Color(0.5, 0.75, 1.0))
-		vbox.add_child(ab_label)
+		card_vbox.add_child(ab_label)
 
-	# Spacer
-	var spacer = Control.new()
-	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	vbox.add_child(spacer)
+	# Spacer (only on desktop where cards have fixed height)
+	if not _is_mobile:
+		var spacer = Control.new()
+		spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		card_vbox.add_child(spacer)
 
 	# Select button
 	var button = Button.new()
 	button.text = "SELECT"
-	button.custom_minimum_size = Vector2(0, 44)
+	var btn_h = 40 if _is_mobile else 44
+	button.custom_minimum_size = Vector2(0, btn_h)
+	button.add_theme_font_size_override("font_size", btn_font_size)
 	button.pressed.connect(_on_hero_selected.bind(hero_key))
 
 	# Hover effects
@@ -133,9 +231,9 @@ func _create_hero_card(hero_key: String, data: Dictionary) -> PanelContainer:
 		style.border_color = data.get("color", Color.WHITE).darkened(0.3)
 		style.set_border_width_all(2)
 	)
-	vbox.add_child(button)
+	card_vbox.add_child(button)
 
-	panel.add_child(vbox)
+	panel.add_child(card_vbox)
 	return panel
 
 func _build_version_button() -> void:
@@ -144,8 +242,11 @@ func _build_version_button() -> void:
 
 	var version_btn = Button.new()
 	version_btn.text = "Version Log (v0.14.0)"
-	version_btn.custom_minimum_size = Vector2(200, 36)
-	version_btn.add_theme_font_size_override("font_size", 13)
+	var ver_btn_w = 160 if _is_mobile else 200
+	var ver_btn_h = 32 if _is_mobile else 36
+	var ver_font_size = 11 if _is_mobile else 13
+	version_btn.custom_minimum_size = Vector2(ver_btn_w, ver_btn_h)
+	version_btn.add_theme_font_size_override("font_size", ver_font_size)
 	version_btn.pressed.connect(_on_version_log_pressed)
 	bottom_bar.add_child(version_btn)
 

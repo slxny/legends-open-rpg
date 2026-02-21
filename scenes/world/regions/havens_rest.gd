@@ -86,8 +86,8 @@ func _ready() -> void:
 
 	_generate_terrain()
 	_generate_town()
-	_generate_decorations()
-	_generate_harvestable_trees()
+	_generate_decorations_async()
+	_generate_harvestable_trees_async()
 
 func _process(delta: float) -> void:
 	_elapsed_time += delta
@@ -439,22 +439,40 @@ func _add_building_label(parent: Node2D, pos: Vector2, text: String) -> void:
 # DECORATIONS: Dense SC:BW jungle foliage
 # ============================================================
 
-func _generate_decorations() -> void:
+func _generate_decorations_async() -> void:
 	var deco_layer = $Decorations
+	var _nodes_this_frame: int = 0
+	const BATCH_SIZE: int = 80  # Yield after this many nodes to keep frames smooth
 
-	# ---- Border trees: dense double-row along all 4 walls ----
-	for x in range(-5950, 5951, 55):
+	# ---- Border trees: double-row along all 4 walls (wider spacing for perf) ----
+	for x in range(-5950, 5951, 90):
 		_add_tree(deco_layer, Vector2(x + randf_range(-12, 12), -4420 + randf_range(-25, 25)))
 		_add_tree(deco_layer, Vector2(x + randf_range(-12, 12), -4350 + randf_range(-20, 20)))
-	for x in range(-5950, 5951, 55):
+		_nodes_this_frame += 2
+		if _nodes_this_frame >= BATCH_SIZE:
+			_nodes_this_frame = 0
+			await get_tree().process_frame
+	for x in range(-5950, 5951, 90):
 		_add_tree(deco_layer, Vector2(x + randf_range(-12, 12), 4420 + randf_range(-25, 25)))
 		_add_tree(deco_layer, Vector2(x + randf_range(-12, 12), 4350 + randf_range(-20, 20)))
-	for y in range(-4400, 4401, 55):
+		_nodes_this_frame += 2
+		if _nodes_this_frame >= BATCH_SIZE:
+			_nodes_this_frame = 0
+			await get_tree().process_frame
+	for y in range(-4400, 4401, 90):
 		_add_tree(deco_layer, Vector2(-5920 + randf_range(-15, 15), y + randf_range(-12, 12)))
 		_add_tree(deco_layer, Vector2(-5850 + randf_range(-15, 15), y + randf_range(-12, 12)))
-	for y in range(-4400, 4401, 55):
+		_nodes_this_frame += 2
+		if _nodes_this_frame >= BATCH_SIZE:
+			_nodes_this_frame = 0
+			await get_tree().process_frame
+	for y in range(-4400, 4401, 90):
 		_add_tree(deco_layer, Vector2(5920 + randf_range(-15, 15), y + randf_range(-12, 12)))
 		_add_tree(deco_layer, Vector2(5850 + randf_range(-15, 15), y + randf_range(-12, 12)))
+		_nodes_this_frame += 2
+		if _nodes_this_frame >= BATCH_SIZE:
+			_nodes_this_frame = 0
+			await get_tree().process_frame
 
 	# ---- Interior tree clusters (expanded across larger map) ----
 	var cluster_centers = [
@@ -496,13 +514,18 @@ func _generate_decorations() -> void:
 		for i in range(count):
 			var offset = Vector2(randf_range(-70, 70), randf_range(-70, 70))
 			_add_tree(deco_layer, center + offset)
+			_nodes_this_frame += 1
 		for i in range(randi_range(2, 5)):
 			var offset = Vector2(randf_range(-50, 50), randf_range(-50, 50))
 			_add_bush(deco_layer, center + offset)
+			_nodes_this_frame += 1
 		if randf() > 0.5:
 			_add_vines(deco_layer, center + Vector2(randf_range(-30, 30), randf_range(-20, 20)))
 		if randf() > 0.6:
 			_add_mushrooms(deco_layer, center + Vector2(randf_range(-40, 40), randf_range(-30, 30)))
+		if _nodes_this_frame >= BATCH_SIZE:
+			_nodes_this_frame = 0
+			await get_tree().process_frame
 
 	# ---- Rock formations ----
 	var rock_positions = [
@@ -529,6 +552,10 @@ func _generate_decorations() -> void:
 	]
 	for pos in rock_positions:
 		_add_rock(deco_layer, pos)
+		_nodes_this_frame += 1
+		if _nodes_this_frame >= BATCH_SIZE:
+			_nodes_this_frame = 0
+			await get_tree().process_frame
 
 	# ---- Dirt paths radiating from town center (longer for bigger map) ----
 	var path_points = [
@@ -575,6 +602,10 @@ func _generate_decorations() -> void:
 	]
 	for pos in path_points:
 		_add_path_segment(deco_layer, pos)
+		_nodes_this_frame += 1
+		if _nodes_this_frame >= BATCH_SIZE:
+			_nodes_this_frame = 0
+			await get_tree().process_frame
 
 	# ---- Camp skull markers (match new camp positions) ----
 	_add_camp_marker(deco_layer, Vector2(-1200, -860), "Goblins Lv1-2")
@@ -623,12 +654,18 @@ func _generate_decorations() -> void:
 	_add_camp_marker(deco_layer, Vector2(5200, -3460), "OGRE WARLORD Lv10-12")
 	_add_camp_marker(deco_layer, Vector2(-5400, -3760), "OGRE WARLORD Lv10-12")
 
+	await get_tree().process_frame
+
 	# ---- Grass tufts scattered (reduced for performance) ----
 	for i in range(150):
 		var gx = randf_range(-5700, 5700)
 		var gy = randf_range(-4200, 4200)
 		if Vector2(gx, gy).length() > 550:
 			_add_grass_tuft(deco_layer, Vector2(gx, gy))
+			_nodes_this_frame += 1
+			if _nodes_this_frame >= BATCH_SIZE:
+				_nodes_this_frame = 0
+				await get_tree().process_frame
 
 	# ---- Bush clusters (reduced for performance) ----
 	for i in range(70):
@@ -636,6 +673,10 @@ func _generate_decorations() -> void:
 		var by = randf_range(-4100, 4100)
 		if Vector2(bx, by).length() > 550:
 			_add_bush(deco_layer, Vector2(bx, by))
+			_nodes_this_frame += 1
+			if _nodes_this_frame >= BATCH_SIZE:
+				_nodes_this_frame = 0
+				await get_tree().process_frame
 
 	# ---- Flower patches ----
 	for i in range(12):
@@ -652,10 +693,15 @@ func _generate_decorations() -> void:
 			_add_fallen_log(deco_layer, Vector2(lx, ly))
 
 	# ---- Ground debris (reduced for performance) ----
+	_nodes_this_frame = 0
 	for i in range(100):
 		var dx = randf_range(-5700, 5700)
 		var dy = randf_range(-4200, 4200)
 		_add_ground_debris(deco_layer, Vector2(dx, dy))
+		_nodes_this_frame += 1
+		if _nodes_this_frame >= BATCH_SIZE:
+			_nodes_this_frame = 0
+			await get_tree().process_frame
 
 	# ---- Mushroom clusters near moist areas ----
 	for i in range(25):
@@ -678,7 +724,7 @@ func _generate_decorations() -> void:
 # HARVESTABLE TREES: Choppable trees that drop wood
 # ============================================================
 
-func _generate_harvestable_trees() -> void:
+func _generate_harvestable_trees_async() -> void:
 	var tree_layer = $Decorations
 	var rng = RandomNumberGenerator.new()
 	rng.seed = 9876
@@ -706,6 +752,7 @@ func _generate_harvestable_trees() -> void:
 		Vector2(4100, 300), Vector2(-3200, -2200), Vector2(3400, -2000),
 	]
 
+	var _htree_count: int = 0
 	for center in grove_centers:
 		# Determine size bias based on distance from town center
 		var dist = center.length()
@@ -739,6 +786,10 @@ func _generate_harvestable_trees() -> void:
 				else:
 					tree_size = 2
 			_spawn_harvestable_tree(tree_layer, pos, tree_size)
+			_htree_count += 1
+			if _htree_count >= 20:
+				_htree_count = 0
+				await get_tree().process_frame
 
 func _spawn_harvestable_tree(parent: Node2D, pos: Vector2, size_enum: int) -> void:
 	var tree = HarvestableTree.new()

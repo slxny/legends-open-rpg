@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.24.0"
+const GAME_VERSION := "v0.25.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.25.0",
+		"title": "Title Screen Branding",
+		"date": "2026-02-21",
+		"entries": [
+			"Added 'OPEN LEGENDS RPG' game title with golden styling above hero select",
+			"Added 'FORGE YOUR LEGEND' tagline beneath the title",
+			"Added 'by Steve Levine' byline with clickable link to OpenClassActions.com",
+		]
+	},
 	{
 		"version": "v0.24.0",
 		"title": "Mobile Text Scaling",

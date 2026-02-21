@@ -16,7 +16,9 @@ var _is_mobile: bool = false
 func _ready() -> void:
 	_detect_mobile()
 	_apply_responsive_layout()
+	_build_game_title()
 	_build_hero_cards()
+	_build_byline()
 	_build_version_button()
 	# Re-layout on resize
 	get_viewport().size_changed.connect(_on_viewport_resized)
@@ -327,12 +329,77 @@ func _create_desktop_hero_card(hero_key: String, data: Dictionary) -> PanelConta
 
 	return panel
 
+func _build_game_title() -> void:
+	# Insert game title section ABOVE "Choose Your Hero"
+	var title_section = VBoxContainer.new()
+	title_section.add_theme_constant_override("separation", 4 if _is_mobile else 2)
+	title_section.alignment = BoxContainer.ALIGNMENT_CENTER
+
+	# Top decorative line
+	var top_line = HBoxContainer.new()
+	top_line.alignment = BoxContainer.ALIGNMENT_CENTER
+	var deco_top = Label.new()
+	deco_top.text = "~ ~ ~"
+	deco_top.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	deco_top.add_theme_font_size_override("font_size", 28 if _is_mobile else 14)
+	deco_top.add_theme_color_override("font_color", Color(0.7, 0.55, 0.2, 0.6))
+	top_line.add_child(deco_top)
+	title_section.add_child(top_line)
+
+	# Main game title
+	var game_title = Label.new()
+	game_title.text = "OPEN LEGENDS RPG"
+	game_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	game_title.add_theme_font_size_override("font_size", 72 if _is_mobile else 48)
+	game_title.add_theme_color_override("font_color", Color(0.95, 0.8, 0.3))
+	title_section.add_child(game_title)
+
+	# Subtitle accent
+	var game_sub = Label.new()
+	game_sub.text = "FORGE YOUR LEGEND"
+	game_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	game_sub.add_theme_font_size_override("font_size", 28 if _is_mobile else 16)
+	game_sub.add_theme_color_override("font_color", Color(0.6, 0.5, 0.3, 0.7))
+	title_section.add_child(game_sub)
+
+	# Bottom decorative line
+	var bot_line = HBoxContainer.new()
+	bot_line.alignment = BoxContainer.ALIGNMENT_CENTER
+	var deco_bot = Label.new()
+	deco_bot.text = "~ ~ ~"
+	deco_bot.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	deco_bot.add_theme_font_size_override("font_size", 28 if _is_mobile else 14)
+	deco_bot.add_theme_color_override("font_color", Color(0.7, 0.55, 0.2, 0.6))
+	bot_line.add_child(deco_bot)
+	title_section.add_child(bot_line)
+
+	# Insert at position 0 in vbox (before TitleLabel)
+	vbox.add_child(title_section)
+	vbox.move_child(title_section, 0)
+
+func _build_byline() -> void:
+	var byline_bar = HBoxContainer.new()
+	byline_bar.alignment = BoxContainer.ALIGNMENT_CENTER
+
+	var byline = RichTextLabel.new()
+	byline.bbcode_enabled = true
+	byline.fit_content = true
+	byline.scroll_active = false
+	byline.autowrap_mode = TextServer.AUTOWRAP_OFF
+	var font_size = 28 if _is_mobile else 14
+	byline.append_text("[center][font_size=%d][color=#8888aa]by [url=https://OpenClassActions.com][color=#99aadd]Steve Levine[/color][/url][/color][/font_size][/center]" % font_size)
+	byline.meta_clicked.connect(func(meta): OS.shell_open(str(meta)))
+	byline.custom_minimum_size = Vector2(300 if _is_mobile else 150, 0)
+	byline_bar.add_child(byline)
+
+	vbox.add_child(byline_bar)
+
 func _build_version_button() -> void:
 	var bottom_bar = HBoxContainer.new()
 	bottom_bar.alignment = BoxContainer.ALIGNMENT_CENTER
 
 	var version_btn = Button.new()
-	version_btn.text = "Version Log (v0.24.0)"
+	version_btn.text = "Version Log (v0.25.0)"
 	var ver_btn_w = 480 if _is_mobile else 200
 	var ver_btn_h = 96 if _is_mobile else 36
 	var ver_font_size = 33 if _is_mobile else 13

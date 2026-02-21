@@ -7,10 +7,22 @@ extends CanvasLayer
 @onready var version_label: Label = $Panel/MarginContainer/VBox/TopBar/VersionLabel
 
 var _is_visible: bool = false
+var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.17.0"
+const GAME_VERSION := "v0.18.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.18.0",
+		"title": "Mobile Changelog Readability",
+		"date": "2026-02-21",
+		"entries": [
+			"Changelog text is now much larger and easier to read on mobile",
+			"Changelog panel expands to fill the screen on mobile devices",
+			"Close button and title bar are larger on mobile for easier tapping",
+			"Version headers now word-wrap on narrow screens",
+		]
+	},
 	{
 		"version": "v0.17.0",
 		"title": "Changelog Timestamps",
@@ -210,8 +222,29 @@ func _ready() -> void:
 func open() -> void:
 	_is_visible = true
 	panel.visible = true
+	var vp_size = get_viewport().get_visible_rect().size
+	_is_mobile = vp_size.x < 700 or (vp_size.x < vp_size.y)
+	_resize_panel(vp_size)
 	_build_entries()
 	scroll.scroll_vertical = 0
+
+func _resize_panel(vp_size: Vector2) -> void:
+	if _is_mobile:
+		# Fill most of the screen on mobile
+		var margin = 20.0
+		panel.offset_left = -vp_size.x / 2.0 + margin
+		panel.offset_right = vp_size.x / 2.0 - margin
+		panel.offset_top = -vp_size.y / 2.0 + margin
+		panel.offset_bottom = vp_size.y / 2.0 - margin
+		close_button.custom_minimum_size = Vector2(120, 44)
+		close_button.add_theme_font_size_override("font_size", 18)
+		version_label.add_theme_font_size_override("font_size", 16)
+		$Panel/MarginContainer/VBox/TopBar/Title.add_theme_font_size_override("font_size", 26)
+	else:
+		panel.offset_left = -320.0
+		panel.offset_right = 320.0
+		panel.offset_top = -300.0
+		panel.offset_bottom = 300.0
 
 func close() -> void:
 	_is_visible = false
@@ -221,6 +254,10 @@ func _build_entries() -> void:
 	for child in entries_container.get_children():
 		child.queue_free()
 
+	var header_size = 22 if _is_mobile else 16
+	var entry_size = 17 if _is_mobile else 12
+	var spacer_height = 10 if _is_mobile else 6
+
 	for patch in CHANGELOG:
 		# Version header with date
 		var header = Label.new()
@@ -229,22 +266,23 @@ func _build_entries() -> void:
 			header.text = "%s — %s  (%s)" % [patch["version"], patch["title"], date_str]
 		else:
 			header.text = "%s — %s" % [patch["version"], patch["title"]]
-		header.add_theme_font_size_override("font_size", 16)
+		header.add_theme_font_size_override("font_size", header_size)
 		header.add_theme_color_override("font_color", Color(0.4, 0.75, 1.0))
+		header.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		entries_container.add_child(header)
 
 		# Entries
 		for entry in patch["entries"]:
 			var line = Label.new()
 			line.text = "  • " + entry
-			line.add_theme_font_size_override("font_size", 12)
+			line.add_theme_font_size_override("font_size", entry_size)
 			line.add_theme_color_override("font_color", Color(0.78, 0.76, 0.7))
 			line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			entries_container.add_child(line)
 
 		# Spacer between versions
 		var spacer = Control.new()
-		spacer.custom_minimum_size = Vector2(0, 6)
+		spacer.custom_minimum_size = Vector2(0, spacer_height)
 		entries_container.add_child(spacer)
 
 func _unhandled_input(event: InputEvent) -> void:

@@ -9,9 +9,22 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.25.0"
+const GAME_VERSION := "v0.26.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.26.0",
+		"title": "Pause Menu",
+		"date": "2026-02-21",
+		"entries": [
+			"Escape key now opens a pause menu instead of quitting",
+			"Pause menu includes: Resume, Save Game, Load Game, Changelog, Help, Quit Game",
+			"Game pauses while the menu is open",
+			"Help screen with full controls reference and gameplay tips",
+			"Mobile: small 'Menu' button in the top-left corner of the HUD",
+			"Escape closes the pause menu when it's already open",
+		]
+	},
 	{
 		"version": "v0.25.0",
 		"title": "Title Screen Branding",

@@ -12,6 +12,7 @@ var _hero_stats_scene: PackedScene = preload("res://scenes/ui/hero_stats_panel.t
 var _messages_scene: PackedScene = preload("res://scenes/ui/game_messages.tscn")
 var _center_msg_scene: PackedScene = preload("res://scenes/ui/center_message_system.tscn")
 var _changelog_scene: PackedScene = preload("res://scenes/ui/changelog_dialog.tscn")
+var _pause_menu_scene: PackedScene = preload("res://scenes/ui/pause_menu.tscn")
 
 @onready var hero_select: Control = $HeroSelect
 
@@ -81,6 +82,11 @@ func _on_hero_chosen(hero_class: String) -> void:
 	var changelog = _changelog_scene.instantiate()
 	changelog.add_to_group("changelog_dialog")
 	add_child(changelog)
+
+	var pause_menu = _pause_menu_scene.instantiate()
+	pause_menu.add_to_group("pause_menu")
+	add_child(pause_menu)
+	pause_menu.setup(_player)
 
 	# Connect level-up to dramatic message
 	_player.stats.leveled_up.connect(_on_player_leveled_up)

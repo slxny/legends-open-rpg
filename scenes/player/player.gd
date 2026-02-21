@@ -480,7 +480,10 @@ func _unhandled_input(event: InputEvent) -> void:
 
 	# Window controls
 	if event.is_action_pressed("ui_cancel"):
-		get_tree().quit()
+		var menus = get_tree().get_nodes_in_group("pause_menu")
+		if menus.size() > 0:
+			menus[0].toggle()
+			get_viewport().set_input_as_handled()
 	elif event is InputEventKey and event.pressed and event.keycode == KEY_F11:
 		var mode = DisplayServer.window_get_mode()
 		if mode == DisplayServer.WINDOW_MODE_FULLSCREEN:

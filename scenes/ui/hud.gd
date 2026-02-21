@@ -56,6 +56,7 @@ func _ready() -> void:
 	_detect_mobile()
 	if _is_mobile:
 		_apply_mobile_layout()
+		_add_mobile_menu_button()
 	_create_tooltip_panel()
 	_create_hint_panel()
 
@@ -94,6 +95,21 @@ func _apply_mobile_layout() -> void:
 		if child is Button:
 			child.custom_minimum_size = Vector2(144, 90)
 			child.add_theme_font_size_override("font_size", 22)
+
+func _add_mobile_menu_button() -> void:
+	var menu_btn = Button.new()
+	menu_btn.text = "Menu"
+	menu_btn.custom_minimum_size = Vector2(110, 52)
+	menu_btn.add_theme_font_size_override("font_size", 24)
+	menu_btn.modulate = Color(1, 1, 1, 0.7)
+	menu_btn.pressed.connect(func():
+		var menus = get_tree().get_nodes_in_group("pause_menu")
+		if menus.size() > 0:
+			menus[0].toggle()
+	)
+	# Insert at position 0 in top bar (before the spacer)
+	top_bar.add_child(menu_btn)
+	top_bar.move_child(menu_btn, 0)
 
 func setup(player: Node2D) -> void:
 	_player = player

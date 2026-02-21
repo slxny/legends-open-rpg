@@ -12,9 +12,13 @@ var _asset_dirs: Dictionary = {}
 
 func _ready() -> void:
 	_init_asset_dirs()
-	_generate_all()
 
 func get_texture(name: String) -> ImageTexture:
+	var cached = textures.get(name, null)
+	if cached != null:
+		return cached
+	# Lazy generation: produce the sprite on first access
+	_gen_or_load(name)
 	return textures.get(name, null)
 
 ## Try loading a PNG from res://assets/sprites/<subdir>/<name>.png

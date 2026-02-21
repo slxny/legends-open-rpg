@@ -20,21 +20,41 @@ var _rotation_timer: Timer
 var _rotation_active: bool = false
 
 func _ready() -> void:
-	_generate_all_sfx()
-	_generate_all_music()
 	_create_players()
 
 # ============================================================
 # PUBLIC API
 # ============================================================
 
+func _ensure_sfx(sfx_name: String) -> AudioStreamWAV:
+	var cached = _sfx_cache.get(sfx_name)
+	if cached:
+		return cached
+	var method_name = "_gen_" + sfx_name
+	if has_method(method_name):
+		var stream = call(method_name)
+		_sfx_cache[sfx_name] = stream
+		return stream
+	return null
+
+func _ensure_music(music_name: String) -> AudioStreamWAV:
+	var cached = _music_cache.get(music_name)
+	if cached:
+		return cached
+	var method_name = "_gen_" + music_name
+	if has_method(method_name):
+		var stream = call(method_name)
+		_music_cache[music_name] = stream
+		return stream
+	return null
+
 func get_sfx(sfx_name: String) -> AudioStreamWAV:
-	return _sfx_cache.get(sfx_name)
+	return _ensure_sfx(sfx_name)
 
 var _next_sfx_player: int = 0  # Round-robin index for SFX pool
 
 func play_sfx(sfx_name: String, volume_offset: float = 0.0) -> void:
-	var stream = _sfx_cache.get(sfx_name)
+	var stream = _ensure_sfx(sfx_name)
 	if not stream:
 		return
 	# Quick check from round-robin position for an idle player
@@ -54,7 +74,7 @@ func play_sfx(sfx_name: String, volume_offset: float = 0.0) -> void:
 	p.play()
 
 func play_music(music_name: String) -> void:
-	var stream = _music_cache.get(music_name)
+	var stream = _ensure_music(music_name)
 	if not stream:
 		return
 	if _music_player.stream == stream and _music_player.playing:
@@ -106,7 +126,7 @@ func _on_rotation_tick() -> void:
 
 func play_music_direct(music_name: String) -> void:
 	## Like play_music but always restarts even if same track
-	var stream = _music_cache.get(music_name)
+	var stream = _ensure_music(music_name)
 	if not stream:
 		return
 	_music_player.stream = stream

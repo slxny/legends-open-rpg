@@ -49,7 +49,7 @@ func _init_asset_dirs() -> void:
 	for n in hero_names:
 		_asset_dirs[n] = "heroes"
 	# Enemies
-	for n in ["rat", "goblin", "wolf", "bandit"]:
+	for n in ["rat", "goblin", "wolf", "bandit", "skeleton", "spider", "troll", "dark_mage", "ogre", "ogre_boss"]:
 		_asset_dirs[n] = "enemies"
 	# Environment
 	for n in ["tree_jungle", "tree_small", "tree_dead", "rock", "rock_large",
@@ -104,6 +104,12 @@ func _generate_all() -> void:
 	_gen_or_load("goblin")
 	_gen_or_load("wolf")
 	_gen_or_load("bandit")
+	_gen_or_load("skeleton")
+	_gen_or_load("spider")
+	_gen_or_load("troll")
+	_gen_or_load("dark_mage")
+	_gen_or_load("ogre")
+	_gen_or_load("ogre_boss")
 	# Environment
 	_gen_or_load("tree_jungle")
 	_gen_or_load("tree_small")
@@ -1459,6 +1465,535 @@ func _gen_bandit() -> void:
 	_fill_rect(img, 22, 26, 4, 3, c["belt"])
 
 	textures["bandit"] = ImageTexture.create_from_image(img)
+
+func _gen_skeleton() -> void:
+	# Actual skeleton warrior — visible bones, skull head, tattered cloth, rusted sword
+	var img = Image.create(28, 42, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = {
+		"bone": Color(0.85, 0.82, 0.72),
+		"bone_dark": Color(0.65, 0.60, 0.50),
+		"bone_light": Color(0.95, 0.92, 0.85),
+		"skull": Color(0.90, 0.87, 0.78),
+		"eye_socket": Color(0.1, 0.0, 0.0),
+		"eye_glow": Color(0.8, 0.15, 0.1),
+		"teeth": Color(0.80, 0.78, 0.70),
+		"rag": Color(0.3, 0.25, 0.2, 0.7),
+		"rag_dark": Color(0.2, 0.15, 0.1, 0.6),
+		"rust_sword": Color(0.45, 0.35, 0.28),
+		"rust_light": Color(0.55, 0.45, 0.35),
+		"shadow": Color(0, 0, 0, 0.25),
+	}
+	_fill_rect(img, 6, 39, 16, 3, c["shadow"])
+	# Bony feet — individual toe-bones
+	_fill_rect(img, 8, 37, 4, 4, c["bone_dark"])
+	_fill_rect(img, 9, 38, 2, 2, c["bone"])
+	_fill_rect(img, 16, 37, 4, 4, c["bone_dark"])
+	_fill_rect(img, 17, 38, 2, 2, c["bone"])
+	# Leg bones — thin with joint knobs
+	_fill_rect(img, 10, 25, 2, 13, c["bone"])
+	_fill_rect(img, 9, 30, 4, 2, c["bone_dark"])  # Knee joint
+	_fill_rect(img, 16, 25, 2, 13, c["bone"])
+	_fill_rect(img, 15, 30, 4, 2, c["bone_dark"])  # Knee joint
+	# Pelvis
+	_fill_rect(img, 8, 23, 12, 3, c["bone_dark"])
+	_fill_rect(img, 9, 24, 10, 2, c["bone"])
+	# Ribcage — individual rib lines
+	_fill_rect(img, 9, 13, 10, 11, c["bone_dark"])  # Rib outline
+	_fill_rect(img, 10, 14, 8, 9, Color(0, 0, 0, 0))  # Hollow interior
+	# Ribs (horizontal bone lines across the torso)
+	_fill_rect(img, 9, 14, 10, 1, c["bone"])
+	_fill_rect(img, 9, 16, 10, 1, c["bone"])
+	_fill_rect(img, 9, 18, 10, 1, c["bone"])
+	_fill_rect(img, 9, 20, 10, 1, c["bone"])
+	_fill_rect(img, 9, 22, 10, 1, c["bone"])
+	# Spine (center vertical)
+	_fill_rect(img, 13, 13, 2, 12, c["bone_light"])
+	# Tattered cloth draped over one shoulder
+	_fill_rect(img, 6, 12, 5, 10, c["rag"])
+	_fill_rect(img, 5, 14, 3, 6, c["rag_dark"])
+	_fill_rect(img, 7, 20, 4, 3, c["rag_dark"])
+	# Arm bones — thin with elbow joints
+	_fill_rect(img, 6, 14, 2, 10, c["bone"])
+	_fill_rect(img, 5, 18, 4, 2, c["bone_dark"])  # Elbow
+	_fill_rect(img, 20, 14, 2, 10, c["bone"])
+	_fill_rect(img, 19, 18, 4, 2, c["bone_dark"])  # Elbow
+	# Skull — rounded with detail
+	_fill_rect(img, 9, 1, 10, 12, c["skull"])
+	_fill_rect(img, 8, 3, 12, 8, c["skull"])
+	_fill_rect(img, 10, 0, 8, 2, c["bone_light"])  # Cranium top
+	# Eye sockets — dark hollows with red glow
+	_fill_rect(img, 10, 5, 3, 3, c["eye_socket"])
+	_fill_rect(img, 15, 5, 3, 3, c["eye_socket"])
+	_fill_rect(img, 11, 6, 1, 1, c["eye_glow"])
+	_fill_rect(img, 16, 6, 1, 1, c["eye_glow"])
+	# Nose hole
+	_fill_rect(img, 13, 8, 2, 2, c["eye_socket"])
+	# Teeth/jaw
+	_fill_rect(img, 10, 10, 8, 2, c["teeth"])
+	_fill_rect(img, 11, 10, 1, 2, c["eye_socket"])
+	_fill_rect(img, 13, 10, 1, 2, c["eye_socket"])
+	_fill_rect(img, 15, 10, 1, 2, c["eye_socket"])
+	# Rusted sword in right hand
+	_fill_rect(img, 22, 8, 2, 16, c["rust_sword"])
+	_fill_rect(img, 21, 7, 4, 2, c["rust_light"])  # Crossguard
+	_fill_rect(img, 22, 6, 2, 2, c["bone_dark"])  # Pommel
+	textures["skeleton"] = ImageTexture.create_from_image(img)
+
+func _gen_spider() -> void:
+	# Giant spider — big round abdomen, 8 long legs, fangs, multiple eyes
+	var img = Image.create(44, 36, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = {
+		"body": Color(0.15, 0.12, 0.10),
+		"body_dark": Color(0.08, 0.06, 0.05),
+		"abdomen": Color(0.20, 0.15, 0.12),
+		"abdomen_mark": Color(0.6, 0.15, 0.1),
+		"abdomen_mark2": Color(0.5, 0.10, 0.08),
+		"leg": Color(0.18, 0.14, 0.10),
+		"leg_joint": Color(0.12, 0.09, 0.07),
+		"eyes": Color(0.9, 0.1, 0.1),
+		"eyes_small": Color(0.7, 0.2, 0.15),
+		"fangs": Color(0.6, 0.55, 0.45),
+		"shadow": Color(0, 0, 0, 0.3),
+	}
+	_fill_ellipse(img, 22, 33, 16, 3, c["shadow"])
+	# 8 legs — 4 on each side, long and angled out
+	# Left legs (top to bottom, angling out)
+	_fill_rect(img, 2, 12, 6, 2, c["leg"])     # L1 upper
+	_fill_rect(img, 0, 14, 3, 2, c["leg"])      # L1 lower
+	_fill_rect(img, 1, 16, 2, 4, c["leg"])      # L1 tip down
+	_fill_rect(img, 3, 17, 6, 2, c["leg"])      # L2 upper
+	_fill_rect(img, 0, 19, 4, 2, c["leg"])      # L2 lower
+	_fill_rect(img, 0, 21, 2, 3, c["leg"])      # L2 tip
+	_fill_rect(img, 4, 22, 6, 2, c["leg"])      # L3 upper
+	_fill_rect(img, 1, 24, 5, 2, c["leg"])      # L3 lower
+	_fill_rect(img, 0, 26, 2, 3, c["leg"])      # L3 tip
+	_fill_rect(img, 5, 27, 6, 2, c["leg"])      # L4 upper
+	_fill_rect(img, 2, 29, 5, 2, c["leg"])      # L4 lower
+	_fill_rect(img, 1, 31, 2, 3, c["leg"])      # L4 tip
+	# Right legs (mirrored)
+	_fill_rect(img, 36, 12, 6, 2, c["leg"])     # R1 upper
+	_fill_rect(img, 41, 14, 3, 2, c["leg"])     # R1 lower
+	_fill_rect(img, 41, 16, 2, 4, c["leg"])     # R1 tip
+	_fill_rect(img, 35, 17, 6, 2, c["leg"])     # R2 upper
+	_fill_rect(img, 40, 19, 4, 2, c["leg"])     # R2 lower
+	_fill_rect(img, 42, 21, 2, 3, c["leg"])     # R2 tip
+	_fill_rect(img, 34, 22, 6, 2, c["leg"])     # R3 upper
+	_fill_rect(img, 38, 24, 5, 2, c["leg"])     # R3 lower
+	_fill_rect(img, 42, 26, 2, 3, c["leg"])     # R3 tip
+	_fill_rect(img, 33, 27, 6, 2, c["leg"])     # R4 upper
+	_fill_rect(img, 37, 29, 5, 2, c["leg"])     # R4 lower
+	_fill_rect(img, 41, 31, 2, 3, c["leg"])     # R4 tip
+	# Leg joints (dark dots at bends)
+	for jx in [5, 4, 5, 6]:
+		_fill_rect(img, jx, 14, 2, 2, c["leg_joint"])
+	for jx in [38, 37, 38, 37]:
+		_fill_rect(img, jx, 14, 2, 2, c["leg_joint"])
+	# Large abdomen (back body) — oval with markings
+	_fill_ellipse(img, 22, 24, 10, 8, c["abdomen"])
+	_fill_ellipse(img, 22, 24, 8, 6, c["body"])
+	# Red hourglass/skull marking on abdomen
+	_fill_rect(img, 20, 21, 4, 2, c["abdomen_mark"])
+	_fill_rect(img, 21, 23, 2, 3, c["abdomen_mark"])
+	_fill_rect(img, 20, 26, 4, 2, c["abdomen_mark"])
+	_fill_rect(img, 19, 22, 1, 1, c["abdomen_mark2"])
+	_fill_rect(img, 24, 22, 1, 1, c["abdomen_mark2"])
+	# Cephalothorax (front body) — smaller, connects head
+	_fill_ellipse(img, 22, 14, 7, 5, c["body"])
+	_fill_ellipse(img, 22, 14, 5, 4, c["body_dark"])
+	# Multiple eyes — 8 eyes in two rows
+	# Top row: 4 larger eyes
+	_fill_rect(img, 17, 10, 2, 2, c["eyes"])
+	_fill_rect(img, 20, 9, 2, 2, c["eyes"])
+	_fill_rect(img, 23, 9, 2, 2, c["eyes"])
+	_fill_rect(img, 26, 10, 2, 2, c["eyes"])
+	# Bottom row: 4 smaller eyes
+	_fill_rect(img, 18, 12, 1, 1, c["eyes_small"])
+	_fill_rect(img, 21, 12, 1, 1, c["eyes_small"])
+	_fill_rect(img, 23, 12, 1, 1, c["eyes_small"])
+	_fill_rect(img, 26, 12, 1, 1, c["eyes_small"])
+	# Fangs — chelicerae
+	_fill_rect(img, 19, 14, 2, 4, c["fangs"])
+	_fill_rect(img, 24, 14, 2, 4, c["fangs"])
+	_fill_rect(img, 19, 17, 1, 2, c["fangs"])
+	_fill_rect(img, 25, 17, 1, 2, c["fangs"])
+	textures["spider"] = ImageTexture.create_from_image(img)
+
+func _gen_troll() -> void:
+	# Large brutish troll — hunched, thick limbs, mossy green, big club
+	var img = Image.create(36, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = {
+		"skin": Color(0.35, 0.50, 0.30),
+		"skin_dark": Color(0.25, 0.38, 0.20),
+		"skin_light": Color(0.45, 0.58, 0.38),
+		"belly": Color(0.50, 0.55, 0.35),
+		"eyes": Color(0.9, 0.7, 0.1),
+		"pupil": Color(0.15, 0.1, 0.05),
+		"teeth": Color(0.85, 0.80, 0.65),
+		"tusk": Color(0.9, 0.85, 0.7),
+		"loincloth": Color(0.4, 0.28, 0.15),
+		"club": Color(0.35, 0.25, 0.15),
+		"club_band": Color(0.5, 0.5, 0.45),
+		"moss": Color(0.3, 0.5, 0.2, 0.5),
+		"wart": Color(0.30, 0.42, 0.22),
+		"shadow": Color(0, 0, 0, 0.3),
+	}
+	_fill_rect(img, 4, 45, 28, 3, c["shadow"])
+	# Huge feet
+	_fill_rect(img, 5, 42, 8, 5, c["skin_dark"])
+	_fill_rect(img, 6, 43, 6, 3, c["skin"])
+	_fill_rect(img, 21, 42, 8, 5, c["skin_dark"])
+	_fill_rect(img, 22, 43, 6, 3, c["skin"])
+	# Toenails
+	_fill_rect(img, 5, 42, 2, 1, c["tusk"])
+	_fill_rect(img, 8, 42, 2, 1, c["tusk"])
+	_fill_rect(img, 21, 42, 2, 1, c["tusk"])
+	_fill_rect(img, 24, 42, 2, 1, c["tusk"])
+	# Thick legs
+	_fill_rect(img, 7, 33, 6, 10, c["skin"])
+	_fill_rect(img, 8, 34, 4, 8, c["skin_light"])
+	_fill_rect(img, 21, 33, 6, 10, c["skin"])
+	_fill_rect(img, 22, 34, 4, 8, c["skin_light"])
+	# Loincloth
+	_fill_rect(img, 6, 30, 22, 5, c["loincloth"])
+	_fill_rect(img, 8, 34, 4, 3, c["loincloth"])
+	_fill_rect(img, 20, 34, 4, 3, c["loincloth"])
+	# Massive torso (hunched, wide)
+	_fill_rect(img, 4, 14, 26, 18, c["skin"])
+	_fill_rect(img, 6, 16, 22, 14, c["skin_light"])
+	# Big belly
+	_fill_ellipse(img, 17, 24, 8, 6, c["belly"])
+	# Warts on skin
+	_fill_rect(img, 8, 18, 2, 2, c["wart"])
+	_fill_rect(img, 24, 20, 2, 2, c["wart"])
+	_fill_rect(img, 12, 28, 2, 2, c["wart"])
+	# Moss patches
+	_fill_rect(img, 5, 16, 3, 2, c["moss"])
+	_fill_rect(img, 26, 22, 3, 2, c["moss"])
+	# Thick arms
+	_fill_rect(img, 1, 15, 5, 14, c["skin"])
+	_fill_rect(img, 2, 16, 3, 12, c["skin_dark"])
+	_fill_rect(img, 28, 15, 5, 14, c["skin"])
+	_fill_rect(img, 29, 16, 3, 12, c["skin_dark"])
+	# Big hands
+	_fill_rect(img, 0, 28, 5, 4, c["skin"])
+	_fill_rect(img, 29, 28, 5, 4, c["skin"])
+	# Head (small relative to body — trolls are all body)
+	_fill_rect(img, 10, 3, 14, 12, c["skin"])
+	_fill_rect(img, 9, 5, 16, 8, c["skin"])
+	_fill_rect(img, 11, 4, 12, 10, c["skin_dark"])
+	# Brow ridge (heavy)
+	_fill_rect(img, 9, 5, 16, 3, c["skin_dark"])
+	# Eyes (small, deep-set, yellow)
+	_fill_rect(img, 12, 7, 3, 2, c["eyes"])
+	_fill_rect(img, 19, 7, 3, 2, c["eyes"])
+	_fill_rect(img, 13, 7, 1, 1, c["pupil"])
+	_fill_rect(img, 20, 7, 1, 1, c["pupil"])
+	# Big nose
+	_fill_rect(img, 15, 9, 4, 3, c["skin_light"])
+	# Mouth with tusks
+	_fill_rect(img, 12, 12, 10, 2, c["skin_dark"])
+	_fill_rect(img, 13, 11, 2, 4, c["tusk"])  # Left tusk
+	_fill_rect(img, 19, 11, 2, 4, c["tusk"])  # Right tusk
+	# Small ears
+	_fill_rect(img, 7, 6, 3, 4, c["skin"])
+	_fill_rect(img, 24, 6, 3, 4, c["skin"])
+	# Big wooden club in right hand
+	_fill_rect(img, 31, 5, 4, 24, c["club"])
+	_fill_rect(img, 30, 3, 6, 6, c["club"])
+	_fill_rect(img, 30, 7, 6, 3, c["club_band"])
+	_fill_rect(img, 30, 14, 6, 2, c["club_band"])
+	textures["troll"] = ImageTexture.create_from_image(img)
+
+func _gen_dark_mage() -> void:
+	# Sinister dark mage — hooded robe, glowing staff, arcane energy
+	var img = Image.create(30, 46, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = {
+		"robe": Color(0.15, 0.08, 0.20),
+		"robe_dark": Color(0.08, 0.03, 0.12),
+		"robe_trim": Color(0.50, 0.20, 0.55),
+		"hood": Color(0.10, 0.05, 0.15),
+		"face_shadow": Color(0.05, 0.02, 0.08),
+		"eyes": Color(0.7, 0.0, 0.8),
+		"eye_glow": Color(0.9, 0.3, 1.0, 0.5),
+		"skin": Color(0.55, 0.48, 0.50),
+		"staff": Color(0.3, 0.2, 0.15),
+		"staff_dark": Color(0.2, 0.12, 0.08),
+		"orb": Color(0.6, 0.1, 0.8),
+		"orb_glow": Color(0.8, 0.3, 1.0, 0.4),
+		"orb_core": Color(1.0, 0.7, 1.0),
+		"shadow": Color(0, 0, 0, 0.3),
+	}
+	_fill_rect(img, 4, 43, 18, 3, c["shadow"])
+	# Robe bottom (wide, flowing)
+	_fill_rect(img, 4, 36, 18, 8, c["robe"])
+	_fill_rect(img, 3, 38, 20, 6, c["robe"])
+	_fill_rect(img, 5, 37, 16, 6, c["robe_dark"])
+	# Robe hem trim
+	_fill_rect(img, 3, 43, 20, 1, c["robe_trim"])
+	# Robe body
+	_fill_rect(img, 6, 18, 14, 20, c["robe"])
+	_fill_rect(img, 7, 19, 12, 18, c["robe_dark"])
+	# Belt / sash with arcane symbol
+	_fill_rect(img, 6, 28, 14, 2, c["robe_trim"])
+	_fill_rect(img, 12, 27, 2, 4, c["robe_trim"])  # Buckle
+	# Sleeves (wide, flowing)
+	_fill_rect(img, 2, 18, 6, 12, c["robe"])
+	_fill_rect(img, 3, 19, 4, 10, c["robe_dark"])
+	_fill_rect(img, 18, 18, 6, 12, c["robe"])
+	_fill_rect(img, 19, 19, 4, 10, c["robe_dark"])
+	# Hands (gaunt, pale)
+	_fill_rect(img, 2, 29, 4, 3, c["skin"])
+	_fill_rect(img, 20, 29, 4, 3, c["skin"])
+	# Hood (large, pointed)
+	_fill_rect(img, 7, 4, 12, 15, c["hood"])
+	_fill_rect(img, 6, 6, 14, 11, c["hood"])
+	_fill_rect(img, 8, 3, 10, 3, c["hood"])
+	_fill_rect(img, 10, 1, 6, 3, c["hood"])
+	_fill_rect(img, 12, 0, 2, 2, c["hood"])  # Hood point
+	# Face in shadow
+	_fill_rect(img, 9, 8, 8, 8, c["face_shadow"])
+	# Glowing eyes visible from shadow
+	_fill_rect(img, 10, 11, 2, 2, c["eyes"])
+	_fill_rect(img, 14, 11, 2, 2, c["eyes"])
+	# Eye glow aura
+	_fill_rect(img, 9, 10, 4, 4, c["eye_glow"])
+	_fill_rect(img, 13, 10, 4, 4, c["eye_glow"])
+	# Staff in left hand
+	_fill_rect(img, 24, 2, 2, 38, c["staff"])
+	_fill_rect(img, 23, 6, 4, 2, c["staff_dark"])
+	_fill_rect(img, 23, 20, 4, 2, c["staff_dark"])
+	# Orb at staff top
+	_fill_ellipse(img, 25, 3, 3, 3, c["orb_glow"])
+	_fill_ellipse(img, 25, 3, 2, 2, c["orb"])
+	_fill_rect(img, 25, 2, 1, 1, c["orb_core"])
+	# Robe trim on edges
+	_fill_rect(img, 6, 18, 1, 26, c["robe_trim"])
+	_fill_rect(img, 19, 18, 1, 26, c["robe_trim"])
+	textures["dark_mage"] = ImageTexture.create_from_image(img)
+
+func _gen_ogre() -> void:
+	# Massive ogre — huge hulking brute, grey-green skin, bone armor, massive fists
+	var img = Image.create(40, 52, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = {
+		"skin": Color(0.45, 0.48, 0.35),
+		"skin_dark": Color(0.32, 0.35, 0.22),
+		"skin_light": Color(0.55, 0.55, 0.40),
+		"belly": Color(0.55, 0.50, 0.38),
+		"eyes": Color(0.9, 0.5, 0.1),
+		"pupil": Color(0.1, 0.08, 0.05),
+		"teeth": Color(0.8, 0.75, 0.60),
+		"bone_armor": Color(0.75, 0.70, 0.58),
+		"bone_dark": Color(0.55, 0.50, 0.40),
+		"loincloth": Color(0.45, 0.25, 0.15),
+		"loincloth_dark": Color(0.30, 0.15, 0.08),
+		"scar": Color(0.55, 0.35, 0.30),
+		"shadow": Color(0, 0, 0, 0.3),
+	}
+	_fill_rect(img, 4, 49, 32, 3, c["shadow"])
+	# Huge feet
+	_fill_rect(img, 6, 46, 10, 5, c["skin_dark"])
+	_fill_rect(img, 7, 47, 8, 3, c["skin"])
+	_fill_rect(img, 24, 46, 10, 5, c["skin_dark"])
+	_fill_rect(img, 25, 47, 8, 3, c["skin"])
+	# Thick legs
+	_fill_rect(img, 8, 35, 8, 12, c["skin"])
+	_fill_rect(img, 9, 36, 6, 10, c["skin_light"])
+	_fill_rect(img, 24, 35, 8, 12, c["skin"])
+	_fill_rect(img, 25, 36, 6, 10, c["skin_light"])
+	# Bone shin guards
+	_fill_rect(img, 8, 38, 8, 3, c["bone_armor"])
+	_fill_rect(img, 9, 39, 6, 1, c["bone_dark"])
+	_fill_rect(img, 24, 38, 8, 3, c["bone_armor"])
+	_fill_rect(img, 25, 39, 6, 1, c["bone_dark"])
+	# Loincloth
+	_fill_rect(img, 6, 32, 28, 5, c["loincloth"])
+	_fill_rect(img, 8, 36, 6, 3, c["loincloth"])
+	_fill_rect(img, 26, 36, 6, 3, c["loincloth"])
+	_fill_rect(img, 14, 36, 12, 4, c["loincloth_dark"])
+	# Massive torso
+	_fill_rect(img, 4, 14, 32, 20, c["skin"])
+	_fill_rect(img, 6, 16, 28, 16, c["skin_light"])
+	# Big gut
+	_fill_ellipse(img, 20, 26, 10, 7, c["belly"])
+	# Scars across chest
+	_fill_rect(img, 10, 18, 8, 1, c["scar"])
+	_fill_rect(img, 22, 20, 6, 1, c["scar"])
+	# Bone shoulder armor (left)
+	_fill_rect(img, 2, 12, 8, 5, c["bone_armor"])
+	_fill_rect(img, 3, 13, 6, 3, c["bone_dark"])
+	# Bone shoulder armor (right)
+	_fill_rect(img, 30, 12, 8, 5, c["bone_armor"])
+	_fill_rect(img, 31, 13, 6, 3, c["bone_dark"])
+	# Massive arms
+	_fill_rect(img, 1, 16, 6, 16, c["skin"])
+	_fill_rect(img, 2, 17, 4, 14, c["skin_dark"])
+	_fill_rect(img, 33, 16, 6, 16, c["skin"])
+	_fill_rect(img, 34, 17, 4, 14, c["skin_dark"])
+	# Huge fists
+	_fill_rect(img, 0, 31, 6, 5, c["skin"])
+	_fill_rect(img, 1, 32, 4, 3, c["skin_light"])
+	_fill_rect(img, 34, 31, 6, 5, c["skin"])
+	_fill_rect(img, 35, 32, 4, 3, c["skin_light"])
+	# Head (small for ogre — tiny brain)
+	_fill_rect(img, 12, 2, 16, 14, c["skin"])
+	_fill_rect(img, 11, 4, 18, 10, c["skin"])
+	_fill_rect(img, 13, 3, 14, 12, c["skin_dark"])
+	# Heavy brow
+	_fill_rect(img, 11, 5, 18, 3, c["skin_dark"])
+	# Small eyes
+	_fill_rect(img, 14, 7, 3, 2, c["eyes"])
+	_fill_rect(img, 23, 7, 3, 2, c["eyes"])
+	_fill_rect(img, 15, 7, 1, 1, c["pupil"])
+	_fill_rect(img, 24, 7, 1, 1, c["pupil"])
+	# Flat nose
+	_fill_rect(img, 18, 9, 4, 3, c["skin_light"])
+	_fill_rect(img, 19, 11, 2, 1, c["skin_dark"])
+	# Wide mouth with underbite
+	_fill_rect(img, 14, 12, 12, 3, c["skin_dark"])
+	_fill_rect(img, 15, 12, 2, 3, c["teeth"])
+	_fill_rect(img, 19, 12, 2, 3, c["teeth"])
+	_fill_rect(img, 23, 12, 2, 3, c["teeth"])
+	# Small ears
+	_fill_rect(img, 9, 6, 3, 4, c["skin"])
+	_fill_rect(img, 28, 6, 3, 4, c["skin"])
+	textures["ogre"] = ImageTexture.create_from_image(img)
+
+func _gen_ogre_boss() -> void:
+	# Ogre Warlord — even bigger, war paint, spiked club, crown of bones
+	var img = Image.create(46, 58, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = {
+		"skin": Color(0.40, 0.45, 0.30),
+		"skin_dark": Color(0.28, 0.32, 0.18),
+		"skin_light": Color(0.50, 0.52, 0.38),
+		"belly": Color(0.52, 0.48, 0.35),
+		"warpaint": Color(0.7, 0.15, 0.1),
+		"warpaint2": Color(0.1, 0.1, 0.5),
+		"eyes": Color(1.0, 0.3, 0.1),
+		"pupil": Color(0.1, 0.05, 0.02),
+		"teeth": Color(0.85, 0.80, 0.65),
+		"tusk": Color(0.90, 0.85, 0.70),
+		"bone_crown": Color(0.80, 0.75, 0.60),
+		"bone_dark": Color(0.60, 0.55, 0.42),
+		"armor_plate": Color(0.55, 0.50, 0.40),
+		"armor_dark": Color(0.38, 0.32, 0.25),
+		"loincloth": Color(0.50, 0.20, 0.10),
+		"club": Color(0.30, 0.22, 0.12),
+		"club_spike": Color(0.6, 0.6, 0.55),
+		"chain": Color(0.5, 0.5, 0.45),
+		"shadow": Color(0, 0, 0, 0.35),
+	}
+	_fill_rect(img, 4, 55, 38, 3, c["shadow"])
+	# Huge feet
+	_fill_rect(img, 7, 52, 12, 5, c["skin_dark"])
+	_fill_rect(img, 8, 53, 10, 3, c["skin"])
+	_fill_rect(img, 27, 52, 12, 5, c["skin_dark"])
+	_fill_rect(img, 28, 53, 10, 3, c["skin"])
+	# Massive legs
+	_fill_rect(img, 9, 40, 10, 14, c["skin"])
+	_fill_rect(img, 10, 41, 8, 12, c["skin_light"])
+	_fill_rect(img, 27, 40, 10, 14, c["skin"])
+	_fill_rect(img, 28, 41, 8, 12, c["skin_light"])
+	# Bone knee guards
+	_fill_rect(img, 9, 44, 10, 3, c["armor_plate"])
+	_fill_rect(img, 10, 45, 8, 1, c["armor_dark"])
+	_fill_rect(img, 27, 44, 10, 3, c["armor_plate"])
+	_fill_rect(img, 28, 45, 8, 1, c["armor_dark"])
+	# Heavy loincloth with chains
+	_fill_rect(img, 7, 36, 32, 6, c["loincloth"])
+	_fill_rect(img, 10, 41, 8, 3, c["loincloth"])
+	_fill_rect(img, 28, 41, 8, 3, c["loincloth"])
+	_fill_rect(img, 7, 36, 32, 1, c["chain"])
+	_fill_rect(img, 15, 41, 16, 4, c["loincloth"])
+	# Enormous torso
+	_fill_rect(img, 5, 16, 36, 22, c["skin"])
+	_fill_rect(img, 7, 18, 32, 18, c["skin_light"])
+	# Gut
+	_fill_ellipse(img, 23, 30, 12, 8, c["belly"])
+	# War paint — tribal stripes across chest
+	_fill_rect(img, 10, 20, 12, 2, c["warpaint"])
+	_fill_rect(img, 12, 23, 8, 2, c["warpaint"])
+	_fill_rect(img, 24, 20, 10, 2, c["warpaint2"])
+	_fill_rect(img, 26, 23, 8, 2, c["warpaint2"])
+	# Chest armor plates (bone)
+	_fill_rect(img, 14, 18, 18, 4, c["armor_plate"])
+	_fill_rect(img, 15, 19, 16, 2, c["armor_dark"])
+	# Bone shoulder pads (larger)
+	_fill_rect(img, 2, 13, 10, 6, c["armor_plate"])
+	_fill_rect(img, 3, 14, 8, 4, c["armor_dark"])
+	_fill_rect(img, 4, 12, 3, 2, c["bone_crown"])  # Spikes
+	_fill_rect(img, 8, 12, 3, 2, c["bone_crown"])
+	_fill_rect(img, 34, 13, 10, 6, c["armor_plate"])
+	_fill_rect(img, 35, 14, 8, 4, c["armor_dark"])
+	_fill_rect(img, 35, 12, 3, 2, c["bone_crown"])
+	_fill_rect(img, 39, 12, 3, 2, c["bone_crown"])
+	# Huge arms
+	_fill_rect(img, 1, 18, 7, 18, c["skin"])
+	_fill_rect(img, 2, 19, 5, 16, c["skin_dark"])
+	_fill_rect(img, 38, 18, 7, 18, c["skin"])
+	_fill_rect(img, 39, 19, 5, 16, c["skin_dark"])
+	# War paint on arms
+	_fill_rect(img, 2, 22, 5, 2, c["warpaint"])
+	_fill_rect(img, 39, 22, 5, 2, c["warpaint"])
+	# Giant fists
+	_fill_rect(img, 0, 35, 7, 6, c["skin"])
+	_fill_rect(img, 1, 36, 5, 4, c["skin_light"])
+	_fill_rect(img, 39, 35, 7, 6, c["skin"])
+	_fill_rect(img, 40, 36, 5, 4, c["skin_light"])
+	# Head
+	_fill_rect(img, 13, 3, 20, 15, c["skin"])
+	_fill_rect(img, 12, 5, 22, 11, c["skin"])
+	_fill_rect(img, 14, 4, 18, 13, c["skin_dark"])
+	# Heavy brow with scars
+	_fill_rect(img, 12, 6, 22, 3, c["skin_dark"])
+	_fill_rect(img, 16, 5, 6, 1, c["warpaint"])  # Scar/paint on brow
+	# Fierce eyes
+	_fill_rect(img, 16, 8, 4, 3, c["eyes"])
+	_fill_rect(img, 26, 8, 4, 3, c["eyes"])
+	_fill_rect(img, 17, 9, 2, 1, c["pupil"])
+	_fill_rect(img, 27, 9, 2, 1, c["pupil"])
+	# Broken nose
+	_fill_rect(img, 21, 10, 4, 3, c["skin_light"])
+	_fill_rect(img, 22, 12, 2, 1, c["skin_dark"])
+	# Snarling mouth with large tusks
+	_fill_rect(img, 15, 14, 16, 3, c["skin_dark"])
+	_fill_rect(img, 16, 14, 3, 3, c["teeth"])
+	_fill_rect(img, 21, 14, 4, 3, c["teeth"])
+	_fill_rect(img, 27, 14, 3, 3, c["teeth"])
+	# Large tusks jutting upward
+	_fill_rect(img, 14, 12, 3, 5, c["tusk"])
+	_fill_rect(img, 29, 12, 3, 5, c["tusk"])
+	_fill_rect(img, 15, 11, 1, 2, c["tusk"])  # Tusk tips
+	_fill_rect(img, 30, 11, 1, 2, c["tusk"])
+	# Crown of bones
+	_fill_rect(img, 14, 2, 18, 3, c["bone_crown"])
+	_fill_rect(img, 15, 1, 2, 3, c["bone_crown"])  # Spike 1
+	_fill_rect(img, 19, 0, 2, 3, c["bone_crown"])  # Spike 2
+	_fill_rect(img, 23, 0, 2, 3, c["bone_crown"])  # Spike 3
+	_fill_rect(img, 27, 0, 2, 3, c["bone_crown"])  # Spike 4
+	_fill_rect(img, 29, 1, 2, 3, c["bone_crown"])  # Spike 5
+	_fill_rect(img, 15, 3, 16, 1, c["bone_dark"])  # Crown band
+	# Ears
+	_fill_rect(img, 10, 7, 3, 5, c["skin"])
+	_fill_rect(img, 33, 7, 3, 5, c["skin"])
+	# Spiked club in right hand (massive)
+	_fill_rect(img, 40, 2, 4, 34, c["club"])
+	_fill_rect(img, 39, 2, 6, 8, c["club"])
+	# Spikes on club
+	_fill_rect(img, 38, 3, 2, 2, c["club_spike"])
+	_fill_rect(img, 44, 3, 2, 2, c["club_spike"])
+	_fill_rect(img, 38, 7, 2, 2, c["club_spike"])
+	_fill_rect(img, 44, 7, 2, 2, c["club_spike"])
+	_fill_rect(img, 41, 1, 2, 2, c["club_spike"])
+	# Chain wrapped around club
+	_fill_rect(img, 39, 12, 6, 1, c["chain"])
+	_fill_rect(img, 39, 16, 6, 1, c["chain"])
+	textures["ogre_boss"] = ImageTexture.create_from_image(img)
 
 # ============================================================
 # ENVIRONMENT SPRITES

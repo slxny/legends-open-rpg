@@ -15,9 +15,9 @@ var _label_settings: LabelSettings = null
 
 func _ready() -> void:
 	_label_settings = LabelSettings.new()
-	_label_settings.font_size = 10
-	_label_settings.font_color = Color(0.85, 0.85, 0.85)
-	_label_settings.outline_size = 1
+	_label_settings.font_size = 13
+	_label_settings.font_color = Color(0.95, 0.95, 0.95)
+	_label_settings.outline_size = 2
 	_label_settings.outline_color = Color(0, 0, 0)
 
 func set_value(current: float, maximum: float) -> void:
@@ -78,7 +78,14 @@ func _draw() -> void:
 
 	# Label overlay
 	if show_label and not label_text.is_empty():
-		draw_string(ThemeDB.fallback_font, Vector2(bar_size.x / 2.0 - 30, bar_size.y - 3), label_text, HORIZONTAL_ALIGNMENT_CENTER, bar_size.x, 10, Color(0.85, 0.85, 0.85))
+		var font = ThemeDB.fallback_font
+		var font_size = 13
+		var text_width = font.get_string_size(label_text, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size).x
+		var x_pos = (bar_size.x - text_width) / 2.0
+		var y_pos = bar_size.y / 2.0 + font_size / 2.0 - 1
+		# Shadow for readability
+		draw_string(font, Vector2(x_pos + 1, y_pos + 1), label_text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color(0, 0, 0, 0.7))
+		draw_string(font, Vector2(x_pos, y_pos), label_text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color(0.95, 0.95, 0.95))
 
 func _get_bar_color(ratio: float) -> Color:
 	match bar_mode:

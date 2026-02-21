@@ -26,6 +26,16 @@ extends CanvasLayer
 
 var _player: Node2D = null
 
+# Ability tooltip panel
+var _tooltip_panel: PanelContainer = null
+var _tooltip_label: RichTextLabel = null
+var _tooltip_timer: Timer = null
+var _tooltip_data: Dictionary = {}  # key -> formatted tooltip string
+var _hovered_btn: Button = null
+
+func _ready() -> void:
+	_create_tooltip_panel()
+
 func setup(player: Node2D) -> void:
 	_player = player
 	minimap.setup(player)
@@ -41,19 +51,31 @@ func setup(player: Node2D) -> void:
 	GameManager.wood_changed.connect(_on_wood_changed)
 	AlignmentManager.alignment_changed.connect(_on_alignment_changed)
 
-	# Ability names
+	# Ability names & tooltips
 	var hero_data = HeroData.get_hero(player.hero_class)
 	if hero_data.has("abilities"):
 		var ab = hero_data["abilities"]
 		if ab.has("ability_1"):
 			ability_1_btn.text = "Q\n" + ab["ability_1"]["name"]
+			_tooltip_data["ability_1"] = _build_ability_tooltip(ab["ability_1"], "Q")
 		if ab.has("ability_2"):
 			ability_2_btn.text = "E\n" + ab["ability_2"]["name"]
+			_tooltip_data["ability_2"] = _build_ability_tooltip(ab["ability_2"], "E")
+
+	# Connect ability button hover for tooltips
+	ability_1_btn.mouse_entered.connect(_on_ability_hover.bind(ability_1_btn, "ability_1"))
+	ability_1_btn.mouse_exited.connect(_on_ability_unhover)
+	ability_2_btn.mouse_entered.connect(_on_ability_hover.bind(ability_2_btn, "ability_2"))
+	ability_2_btn.mouse_exited.connect(_on_ability_unhover)
 
 	# Connect command card buttons
 	log_btn.text = "F1\nLog"
 	log_btn.disabled = false
 	log_btn.pressed.connect(_on_changelog_pressed)
+
+	# Save/Load are click-only (no F-key binding)
+	save_btn.text = "Save\nGame"
+	load_btn.text = "Load\nGame"
 	save_btn.pressed.connect(_on_save_pressed)
 	load_btn.pressed.connect(_on_load_pressed)
 
@@ -67,21 +89,16 @@ func setup(player: Node2D) -> void:
 	_update_alignment_display()
 
 func _unhandled_input(event: InputEvent) -> void:
-	# F1 = Changelog, F5 = Save, F9 = Load
 	if event is InputEventKey and event.pressed:
 		if event.keycode == KEY_F1:
 			_on_changelog_pressed()
-		elif event.keycode == KEY_F5:
-			_on_save_pressed()
-		elif event.keycode == KEY_F9:
-			_on_load_pressed()
 
 func _on_hp_changed(current: int, maximum: int) -> void:
-	hp_bar.label_text = "%d / %d" % [current, maximum]
+	hp_bar.label_text = "HP: %d / %d" % [current, maximum]
 	hp_bar.set_value(current, maximum)
 
 func _on_mana_changed(current: int, maximum: int) -> void:
-	mana_bar.label_text = "%d / %d" % [current, maximum]
+	mana_bar.label_text = "MP: %d / %d" % [current, maximum]
 	mana_bar.set_value(current, maximum)
 
 func _on_xp_changed(current: int, needed: int) -> void:
@@ -129,14 +146,12 @@ func _update_alignment_display() -> void:
 	alignment_label.text = "%s (%+d)" % [faction, val]
 	alignment_label.add_theme_color_override("font_color", color)
 
-func _on_ability_cooldown(index: int, remaining: float, total: float) -> void:
+func _on_ability_cooldown(index: int, remaining: float, _total: float) -> void:
 	var btn = ability_1_btn if index == 0 else ability_2_btn
 	if remaining > 0:
 		btn.disabled = true
-		btn.tooltip_text = "%.1fs" % remaining
 	else:
 		btn.disabled = false
-		btn.tooltip_text = "Ready"
 
 func _on_changelog_pressed() -> void:
 	var dialogs = get_tree().get_nodes_in_group("changelog_dialog")
@@ -154,3 +169,99 @@ func _on_load_pressed() -> void:
 	SaveLoadManager.load_game()
 	if _player and is_instance_valid(_player):
 		SaveLoadManager.apply_to_player(_player)
+
+# ── Ability Tooltip System ──────────────────────────────────────────────
+
+func _create_tooltip_panel() -> void:
+	_tooltip_panel = PanelContainer.new()
+	_tooltip_panel.visible = false
+	_tooltip_panel.z_index = 100
+	_tooltip_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.08, 0.08, 0.12, 0.96)
+	style.border_color = Color(0.45, 0.4, 0.2, 1.0)
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(4)
+	style.set_content_margin_all(10)
+	_tooltip_panel.add_theme_stylebox_override("panel", style)
+
+	_tooltip_label = RichTextLabel.new()
+	_tooltip_label.bbcode_enabled = true
+	_tooltip_label.fit_content = true
+	_tooltip_label.scroll_active = false
+	_tooltip_label.custom_minimum_size = Vector2(240, 0)
+	_tooltip_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_tooltip_label.add_theme_font_size_override("normal_font_size", 13)
+	_tooltip_label.add_theme_font_size_override("bold_font_size", 14)
+	_tooltip_label.add_theme_color_override("default_color", Color(0.9, 0.88, 0.8))
+	_tooltip_panel.add_child(_tooltip_label)
+
+	# Timer for delayed show
+	_tooltip_timer = Timer.new()
+	_tooltip_timer.one_shot = true
+	_tooltip_timer.wait_time = 0.3
+	_tooltip_timer.timeout.connect(_show_tooltip)
+	add_child(_tooltip_timer)
+	add_child(_tooltip_panel)
+
+func _build_ability_tooltip(ability: Dictionary, hotkey: String) -> String:
+	var name_str = ability.get("name", "Unknown")
+	var desc = ability.get("description", "")
+	var mana = ability.get("mana_cost", 0)
+	var cd = ability.get("cooldown", 0.0)
+
+	var text = "[b][color=#f0d866]%s[/color][/b]  [color=#aaaaaa][%s][/color]\n" % [name_str, hotkey]
+	text += "[color=#bbbbbb]%s[/color]\n\n" % desc
+
+	# Stats line
+	var stats_parts: Array[String] = []
+	if mana > 0:
+		stats_parts.append("[color=#6699ff]%d Mana[/color]" % mana)
+	if cd > 0:
+		stats_parts.append("[color=#ccaa55]%.0fs Cooldown[/color]" % cd)
+	if stats_parts.size() > 0:
+		text += "  ".join(stats_parts) + "\n"
+
+	# Extra details
+	if ability.has("damage_multiplier"):
+		text += "[color=#ff8866]%.0f%% damage[/color]" % (ability["damage_multiplier"] * 100)
+		if ability.has("radius"):
+			text += "  [color=#aaaaaa]in %.0fpx radius[/color]" % ability["radius"]
+		if ability.has("projectile_count"):
+			text += "  [color=#aaaaaa]%d projectiles[/color]" % ability["projectile_count"]
+		text += "\n"
+	if ability.has("armor_bonus"):
+		text += "[color=#66ccff]+%d Armor[/color]  for [color=#cccccc]%.0fs[/color]\n" % [ability["armor_bonus"], ability.get("duration", 0)]
+	if ability.has("dodge_bonus"):
+		text += "[color=#66ff99]+%.0f%% Dodge[/color]  for [color=#cccccc]%.0fs[/color]\n" % [ability["dodge_bonus"] * 100, ability.get("duration", 0)]
+
+	return text.strip_edges()
+
+func _on_ability_hover(btn: Button, ability_key: String) -> void:
+	if not _tooltip_data.has(ability_key):
+		return
+	_hovered_btn = btn
+	_tooltip_label.text = _tooltip_data[ability_key]
+	_tooltip_timer.start()
+
+func _on_ability_unhover() -> void:
+	_hovered_btn = null
+	_tooltip_timer.stop()
+	_tooltip_panel.visible = false
+
+func _show_tooltip() -> void:
+	if _hovered_btn == null:
+		return
+	_tooltip_panel.visible = true
+	# Position above the hovered button
+	await get_tree().process_frame
+	var btn_rect = _hovered_btn.get_global_rect()
+	var tip_size = _tooltip_panel.size
+	var x_pos = btn_rect.position.x + btn_rect.size.x / 2.0 - tip_size.x / 2.0
+	var y_pos = btn_rect.position.y - tip_size.y - 8.0
+	# Clamp to screen
+	x_pos = clampf(x_pos, 4, get_viewport().get_visible_rect().size.x - tip_size.x - 4)
+	if y_pos < 4:
+		y_pos = btn_rect.position.y + btn_rect.size.y + 8.0
+	_tooltip_panel.position = Vector2(x_pos, y_pos)

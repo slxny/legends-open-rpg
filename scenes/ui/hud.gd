@@ -28,6 +28,10 @@ extends CanvasLayer
 @onready var ability_1_btn: Button = $BottomPanel/HBox/CommandCard/Grid/Ability1
 @onready var ability_2_btn: Button = $BottomPanel/HBox/CommandCard/Grid/Ability2
 @onready var log_btn: Button = $BottomPanel/HBox/CommandCard/Grid/Slot3
+@onready var potion_1_btn: Button = $BottomPanel/HBox/CommandCard/Grid/Slot4
+@onready var potion_2_btn: Button = $BottomPanel/HBox/CommandCard/Grid/Slot5
+@onready var potion_3_btn: Button = $BottomPanel/HBox/CommandCard/Grid/Slot6
+@onready var inv_btn: Button = $BottomPanel/HBox/CommandCard/Grid/Inv
 @onready var save_btn: Button = $BottomPanel/HBox/CommandCard/Grid/Save
 @onready var load_btn: Button = $BottomPanel/HBox/CommandCard/Grid/Load
 
@@ -117,16 +121,44 @@ func setup(player: Node2D) -> void:
 			ability_2_btn.text = "E\n" + ab["ability_2"]["name"]
 			_tooltip_data["ability_2"] = _build_ability_tooltip(ab["ability_2"], "E")
 
-	# Connect ability button hover for tooltips
-	ability_1_btn.mouse_entered.connect(_on_ability_hover.bind(ability_1_btn, "ability_1"))
-	ability_1_btn.mouse_exited.connect(_on_ability_unhover)
-	ability_2_btn.mouse_entered.connect(_on_ability_hover.bind(ability_2_btn, "ability_2"))
-	ability_2_btn.mouse_exited.connect(_on_ability_unhover)
+	# Connect ability buttons to actually cast on press (needed for mobile tap)
+	ability_1_btn.pressed.connect(func():
+		if _player and is_instance_valid(_player):
+			_player._use_ability("ability_1")
+	)
+	ability_2_btn.pressed.connect(func():
+		if _player and is_instance_valid(_player):
+			_player._use_ability("ability_2")
+	)
+
+	# Tooltip hover — desktop only (on mobile, tap should cast, not tooltip)
+	if not _is_mobile:
+		ability_1_btn.mouse_entered.connect(_on_ability_hover.bind(ability_1_btn, "ability_1"))
+		ability_1_btn.mouse_exited.connect(_on_ability_unhover)
+		ability_2_btn.mouse_entered.connect(_on_ability_hover.bind(ability_2_btn, "ability_2"))
+		ability_2_btn.mouse_exited.connect(_on_ability_unhover)
 
 	# Connect command card buttons
 	log_btn.text = "F1\nLog"
 	log_btn.disabled = false
 	log_btn.pressed.connect(_on_changelog_pressed)
+
+	# Potion slots — tap to use consumable
+	potion_1_btn.pressed.connect(func():
+		if _player and is_instance_valid(_player):
+			_player.inventory.use_consumable(0)
+	)
+	potion_2_btn.pressed.connect(func():
+		if _player and is_instance_valid(_player):
+			_player.inventory.use_consumable(1)
+	)
+	potion_3_btn.pressed.connect(func():
+		if _player and is_instance_valid(_player):
+			_player.inventory.use_consumable(2)
+	)
+
+	# Inventory toggle
+	inv_btn.pressed.connect(_on_inventory_pressed)
 
 	# Save/Load are click-only (no F-key binding)
 	save_btn.text = "Save\nGame"
@@ -219,6 +251,12 @@ func _on_changelog_pressed() -> void:
 			dlg.close()
 		else:
 			dlg.open()
+
+func _on_inventory_pressed() -> void:
+	var event = InputEventAction.new()
+	event.action = "toggle_inventory"
+	event.pressed = true
+	Input.parse_input_event(event)
 
 func _on_save_pressed() -> void:
 	SaveLoadManager.save_game()

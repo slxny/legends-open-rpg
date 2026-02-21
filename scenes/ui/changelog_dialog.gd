@@ -23,6 +23,10 @@ const CHANGELOG: Array[Dictionary] = [
 			"HP/Mana/XP bars, unit info, and minimap all scaled up for mobile",
 			"Ability tooltips and tutorial hints scaled to 26-30px font on mobile",
 			"All command buttons are now large enough to tap comfortably on phones",
+			"Tapping ability buttons (Q/E) now casts abilities on mobile",
+			"Tapping potion buttons (1/2/3) now uses consumables on mobile",
+			"Tapping Items button now opens inventory on mobile",
+			"Disabled tooltip hover on mobile so taps cast instead of showing tooltips",
 		]
 	},
 	{

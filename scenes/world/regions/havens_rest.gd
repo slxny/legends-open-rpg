@@ -3,6 +3,49 @@ extends Node2D
 @onready var heal_beacon: Area2D = $HealBeacon
 @onready var info_beacon: Area2D = $InfoBeacon
 
+# ============================================================
+# PROGRESSIVE DIFFICULTY SYSTEM
+# ============================================================
+# Waves of increasingly powerful enemies spawn outward from town.
+# Mini-bosses appear at intervals with their own music cues.
+
+const CreepCampScene = preload("res://scenes/enemies/creep_camp.tscn")
+
+# Wave definitions: each wave spawns camps of a certain type at a minimum distance
+# [camp_type, min_distance, max_distance, camp_count, enemy_per_camp]
+const WAVE_SCHEDULE = [
+	# Wave 1 (3 min): Tougher wolves + skeleton reinforcements mid-range
+	{"time": 180.0, "type": "wolf", "min_dist": 1500.0, "max_dist": 2500.0, "camps": 3, "per_camp": 6, "msg": "Wolves are gathering in the wilds...", "color": Color(0.6, 0.6, 0.9)},
+	# Wave 2 (5 min): Bandits push in, trolls appear mid
+	{"time": 300.0, "type": "troll", "min_dist": 2000.0, "max_dist": 3500.0, "camps": 3, "per_camp": 4, "msg": "Trolls emerge from the deep forest!", "color": Color(0.4, 0.8, 0.4)},
+	# Wave 3 (7 min): Dark mages + first mini-boss
+	{"time": 420.0, "type": "dark_mage", "min_dist": 2500.0, "max_dist": 4000.0, "camps": 4, "per_camp": 4, "msg": "Dark magic crackles in the air...", "color": Color(0.7, 0.3, 0.9)},
+	# Wave 4 (10 min): Demon Knights arrive
+	{"time": 600.0, "type": "demon_knight", "min_dist": 3000.0, "max_dist": 4500.0, "camps": 3, "per_camp": 4, "msg": "Demon Knights march from the shadows!", "color": Color(1.0, 0.3, 0.3)},
+	# Wave 5 (13 min): Ancient Golems
+	{"time": 780.0, "type": "ancient_golem", "min_dist": 3500.0, "max_dist": 5000.0, "camps": 3, "per_camp": 3, "msg": "The earth trembles... Ancient Golems awaken!", "color": Color(0.7, 0.5, 0.2)},
+	# Wave 6 (17 min): Shadow Wraiths
+	{"time": 1020.0, "type": "shadow_wraith", "min_dist": 3000.0, "max_dist": 5000.0, "camps": 4, "per_camp": 3, "msg": "Shadow Wraiths phase into existence!", "color": Color(0.5, 0.2, 0.8)},
+	# Wave 7 (22 min): Dragon Whelps
+	{"time": 1320.0, "type": "dragon_whelp", "min_dist": 3500.0, "max_dist": 5500.0, "camps": 3, "per_camp": 3, "msg": "Dragon Whelps descend from the peaks!", "color": Color(1.0, 0.5, 0.1)},
+	# Wave 8 (28 min): Infernals — endgame
+	{"time": 1680.0, "type": "infernal", "min_dist": 4000.0, "max_dist": 5500.0, "camps": 3, "per_camp": 2, "msg": "INFERNALS TEAR THROUGH THE VEIL!", "color": Color(1.0, 0.1, 0.1)},
+]
+
+# Mini-boss spawn schedule: [time, boss_type, distance_from_town]
+const BOSS_SCHEDULE = [
+	{"time": 450.0, "type": "mini_boss_ravager", "dist": 2800.0, "count": 1, "msg": "A RAVAGER stalks the outer wilds!"},
+	{"time": 720.0, "type": "mini_boss_dread_knight", "dist": 3500.0, "count": 1, "msg": "A DREAD KNIGHT has appeared!"},
+	{"time": 1200.0, "type": "mini_boss_elder_drake", "dist": 4200.0, "count": 1, "msg": "An ELDER DRAKE circles above!"},
+	{"time": 1800.0, "type": "mini_boss_abyssal_lord", "dist": 5000.0, "count": 1, "msg": "THE ABYSSAL LORD HAS ARRIVED!"},
+]
+
+var _elapsed_time: float = 0.0
+var _next_wave_index: int = 0
+var _next_boss_index: int = 0
+var _wave_rng := RandomNumberGenerator.new()
+var _spawned_camps: Array[Node2D] = []  # Track dynamically spawned camps
+
 # Creep camp positions for ground darkening (matches .tscn camp positions)
 var _camp_positions := [
 	# Goblins (close to town)
@@ -39,11 +82,124 @@ func _ready() -> void:
 	heal_beacon.activated.connect(_on_heal_beacon)
 	info_beacon.activated.connect(_on_info_beacon)
 
+	_wave_rng.seed = 42
 
 	_generate_terrain()
 	_generate_town()
 	_generate_decorations()
 	_generate_harvestable_trees()
+
+func _process(delta: float) -> void:
+	_elapsed_time += delta
+
+	# Check for wave spawns
+	if _next_wave_index < WAVE_SCHEDULE.size():
+		var wave = WAVE_SCHEDULE[_next_wave_index]
+		if _elapsed_time >= wave["time"]:
+			_spawn_wave(wave)
+			_next_wave_index += 1
+
+	# Check for mini-boss spawns
+	if _next_boss_index < BOSS_SCHEDULE.size():
+		var boss = BOSS_SCHEDULE[_next_boss_index]
+		if _elapsed_time >= boss["time"]:
+			_spawn_mini_boss(boss)
+			_next_boss_index += 1
+
+	# All waves and bosses done — stop processing
+	if _next_wave_index >= WAVE_SCHEDULE.size() and _next_boss_index >= BOSS_SCHEDULE.size():
+		set_process(false)
+
+# ============================================================
+# WAVE SPAWNING
+# ============================================================
+
+func _spawn_wave(wave: Dictionary) -> void:
+	# Play warning stinger
+	AudioManager.play_music_direct("wave_warning")
+	# Announce
+	GameManager.game_message.emit(wave["msg"], wave["color"])
+
+	var camp_type: String = wave["type"]
+	var min_dist: float = wave["min_dist"]
+	var max_dist: float = wave["max_dist"]
+	var camp_count: int = wave["camps"]
+	var per_camp: int = wave["per_camp"]
+
+	for i in range(camp_count):
+		var pos = _random_position_in_ring(min_dist, max_dist)
+		var camp = CreepCampScene.instantiate()
+		camp.camp_type = camp_type
+		camp.enemy_count = per_camp
+		camp.respawn_time = 60.0 + _wave_rng.randf_range(-10.0, 10.0)
+		camp.position = pos
+		add_child(camp)
+		_spawned_camps.append(camp)
+
+		# Add creep ground darkening at new camp
+		_add_creep_ground(pos, _wave_rng.randf_range(140, 200))
+
+		# Add a marker for the new camp
+		var type_data = camp.CAMP_TYPES.get(camp_type, {})
+		var type_name = type_data.get("name", camp_type)
+		var lvl = type_data.get("level_range", [1, 1])
+		var marker_text = "%s Lv%d-%d" % [type_name, lvl[0], lvl[1]]
+		_add_camp_marker($Decorations, pos + Vector2(0, -40), marker_text)
+
+func _spawn_mini_boss(boss_info: Dictionary) -> void:
+	# Play wave warning stinger for boss announcement
+	AudioManager.play_music_direct("wave_warning")
+
+	# Big announcement
+	GameManager.game_message.emit("", Color(1, 1, 1))  # Blank line for emphasis
+	GameManager.game_message.emit("!! MINI-BOSS INCOMING !!", Color(1.0, 0.2, 0.2))
+	GameManager.game_message.emit(boss_info["msg"], Color(1.0, 0.6, 0.2))
+
+	var pos = _random_position_in_ring(boss_info["dist"] - 300.0, boss_info["dist"] + 300.0)
+	var camp = CreepCampScene.instantiate()
+	camp.camp_type = boss_info["type"]
+	camp.enemy_count = boss_info["count"]
+	camp.respawn_time = 180.0  # Bosses respawn slowly
+	camp.position = pos
+	add_child(camp)
+	_spawned_camps.append(camp)
+
+	# Connect boss death for announcements
+	camp.mini_boss_died.connect(_on_mini_boss_died)
+
+	# Add visuals
+	_add_creep_ground(pos, 220)
+	var type_data = camp.CAMP_TYPES.get(boss_info["type"], {})
+	var boss_name = type_data.get("name", boss_info["type"])
+	_add_camp_marker($Decorations, pos + Vector2(0, -50), "BOSS: %s" % boss_name)
+
+func _on_mini_boss_died(boss_name: String, pos: Vector2) -> void:
+	GameManager.game_message.emit("", Color(1, 1, 1))
+	GameManager.game_message.emit("The %s has been slain!" % boss_name, Color(1.0, 0.85, 0.2))
+	GameManager.game_message.emit("The wilds grow quiet... for now.", Color(0.7, 0.7, 0.7))
+
+func _random_position_in_ring(min_dist: float, max_dist: float) -> Vector2:
+	# Generate a random position in a ring around the origin, avoiding overlaps
+	for _attempt in range(20):
+		var angle = _wave_rng.randf_range(0, TAU)
+		var dist = _wave_rng.randf_range(min_dist, max_dist)
+		var pos = Vector2(cos(angle) * dist, sin(angle) * dist)
+		# Clamp to map bounds
+		pos.x = clampf(pos.x, -5500.0, 5500.0)
+		pos.y = clampf(pos.y, -4200.0, 4200.0)
+		# Avoid town center
+		if pos.length() < 800.0:
+			continue
+		# Avoid too-close overlap with existing spawned camps
+		var too_close = false
+		for existing in _spawned_camps:
+			if is_instance_valid(existing) and pos.distance_to(existing.position) < 400.0:
+				too_close = true
+				break
+		if not too_close:
+			return pos
+	# Fallback: just return a valid position
+	return Vector2(_wave_rng.randf_range(-5000, 5000), _wave_rng.randf_range(-3800, 3800))
 
 func _on_heal_beacon(_b: Area2D) -> void:
 	var players = get_tree().get_nodes_in_group("player")

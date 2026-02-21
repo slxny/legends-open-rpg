@@ -49,7 +49,8 @@ func _init_asset_dirs() -> void:
 	for n in hero_names:
 		_asset_dirs[n] = "heroes"
 	# Enemies
-	for n in ["rat", "goblin", "wolf", "bandit", "skeleton", "spider", "troll", "dark_mage", "ogre", "ogre_boss"]:
+	for n in ["rat", "goblin", "wolf", "bandit", "skeleton", "spider", "troll", "dark_mage", "ogre", "ogre_boss",
+			"demon_knight", "ancient_golem", "shadow_wraith", "dragon_whelp", "infernal"]:
 		_asset_dirs[n] = "enemies"
 	# Environment
 	for n in ["tree_jungle", "tree_small", "tree_dead", "rock", "rock_large",
@@ -110,6 +111,12 @@ func _generate_all() -> void:
 	_gen_or_load("dark_mage")
 	_gen_or_load("ogre")
 	_gen_or_load("ogre_boss")
+	# Higher-tier enemies
+	_gen_or_load("demon_knight")
+	_gen_or_load("ancient_golem")
+	_gen_or_load("shadow_wraith")
+	_gen_or_load("dragon_whelp")
+	_gen_or_load("infernal")
 	# Environment
 	_gen_or_load("tree_jungle")
 	_gen_or_load("tree_small")
@@ -1994,6 +2001,267 @@ func _gen_ogre_boss() -> void:
 	_fill_rect(img, 39, 12, 6, 1, c["chain"])
 	_fill_rect(img, 39, 16, 6, 1, c["chain"])
 	textures["ogre_boss"] = ImageTexture.create_from_image(img)
+
+# ---- DEMON KNIGHT: Dark armored figure, red accents, horned helm ----
+func _gen_demon_knight() -> void:
+	var img = Image.create(32, 32, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = {
+		"armor": Color(0.15, 0.05, 0.05),  # Very dark red-black
+		"trim": Color(0.7, 0.15, 0.1),     # Glowing red trim
+		"skin": Color(0.35, 0.15, 0.1),    # Dark reddish skin
+		"eyes": Color(1.0, 0.2, 0.0),      # Fiery orange eyes
+		"sword": Color(0.5, 0.5, 0.55),    # Steel blade
+		"blade_glow": Color(0.8, 0.2, 0.1),# Red glowing edge
+		"horn": Color(0.2, 0.08, 0.05),
+	}
+	# Shadow
+	_fill_ellipse(img, 16, 30, 8, 2, Color(0, 0, 0, 0.4))
+	# Legs
+	_fill_rect(img, 11, 24, 4, 6, c["armor"])
+	_fill_rect(img, 17, 24, 4, 6, c["armor"])
+	_fill_rect(img, 11, 28, 4, 2, c["trim"])
+	_fill_rect(img, 17, 28, 4, 2, c["trim"])
+	# Body — heavy plate armor
+	_fill_rect(img, 9, 14, 14, 11, c["armor"])
+	_fill_rect(img, 10, 15, 12, 9, Color(0.2, 0.07, 0.07))
+	# Shoulder pauldrons
+	_fill_rect(img, 6, 13, 5, 4, c["armor"])
+	_fill_rect(img, 21, 13, 5, 4, c["armor"])
+	_fill_rect(img, 7, 14, 3, 2, c["trim"])
+	_fill_rect(img, 22, 14, 3, 2, c["trim"])
+	# Head — horned helm
+	_fill_rect(img, 12, 5, 8, 9, c["armor"])
+	_fill_rect(img, 13, 6, 6, 7, c["skin"])
+	_fill_rect(img, 14, 8, 2, 2, c["eyes"])
+	_fill_rect(img, 18, 8, 2, 2, c["eyes"])
+	# Horns
+	_fill_rect(img, 10, 2, 2, 6, c["horn"])
+	_fill_rect(img, 20, 2, 2, 6, c["horn"])
+	_fill_rect(img, 9, 1, 2, 2, c["horn"])
+	_fill_rect(img, 21, 1, 2, 2, c["horn"])
+	# Red visor slit
+	_fill_rect(img, 13, 8, 6, 1, c["trim"])
+	# Sword in right hand
+	_fill_rect(img, 26, 4, 2, 22, c["sword"])
+	_fill_rect(img, 25, 4, 4, 3, c["blade_glow"])
+	_fill_rect(img, 25, 22, 4, 3, c["trim"])
+	# Chest emblem — red V
+	_fill_rect(img, 14, 18, 2, 2, c["trim"])
+	_fill_rect(img, 18, 18, 2, 2, c["trim"])
+	_fill_rect(img, 15, 20, 2, 2, c["trim"])
+	_fill_rect(img, 17, 20, 2, 2, c["trim"])
+	textures["demon_knight"] = ImageTexture.create_from_image(img)
+
+# ---- ANCIENT GOLEM: Massive stone/crystal construct, glowing runes ----
+func _gen_ancient_golem() -> void:
+	var img = Image.create(40, 40, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = {
+		"stone": Color(0.35, 0.32, 0.28),
+		"stone_dark": Color(0.22, 0.2, 0.18),
+		"rune": Color(0.2, 0.7, 1.0),       # Blue glowing runes
+		"crystal": Color(0.3, 0.8, 0.9),
+		"eye": Color(0.1, 0.9, 1.0),
+		"moss": Color(0.15, 0.3, 0.1),
+	}
+	# Shadow
+	_fill_ellipse(img, 20, 38, 12, 3, Color(0, 0, 0, 0.5))
+	# Legs — thick stone pillars
+	_fill_rect(img, 10, 28, 7, 10, c["stone_dark"])
+	_fill_rect(img, 23, 28, 7, 10, c["stone_dark"])
+	_fill_rect(img, 11, 29, 5, 8, c["stone"])
+	_fill_rect(img, 24, 29, 5, 8, c["stone"])
+	# Body — massive stone torso
+	_fill_rect(img, 8, 14, 24, 16, c["stone_dark"])
+	_fill_rect(img, 9, 15, 22, 14, c["stone"])
+	_fill_rect(img, 10, 16, 20, 12, Color(0.38, 0.35, 0.3))
+	# Glowing rune lines on body
+	_fill_rect(img, 12, 18, 1, 8, c["rune"])
+	_fill_rect(img, 27, 18, 1, 8, c["rune"])
+	_fill_rect(img, 16, 22, 8, 1, c["rune"])
+	_fill_rect(img, 18, 20, 4, 1, c["rune"])
+	_fill_rect(img, 18, 24, 4, 1, c["rune"])
+	# Arms — stone blocks
+	_fill_rect(img, 3, 16, 6, 14, c["stone_dark"])
+	_fill_rect(img, 31, 16, 6, 14, c["stone_dark"])
+	_fill_rect(img, 4, 17, 4, 12, c["stone"])
+	_fill_rect(img, 32, 17, 4, 12, c["stone"])
+	# Runes on arms
+	_fill_rect(img, 5, 20, 2, 1, c["rune"])
+	_fill_rect(img, 33, 20, 2, 1, c["rune"])
+	# Head — angular stone block
+	_fill_rect(img, 13, 4, 14, 11, c["stone_dark"])
+	_fill_rect(img, 14, 5, 12, 9, c["stone"])
+	# Eyes — glowing
+	_fill_rect(img, 16, 7, 3, 3, c["eye"])
+	_fill_rect(img, 22, 7, 3, 3, c["eye"])
+	_fill_rect(img, 17, 8, 1, 1, Color(1, 1, 1))
+	_fill_rect(img, 23, 8, 1, 1, Color(1, 1, 1))
+	# Moss patches
+	_fill_rect(img, 8, 14, 3, 2, c["moss"])
+	_fill_rect(img, 29, 14, 3, 2, c["moss"])
+	_fill_rect(img, 14, 28, 4, 2, c["moss"])
+	textures["ancient_golem"] = ImageTexture.create_from_image(img)
+
+# ---- SHADOW WRAITH: Spectral floating figure, purple/black wisps ----
+func _gen_shadow_wraith() -> void:
+	var img = Image.create(28, 32, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = {
+		"cloak": Color(0.1, 0.05, 0.15, 0.85),
+		"cloak_edge": Color(0.2, 0.1, 0.3, 0.6),
+		"face": Color(0.15, 0.08, 0.2),
+		"eyes": Color(0.6, 0.1, 1.0),
+		"wisp": Color(0.4, 0.15, 0.7, 0.5),
+		"scythe_handle": Color(0.2, 0.15, 0.1),
+		"scythe_blade": Color(0.5, 0.55, 0.6),
+	}
+	# Wispy shadow beneath (no solid shadow)
+	_fill_ellipse(img, 14, 30, 8, 2, Color(0.1, 0.05, 0.15, 0.3))
+	# Tattered cloak body — elongated and flowing
+	_fill_rect(img, 8, 10, 12, 18, c["cloak"])
+	_fill_rect(img, 7, 12, 14, 14, c["cloak"])
+	# Tattered edges
+	_fill_rect(img, 6, 24, 2, 4, c["cloak_edge"])
+	_fill_rect(img, 20, 24, 2, 4, c["cloak_edge"])
+	_fill_rect(img, 9, 26, 2, 4, c["cloak_edge"])
+	_fill_rect(img, 17, 26, 2, 4, c["cloak_edge"])
+	_fill_rect(img, 12, 28, 4, 3, c["cloak_edge"])
+	# Hood
+	_fill_rect(img, 9, 4, 10, 8, c["cloak"])
+	_fill_rect(img, 8, 5, 12, 6, c["cloak"])
+	# Dark face void
+	_fill_rect(img, 10, 6, 8, 5, c["face"])
+	# Glowing eyes
+	_fill_rect(img, 11, 7, 2, 2, c["eyes"])
+	_fill_rect(img, 16, 7, 2, 2, c["eyes"])
+	# Wisp tendrils
+	_fill_rect(img, 5, 18, 1, 6, c["wisp"])
+	_fill_rect(img, 22, 18, 1, 6, c["wisp"])
+	_fill_rect(img, 4, 22, 1, 4, c["wisp"])
+	_fill_rect(img, 23, 22, 1, 4, c["wisp"])
+	# Scythe
+	_fill_rect(img, 23, 2, 2, 24, c["scythe_handle"])
+	_fill_rect(img, 24, 2, 4, 2, c["scythe_blade"])
+	_fill_rect(img, 25, 3, 3, 5, c["scythe_blade"])
+	_fill_rect(img, 24, 6, 2, 3, c["scythe_blade"])
+	textures["shadow_wraith"] = ImageTexture.create_from_image(img)
+
+# ---- DRAGON WHELP: Small dragon, wings spread, fiery colours ----
+func _gen_dragon_whelp() -> void:
+	var img = Image.create(36, 32, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = {
+		"scales": Color(0.6, 0.15, 0.05),
+		"belly": Color(0.85, 0.6, 0.2),
+		"wing": Color(0.5, 0.1, 0.05, 0.8),
+		"wing_membrane": Color(0.7, 0.25, 0.1, 0.6),
+		"eye": Color(1.0, 0.8, 0.0),
+		"horn": Color(0.3, 0.15, 0.05),
+		"claw": Color(0.2, 0.12, 0.05),
+		"fire": Color(1.0, 0.4, 0.0),
+	}
+	# Shadow
+	_fill_ellipse(img, 18, 30, 10, 2, Color(0, 0, 0, 0.35))
+	# Hind legs
+	_fill_rect(img, 12, 24, 4, 6, c["scales"])
+	_fill_rect(img, 20, 24, 4, 6, c["scales"])
+	_fill_rect(img, 11, 28, 2, 2, c["claw"])
+	_fill_rect(img, 24, 28, 2, 2, c["claw"])
+	# Body
+	_fill_rect(img, 10, 16, 16, 10, c["scales"])
+	_fill_rect(img, 12, 18, 12, 6, c["belly"])
+	# Wings (spread out)
+	# Left wing
+	_fill_rect(img, 1, 8, 10, 12, c["wing"])
+	_fill_rect(img, 2, 10, 8, 8, c["wing_membrane"])
+	_fill_rect(img, 1, 8, 2, 3, c["scales"])
+	# Right wing
+	_fill_rect(img, 25, 8, 10, 12, c["wing"])
+	_fill_rect(img, 26, 10, 8, 8, c["wing_membrane"])
+	_fill_rect(img, 33, 8, 2, 3, c["scales"])
+	# Neck
+	_fill_rect(img, 14, 10, 8, 7, c["scales"])
+	_fill_rect(img, 15, 12, 6, 4, c["belly"])
+	# Head
+	_fill_rect(img, 13, 4, 10, 7, c["scales"])
+	_fill_rect(img, 14, 5, 8, 5, Color(0.65, 0.18, 0.08))
+	# Snout
+	_fill_rect(img, 15, 8, 6, 3, c["scales"])
+	# Eyes
+	_fill_rect(img, 15, 5, 2, 2, c["eye"])
+	_fill_rect(img, 19, 5, 2, 2, c["eye"])
+	# Horns
+	_fill_rect(img, 13, 2, 2, 4, c["horn"])
+	_fill_rect(img, 21, 2, 2, 4, c["horn"])
+	# Fire breath
+	_fill_rect(img, 16, 10, 4, 2, c["fire"])
+	_fill_rect(img, 15, 11, 6, 1, Color(1.0, 0.6, 0.0, 0.7))
+	# Tail
+	_fill_rect(img, 18, 25, 3, 6, c["scales"])
+	_fill_rect(img, 19, 29, 2, 3, c["scales"])
+	textures["dragon_whelp"] = ImageTexture.create_from_image(img)
+
+# ---- INFERNAL: Massive fire demon, lava cracks, burning aura ----
+func _gen_infernal() -> void:
+	var img = Image.create(40, 44, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = {
+		"body": Color(0.15, 0.05, 0.02),
+		"lava": Color(1.0, 0.4, 0.0),
+		"lava_bright": Color(1.0, 0.7, 0.1),
+		"rock": Color(0.2, 0.1, 0.05),
+		"eye": Color(1.0, 0.9, 0.2),
+		"horn": Color(0.25, 0.1, 0.05),
+		"fire": Color(1.0, 0.3, 0.0, 0.7),
+	}
+	# Shadow
+	_fill_ellipse(img, 20, 42, 12, 3, Color(0, 0, 0, 0.5))
+	# Legs — rocky with lava cracks
+	_fill_rect(img, 10, 30, 7, 12, c["body"])
+	_fill_rect(img, 23, 30, 7, 12, c["body"])
+	_fill_rect(img, 12, 34, 1, 6, c["lava"])
+	_fill_rect(img, 25, 34, 1, 6, c["lava"])
+	# Body — massive dark form with lava veins
+	_fill_rect(img, 7, 16, 26, 16, c["body"])
+	_fill_rect(img, 8, 17, 24, 14, Color(0.18, 0.07, 0.03))
+	# Lava veins across body
+	_fill_rect(img, 12, 20, 1, 8, c["lava"])
+	_fill_rect(img, 27, 20, 1, 8, c["lava"])
+	_fill_rect(img, 15, 24, 10, 1, c["lava"])
+	_fill_rect(img, 18, 20, 4, 1, c["lava_bright"])
+	_fill_rect(img, 16, 28, 8, 1, c["lava"])
+	# Chest lava core
+	_fill_rect(img, 17, 22, 6, 4, c["lava"])
+	_fill_rect(img, 18, 23, 4, 2, c["lava_bright"])
+	# Arms — rocky pillars
+	_fill_rect(img, 2, 18, 6, 16, c["body"])
+	_fill_rect(img, 32, 18, 6, 16, c["body"])
+	_fill_rect(img, 3, 19, 4, 14, c["rock"])
+	_fill_rect(img, 33, 19, 4, 14, c["rock"])
+	_fill_rect(img, 4, 24, 1, 6, c["lava"])
+	_fill_rect(img, 34, 24, 1, 6, c["lava"])
+	# Head
+	_fill_rect(img, 13, 4, 14, 13, c["body"])
+	_fill_rect(img, 14, 5, 12, 11, Color(0.2, 0.08, 0.04))
+	# Eyes — blazing
+	_fill_rect(img, 16, 8, 3, 3, c["eye"])
+	_fill_rect(img, 22, 8, 3, 3, c["eye"])
+	_fill_rect(img, 17, 9, 1, 1, Color(1, 1, 1))
+	_fill_rect(img, 23, 9, 1, 1, Color(1, 1, 1))
+	# Mouth — lava glow
+	_fill_rect(img, 17, 12, 6, 2, c["lava"])
+	# Horns — large and curved
+	_fill_rect(img, 10, 1, 3, 8, c["horn"])
+	_fill_rect(img, 27, 1, 3, 8, c["horn"])
+	_fill_rect(img, 8, 0, 3, 3, c["horn"])
+	_fill_rect(img, 29, 0, 3, 3, c["horn"])
+	# Fire wisps above head
+	_fill_rect(img, 15, 1, 2, 3, c["fire"])
+	_fill_rect(img, 23, 1, 2, 3, c["fire"])
+	_fill_rect(img, 19, 0, 2, 4, c["fire"])
+	textures["infernal"] = ImageTexture.create_from_image(img)
 
 # ============================================================
 # ENVIRONMENT SPRITES

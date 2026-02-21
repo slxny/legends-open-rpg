@@ -113,6 +113,36 @@ func play_music_direct(music_name: String) -> void:
 	_music_player.volume_db = _music_volume_db
 	_music_player.play()
 
+var _saved_rotation_tracks: Array[String] = []
+var _saved_rotation_active: bool = false
+
+## Temporarily override music (e.g. for boss fights). Pauses rotation.
+func override_music(music_name: String) -> void:
+	if _rotation_active:
+		_saved_rotation_tracks = _rotation_tracks.duplicate()
+		_saved_rotation_active = true
+		stop_rotation()
+	play_music_direct(music_name)
+
+## Restore the normal rotation after a boss override. If oneshot_first plays a short track first (e.g. victory fanfare), then resumes.
+func restore_music(oneshot_first: String = "") -> void:
+	if oneshot_first != "":
+		play_music_direct(oneshot_first)
+		# After the oneshot track finishes, resume rotation
+		if not _music_player.finished.is_connected(_on_oneshot_done):
+			_music_player.finished.connect(_on_oneshot_done, CONNECT_ONE_SHOT)
+	else:
+		_resume_rotation()
+
+func _on_oneshot_done() -> void:
+	_resume_rotation()
+
+func _resume_rotation() -> void:
+	if _saved_rotation_active and _saved_rotation_tracks.size() > 0:
+		start_rotation(_saved_rotation_tracks, 60.0, 300.0)
+		_saved_rotation_active = false
+		_saved_rotation_tracks.clear()
+
 # ============================================================
 # PLAYER SETUP
 # ============================================================
@@ -556,6 +586,10 @@ func _generate_all_music() -> void:
 	_music_cache["pirate_jig"] = _gen_pirate_jig()
 	_music_cache["dark_cathedral"] = _gen_dark_cathedral()
 	_music_cache["desert_caravan"] = _gen_desert_caravan()
+	_music_cache["boss_encounter"] = _gen_boss_encounter()
+	_music_cache["boss_idle"] = _gen_boss_idle()
+	_music_cache["boss_victory"] = _gen_boss_victory()
+	_music_cache["wave_warning"] = _gen_wave_warning()
 
 # ---- Track 1: WAR DRUMS — Aggressive tribal percussion, deep bass, chanting ----
 func _gen_war_drums() -> AudioStreamWAV:
@@ -1061,3 +1095,233 @@ func _gen_desert_caravan() -> AudioStreamWAV:
 		samples[samples.size() - fade_len + i] *= (1.0 - frac)
 		samples[i] *= frac
 	return _to_stream(samples, true)
+
+# ---- BOSS ENCOUNTER — Intense, driving, menacing combat music ----
+func _gen_boss_encounter() -> AudioStreamWAV:
+	var dur = 30.0
+	var samples = _make_samples(dur)
+	var rng = RandomNumberGenerator.new()
+	rng.seed = 7777
+
+	# Aggressive double-time kick/snare — frantic combat pulse
+	var beat = 0.25  # Fast tempo
+	for i in range(samples.size()):
+		var t = float(i) / SAMPLE_RATE
+		var bar_t = fmod(t, beat * 8.0)
+		var beat_num = int(bar_t / beat) % 8
+		var bt = fmod(bar_t, beat)
+		# Heavy kick on 0, 2, 4, 6
+		if beat_num % 2 == 0 and bt < 0.08:
+			var env = exp(-bt * 25.0) * 0.3
+			samples[i] += sin(t * 50.0 * TAU * (1.0 - bt * 2.5)) * env
+			samples[i] += sin(t * 100.0 * TAU) * env * 0.2
+		# Snare on 1, 3, 5, 7
+		elif bt < 0.06:
+			var env = exp(-bt * 35.0) * 0.15
+			samples[i] += sin(t * 200.0 * TAU) * env * 0.5
+			samples[i] += rng.randf_range(-1.0, 1.0) * env * 0.6
+
+	# Menacing bass riff — chromatic descending in minor
+	# E2=82.4, Eb2=77.8, D2=73.4, Db2=69.3, C2=65.4, B1=61.7
+	var bass_riff = [82.41, 82.41, 77.78, 73.42, 69.30, 65.41, 61.74, 65.41]
+	var riff_note_dur = beat * 2.0  # Each bass note = 2 beats
+	for i in range(samples.size()):
+		var t = float(i) / SAMPLE_RATE
+		var riff_cycle = fmod(t, riff_note_dur * bass_riff.size())
+		var ri = int(riff_cycle / riff_note_dur) % bass_riff.size()
+		var bf = bass_riff[ri]
+		var note_t = fmod(riff_cycle, riff_note_dur)
+		var benv = 0.18 * exp(-note_t * 1.5)
+		# Distorted bass — heavy harmonics
+		samples[i] += sin(t * bf * TAU) * benv
+		samples[i] += sin(t * bf * 2.0 * TAU) * benv * 0.5
+		samples[i] += sin(t * bf * 3.0 * TAU) * benv * 0.25
+		samples[i] += sin(t * bf * 4.0 * TAU) * benv * 0.12
+
+	# Dissonant power chord stabs — diminished chord hits
+	var stab_times = [0.0, 2.0, 4.0, 4.5, 6.0, 8.0, 10.0, 10.5, 12.0, 14.0]
+	var stab_cycle = 16.0
+	for i in range(samples.size()):
+		var t = float(i) / SAMPLE_RATE
+		var ct = fmod(t, stab_cycle)
+		for st in stab_times:
+			var dt = ct - st
+			if dt >= 0.0 and dt < 0.4:
+				var env = exp(-dt * 5.0) * 0.08
+				# Diminished chord: E, G, Bb — dissonant and menacing
+				samples[i] += sin(t * 164.81 * TAU) * env
+				samples[i] += sin(t * 196.0 * TAU) * env * 0.8
+				samples[i] += sin(t * 233.08 * TAU) * env * 0.7
+				samples[i] += sin(t * 329.63 * TAU) * env * 0.4
+
+	# Ominous string tremolo — high tension
+	for i in range(samples.size()):
+		var t = float(i) / SAMPLE_RATE
+		var trem = 0.5 + 0.5 * sin(t * 14.0 * TAU)
+		var section = int(t / 7.5) % 4
+		var str_vol = [0.03, 0.04, 0.05, 0.06][section] * trem
+		# High minor second cluster — maximum tension
+		samples[i] += sin(t * 622.25 * TAU) * str_vol
+		samples[i] += sin(t * 659.25 * TAU) * str_vol * 0.8
+
+	_soft_clip(samples, 2.2)
+	var fade_len = int(1.0 * SAMPLE_RATE)
+	for i in range(fade_len):
+		var frac = float(i) / fade_len
+		samples[samples.size() - fade_len + i] *= (1.0 - frac)
+		samples[i] *= frac
+	return _to_stream(samples, true)
+
+# ---- BOSS IDLE — Low menacing drone, ambient danger when boss is nearby but not aggroed ----
+func _gen_boss_idle() -> AudioStreamWAV:
+	var dur = 20.0
+	var samples = _make_samples(dur)
+	var rng = RandomNumberGenerator.new()
+	rng.seed = 6666
+
+	# Deep rumbling drone
+	for i in range(samples.size()):
+		var t = float(i) / SAMPLE_RATE
+		var drone_f = 45.0 + 3.0 * sin(t * 0.15 * TAU)
+		var drone_vol = 0.08 + 0.03 * sin(t * 0.1 * TAU)
+		samples[i] += sin(t * drone_f * TAU) * drone_vol
+		samples[i] += sin(t * drone_f * 1.5 * TAU) * drone_vol * 0.4
+		samples[i] += sin(t * drone_f * 2.0 * TAU) * drone_vol * 0.15
+
+	# Heartbeat-like pulse
+	var hb_period = 1.2
+	for i in range(samples.size()):
+		var t = float(i) / SAMPLE_RATE
+		var hbt = fmod(t, hb_period)
+		# Double thump like a heartbeat
+		if hbt < 0.1:
+			var env = exp(-hbt * 20.0) * 0.12
+			samples[i] += sin(t * 40.0 * TAU) * env
+		elif hbt > 0.2 and hbt < 0.3:
+			var env = exp(-(hbt - 0.2) * 25.0) * 0.08
+			samples[i] += sin(t * 35.0 * TAU) * env
+
+	# Creepy whisper layer
+	var w_rng = RandomNumberGenerator.new()
+	w_rng.seed = 3333
+	var wpv = 0.0
+	for i in range(samples.size()):
+		var t = float(i) / SAMPLE_RATE
+		var raw = w_rng.randf_range(-1.0, 1.0)
+		wpv = wpv * 0.97 + raw * 0.03
+		var wvol = (0.5 + 0.5 * sin(t * 0.06 * TAU)) * 0.02
+		samples[i] += wpv * wvol
+
+	_soft_clip(samples, 1.3)
+	var fade_len = int(1.5 * SAMPLE_RATE)
+	for i in range(fade_len):
+		var frac = float(i) / fade_len
+		samples[samples.size() - fade_len + i] *= (1.0 - frac)
+		samples[i] *= frac
+	return _to_stream(samples, true)
+
+# ---- BOSS VICTORY — Short triumphant fanfare after defeating a boss ----
+func _gen_boss_victory() -> AudioStreamWAV:
+	var dur = 6.0
+	var samples = _make_samples(dur)
+
+	# Triumphant brass fanfare: C major -> G major -> C major (up octave)
+	# C4=261.6, E4=329.6, G4=392.0, C5=523.3
+	var fanfare = [
+		[261.63, 0.0, 0.5],  # C4
+		[329.63, 0.4, 0.5],  # E4
+		[392.0, 0.8, 0.6],   # G4
+		[523.25, 1.3, 1.2],  # C5 (held longer)
+		[659.25, 2.3, 0.6],  # E5
+		[784.0, 2.8, 1.5],   # G5 (final note, held long)
+	]
+	for note in fanfare:
+		var freq = note[0]
+		var start = note[1]
+		var ndur = note[2]
+		var ns = _make_samples(ndur + 0.5)
+		for i in range(ns.size()):
+			var t = float(i) / SAMPLE_RATE
+			var nf = t / ndur
+			var vib = 1.0 + 0.003 * sin(t * 5.0 * TAU) * clampf(t - 0.1, 0.0, 1.0)
+			var f = freq * vib
+			# Brass: odd harmonics stronger
+			ns[i] = sin(t * f * TAU) * 0.06
+			ns[i] += sin(t * f * 2.0 * TAU) * 0.03
+			ns[i] += sin(t * f * 3.0 * TAU) * 0.04
+			ns[i] += sin(t * f * 4.0 * TAU) * 0.015
+			ns[i] += sin(t * f * 5.0 * TAU) * 0.02
+			var env = min(t * 15.0, 1.0) * maxf(0.0, 1.0 - maxf(nf - 0.7, 0.0) * 3.3)
+			ns[i] *= env
+		_mix_into(samples, ns, int(start * SAMPLE_RATE))
+
+	# Cymbal crash at the climax
+	var crash_start = int(1.3 * SAMPLE_RATE)
+	var crash_dur = int(3.0 * SAMPLE_RATE)
+	var c_rng = RandomNumberGenerator.new()
+	c_rng.seed = 1234
+	for i in range(crash_dur):
+		var di = crash_start + i
+		if di >= samples.size():
+			break
+		var t = float(i) / SAMPLE_RATE
+		var env = exp(-t * 1.5) * 0.06
+		samples[di] += c_rng.randf_range(-1.0, 1.0) * env
+		samples[di] += sin(float(di) / SAMPLE_RATE * 3000.0 * TAU) * env * 0.1
+
+	_soft_clip(samples, 1.5)
+	# Fade out at end
+	var fade_len = int(1.5 * SAMPLE_RATE)
+	for i in range(fade_len):
+		var frac = float(i) / fade_len
+		samples[samples.size() - fade_len + i] *= (1.0 - frac)
+	# Fade in at start
+	var fade_in = int(0.1 * SAMPLE_RATE)
+	for i in range(fade_in):
+		samples[i] *= float(i) / fade_in
+	return _to_stream(samples, false)
+
+# ---- WAVE WARNING — Short ominous stinger when a new wave of enemies spawns ----
+func _gen_wave_warning() -> AudioStreamWAV:
+	var dur = 3.0
+	var samples = _make_samples(dur)
+
+	# Descending brass stab — warning horn
+	var horn_notes = [220.0, 196.0, 174.61, 164.81]
+	var note_dur = 0.4
+	for ni in range(horn_notes.size()):
+		var freq = horn_notes[ni]
+		var start = ni * note_dur * 0.8
+		var ns = _make_samples(note_dur + 0.3)
+		for i in range(ns.size()):
+			var t = float(i) / SAMPLE_RATE
+			var vib = 1.0 + 0.005 * sin(t * 6.0 * TAU)
+			var f = freq * vib
+			ns[i] = sin(t * f * TAU) * 0.08
+			ns[i] += sin(t * f * 2.0 * TAU) * 0.04
+			ns[i] += sin(t * f * 3.0 * TAU) * 0.05
+			var env = min(t * 20.0, 1.0) * exp(-t * 3.0)
+			ns[i] *= env
+		_mix_into(samples, ns, int(start * SAMPLE_RATE))
+
+	# Timpani roll underneath
+	var t_rng = RandomNumberGenerator.new()
+	t_rng.seed = 8888
+	var roll_t = 0.0
+	while roll_t < 2.0:
+		var ti = int(roll_t * SAMPLE_RATE)
+		var tdur = int(0.08 * SAMPLE_RATE)
+		for i in range(tdur):
+			var di = ti + i
+			if di >= samples.size():
+				break
+			var t = float(i) / SAMPLE_RATE
+			var env = exp(-t * 18.0) * 0.1
+			samples[di] += sin(float(di) / SAMPLE_RATE * 65.0 * TAU) * env
+		roll_t += t_rng.randf_range(0.06, 0.12)
+
+	_soft_clip(samples, 1.5)
+	var fade_len = int(0.8 * SAMPLE_RATE)
+	for i in range(fade_len):
+		samples[samples.size() - fade_len + i] *= 1.0 - float(i) / fade_len
+	return _to_stream(samples, false)

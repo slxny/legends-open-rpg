@@ -23,6 +23,8 @@ var xp_reward: int = 15
 var gold_reward: int = 5
 var drop_table: String = ""
 var sprite_type: String = "goblin"
+var is_mini_boss: bool = false
+var _boss_music_active: bool = false
 
 var _attack_timer: float = 0.0
 var _is_dead: bool = false
@@ -111,6 +113,7 @@ func initialize(config: Dictionary) -> void:
 	gold_reward = config.get("gold_reward", 5)
 	drop_table = config.get("drop_table", "")
 	sprite_type = config.get("sprite_type", "goblin")
+	is_mini_boss = config.get("is_mini_boss", false)
 
 	stats.max_hp = 30 + enemy_level * 15
 	stats.current_hp = stats.max_hp
@@ -150,7 +153,13 @@ func initialize(config: Dictionary) -> void:
 		var tex = SpriteGenerator.get_texture(sprite_type)
 		if tex:
 			sprite.texture = tex
-		name_label.text = "%s Lv%d" % [enemy_name, enemy_level]
+		if is_mini_boss:
+			name_label.text = "BOSS: %s Lv%d" % [enemy_name, enemy_level]
+			name_label.add_theme_color_override("font_color", Color(1.0, 0.3, 0.3))
+			name_label.visible = true
+			hp_bar.visible = true
+		else:
+			name_label.text = "%s Lv%d" % [enemy_name, enemy_level]
 		_update_hp_bar()
 
 func show_selection() -> void:
@@ -206,6 +215,9 @@ func _process_idle(delta: float) -> void:
 		target = player
 		current_state = State.CHASE
 		name_label.visible = true
+		if is_mini_boss and not _boss_music_active:
+			_boss_music_active = true
+			AudioManager.override_music("boss_encounter")
 		return
 
 	# Count down idle pause, then pick a patrol waypoint
@@ -227,6 +239,9 @@ func _process_patrol(delta: float) -> void:
 		target = player
 		current_state = State.CHASE
 		name_label.visible = true
+		if is_mini_boss and not _boss_music_active:
+			_boss_music_active = true
+			AudioManager.override_music("boss_encounter")
 		return
 
 	var dist_sq_to_target = global_position.distance_squared_to(_patrol_target)
@@ -317,8 +332,11 @@ func _process_return(delta: float) -> void:
 		stats.current_hp = stats.max_hp
 		_update_hp_bar()
 		_patrol_wait_timer = randf_range(0.3, 1.0)
-		if not _is_selected:
+		if not _is_selected and not is_mini_boss:
 			name_label.visible = false
+		if is_mini_boss and _boss_music_active:
+			_boss_music_active = false
+			AudioManager.restore_music()
 		return
 
 	var dir = (home_position - global_position).normalized()
@@ -374,7 +392,14 @@ func _die() -> void:
 	_is_dead = true
 	collision_layer = 0
 	collision_mask = 0
-	AudioManager.play_sfx("enemy_death", -3.0)
+	if is_mini_boss:
+		AudioManager.play_sfx("level_up")  # Triumphant sound for boss kill
+		if _boss_music_active:
+			_boss_music_active = false
+			AudioManager.restore_music("boss_victory")
+		GameManager.game_message.emit("BOSS DEFEATED: %s!" % enemy_name, Color(1.0, 0.85, 0.2))
+	else:
+		AudioManager.play_sfx("enemy_death", -3.0)
 	died.emit(self, xp_reward, gold_reward)
 	_spawn_gold_drop(gold_reward)
 	_spawn_blood_splatter()

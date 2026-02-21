@@ -8,9 +8,19 @@ extends CanvasLayer
 
 var _is_visible: bool = false
 
-const GAME_VERSION := "v0.14.0"
+const GAME_VERSION := "v0.15.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.15.0",
+		"title": "Combat & Equipment Fixes",
+		"entries": [
+			"Clicking or spacebar-attacking an enemy now auto-attacks until you move or act",
+			"Player automatically chases target if it walks out of melee range",
+			"Equipping items now shows an error message when level requirement is not met",
+			"Ravager's Cleaver can now be equipped immediately after dropping",
+		]
+	},
 	{
 		"version": "v0.14.0",
 		"title": "Clickable Tree Harvesting",

@@ -719,8 +719,8 @@ func _execute_whirlwind(attack_dir: Vector2) -> void:
 	_anim_return_to_idle(tween, base_pos)
 
 func _execute_charged_slash(attack_dir: Vector2) -> void:
-	# Hold attack 1.5s: Devastating long-range slash that cleaves 3.5x further
-	# in one direction, damaging all enemies in the path
+	# Hold attack 1.5s: Dash the full slash range with running animation,
+	# cleaving all enemies in the path. 1.6x damage.
 	_is_attack_animating = true
 	_attack_cooldown = 0.8 / stats.attack_speed
 	var dir = attack_dir
@@ -745,41 +745,109 @@ func _execute_charged_slash(attack_dir: Vector2) -> void:
 			if dir.dot(to_enemy) > 0.0:
 				slash_targets.append(enemy)
 
-	# Use thrust frames for the release
+	# Use thrust frames for the final slash impact
 	var frames = _combo_swings[3] if _combo_swings.size() > 3 else []
 
+	# Walk frames for running animation during the dash
+	var walk_tex = _walk_frames.get(_facing_cat, []) as Array
+	var idle_tex = _dir_textures.get(_facing_cat, _idle_texture)
+	var run_cycle: Array = []
+	if walk_tex.size() == 3 and idle_tex:
+		run_cycle = [idle_tex, walk_tex[0], walk_tex[1], walk_tex[2]]
+
+	# Dash timing: snappy but visible, scales with distance
+	var dash_duration := clampf(slash_range / 500.0, 0.15, 0.40)
+
 	var tween = create_tween()
-	# Already charged up — now RELEASE. Brief coil then explosive lunge
-	if frames.size() >= 3:
-		tween.tween_callback(func(): sprite.texture = frames[0])
-	# Bright flash on release
+
+	# --- COIL: Brief pull-back with golden flash ---
 	tween.tween_callback(func(): sprite.modulate = Color(2.0, 1.8, 1.0))
 	tween.tween_property(sprite, "position", base_pos - dir * 4.0, 0.04)
-	tween.tween_property(sprite, "scale", Vector2(0.8, 1.3), 0.03)
+	tween.tween_property(sprite, "scale", Vector2(0.85, 1.2), 0.03)
+
+	# --- DASH: Running animation + afterimage trail (concurrent with body movement) ---
+	tween.tween_callback(func():
+		AudioManager.play_sfx("dash_swoosh")
+		# Running animation: rapid walk-frame cycling via separate tween
+		if run_cycle.size() == 4:
+			var run_steps = maxi(int(dash_duration / 0.05), 3)
+			var step_time = dash_duration / float(run_steps)
+			var run_tw = create_tween()
+			for j in range(run_steps):
+				# .bind() captures the texture value NOW, safe across loop iterations
+				run_tw.tween_callback(sprite.set.bind("texture", run_cycle[j % 4]))
+				run_tw.tween_interval(step_time)
+		# Afterimage trail: ghostly sprite copies left behind during the dash
+		var ghost_count = maxi(int(dash_duration / 0.06), 3)
+		var ghost_interval = dash_duration / float(ghost_count)
+		var ghost_tw = create_tween()
+		for _k in range(ghost_count):
+			ghost_tw.tween_callback(func():
+				var ghost = _get_pooled_vfx()
+				ghost.texture = sprite.texture
+				ghost.global_position = global_position
+				ghost.flip_h = sprite.flip_h
+				ghost.scale = sprite.scale
+				ghost.modulate = Color(1.0, 0.9, 0.3, 0.45)
+				ghost.z_index = -1
+				_get_world_node().add_child(ghost)
+				var gt = ghost.create_tween()
+				gt.tween_property(ghost, "modulate:a", 0.0, 0.25)
+				gt.tween_callback(_recycle_vfx.bind(ghost))
+			)
+			ghost_tw.tween_interval(ghost_interval)
+	)
+	# Physically move the character body forward + lean sprite into the run
+	tween.set_parallel(true)
+	tween.tween_property(self, "global_position", end_pos, dash_duration).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+	tween.tween_property(sprite, "position", base_pos + dir * 6.0, dash_duration * 0.3)
+	tween.set_parallel(false)
+
+	# --- SLASH IMPACT: devastating cleave at the end of the dash ---
 	if frames.size() >= 3:
 		tween.tween_callback(func(): sprite.texture = frames[1])
-	# Explosive forward lunge — longer than before to sell the extended range
-	tween.tween_property(sprite, "position", base_pos + dir * 32.0, 0.08)
-	if frames.size() >= 3:
-		tween.tween_callback(func(): sprite.texture = frames[2])
-	tween.tween_property(sprite, "position", base_pos + dir * 36.0, 0.03)
-	# Impact — hit ALL enemies along the extended slash path
 	tween.tween_callback(func():
 		sprite.modulate = Color.WHITE
-		# VFX: spawn slash arcs along the full path to visualize the range.
-		# _spawn_slash_vfx places VFX at direction * radius * 0.5, so pass dist * 2.
+		sprite.scale = Vector2(1.0, 1.0)
+		# Slash VFX arcs along the full trail (world-space positions from start to end)
+		var world = _get_world_node()
 		var vfx_steps := 4
 		for i in range(vfx_steps):
 			var frac = (float(i) + 0.5) / float(vfx_steps)
-			var vfx_dist = slash_range * frac
-			var vfx_radius = vfx_dist * 2.0  # Compensate for the 0.5 multiplier in _spawn_slash_vfx
+			var trail_pos = start_pos + dir * slash_range * frac
 			var vfx_scale = lerpf(2.2, 1.4, frac)
-			_spawn_slash_vfx(dir, vfx_radius, vfx_scale)
-			# Offset slash at slight angle for visual breadth
-			if i % 2 == 0:
-				_spawn_slash_vfx(dir.rotated(0.25), vfx_radius * 0.9, vfx_scale * 0.8)
-			else:
-				_spawn_slash_vfx(dir.rotated(-0.25), vfx_radius * 0.9, vfx_scale * 0.8)
+			# Main slash arc at this trail position
+			var s1 = _get_pooled_vfx()
+			s1.texture = _tex_slash_arc
+			s1.global_position = trail_pos
+			s1.rotation = dir.angle()
+			s1.scale = Vector2(vfx_scale, vfx_scale)
+			s1.modulate = Color(1.0, 0.9, 0.6, 0.9)
+			world.add_child(s1)
+			var t1 = s1.create_tween()
+			t1.set_parallel(true)
+			t1.tween_property(s1, "scale", s1.scale * 1.4, 0.15)
+			t1.tween_property(s1, "modulate:a", 0.0, 0.2)
+			t1.set_parallel(false)
+			t1.tween_callback(_recycle_vfx.bind(s1))
+			# Offset slash at alternating angle for visual width
+			var angle_off = 0.25 if i % 2 == 0 else -0.25
+			var s2 = _get_pooled_vfx()
+			s2.texture = _tex_slash_arc
+			s2.global_position = trail_pos + perp * 8.0 * (1.0 if i % 2 == 0 else -1.0)
+			s2.rotation = dir.rotated(angle_off).angle()
+			s2.scale = Vector2(vfx_scale * 0.8, vfx_scale * 0.8)
+			s2.modulate = Color(1.0, 0.9, 0.6, 0.9)
+			world.add_child(s2)
+			var t2 = s2.create_tween()
+			t2.set_parallel(true)
+			t2.tween_property(s2, "scale", s2.scale * 1.4, 0.15)
+			t2.tween_property(s2, "modulate:a", 0.0, 0.2)
+			t2.set_parallel(false)
+			t2.tween_callback(_recycle_vfx.bind(s2))
+		# Big final slash at the landing point
+		_spawn_slash_vfx(dir, 55.0, 2.5)
+		_spawn_slash_vfx(dir.rotated(0.3), 50.0, 1.8)
 		# Damage all enemies in the slash corridor
 		var hit_count := 0
 		for enemy in slash_targets:

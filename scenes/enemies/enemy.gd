@@ -463,6 +463,8 @@ func _process_attack(delta: float) -> void:
 			var result = CombatManager.calculate_damage(get_stats_dict(), target.get_stats_dict())
 			target.take_damage(result["damage"], result["is_crit"])
 			_do_attack_lunge()
+			if sprite_type == "rat":
+				AudioManager.play_sfx("rat_squeal", -4.0)
 			# Rare effect proc
 			if _effect_chance > 0.0 and randf() < _effect_chance:
 				_apply_effect_to_target(target)

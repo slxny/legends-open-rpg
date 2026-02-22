@@ -217,7 +217,7 @@ func _pregenerate_async() -> void:
 		"gold_pickup", "item_pickup", "level_up", "dash_swoosh",
 		"ability_whoosh", "power_strike", "whirlwind", "player_hurt",
 		"charge_loop", "charge_ready", "charge_release", "tree_chop",
-		"tree_fall"]
+		"tree_fall", "rat_squeal"]
 	var batch: int = 0
 	for sfx_name in sfx_names:
 		if _sfx_cache.has(sfx_name):
@@ -644,6 +644,20 @@ func _gen_tree_fall() -> AudioStreamWAV:
 	_mix_into(samples, thump, int(0.3 * SAMPLE_RATE))
 	_apply_envelope(samples, 0.01, 0.1, 0.4)
 	_soft_clip(samples, 1.4)
+	return _to_stream(samples)
+
+func _gen_rat_squeal() -> AudioStreamWAV:
+	# Short high-pitched rat squeak — piercing chirp with breathy rasp
+	var samples = _make_samples(0.14)
+	# Core squeal: sharp rising-then-falling high pitch
+	_pitch_sweep_sine(samples, 1800.0, 3200.0, 0.25)
+	_pitch_sweep_sine(samples, 2600.0, 2000.0, 0.15, 0.05)
+	# Second harmonic for shrillness
+	_pitch_sweep_sine(samples, 3600.0, 5000.0, 0.1)
+	# Breathy rasp layer — gives it that animal quality
+	_add_pitched_noise(samples, 3000.0, 2000.0, 0.12)
+	_apply_envelope(samples, 0.005, 0.03, 0.1)
+	_soft_clip(samples, 1.8)
 	return _to_stream(samples)
 
 # ============================================================

@@ -44,7 +44,7 @@ func _all_sprite_names() -> Array[String]:
 		"dirt", "dirt_path", "water", "stone_floor", "snow", "ice",
 		"terrain_blob", "dirt_patch"])
 	# Buildings & town structures
-	names.append_array(["town_wall_h", "watch_tower", "town_fountain",
+	names.append_array(["town_wall_h", "town_wall_v", "watch_tower", "town_fountain",
 		"shop_building", "armory_building", "inn_building", "barracks_building",
 		"stable_building", "chapel_building", "tavern_building",
 		"crate_stack", "barrel", "well", "lamp_post", "wall_torch",
@@ -134,7 +134,7 @@ func _init_asset_dirs() -> void:
 			"barracks_building", "inn_building", "watch_tower", "town_fountain",
 			"stable_building", "chapel_building", "tavern_building",
 			"crate_stack", "barrel", "well", "lamp_post", "wall_torch",
-			"town_wall_h", "woodworking_bench"]:
+			"town_wall_h", "town_wall_v", "woodworking_bench"]:
 		_asset_dirs[n] = "buildings"
 	# Beacons
 	for n in ["beacon_green", "beacon_yellow", "beacon_blue", "beacon_red", "beacon_cyan"]:
@@ -223,6 +223,7 @@ func _generate_all() -> void:
 	_gen_or_load("well")
 	_gen_or_load("lamp_post")
 	_gen_or_load("town_wall_h")
+	_gen_or_load("town_wall_v")
 	_gen_or_load("woodworking_bench")
 	_gen_or_load("town_grass")
 	_gen_or_load("landing_pad")
@@ -2895,6 +2896,19 @@ func _gen_town_wall_h() -> void:
 	# Mortar lines
 	_fill_rect(img, 0, 8, 40, 1, Color(0.38, 0.36, 0.32))
 	textures["town_wall_h"] = ImageTexture.create_from_image(img)
+
+func _gen_town_wall_v() -> void:
+	var img = Image.create(14, 40, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	# Wall body
+	_fill_rect(img, 4, 0, 10, 40, Color(0.42, 0.4, 0.36))
+	_fill_rect(img, 5, 0, 8, 40, Color(0.48, 0.45, 0.4))
+	# Crenellations (notches on left side)
+	for cy in range(0, 40, 8):
+		_fill_rect(img, 0, cy, 5, 4, Color(0.45, 0.42, 0.38))
+	# Mortar lines
+	_fill_rect(img, 8, 0, 1, 40, Color(0.38, 0.36, 0.32))
+	textures["town_wall_v"] = ImageTexture.create_from_image(img)
 
 func _gen_woodworking_bench() -> void:
 	var img = Image.create(44, 44, false, Image.FORMAT_RGBA8)

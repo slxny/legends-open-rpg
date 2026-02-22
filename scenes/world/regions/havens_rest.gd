@@ -349,11 +349,11 @@ func _generate_town() -> void:
 	# West wall segments (skip gate area around y=0)
 	for wy in range(-360, 361, 42):
 		if abs(wy) > 60:
-			_add_town_building(town, Vector2(-480, wy), "town_wall_h")
+			_add_town_building(town, Vector2(-480, wy), "town_wall_v")
 	# East wall segments
 	for wy in range(-360, 361, 42):
 		if abs(wy) > 60:
-			_add_town_building(town, Vector2(460, wy), "town_wall_h")
+			_add_town_building(town, Vector2(460, wy), "town_wall_v")
 
 	# ---- Watch towers at 4 corners ----
 	_add_town_building(town, Vector2(-460, -370), "watch_tower")

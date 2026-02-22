@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.26.0"
+const GAME_VERSION := "v0.27.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.27.0",
+		"title": "Combat Balance",
+		"date": "2026-02-21",
+		"entries": [
+			"Rat damage raised from 8 to 12 (they now bite harder)",
+			"Enemies can now override base attack damage per type",
+			"Removed passive HP regeneration — use potions and heal beacons instead",
+			"Mana still regenerates passively (needed for abilities)",
+		]
+	},
 	{
 		"version": "v0.26.0",
 		"title": "Pause Menu",

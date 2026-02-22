@@ -183,10 +183,6 @@ func process_regen(delta: float) -> void:
 	_regen_timer += delta
 	if _regen_timer >= 1.0:
 		_regen_timer -= 1.0
-		# HP regen: 1% + STR/20 per second
-		var hp_regen = max(1, int(get_total_max_hp() * 0.01 + (strength + bonus_strength) / 20.0))
-		if current_hp < get_total_max_hp():
-			heal(hp_regen)
 		# Mana regen: 2% + INT/15 per second
 		var mana_regen = max(1, int(get_total_max_mana() * 0.02 + (intelligence + bonus_intelligence) / 15.0))
 		if current_mana < get_total_max_mana():

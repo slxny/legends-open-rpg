@@ -189,7 +189,7 @@ func initialize(config: Dictionary) -> void:
 	stats.agility = 3 + enemy_level
 	stats.intelligence = 2 + enemy_level
 	stats.armor = enemy_level
-	stats.attack_damage = 5 + enemy_level * 3
+	stats.attack_damage = config.get("attack_damage", 5 + enemy_level * 3)
 	stats.attack_range = config.get("attack_range", 35.0)
 	stats.move_speed = config.get("move_speed", 80.0)
 	stats.primary_stat = "strength"

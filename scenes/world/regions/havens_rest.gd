@@ -379,13 +379,18 @@ func _generate_town() -> void:
 	_add_building_label(town, Vector2(280, -190), "Chapel")
 
 	# ---- Wall torches along the fortress walls ----
-	for wx in range(-420, 421, 84):
+	for wx in range(-450, 461, 42):
 		_add_wall_torch(town, Vector2(wx, -375))   # North wall
 		_add_wall_torch(town, Vector2(wx, 365))    # South wall
-	for wy in range(-320, 321, 84):
-		if abs(wy) > 70:  # Skip gate openings
+	for wy in range(-350, 361, 42):
+		if abs(wy) > 50:  # Skip gate openings
 			_add_wall_torch(town, Vector2(-475, wy))  # West wall
 			_add_wall_torch(town, Vector2(455, wy))    # East wall
+	# Gate entrance torches — flanking both sides of each gate
+	_add_wall_torch(town, Vector2(-475, -55))
+	_add_wall_torch(town, Vector2(-475, 55))
+	_add_wall_torch(town, Vector2(455, -55))
+	_add_wall_torch(town, Vector2(455, 55))
 
 	# ---- Lamp posts along the main roads ----
 	for lx in [-160, -80, 80, 160]:
@@ -426,6 +431,29 @@ func _generate_town() -> void:
 		if abs(qx) > 50 and abs(qy) > 50:
 			_add_grass_tuft($Decorations, Vector2(qx, qy))
 
+	# ---- Town trees with wind sway ----
+	# Along the inner north wall
+	_add_town_tree(town, Vector2(-380, -340))
+	_add_town_tree(town, Vector2(-180, -330))
+	_add_town_tree(town, Vector2(100, -340))
+	_add_town_tree(town, Vector2(370, -330))
+	# Near the inn (NW)
+	_add_town_tree(town, Vector2(-350, -250))
+	_add_town_tree(town, Vector2(-180, -240))
+	# Near the chapel (NE)
+	_add_town_tree(town, Vector2(350, -250))
+	_add_town_tree(town, Vector2(180, -270))
+	# Near the stables (SW)
+	_add_town_tree(town, Vector2(-380, 120))
+	_add_town_tree(town, Vector2(-360, 260))
+	# Near the barracks (SE)
+	_add_town_tree(town, Vector2(360, 100))
+	_add_town_tree(town, Vector2(180, 250))
+	# Along the inner south wall
+	_add_town_tree(town, Vector2(-300, 310))
+	_add_town_tree(town, Vector2(0, 300))
+	_add_town_tree(town, Vector2(300, 310))
+
 func _add_town_building(parent: Node2D, pos: Vector2, tex_name: String) -> void:
 	var spr = Sprite2D.new()
 	spr.position = pos
@@ -443,6 +471,40 @@ func _add_building_label(parent: Node2D, pos: Vector2, text: String) -> void:
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.custom_minimum_size = Vector2(50, 0)
 	parent.add_child(label)
+
+func _add_town_tree(parent: Node2D, pos: Vector2) -> void:
+	var spr = Sprite2D.new()
+	spr.position = pos
+	spr.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	# Mix of small and large trees
+	if randf() > 0.4:
+		spr.texture = SpriteGenerator.get_texture("tree_small")
+		spr.offset = Vector2(0, -14)
+	else:
+		spr.texture = SpriteGenerator.get_texture("tree_jungle")
+		spr.offset = Vector2(0, -24)
+	var s = randf_range(0.7, 1.1)
+	spr.scale = Vector2(s, s)
+	var v = randf_range(-0.04, 0.04)
+	spr.modulate = Color(1.0 + v, 1.0 + v * 0.5, 1.0 + v)
+	spr.z_index = 0
+	parent.add_child(spr)
+	# Wind sway — gentle rotation + scale X oscillation, randomized per tree
+	var base_sx = spr.scale.x
+	var base_sy = spr.scale.y
+	var sway_deg = randf_range(1.5, 3.5)
+	var sway_rad = deg_to_rad(sway_deg)
+	var phase_dur = randf_range(1.8, 3.2)
+	var wind_tween = spr.create_tween().set_loops()
+	# Lean right
+	wind_tween.tween_property(spr, "rotation", sway_rad, phase_dur).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	wind_tween.parallel().tween_property(spr, "scale", Vector2(base_sx * 1.03, base_sy * 0.98), phase_dur).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	# Lean left
+	wind_tween.tween_property(spr, "rotation", -sway_rad * 0.7, phase_dur * 0.9).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	wind_tween.parallel().tween_property(spr, "scale", Vector2(base_sx * 0.97, base_sy * 1.02), phase_dur * 0.9).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	# Settle back through center
+	wind_tween.tween_property(spr, "rotation", sway_rad * 0.3, phase_dur * 0.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	wind_tween.parallel().tween_property(spr, "scale", Vector2(base_sx, base_sy), phase_dur * 0.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 func _add_wall_torch(parent: Node2D, pos: Vector2) -> void:
 	var spr = Sprite2D.new()

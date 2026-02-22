@@ -448,9 +448,11 @@ func _process_attack(delta: float) -> void:
 		if dist < ideal_dist:
 			# Too close — back away
 			push += dir_from_target * stats.move_speed * 0.5
-		elif dist > stats.attack_range * 1.2:
-			# Drifting too far — step back in
-			push -= dir_from_target * stats.move_speed * 0.3
+		elif dist > ideal_dist + 3.0:
+			# Drifting past ideal — close in to maintain melee contact
+			# Urgency scales with distance so enemies track moving targets
+			var urgency = clampf((dist - ideal_dist) / (stats.attack_range * 0.5), 0.3, 1.0)
+			push -= dir_from_target * stats.move_speed * urgency
 	velocity = push
 	move_and_slide()
 

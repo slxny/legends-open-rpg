@@ -11,7 +11,7 @@ const CAMP_TYPES = {
 		"level_range": [1, 1],
 		"sprite_type": "rat",
 		"move_speed": 55.0,
-		"attack_range": 22.0,
+		"attack_range": 28.0,
 		"aggro_range": 120.0,
 		"attack_damage": 12,
 		"xp_reward": 4,
@@ -344,6 +344,8 @@ func _instantiate_enemy(pending: Dictionary) -> void:
 		"weakness_factor": weakness_factor,
 		"is_mini_boss": is_mini_boss,
 	}
+	if type_data.has("attack_damage"):
+		config["attack_damage"] = type_data["attack_damage"]
 
 	add_child(enemy)
 	enemy.initialize(config)

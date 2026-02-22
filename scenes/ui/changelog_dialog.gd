@@ -9,13 +9,26 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.27.0"
+const GAME_VERSION := "v0.29.0"
 
 const CHANGELOG: Array[Dictionary] = [
 	{
+		"version": "v0.29.0",
+		"title": "Touch Attack Fixes & Pause Menu Close Button",
+		"date": "2026-02-22 19:00",
+		"entries": [
+			"ATK button now flashes bright gold and scale-punches on every tap for clear feedback",
+			"Fixed multi-touch special attacks not triggering (touches on UI were silently lost)",
+			"Hold finger + double-tap ATK now reliably triggers Power Strike / Piercing Shot",
+			"Two fingers on screen + tap ATK now reliably triggers Dash Strike / Shadow Step",
+			"Attack direction on mobile is now derived from finger position relative to the player",
+			"Pause menu now has a close X button in the top-right corner (matches all other menus)",
+		]
+	},
+	{
 		"version": "v0.28.0",
 		"title": "Mobile Special Attacks & Pinch Zoom",
-		"date": "2026-02-22",
+		"date": "2026-02-22 12:00",
 		"entries": [
 			"Added ATK button on mobile for special attacks (tap, double-tap, triple-tap, hold)",
 			"Fast taps on ATK = same as fast spacebar presses (Power Strike, Whirlwind, etc.)",

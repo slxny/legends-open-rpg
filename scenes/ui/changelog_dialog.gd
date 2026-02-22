@@ -13,6 +13,20 @@ const GAME_VERSION := "v0.27.0"
 
 const CHANGELOG: Array[Dictionary] = [
 	{
+		"version": "v0.28.0",
+		"title": "Mobile Special Attacks & Pinch Zoom",
+		"date": "2026-02-22",
+		"entries": [
+			"Added ATK button on mobile for special attacks (tap, double-tap, triple-tap, hold)",
+			"Fast taps on ATK = same as fast spacebar presses (Power Strike, Whirlwind, etc.)",
+			"Hold ATK for 1.5s = Charged Slash / Sniper Shot, just like holding spacebar",
+			"Diagonal attacks on mobile: move diagonally then tap ATK for Dash Strike / Shadow Step",
+			"Pinch-to-zoom on mobile with two-finger touch tracking",
+			"Mobile zoom allows more zoom-in and less zoom-out than desktop (better for small screens)",
+			"Tutorial hints updated for mobile controls (ATK button instead of SPACE key)",
+		]
+	},
+	{
 		"version": "v0.27.0",
 		"title": "Combat Balance",
 		"date": "2026-02-21",

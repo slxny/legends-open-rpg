@@ -127,6 +127,17 @@ const SHAKE_DURATION: float = 0.11
 enum SpecialAttack { NONE, POWER_STRIKE, WHIRLWIND, CHARGED_SLASH, DASH_STRIKE,
 	PIERCING_SHOT, ARROW_RAIN, SNIPER_SHOT, SHADOW_STEP }
 
+# Mobile controls
+var _is_mobile: bool = false
+var _mobile_attack_held: bool = false   # True while mobile attack button is held
+var _mobile_atk_canvas: CanvasLayer = null
+var _mobile_atk_btn: Button = null
+# Two-finger pinch-to-zoom tracking
+var _touch_points: Dictionary = {}      # touch index -> screen position
+var _pinch_prev_distance: float = 0.0   # Previous distance between two fingers
+const ZOOM_MIN_MOBILE := Vector2(2.5, 2.5)  # Less zoom-out on mobile (screen is small)
+const ZOOM_MAX_MOBILE := Vector2(7.0, 7.0)  # More zoom-in on mobile
+
 func _ready() -> void:
 	add_to_group("player")
 	hero_class = GameManager.current_hero_class
@@ -223,6 +234,12 @@ func _ready() -> void:
 	stats.leveled_up.connect(_on_level_up_sprite_upgrade)
 	# Register fog of war update trigger
 	_register_fog_trigger()
+
+	# Mobile detection and attack button setup
+	var vp_size = get_viewport().get_visible_rect().size
+	_is_mobile = vp_size.x < 700 or (vp_size.x < vp_size.y)
+	if _is_mobile:
+		_create_mobile_attack_button()
 
 ## Public API for external systems (e.g. minimap click) to move the player.
 func move_to(world_pos: Vector2) -> void:
@@ -326,10 +343,14 @@ func _physics_process(delta: float) -> void:
 				Input.get_axis("move_left", "move_right"),
 				Input.get_axis("move_up", "move_down")
 			)
+			# On mobile, consider click-to-move velocity as movement input
+			var is_moving = move_input.length() > 0.25
+			if not is_moving and _is_mobile and velocity.length() > 30.0:
+				is_moving = true
 			var is_ranged = hero_class == "shadow_ranger"
 			if taps >= 3:
 				_try_special_attack(SpecialAttack.ARROW_RAIN if is_ranged else SpecialAttack.WHIRLWIND)
-			elif taps >= 2 and move_input.length() > 0.25:
+			elif taps >= 2 and is_moving:
 				_try_special_attack(SpecialAttack.PIERCING_SHOT if is_ranged else SpecialAttack.POWER_STRIKE)
 			else:
 				# Single tap, or double-tap without direction = normal attack
@@ -342,8 +363,9 @@ func _physics_process(delta: float) -> void:
 			_is_chopping_tree = false
 
 	# --- Hold-to-attack: only after tap sequence resolved ---
+	var attack_held = Input.is_action_pressed("attack") or _mobile_attack_held
 	if not _is_paralyzed and _tap_resolved:
-		if Input.is_action_pressed("attack"):
+		if attack_held:
 			if _is_chopping_tree:
 				# In chopping mode: just keep chopping, no charge/specials
 				_charge_time = 0.0
@@ -502,19 +524,52 @@ const ZOOM_MIN := Vector2(1.5, 1.5)
 const ZOOM_MAX := Vector2(5.0, 5.0)
 const ZOOM_STEP := 0.25
 
+func _get_zoom_min() -> Vector2:
+	return ZOOM_MIN_MOBILE if _is_mobile else ZOOM_MIN
+
+func _get_zoom_max() -> Vector2:
+	return ZOOM_MAX_MOBILE if _is_mobile else ZOOM_MAX
+
 func _unhandled_input(event: InputEvent) -> void:
+	var z_min = _get_zoom_min()
+	var z_max = _get_zoom_max()
+
+	# Two-finger pinch-to-zoom via touch tracking (mobile)
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			_touch_points[event.index] = event.position
+		else:
+			_touch_points.erase(event.index)
+			_pinch_prev_distance = 0.0
+		if _touch_points.size() == 2:
+			var keys = _touch_points.keys()
+			_pinch_prev_distance = (_touch_points[keys[0]] as Vector2).distance_to(_touch_points[keys[1]])
+	if event is InputEventScreenDrag:
+		if event.index in _touch_points:
+			_touch_points[event.index] = event.position
+		if _touch_points.size() >= 2 and _pinch_prev_distance > 0.0:
+			var keys = _touch_points.keys()
+			var p1 = _touch_points[keys[0]] as Vector2
+			var p2 = _touch_points[keys[1]] as Vector2
+			var dist = p1.distance_to(p2)
+			if dist > 10.0:  # Avoid jitter from near-zero distances
+				var factor = dist / _pinch_prev_distance
+				camera.zoom = (camera.zoom * factor).clamp(z_min, z_max)
+				_pinch_prev_distance = dist
+			return
+
 	if event is InputEventMagnifyGesture:
 		# Trackpad pinch: factor > 1 = pinch out (zoom in), < 1 = pinch in (zoom out)
-		var new_zoom = (camera.zoom * event.factor).clamp(ZOOM_MIN, ZOOM_MAX)
+		var new_zoom = (camera.zoom * event.factor).clamp(z_min, z_max)
 		camera.zoom = new_zoom
 		return
 
 	if event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
-			camera.zoom = (camera.zoom + Vector2(ZOOM_STEP, ZOOM_STEP)).clamp(ZOOM_MIN, ZOOM_MAX)
+			camera.zoom = (camera.zoom + Vector2(ZOOM_STEP, ZOOM_STEP)).clamp(z_min, z_max)
 			return
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-			camera.zoom = (camera.zoom - Vector2(ZOOM_STEP, ZOOM_STEP)).clamp(ZOOM_MIN, ZOOM_MAX)
+			camera.zoom = (camera.zoom - Vector2(ZOOM_STEP, ZOOM_STEP)).clamp(z_min, z_max)
 			return
 
 		if event.button_index == MOUSE_BUTTON_LEFT or event.button_index == MOUSE_BUTTON_RIGHT:
@@ -624,7 +679,12 @@ func _try_manual_attack() -> void:
 	_set_facing(attack_dir)
 
 	# Diagonal keys + attack = dash strike / shadow step
-	if abs(input_raw.x) > 0.3 and abs(input_raw.y) > 0.3:
+	# On mobile, check if actively moving diagonally via click-to-move
+	var is_diagonal = abs(input_raw.x) > 0.3 and abs(input_raw.y) > 0.3
+	if not is_diagonal and _is_mobile and velocity.length() > 30.0:
+		var vel_norm = velocity.normalized()
+		is_diagonal = abs(vel_norm.x) > 0.3 and abs(vel_norm.y) > 0.3
+	if is_diagonal:
 		if hero_class == "shadow_ranger":
 			_execute_shadow_step(attack_dir)
 		else:
@@ -1477,6 +1537,63 @@ func _stop_charge_sfx() -> void:
 		_charge_sfx_player.stop()
 		_charge_sfx_player.queue_free()
 		_charge_sfx_player = null
+
+# --- Mobile Attack Button ---
+
+func _create_mobile_attack_button() -> void:
+	_mobile_atk_canvas = CanvasLayer.new()
+	_mobile_atk_canvas.layer = 10  # Above HUD
+	add_child(_mobile_atk_canvas)
+
+	var vp_size = get_viewport().get_visible_rect().size
+	var is_landscape = vp_size.x > vp_size.y
+	var btn_size = 120 if is_landscape else 180
+
+	_mobile_atk_btn = Button.new()
+	_mobile_atk_btn.text = "ATK"
+	_mobile_atk_btn.custom_minimum_size = Vector2(btn_size, btn_size)
+	_mobile_atk_btn.size = Vector2(btn_size, btn_size)
+	# Position: lower-right, above the HUD bottom panel
+	var margin_right = 30 if is_landscape else 40
+	var margin_bottom = 240 if is_landscape else 420
+	_mobile_atk_btn.position = Vector2(vp_size.x - btn_size - margin_right, vp_size.y - btn_size - margin_bottom)
+	_mobile_atk_btn.modulate = Color(1.0, 1.0, 1.0, 0.8)
+
+	# Style: dark background with gold border for SC:BW feel
+	var style_normal = StyleBoxFlat.new()
+	style_normal.bg_color = Color(0.15, 0.12, 0.08, 0.85)
+	style_normal.border_color = Color(0.7, 0.55, 0.2, 0.9)
+	style_normal.set_border_width_all(3)
+	style_normal.set_corner_radius_all(btn_size / 2)  # Circular
+	style_normal.set_content_margin_all(8)
+	_mobile_atk_btn.add_theme_stylebox_override("normal", style_normal)
+
+	var style_pressed = style_normal.duplicate()
+	style_pressed.bg_color = Color(0.4, 0.3, 0.1, 0.95)
+	style_pressed.border_color = Color(1.0, 0.85, 0.3, 1.0)
+	_mobile_atk_btn.add_theme_stylebox_override("pressed", style_pressed)
+
+	var style_hover = style_normal.duplicate()
+	_mobile_atk_btn.add_theme_stylebox_override("hover", style_hover)
+
+	_mobile_atk_btn.add_theme_font_size_override("font_size", 36 if is_landscape else 52)
+	_mobile_atk_btn.add_theme_color_override("font_color", Color(0.95, 0.85, 0.5))
+	_mobile_atk_btn.add_theme_color_override("font_pressed_color", Color(1.0, 1.0, 0.7))
+
+	_mobile_atk_btn.button_down.connect(_on_mobile_attack_pressed)
+	_mobile_atk_btn.button_up.connect(_on_mobile_attack_released)
+	_mobile_atk_canvas.add_child(_mobile_atk_btn)
+
+func _on_mobile_attack_pressed() -> void:
+	# Count as a tap (same as spacebar press) for special attack detection
+	if not _is_paralyzed:
+		_tap_count += 1
+		_tap_resolve_timer = TAP_RESOLVE_TIME
+		_tap_resolved = false
+	_mobile_attack_held = true
+
+func _on_mobile_attack_released() -> void:
+	_mobile_attack_held = false
 
 func _get_world_mouse_pos() -> Vector2:
 	# Use the viewport's canvas transform so the result matches what is

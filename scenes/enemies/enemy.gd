@@ -94,9 +94,12 @@ func _ready() -> void:
 	# Detect mobile for font scaling
 	var vp_size = get_viewport().get_visible_rect().size
 	var is_mobile = vp_size.x < 700 or (vp_size.x < vp_size.y)
-	# Scale enemy name label for mobile
+	# Scale enemy name label for mobile — larger font, moved higher so it
+	# doesn't overlap the sprite and block taps
 	if is_mobile:
 		name_label.add_theme_font_size_override("font_size", 28)
+		name_label.position = Vector2(-60, -78)
+		name_label.size = Vector2(120, 36)
 	# Initialize shared label settings once (static, shared across all enemies)
 	if not _dmg_settings_normal:
 		_dmg_settings_normal = LabelSettings.new()
@@ -257,6 +260,7 @@ func show_info() -> void:
 	if _info_label and is_instance_valid(_info_label):
 		_info_label.queue_free()
 	_info_label = Label.new()
+	_info_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var info_parts: Array[String] = []
 	info_parts.append("HP %d/%d  ATK %d  ARM %d" % [stats.current_hp, stats.max_hp, stats.attack_damage, stats.armor])
 	if _effect_type != "":

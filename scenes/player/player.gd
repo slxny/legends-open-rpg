@@ -110,7 +110,8 @@ var _clickable_query_params: PhysicsPointQueryParameters2D = null
 var _click_circle: CircleShape2D = null
 var _enemy_shape_query: PhysicsShapeQueryParameters2D = null
 var _tree_shape_query: PhysicsShapeQueryParameters2D = null
-const CLICK_RADIUS: float = 30.0  # Generous click detection radius
+const CLICK_RADIUS: float = 30.0  # Desktop click detection radius
+const CLICK_RADIUS_MOBILE: float = 55.0  # Larger touch target on mobile
 # Damage label pool (avoids Label.new() per hit on player)
 var _player_dmg_pool: Array[Label] = []
 const PLAYER_DMG_POOL_MAX: int = 10
@@ -239,6 +240,7 @@ func _ready() -> void:
 	var vp_size = get_viewport().get_visible_rect().size
 	_is_mobile = vp_size.x < 700 or (vp_size.x < vp_size.y)
 	if _is_mobile:
+		_click_circle.radius = CLICK_RADIUS_MOBILE
 		_create_mobile_attack_button()
 
 ## Public API for external systems (e.g. minimap click) to move the player.

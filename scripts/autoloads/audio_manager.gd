@@ -370,6 +370,7 @@ func _generate_all_sfx() -> void:
 	_sfx_cache["charge_release"] = _gen_charge_release()
 	_sfx_cache["tree_chop"] = _gen_tree_chop()
 	_sfx_cache["tree_fall"] = _gen_tree_fall()
+	_sfx_cache["beacon_heal"] = _gen_beacon_heal()
 
 func _gen_sword_swing() -> AudioStreamWAV:
 	# Warm blade slice — smooth swoosh with subtle metal edge
@@ -462,16 +463,45 @@ func _gen_item_pickup() -> AudioStreamWAV:
 	return _to_stream(samples)
 
 func _gen_level_up() -> AudioStreamWAV:
-	# Triumphant ascending arpeggio: C4 -> E4 -> G4 -> C5
+	# Rich triumphant fanfare — warm bass foundation with shimmering arpeggio
+	var samples = _make_samples(1.2)
+	# Warm bass foundation (C3) gives weight and satisfaction
+	_add_sine_segment(samples, 130.8, 0.3, 0.0, 0.9)
+	_add_sine_segment(samples, 65.4, 0.15, 0.0, 0.7)
+	# Ascending arpeggio: C4 -> E4 -> G4 -> C5 with overlapping sustain
+	_add_sine_segment(samples, 261.6, 0.35, 0.0, 0.35)
+	_add_sine_segment(samples, 329.6, 0.35, 0.12, 0.35)
+	_add_sine_segment(samples, 392.0, 0.4, 0.24, 0.35)
+	_add_sine_segment(samples, 523.0, 0.45, 0.36, 0.55)
+	# Octave shimmer on the final note for brilliance
+	_add_sine_segment(samples, 1046.0, 0.15, 0.36, 0.55)
+	_add_sine_segment(samples, 784.0, 0.12, 0.36, 0.55)
+	_add_sine_segment(samples, 1568.0, 0.06, 0.45, 0.4)
+	# Sparkle — high pitched noise burst for that satisfying "ding" feel
+	_add_pitched_noise(samples, 4000.0, 2000.0, 0.04, 0.36)
+	_add_pitched_noise(samples, 6000.0, 1500.0, 0.03, 0.42)
+	# Fifth harmony layer (G4 sustained under the final C5)
+	_add_sine_segment(samples, 392.0, 0.15, 0.36, 0.5)
+	_apply_decay(samples, 1.3)
+	_soft_clip(samples, 1.5)
+	return _to_stream(samples)
+
+func _gen_beacon_heal() -> AudioStreamWAV:
+	# Gentle restorative chime — warm ascending tones with crystal shimmer
 	var samples = _make_samples(0.7)
-	_add_sine_segment(samples, 261.6, 0.5, 0.0, 0.18)
-	_add_sine_segment(samples, 329.6, 0.5, 0.13, 0.18)
-	_add_sine_segment(samples, 392.0, 0.55, 0.26, 0.18)
-	_add_sine_segment(samples, 523.0, 0.6, 0.39, 0.31)
-	# Add harmonics to the final note for richness
-	_add_sine_segment(samples, 1046.0, 0.15, 0.39, 0.31)
-	_add_sine_segment(samples, 784.0, 0.2, 0.39, 0.31)
-	_apply_decay(samples, 0.8)
+	# Soft warm base tone (C5)
+	_add_sine_segment(samples, 523.0, 0.3, 0.0, 0.5)
+	# Gentle ascending fifth (C5 -> G5)
+	_pitch_sweep_sine(samples, 523.0, 784.0, 0.2)
+	# Crystal overtones for that healing sparkle
+	_add_sine_segment(samples, 1046.0, 0.12, 0.05, 0.4)
+	_add_sine_segment(samples, 1318.0, 0.08, 0.1, 0.35)
+	# Soft high shimmer
+	_add_pitched_noise(samples, 5000.0, 2000.0, 0.025, 0.08)
+	# Warm third harmony (E5)
+	_add_sine_segment(samples, 659.0, 0.1, 0.08, 0.35)
+	_apply_envelope(samples, 0.04, 0.25, 0.4)
+	_soft_clip(samples, 1.2)
 	return _to_stream(samples)
 
 func _gen_dash_swoosh() -> AudioStreamWAV:

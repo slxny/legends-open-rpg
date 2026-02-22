@@ -7,6 +7,8 @@ extends Node
 
 signal beacon_activated(beacon_type: String, data: Dictionary, player: Node2D)
 
+var _last_heal_sfx_ms: int = 0
+
 func activate(beacon_type: String, data: Dictionary, player: Node2D = null) -> void:
 	if player == null:
 		var players = _get_players()
@@ -43,6 +45,11 @@ func _handle_heal(data: Dictionary, player: Node2D) -> void:
 		stats.current_hp = stats.get_total_max_hp()
 		stats.current_mana = stats.get_total_max_mana()
 		stats._emit_all()
+		# Play heal chime only if not recently played (prevents repeat while standing on beacon)
+		var now = Time.get_ticks_msec()
+		if now - _last_heal_sfx_ms > 2000:
+			AudioManager.play_sfx("beacon_heal")
+			_last_heal_sfx_ms = now
 		GameManager.game_message.emit("Fully Restored!", Color(0.3, 1.0, 0.5))
 
 func _handle_teleport(data: Dictionary, player: Node2D) -> void:

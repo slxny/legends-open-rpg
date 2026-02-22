@@ -16,7 +16,7 @@ func _ready() -> void:
 	name_label.text = shop_name
 	var vp_size = get_viewport().get_visible_rect().size
 	if vp_size.x < 700 or (vp_size.x < vp_size.y):
-		name_label.add_theme_font_size_override("font_size", 32)
+		name_label.add_theme_font_size_override("font_size", 18)
 	beacon.activated.connect(_on_beacon_activated)
 	var tex = SpriteGenerator.get_texture("shop_building")
 	if tex:

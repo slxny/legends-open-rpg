@@ -22,9 +22,9 @@ offset = Vector2(0, -20)
 shape = SubResource("RectangleShape2D_shop")
 
 [node name="NameLabel" type="Label" parent="."]
-offset_left = -40.0
+offset_left = -80.0
 offset_top = -26.0
-offset_right = 40.0
+offset_right = 80.0
 offset_bottom = -12.0
 text = "Shop"
 horizontal_alignment = 1
@@ -44,9 +44,9 @@ beacon_radius = 24.0
 texture_filter = 0
 
 [node name="Label" type="Label" parent="Beacon"]
-offset_left = -30.0
+offset_left = -60.0
 offset_top = -16.0
-offset_right = 30.0
+offset_right = 60.0
 offset_bottom = -2.0
 text = "Shop"
 horizontal_alignment = 1

@@ -65,42 +65,80 @@ func _detect_mobile() -> void:
 	_is_mobile = vp_size.x < 700 or (vp_size.x < vp_size.y)
 
 func _apply_mobile_layout() -> void:
-	# ── Top bar: triple font sizes for 6.9" readability ──
-	top_bar.offset_bottom = 72
-	gold_label.add_theme_font_size_override("font_size", 44)
-	wood_label.add_theme_font_size_override("font_size", 44)
-	alignment_label.add_theme_font_size_override("font_size", 38)
+	var vp_size = get_viewport().get_visible_rect().size
+	var is_landscape = vp_size.x > vp_size.y
 
-	# ── Bottom panel: grow taller ──
-	bottom_panel.offset_top = -400
-	bottom_hbox.add_theme_constant_override("separation", 20)
+	# ── Top bar: scale font sizes for readability ──
+	if is_landscape:
+		top_bar.offset_bottom = 48
+		gold_label.add_theme_font_size_override("font_size", 28)
+		wood_label.add_theme_font_size_override("font_size", 28)
+		alignment_label.add_theme_font_size_override("font_size", 24)
+	else:
+		top_bar.offset_bottom = 72
+		gold_label.add_theme_font_size_override("font_size", 44)
+		wood_label.add_theme_font_size_override("font_size", 44)
+		alignment_label.add_theme_font_size_override("font_size", 38)
+
+	# ── Bottom panel: size to fit without crushing the game view ──
+	if is_landscape:
+		bottom_panel.offset_top = -220
+		bottom_hbox.add_theme_constant_override("separation", 10)
+	else:
+		bottom_panel.offset_top = -400
+		bottom_hbox.add_theme_constant_override("separation", 20)
 
 	# ── Unit info: bigger text and bars ──
-	level_label.add_theme_font_size_override("font_size", 48)
-	hp_bar.custom_minimum_size.y = 56
-	mana_bar.custom_minimum_size.y = 56
-	xp_bar.custom_minimum_size.y = 42
-	unit_info.add_theme_constant_override("separation", 8)
+	if is_landscape:
+		level_label.add_theme_font_size_override("font_size", 26)
+		hp_bar.custom_minimum_size.y = 32
+		mana_bar.custom_minimum_size.y = 32
+		xp_bar.custom_minimum_size.y = 24
+		unit_info.add_theme_constant_override("separation", 4)
+	else:
+		level_label.add_theme_font_size_override("font_size", 48)
+		hp_bar.custom_minimum_size.y = 56
+		mana_bar.custom_minimum_size.y = 56
+		xp_bar.custom_minimum_size.y = 42
+		unit_info.add_theme_constant_override("separation", 8)
 
-	# ── Minimap: scale up ──
-	minimap.custom_minimum_size = Vector2(240, 240)
+	# ── Minimap: scale appropriately ──
+	if is_landscape:
+		minimap.custom_minimum_size = Vector2(160, 160)
+	else:
+		minimap.custom_minimum_size = Vector2(240, 240)
 
-	# ── Command card: larger button sizes and fonts ──
-	command_card.custom_minimum_size.x = 500
-	command_label.add_theme_font_size_override("font_size", 36)
-	command_grid.add_theme_constant_override("h_separation", 4)
-	command_grid.add_theme_constant_override("v_separation", 4)
-
-	for child in command_grid.get_children():
-		if child is Button:
-			child.custom_minimum_size = Vector2(158, 100)
-			child.add_theme_font_size_override("font_size", 30)
+	# ── Command card: size to fit available width ──
+	if is_landscape:
+		command_card.custom_minimum_size.x = 280
+		command_label.add_theme_font_size_override("font_size", 20)
+		command_grid.add_theme_constant_override("h_separation", 3)
+		command_grid.add_theme_constant_override("v_separation", 3)
+		for child in command_grid.get_children():
+			if child is Button:
+				child.custom_minimum_size = Vector2(86, 58)
+				child.add_theme_font_size_override("font_size", 18)
+	else:
+		command_card.custom_minimum_size.x = 500
+		command_label.add_theme_font_size_override("font_size", 36)
+		command_grid.add_theme_constant_override("h_separation", 4)
+		command_grid.add_theme_constant_override("v_separation", 4)
+		for child in command_grid.get_children():
+			if child is Button:
+				child.custom_minimum_size = Vector2(158, 100)
+				child.add_theme_font_size_override("font_size", 30)
 
 func _add_mobile_menu_button() -> void:
+	var vp_size = get_viewport().get_visible_rect().size
+	var is_landscape = vp_size.x > vp_size.y
 	var menu_btn = Button.new()
 	menu_btn.text = "Menu"
-	menu_btn.custom_minimum_size = Vector2(140, 60)
-	menu_btn.add_theme_font_size_override("font_size", 34)
+	if is_landscape:
+		menu_btn.custom_minimum_size = Vector2(100, 40)
+		menu_btn.add_theme_font_size_override("font_size", 22)
+	else:
+		menu_btn.custom_minimum_size = Vector2(140, 60)
+		menu_btn.add_theme_font_size_override("font_size", 34)
 	menu_btn.modulate = Color(1, 1, 1, 0.7)
 	menu_btn.pressed.connect(func():
 		var menus = get_tree().get_nodes_in_group("pause_menu")
@@ -512,7 +550,11 @@ func _show_next_hint() -> void:
 	await get_tree().process_frame
 	var screen_w = get_viewport().get_visible_rect().size.x
 	var panel_w = _hint_panel.size.x
-	var bottom_offset = -340.0 if _is_mobile else -175.0
+	var vp_size_hint = get_viewport().get_visible_rect().size
+	var is_landscape_hint = vp_size_hint.x > vp_size_hint.y
+	var bottom_offset = -175.0
+	if _is_mobile:
+		bottom_offset = -230.0 if is_landscape_hint else -340.0
 	_hint_panel.position = Vector2((screen_w - panel_w) / 2.0, bottom_offset - _hint_panel.size.y - 10)
 
 	# Fade in

@@ -476,11 +476,14 @@ func _add_town_wall_rotated(parent: Node2D, pos: Vector2, angle: float) -> void:
 func _add_building_label(parent: Node2D, pos: Vector2, text: String) -> void:
 	var label = Label.new()
 	label.text = text
-	label.position = pos + Vector2(-25, 0)
+	label.position = pos + Vector2(-50, 0)
 	label.add_theme_font_size_override("font_size", 9)
 	label.add_theme_color_override("font_color", Color(0.8, 0.8, 0.7, 0.6))
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.custom_minimum_size = Vector2(50, 0)
+	label.custom_minimum_size = Vector2(100, 0)
+	var vp_size = get_viewport().get_visible_rect().size
+	if vp_size.x < 700 or (vp_size.x < vp_size.y):
+		label.add_theme_font_size_override("font_size", 16)
 	parent.add_child(label)
 
 func _add_town_tree(parent: Node2D, pos: Vector2) -> void:

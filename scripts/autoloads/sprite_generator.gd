@@ -47,8 +47,8 @@ func _all_sprite_names() -> Array[String]:
 	names.append_array(["town_wall_h", "watch_tower", "town_fountain",
 		"shop_building", "armory_building", "inn_building", "barracks_building",
 		"stable_building", "chapel_building", "tavern_building",
-		"crate_stack", "barrel", "well", "lamp_post", "woodworking_bench",
-		"town_hall", "landing_pad"])
+		"crate_stack", "barrel", "well", "lamp_post", "wall_torch",
+		"woodworking_bench", "town_hall", "landing_pad"])
 	# Environment decorations
 	names.append_array(["tree_jungle", "tree_small", "tree_dead", "rock",
 		"rock_large", "bush", "flowers", "grass_tuft", "grass_tuft_tall",
@@ -133,8 +133,8 @@ func _init_asset_dirs() -> void:
 	for n in ["shop_building", "armory_building", "town_hall", "landing_pad", "hatchery",
 			"barracks_building", "inn_building", "watch_tower", "town_fountain",
 			"stable_building", "chapel_building", "tavern_building",
-			"crate_stack", "barrel", "well", "lamp_post", "town_wall_h",
-			"woodworking_bench"]:
+			"crate_stack", "barrel", "well", "lamp_post", "wall_torch",
+			"town_wall_h", "woodworking_bench"]:
 		_asset_dirs[n] = "buildings"
 	# Beacons
 	for n in ["beacon_green", "beacon_yellow", "beacon_blue", "beacon_red", "beacon_cyan"]:
@@ -2868,6 +2868,20 @@ func _gen_lamp_post() -> void:
 	# Top cap
 	_fill_rect(img, 3, 2, 4, 2, Color(0.38, 0.36, 0.33))
 	textures["lamp_post"] = ImageTexture.create_from_image(img)
+
+func _gen_wall_torch() -> void:
+	var img = Image.create(8, 16, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	# Bracket / mount plate
+	_fill_rect(img, 3, 9, 2, 5, Color(0.35, 0.3, 0.25))
+	_fill_rect(img, 2, 13, 4, 2, Color(0.4, 0.35, 0.3))
+	# Bowl / holder
+	_fill_rect(img, 1, 7, 6, 3, Color(0.45, 0.38, 0.3))
+	# Flame — layered for depth
+	_fill_rect(img, 2, 3, 4, 5, Color(1.0, 0.7, 0.2, 0.9))
+	_fill_rect(img, 3, 1, 2, 4, Color(1.0, 0.85, 0.3, 0.8))
+	_fill_rect(img, 3, 5, 2, 2, Color(1.0, 0.5, 0.1, 0.9))
+	textures["wall_torch"] = ImageTexture.create_from_image(img)
 
 func _gen_town_wall_h() -> void:
 	var img = Image.create(40, 14, false, Image.FORMAT_RGBA8)

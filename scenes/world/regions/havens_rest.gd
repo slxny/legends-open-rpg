@@ -378,6 +378,15 @@ func _generate_town() -> void:
 	_add_town_building(town, Vector2(280, -220), "chapel_building")
 	_add_building_label(town, Vector2(280, -190), "Chapel")
 
+	# ---- Wall torches along the fortress walls ----
+	for wx in range(-420, 421, 84):
+		_add_wall_torch(town, Vector2(wx, -375))   # North wall
+		_add_wall_torch(town, Vector2(wx, 365))    # South wall
+	for wy in range(-320, 321, 84):
+		if abs(wy) > 70:  # Skip gate openings
+			_add_wall_torch(town, Vector2(-475, wy))  # West wall
+			_add_wall_torch(town, Vector2(455, wy))    # East wall
+
 	# ---- Lamp posts along the main roads ----
 	for lx in [-160, -80, 80, 160]:
 		_add_town_building(town, Vector2(lx, -5), "lamp_post")
@@ -434,6 +443,25 @@ func _add_building_label(parent: Node2D, pos: Vector2, text: String) -> void:
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.custom_minimum_size = Vector2(50, 0)
 	parent.add_child(label)
+
+func _add_wall_torch(parent: Node2D, pos: Vector2) -> void:
+	var spr = Sprite2D.new()
+	spr.position = pos
+	spr.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	spr.texture = SpriteGenerator.get_texture("wall_torch")
+	spr.z_index = 1
+	parent.add_child(spr)
+	# Flickering animation — randomized durations so torches don't sync
+	var tween = spr.create_tween().set_loops()
+	var d1 = randf_range(0.12, 0.22)
+	var d2 = randf_range(0.1, 0.2)
+	var d3 = randf_range(0.08, 0.18)
+	tween.tween_property(spr, "modulate", Color(1.1, 0.9, 0.55), d1)
+	tween.parallel().tween_property(spr, "scale", Vector2(1.0, randf_range(0.9, 1.05)), d1)
+	tween.tween_property(spr, "modulate", Color(1.0, 0.75, 0.4), d2)
+	tween.parallel().tween_property(spr, "scale", Vector2(0.95, randf_range(0.85, 1.0)), d2)
+	tween.tween_property(spr, "modulate", Color(1.2, 0.85, 0.45), d3)
+	tween.parallel().tween_property(spr, "scale", Vector2(1.05, randf_range(0.95, 1.1)), d3)
 
 # ============================================================
 # DECORATIONS: Dense SC:BW jungle foliage

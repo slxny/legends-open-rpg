@@ -47,6 +47,13 @@ var _slow_factor: float = 1.0  # 1.0 = normal, < 1.0 = slowed
 var _slow_timer: float = 0.0
 var _effect_vfx: Sprite2D = null  # Visual indicator for active status effect
 
+# Idle animations — breathing and random fidgets when standing still
+var _idle_breathe_tween: Tween = null
+var _idle_fidget_tween: Tween = null
+var _idle_time: float = 0.0
+var _idle_fidget_next: float = 0.0  # Countdown to next fidget
+var _is_idle_animating: bool = false  # True during a fidget animation
+
 # Sprite upgrade milestones: level -> texture key suffix
 const SPRITE_UPGRADE_LEVELS: Array[int] = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50]
 var _current_sprite_tier: int = 0
@@ -380,12 +387,23 @@ func _physics_process(delta: float) -> void:
 
 func _update_walk_anim(delta: float) -> void:
 	if _is_attack_animating:
-		return  # Attack tweens own the sprite
+		# Kill idle tweens but don't reset transforms — attack tween owns them
+		if _idle_breathe_tween and _idle_breathe_tween.is_valid():
+			_idle_breathe_tween.kill()
+			_idle_breathe_tween = null
+		if _idle_fidget_tween and _idle_fidget_tween.is_valid():
+			_idle_fidget_tween.kill()
+			_idle_fidget_tween = null
+		_is_idle_animating = false
+		_idle_time = 0.0
+		return
 
 	var speed_ratio = velocity.length() / max(stats.get_total_move_speed(), 1.0)
 	var frames = _walk_frames.get(_facing_cat, []) as Array
 
 	if speed_ratio > 0.15 and frames.size() == 3:
+		# Moving — stop idle animations and reset transforms
+		_stop_idle_anims()
 		# Advance walk timer — speed scales the animation rate
 		_walk_anim_time += delta * WALK_FPS * clampf(speed_ratio, 0.5, 1.2)
 		# 4-frame cycle: idle(0) -> stride1(1) -> passing(2) -> stride2(3)
@@ -404,6 +422,81 @@ func _update_walk_anim(delta: float) -> void:
 			_walk_anim_time = 0.0
 			if _idle_texture:
 				sprite.texture = _idle_texture
+		# Idle animations — breathing + occasional fidgets
+		_idle_time += delta
+		if not _idle_breathe_tween or not _idle_breathe_tween.is_valid():
+			_start_idle_breathe()
+		_idle_fidget_next -= delta
+		if _idle_fidget_next <= 0.0 and not _is_idle_animating:
+			_play_idle_fidget()
+			_idle_fidget_next = randf_range(4.0, 9.0)
+
+func _stop_idle_anims() -> void:
+	var was_active = _is_idle_animating or (_idle_breathe_tween and _idle_breathe_tween.is_valid())
+	if _idle_breathe_tween and _idle_breathe_tween.is_valid():
+		_idle_breathe_tween.kill()
+		_idle_breathe_tween = null
+	if _idle_fidget_tween and _idle_fidget_tween.is_valid():
+		_idle_fidget_tween.kill()
+		_idle_fidget_tween = null
+	if was_active:
+		sprite.scale = Vector2.ONE
+		sprite.position = Vector2.ZERO
+	_is_idle_animating = false
+	_idle_time = 0.0
+	_idle_fidget_next = randf_range(4.0, 9.0)
+
+func _start_idle_breathe() -> void:
+	if _idle_breathe_tween and _idle_breathe_tween.is_valid():
+		return
+	_idle_breathe_tween = create_tween().set_loops()
+	_idle_breathe_tween.tween_property(sprite, "scale", Vector2(1.02, 0.98), 0.9).set_trans(Tween.TRANS_SINE)
+	_idle_breathe_tween.tween_property(sprite, "scale", Vector2(0.99, 1.01), 0.9).set_trans(Tween.TRANS_SINE)
+
+func _play_idle_fidget() -> void:
+	if _is_attack_animating or _is_idle_animating:
+		return
+	_is_idle_animating = true
+	# Pause breathing while fidgeting (both modify scale)
+	if _idle_breathe_tween and _idle_breathe_tween.is_valid():
+		_idle_breathe_tween.kill()
+		_idle_breathe_tween = null
+	_idle_fidget_tween = create_tween()
+	var fidget = randi() % 4
+	match fidget:
+		0:  # Look around — glance to one side then back
+			var orig_flip = sprite.flip_h
+			_idle_fidget_tween.tween_interval(0.1)
+			_idle_fidget_tween.tween_callback(func(): sprite.flip_h = not orig_flip)
+			_idle_fidget_tween.tween_interval(0.7)
+			_idle_fidget_tween.tween_callback(func(): sprite.flip_h = orig_flip)
+		1:  # Weapon ready — quick draw check and sheathe
+			_idle_fidget_tween.tween_property(sprite, "position", Vector2(0, -2), 0.1)
+			_idle_fidget_tween.parallel().tween_property(sprite, "scale", Vector2(1.05, 0.97), 0.1)
+			_idle_fidget_tween.tween_interval(0.35)
+			_idle_fidget_tween.tween_property(sprite, "position", Vector2.ZERO, 0.15)
+			_idle_fidget_tween.parallel().tween_property(sprite, "scale", Vector2.ONE, 0.15)
+		2:  # Stretch — reach up then settle
+			_idle_fidget_tween.tween_property(sprite, "scale", Vector2(0.92, 1.08), 0.25).set_trans(Tween.TRANS_SINE)
+			_idle_fidget_tween.parallel().tween_property(sprite, "position", Vector2(0, -2), 0.25)
+			_idle_fidget_tween.tween_interval(0.15)
+			_idle_fidget_tween.tween_property(sprite, "scale", Vector2(1.04, 0.96), 0.15)
+			_idle_fidget_tween.parallel().tween_property(sprite, "position", Vector2(0, 1), 0.15)
+			_idle_fidget_tween.tween_property(sprite, "scale", Vector2.ONE, 0.2)
+			_idle_fidget_tween.parallel().tween_property(sprite, "position", Vector2.ZERO, 0.2)
+		3:  # Head scratch — lean to one side with small oscillations
+			_idle_fidget_tween.tween_property(sprite, "position", Vector2(2, -1), 0.12)
+			_idle_fidget_tween.parallel().tween_property(sprite, "scale", Vector2(1.03, 0.98), 0.12)
+			_idle_fidget_tween.tween_property(sprite, "position", Vector2(2, 0), 0.08)
+			_idle_fidget_tween.tween_property(sprite, "position", Vector2(2, -1), 0.08)
+			_idle_fidget_tween.tween_property(sprite, "position", Vector2(2, 0), 0.08)
+			_idle_fidget_tween.tween_property(sprite, "position", Vector2.ZERO, 0.15)
+			_idle_fidget_tween.parallel().tween_property(sprite, "scale", Vector2.ONE, 0.15)
+	# Resume breathing after fidget completes
+	_idle_fidget_tween.tween_callback(func():
+		_is_idle_animating = false
+		_start_idle_breathe()
+	)
 
 const ZOOM_MIN := Vector2(1.5, 1.5)
 const ZOOM_MAX := Vector2(5.0, 5.0)

@@ -13,7 +13,7 @@ const CAMP_TYPES = {
 		"move_speed": 100.0,
 		"attack_range": 28.0,
 		"aggro_range": 120.0,
-		"attack_damage": 10,
+		"attack_damage": 6,
 		"xp_reward": 4,
 		"gold_reward": 1,
 		"drop_table": "rat",

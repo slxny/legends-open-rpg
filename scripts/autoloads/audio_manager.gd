@@ -647,33 +647,51 @@ func _gen_tree_fall() -> AudioStreamWAV:
 	return _to_stream(samples)
 
 func _gen_rat_squeal_1() -> AudioStreamWAV:
-	# Soft short chirp — low-mid squeak, not piercing
+	# Throaty chitter — low warbling squeak with amplitude modulation
+	var samples = _make_samples(0.14)
+	_pitch_sweep_sine(samples, 480.0, 720.0, 0.16)
+	_pitch_sweep_sine(samples, 650.0, 400.0, 0.10, 0.04)
+	# Sub-harmonic growl layer
+	_pitch_sweep_sine(samples, 240.0, 360.0, 0.06)
+	_add_pitched_noise(samples, 600.0, 400.0, 0.05)
+	# Amplitude modulation for warbling/chittering
+	for i in range(samples.size()):
+		var t = float(i) / SAMPLE_RATE
+		samples[i] *= 0.7 + 0.3 * sin(t * 45.0 * TAU)
+	_apply_envelope(samples, 0.004, 0.03, 0.10)
+	_soft_clip(samples, 1.3)
+	return _to_stream(samples)
+
+func _gen_rat_squeal_2() -> AudioStreamWAV:
+	# Quick nasal grunt — deep and guttural with pitch wobble
 	var samples = _make_samples(0.10)
-	_pitch_sweep_sine(samples, 900.0, 1400.0, 0.18)
-	_pitch_sweep_sine(samples, 1200.0, 800.0, 0.10, 0.03)
-	_add_pitched_noise(samples, 1200.0, 800.0, 0.06)
+	_pitch_sweep_sine(samples, 400.0, 650.0, 0.14)
+	_pitch_sweep_sine(samples, 550.0, 350.0, 0.08, 0.03)
+	# Gritty sub layer
+	_pitch_sweep_sine(samples, 200.0, 320.0, 0.05)
+	_add_pitched_noise(samples, 500.0, 350.0, 0.06)
+	# Pitch wobble for organic feel
+	for i in range(samples.size()):
+		var t = float(i) / SAMPLE_RATE
+		samples[i] *= 0.8 + 0.2 * sin(t * 30.0 * TAU)
 	_apply_envelope(samples, 0.003, 0.02, 0.07)
 	_soft_clip(samples, 1.2)
 	return _to_stream(samples)
 
-func _gen_rat_squeal_2() -> AudioStreamWAV:
-	# Quick nasal grunt — deeper, more of a chitter
-	var samples = _make_samples(0.08)
-	_pitch_sweep_sine(samples, 700.0, 1100.0, 0.16)
-	_pitch_sweep_sine(samples, 1000.0, 700.0, 0.08, 0.02)
-	_add_pitched_noise(samples, 900.0, 600.0, 0.07)
-	_apply_envelope(samples, 0.002, 0.02, 0.05)
-	_soft_clip(samples, 1.2)
-	return _to_stream(samples)
-
 func _gen_rat_squeal_3() -> AudioStreamWAV:
-	# Breathy hiss — shortest, almost just air
-	var samples = _make_samples(0.12)
-	_pitch_sweep_sine(samples, 800.0, 1200.0, 0.12)
-	_add_pitched_noise(samples, 1000.0, 1200.0, 0.10)
-	_pitch_sweep_sine(samples, 1100.0, 600.0, 0.06, 0.04)
-	_apply_envelope(samples, 0.004, 0.03, 0.08)
-	_soft_clip(samples, 1.0)
+	# Breathy hiss-squeak — rising then falling with tremolo
+	var samples = _make_samples(0.16)
+	_pitch_sweep_sine(samples, 450.0, 800.0, 0.10)
+	_pitch_sweep_sine(samples, 700.0, 380.0, 0.08, 0.05)
+	_add_pitched_noise(samples, 550.0, 500.0, 0.08)
+	# Sub rumble
+	_pitch_sweep_sine(samples, 220.0, 280.0, 0.04)
+	# Fast tremolo for rattly texture
+	for i in range(samples.size()):
+		var t = float(i) / SAMPLE_RATE
+		samples[i] *= 0.6 + 0.4 * sin(t * 55.0 * TAU)
+	_apply_envelope(samples, 0.005, 0.04, 0.11)
+	_soft_clip(samples, 1.1)
 	return _to_stream(samples)
 
 # ============================================================

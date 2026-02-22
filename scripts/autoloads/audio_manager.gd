@@ -217,7 +217,8 @@ func _pregenerate_async() -> void:
 		"gold_pickup", "item_pickup", "level_up", "dash_swoosh",
 		"ability_whoosh", "power_strike", "whirlwind", "player_hurt",
 		"charge_loop", "charge_ready", "charge_release", "tree_chop",
-		"tree_fall", "rat_squeal_1", "rat_squeal_2", "rat_squeal_3"]
+		"tree_fall", "rat_squeal_1", "rat_squeal_2", "rat_squeal_3",
+		"debuff_apply"]
 	var batch: int = 0
 	for sfx_name in sfx_names:
 		if _sfx_cache.has(sfx_name):
@@ -675,6 +676,26 @@ func _gen_tree_fall() -> AudioStreamWAV:
 	_mix_into(samples, thump, int(0.3 * SAMPLE_RATE))
 	_apply_envelope(samples, 0.01, 0.1, 0.4)
 	_soft_clip(samples, 1.4)
+	return _to_stream(samples)
+
+func _gen_debuff_apply() -> AudioStreamWAV:
+	# Cutesy descending two-note chime — "boo-boop" minor third drop
+	# Sounds negative but adorable, like a music-box going "aww"
+	var samples = _make_samples(0.35)
+	# Note 1: E5 (high, bright start)
+	_add_sine_segment(samples, 659.0, 0.35, 0.0, 0.14)
+	_add_sine_segment(samples, 1318.0, 0.10, 0.0, 0.10)   # Octave harmonic for bell quality
+	_add_sine_segment(samples, 1978.0, 0.04, 0.0, 0.07)   # Soft upper partial
+	# Note 2: C5 (drops down a minor third — the "sad but cute" interval)
+	_add_sine_segment(samples, 523.0, 0.38, 0.10, 0.18)
+	_add_sine_segment(samples, 1046.0, 0.12, 0.10, 0.14)   # Octave harmonic
+	_add_sine_segment(samples, 1569.0, 0.04, 0.10, 0.10)   # Upper partial
+	# Tiny wobble on the second note for extra character
+	for i in range(int(0.10 * SAMPLE_RATE), samples.size()):
+		var t = float(i) / SAMPLE_RATE
+		samples[i] *= 0.9 + 0.1 * sin(t * 18.0 * TAU)
+	_apply_envelope(samples, 0.008, 0.10, 0.24)
+	_normalize(samples, 0.6)
 	return _to_stream(samples)
 
 func _gen_rat_squeal_1() -> AudioStreamWAV:

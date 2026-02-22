@@ -204,6 +204,8 @@ func apply_timed_buff(buff_id: String, stat: String, amount, duration: float, is
 	_active_buffs.append(buff)
 	_apply_buff_stat(stat, amount)
 	buff_applied.emit(buff_id, is_debuff, duration)
+	if is_debuff:
+		AudioManager.play_sfx("debuff_apply")
 
 func remove_buff(buff_id: String) -> void:
 	for i in range(_active_buffs.size() - 1, -1, -1):

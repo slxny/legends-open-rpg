@@ -148,11 +148,11 @@ func get_xp_to_next_level() -> int:
 	return int(50 * pow(level, 1.5))
 
 func _level_up() -> void:
-	level += 1
-	skill_points += 1
 	var data = HeroData.get_hero(hero_class)
 	if data.is_empty():
 		return
+	level += 1
+	skill_points += 1
 	var growth = data["growth_per_level"]
 	max_hp += int(growth.get("max_hp", 0))
 	max_mana += int(growth.get("max_mana", 0))

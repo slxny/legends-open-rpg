@@ -2,6 +2,8 @@ extends Control
 
 signal hero_chosen(hero_class: String)
 
+var _hero_selected := false
+
 @onready var scroll: ScrollContainer = $ScrollContainer
 @onready var margin: MarginContainer = $ScrollContainer/MarginContainer
 @onready var hero_container: HBoxContainer = $ScrollContainer/MarginContainer/VBoxContainer/HeroContainer
@@ -418,5 +420,8 @@ func _on_version_log_pressed() -> void:
 	_changelog_dialog.open()
 
 func _on_hero_selected(hero_key: String) -> void:
+	if _hero_selected:
+		return
+	_hero_selected = true
 	GameManager.select_hero(hero_key)
 	hero_chosen.emit(hero_key)

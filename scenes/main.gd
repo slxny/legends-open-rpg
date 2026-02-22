@@ -18,11 +18,15 @@ var _pause_menu_scene: PackedScene = preload("res://scenes/ui/pause_menu.tscn")
 
 var _world: Node2D = null
 var _player: CharacterBody2D = null
+var _game_started := false
 
 func _ready() -> void:
 	hero_select.hero_chosen.connect(_on_hero_chosen)
 
 func _on_hero_chosen(hero_class: String) -> void:
+	if _game_started:
+		return
+	_game_started = true
 	# Remove hero selection screen
 	hero_select.queue_free()
 

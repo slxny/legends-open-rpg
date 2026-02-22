@@ -48,22 +48,33 @@ layout_mode = 2
 text = "Close [Q]"
 custom_minimum_size = Vector2(90, 30)
 
-[node name="StatsLabel" type="Label" parent="Panel/MarginContainer/VBox"]
+[node name="Scroll" type="ScrollContainer" parent="Panel/MarginContainer/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="ScrollContent" type="VBoxContainer" parent="Panel/MarginContainer/VBox/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 8
+
+[node name="StatsLabel" type="Label" parent="Panel/MarginContainer/VBox/Scroll/ScrollContent"]
 layout_mode = 2
 text = "Level 1"
 theme_override_font_sizes/font_size = 13
 
-[node name="Sep" type="HSeparator" parent="Panel/MarginContainer/VBox"]
+[node name="Sep" type="HSeparator" parent="Panel/MarginContainer/VBox/Scroll/ScrollContent"]
 layout_mode = 2
 theme_override_constants/separation = 4
 
-[node name="BuffsTitle" type="Label" parent="Panel/MarginContainer/VBox"]
+[node name="BuffsTitle" type="Label" parent="Panel/MarginContainer/VBox/Scroll/ScrollContent"]
 layout_mode = 2
 text = "Active Effects"
 theme_override_font_sizes/font_size = 15
 theme_override_colors/font_color = Color(0.8, 0.75, 0.55, 1)
 
-[node name="BuffsContainer" type="VBoxContainer" parent="Panel/MarginContainer/VBox"]
+[node name="BuffsContainer" type="VBoxContainer" parent="Panel/MarginContainer/VBox/Scroll/ScrollContent"]
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 6

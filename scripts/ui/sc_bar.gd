@@ -18,9 +18,9 @@ func _ready() -> void:
 	var vp_size = get_viewport().get_visible_rect().size
 	_is_mobile = vp_size.x < 700 or (vp_size.x < vp_size.y)
 	_label_settings = LabelSettings.new()
-	_label_settings.font_size = 24 if _is_mobile else 13
+	_label_settings.font_size = 32 if _is_mobile else 13
 	_label_settings.font_color = Color(0.95, 0.95, 0.95)
-	_label_settings.outline_size = 3 if _is_mobile else 2
+	_label_settings.outline_size = 4 if _is_mobile else 2
 	_label_settings.outline_color = Color(0, 0, 0)
 
 func set_value(current: float, maximum: float) -> void:
@@ -82,7 +82,7 @@ func _draw() -> void:
 	# Label overlay
 	if show_label and not label_text.is_empty():
 		var font = ThemeDB.fallback_font
-		var font_size = 24 if _is_mobile else 13
+		var font_size = 32 if _is_mobile else 13
 		var text_width = font.get_string_size(label_text, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size).x
 		var x_pos = (bar_size.x - text_width) / 2.0
 		var y_pos = bar_size.y / 2.0 + font_size / 2.0 - 1

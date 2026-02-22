@@ -74,7 +74,7 @@ func _build_menu() -> void:
 	var title = Label.new()
 	title.text = "PAUSED"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 48 if _is_mobile else 28)
+	title.add_theme_font_size_override("font_size", 64 if _is_mobile else 28)
 	title.add_theme_color_override("font_color", Color(0.95, 0.8, 0.3))
 	vbox.add_child(title)
 
@@ -83,8 +83,8 @@ func _build_menu() -> void:
 	vbox.add_child(sep)
 
 	# Menu buttons
-	var btn_size = Vector2(0, 80) if _is_mobile else Vector2(0, 44)
-	var btn_font = 30 if _is_mobile else 16
+	var btn_size = Vector2(0, 90) if _is_mobile else Vector2(0, 44)
+	var btn_font = 40 if _is_mobile else 16
 
 	_add_menu_button(vbox, "Resume", btn_size, btn_font, Color(0.3, 0.8, 0.4), func(): close())
 	_add_menu_button(vbox, "Save Game", btn_size, btn_font, Color(0.4, 0.7, 1.0), _on_save)
@@ -170,7 +170,7 @@ func _show_help_dialog() -> void:
 	var top = HBoxContainer.new()
 	var htitle = Label.new()
 	htitle.text = "Controls & Help"
-	htitle.add_theme_font_size_override("font_size", 36 if _is_mobile else 20)
+	htitle.add_theme_font_size_override("font_size", 48 if _is_mobile else 20)
 	htitle.add_theme_color_override("font_color", Color(0.95, 0.8, 0.3))
 	top.add_child(htitle)
 	var spacer = Control.new()
@@ -178,9 +178,9 @@ func _show_help_dialog() -> void:
 	top.add_child(spacer)
 	var close_btn = Button.new()
 	close_btn.text = "Close"
-	close_btn.custom_minimum_size = Vector2(160, 56) if _is_mobile else Vector2(80, 32)
+	close_btn.custom_minimum_size = Vector2(200, 64) if _is_mobile else Vector2(80, 32)
 	if _is_mobile:
-		close_btn.add_theme_font_size_override("font_size", 26)
+		close_btn.add_theme_font_size_override("font_size", 36)
 	close_btn.pressed.connect(func(): help_layer.queue_free())
 	top.add_child(close_btn)
 	vbox.add_child(top)
@@ -195,7 +195,7 @@ func _show_help_dialog() -> void:
 
 	var content = Label.new()
 	content.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	var fs = 24 if _is_mobile else 13
+	var fs = 34 if _is_mobile else 13
 	content.add_theme_font_size_override("font_size", fs)
 	content.add_theme_color_override("font_color", Color(0.85, 0.85, 0.85))
 	content.text = """Movement: WASD or right-click to move

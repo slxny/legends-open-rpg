@@ -54,7 +54,13 @@ layout_mode = 2
 text = "Close [Q]"
 custom_minimum_size = Vector2(90, 30)
 
-[node name="Content" type="VBoxContainer" parent="Panel/MarginContainer/VBox"]
+[node name="Scroll" type="ScrollContainer" parent="Panel/MarginContainer/VBox"]
 layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="Content" type="VBoxContainer" parent="Panel/MarginContainer/VBox/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 6

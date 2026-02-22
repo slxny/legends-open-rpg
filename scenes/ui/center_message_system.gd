@@ -43,9 +43,9 @@ func _display_message(text: String, color: Color, duration: float) -> void:
 	var vp_size = get_viewport().get_visible_rect().size
 	var is_mobile = vp_size.x < 700 or (vp_size.x < vp_size.y)
 	var settings = LabelSettings.new()
-	settings.font_size = 52 if is_mobile else 32
+	settings.font_size = 72 if is_mobile else 32
 	settings.font_color = color
-	settings.outline_size = 6 if is_mobile else 4
+	settings.outline_size = 8 if is_mobile else 4
 	settings.outline_color = Color.BLACK
 	message_label.label_settings = settings
 	message_label.text = text

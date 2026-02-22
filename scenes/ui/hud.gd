@@ -65,42 +65,42 @@ func _detect_mobile() -> void:
 	_is_mobile = vp_size.x < 700 or (vp_size.x < vp_size.y)
 
 func _apply_mobile_layout() -> void:
-	# ── Top bar: double font sizes ──
-	top_bar.offset_bottom = 56
-	gold_label.add_theme_font_size_override("font_size", 32)
-	wood_label.add_theme_font_size_override("font_size", 32)
-	alignment_label.add_theme_font_size_override("font_size", 28)
+	# ── Top bar: triple font sizes for 6.9" readability ──
+	top_bar.offset_bottom = 72
+	gold_label.add_theme_font_size_override("font_size", 44)
+	wood_label.add_theme_font_size_override("font_size", 44)
+	alignment_label.add_theme_font_size_override("font_size", 38)
 
 	# ── Bottom panel: grow taller ──
-	bottom_panel.offset_top = -330
+	bottom_panel.offset_top = -400
 	bottom_hbox.add_theme_constant_override("separation", 20)
 
 	# ── Unit info: bigger text and bars ──
-	level_label.add_theme_font_size_override("font_size", 36)
-	hp_bar.custom_minimum_size.y = 50
-	mana_bar.custom_minimum_size.y = 50
-	xp_bar.custom_minimum_size.y = 36
+	level_label.add_theme_font_size_override("font_size", 48)
+	hp_bar.custom_minimum_size.y = 56
+	mana_bar.custom_minimum_size.y = 56
+	xp_bar.custom_minimum_size.y = 42
 	unit_info.add_theme_constant_override("separation", 8)
 
 	# ── Minimap: scale up ──
-	minimap.custom_minimum_size = Vector2(240, 200)
+	minimap.custom_minimum_size = Vector2(240, 240)
 
-	# ── Command card: double button sizes and fonts ──
-	command_card.custom_minimum_size.x = 460
-	command_label.add_theme_font_size_override("font_size", 26)
+	# ── Command card: larger button sizes and fonts ──
+	command_card.custom_minimum_size.x = 500
+	command_label.add_theme_font_size_override("font_size", 36)
 	command_grid.add_theme_constant_override("h_separation", 4)
 	command_grid.add_theme_constant_override("v_separation", 4)
 
 	for child in command_grid.get_children():
 		if child is Button:
-			child.custom_minimum_size = Vector2(144, 90)
-			child.add_theme_font_size_override("font_size", 22)
+			child.custom_minimum_size = Vector2(158, 100)
+			child.add_theme_font_size_override("font_size", 30)
 
 func _add_mobile_menu_button() -> void:
 	var menu_btn = Button.new()
 	menu_btn.text = "Menu"
-	menu_btn.custom_minimum_size = Vector2(110, 52)
-	menu_btn.add_theme_font_size_override("font_size", 24)
+	menu_btn.custom_minimum_size = Vector2(140, 60)
+	menu_btn.add_theme_font_size_override("font_size", 34)
 	menu_btn.modulate = Color(1, 1, 1, 0.7)
 	menu_btn.pressed.connect(func():
 		var menus = get_tree().get_nodes_in_group("pause_menu")
@@ -416,9 +416,9 @@ func _create_hint_panel() -> void:
 	_hint_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_hint_label.add_theme_color_override("default_color", Color(0.85, 0.85, 0.8))
 	if _is_mobile:
-		_hint_label.custom_minimum_size = Vector2(600, 0)
-		_hint_label.add_theme_font_size_override("normal_font_size", 28)
-		_hint_label.add_theme_font_size_override("bold_font_size", 30)
+		_hint_label.custom_minimum_size = Vector2(700, 0)
+		_hint_label.add_theme_font_size_override("normal_font_size", 38)
+		_hint_label.add_theme_font_size_override("bold_font_size", 40)
 	else:
 		_hint_label.custom_minimum_size = Vector2(500, 0)
 		_hint_label.add_theme_font_size_override("normal_font_size", 14)

@@ -48,47 +48,52 @@ text = "Close [Q] or [I]"
 theme_override_font_sizes/font_size = 13
 theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
 
-[node name="HBox" type="HBoxContainer" parent="Panel/MarginContainer/VBox"]
+[node name="Scroll" type="ScrollContainer" parent="Panel/MarginContainer/VBox"]
 layout_mode = 2
+size_flags_vertical = 3
+
+[node name="HBox" type="HBoxContainer" parent="Panel/MarginContainer/VBox/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 16
 
-[node name="EquipmentPanel" type="VBoxContainer" parent="Panel/MarginContainer/VBox/HBox"]
+[node name="EquipmentPanel" type="VBoxContainer" parent="Panel/MarginContainer/VBox/Scroll/HBox"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="Title" type="Label" parent="Panel/MarginContainer/VBox/HBox/EquipmentPanel"]
+[node name="Title" type="Label" parent="Panel/MarginContainer/VBox/Scroll/HBox/EquipmentPanel"]
 layout_mode = 2
 text = "Equipment"
 theme_override_font_sizes/font_size = 16
 
-[node name="EquipGrid" type="GridContainer" parent="Panel/MarginContainer/VBox/HBox/EquipmentPanel"]
+[node name="EquipGrid" type="GridContainer" parent="Panel/MarginContainer/VBox/Scroll/HBox/EquipmentPanel"]
 layout_mode = 2
 columns = 2
 
-[node name="BagPanel" type="VBoxContainer" parent="Panel/MarginContainer/VBox/HBox"]
+[node name="BagPanel" type="VBoxContainer" parent="Panel/MarginContainer/VBox/Scroll/HBox"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="Title" type="Label" parent="Panel/MarginContainer/VBox/HBox/BagPanel"]
+[node name="Title" type="Label" parent="Panel/MarginContainer/VBox/Scroll/HBox/BagPanel"]
 layout_mode = 2
 text = "Bag"
 theme_override_font_sizes/font_size = 16
 
-[node name="BagGrid" type="GridContainer" parent="Panel/MarginContainer/VBox/HBox/BagPanel"]
+[node name="BagGrid" type="GridContainer" parent="Panel/MarginContainer/VBox/Scroll/HBox/BagPanel"]
 layout_mode = 2
 columns = 4
 
-[node name="StatsPanel" type="VBoxContainer" parent="Panel/MarginContainer/VBox/HBox"]
+[node name="StatsPanel" type="VBoxContainer" parent="Panel/MarginContainer/VBox/Scroll/HBox"]
 layout_mode = 2
 custom_minimum_size = Vector2(130, 0)
 
-[node name="Title" type="Label" parent="Panel/MarginContainer/VBox/HBox/StatsPanel"]
+[node name="Title" type="Label" parent="Panel/MarginContainer/VBox/Scroll/HBox/StatsPanel"]
 layout_mode = 2
 text = "Stats"
 theme_override_font_sizes/font_size = 16
 
-[node name="StatsLabel" type="Label" parent="Panel/MarginContainer/VBox/HBox/StatsPanel"]
+[node name="StatsLabel" type="Label" parent="Panel/MarginContainer/VBox/Scroll/HBox/StatsPanel"]
 layout_mode = 2
 text = "Level: 1"
 theme_override_font_sizes/font_size = 13

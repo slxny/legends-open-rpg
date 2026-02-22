@@ -350,10 +350,10 @@ func _resize_panel(vp_size: Vector2) -> void:
 		panel.offset_right = vp_size.x / 2.0 - margin
 		panel.offset_top = -vp_size.y / 2.0 + margin
 		panel.offset_bottom = vp_size.y / 2.0 - margin
-		close_button.custom_minimum_size = Vector2(200, 64)
-		close_button.add_theme_font_size_override("font_size", 36)
-		version_label.add_theme_font_size_override("font_size", 32)
-		$Panel/MarginContainer/VBox/TopBar/Title.add_theme_font_size_override("font_size", 52)
+		close_button.custom_minimum_size = Vector2(220, 68)
+		close_button.add_theme_font_size_override("font_size", 38)
+		version_label.add_theme_font_size_override("font_size", 40)
+		$Panel/MarginContainer/VBox/TopBar/Title.add_theme_font_size_override("font_size", 56)
 	else:
 		panel.offset_left = -420.0
 		panel.offset_right = 420.0
@@ -368,9 +368,9 @@ func _build_entries() -> void:
 	for child in entries_container.get_children():
 		child.queue_free()
 
-	var header_size = 44 if _is_mobile else 32
-	var entry_size = 34 if _is_mobile else 24
-	var spacer_height = 20 if _is_mobile else 12
+	var header_size = 56 if _is_mobile else 32
+	var entry_size = 42 if _is_mobile else 24
+	var spacer_height = 24 if _is_mobile else 12
 
 	for patch in CHANGELOG:
 		# Version header with date

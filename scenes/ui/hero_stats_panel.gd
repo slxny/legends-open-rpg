@@ -3,8 +3,8 @@ extends CanvasLayer
 ## Hero stats panel — right-click on your hero to view all stats and active buffs/debuffs.
 
 @onready var panel: PanelContainer = $Panel
-@onready var stats_label: Label = $Panel/MarginContainer/VBox/StatsLabel
-@onready var buffs_container: VBoxContainer = $Panel/MarginContainer/VBox/BuffsContainer
+@onready var stats_label: Label = $Panel/MarginContainer/VBox/Scroll/ScrollContent/StatsLabel
+@onready var buffs_container: VBoxContainer = $Panel/MarginContainer/VBox/Scroll/ScrollContent/BuffsContainer
 @onready var close_button: Button = $Panel/MarginContainer/VBox/TopBar/CloseButton
 
 var _player: Node2D = null
@@ -40,11 +40,11 @@ func _detect_mobile() -> void:
 		panel.offset_right = vp_size.x / 2.0 - margin
 		panel.offset_top = -vp_size.y / 2.0 + margin
 		panel.offset_bottom = vp_size.y / 2.0 - margin
-		$Panel/MarginContainer/VBox/TopBar/Title.add_theme_font_size_override("font_size", 36)
-		close_button.add_theme_font_size_override("font_size", 28)
-		close_button.custom_minimum_size = Vector2(180, 60)
-		stats_label.add_theme_font_size_override("font_size", 26)
-		$Panel/MarginContainer/VBox/BuffsTitle.add_theme_font_size_override("font_size", 30)
+		$Panel/MarginContainer/VBox/TopBar/Title.add_theme_font_size_override("font_size", 52)
+		close_button.add_theme_font_size_override("font_size", 38)
+		close_button.custom_minimum_size = Vector2(220, 68)
+		stats_label.add_theme_font_size_override("font_size", 36)
+		$Panel/MarginContainer/VBox/Scroll/ScrollContent/BuffsTitle.add_theme_font_size_override("font_size", 42)
 
 func close() -> void:
 	_is_visible = false
@@ -108,7 +108,7 @@ func _refresh_buffs() -> void:
 	if active.size() == 0:
 		var none_label = Label.new()
 		none_label.text = "No active effects"
-		none_label.add_theme_font_size_override("font_size", 24 if _is_mobile else 12)
+		none_label.add_theme_font_size_override("font_size", 34 if _is_mobile else 12)
 		none_label.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
 		buffs_container.add_child(none_label)
 		return
@@ -123,7 +123,7 @@ func _create_buff_entry(buff: Dictionary) -> HBoxContainer:
 
 	# Icon indicator
 	var icon = Label.new()
-	icon.add_theme_font_size_override("font_size", 28 if _is_mobile else 14)
+	icon.add_theme_font_size_override("font_size", 40 if _is_mobile else 14)
 	if buff.get("is_debuff", false):
 		icon.text = "[-]"
 		icon.add_theme_color_override("font_color", Color(1, 0.3, 0.3))
@@ -141,7 +141,7 @@ func _create_buff_entry(buff: Dictionary) -> HBoxContainer:
 	var buff_name = _get_buff_display_name(buff["id"])
 	var stat_text = _get_stat_effect_text(buff["stat"], buff["amount"])
 	name_label.text = "%s  %s" % [buff_name, stat_text]
-	name_label.add_theme_font_size_override("font_size", 26 if _is_mobile else 13)
+	name_label.add_theme_font_size_override("font_size", 36 if _is_mobile else 13)
 	if buff.get("is_debuff", false):
 		name_label.add_theme_color_override("font_color", Color(1, 0.5, 0.5))
 	else:
@@ -151,7 +151,7 @@ func _create_buff_entry(buff: Dictionary) -> HBoxContainer:
 	# Description
 	var desc_label = Label.new()
 	desc_label.text = _get_buff_description(buff["id"])
-	desc_label.add_theme_font_size_override("font_size", 22 if _is_mobile else 11)
+	desc_label.add_theme_font_size_override("font_size", 32 if _is_mobile else 11)
 	desc_label.add_theme_color_override("font_color", Color(0.6, 0.58, 0.55))
 	info.add_child(desc_label)
 
@@ -162,10 +162,10 @@ func _create_buff_entry(buff: Dictionary) -> HBoxContainer:
 	var mins = int(buff["time_left"]) / 60
 	var secs = int(buff["time_left"]) % 60
 	timer_label.text = "%d:%02d" % [mins, secs]
-	timer_label.add_theme_font_size_override("font_size", 28 if _is_mobile else 14)
+	timer_label.add_theme_font_size_override("font_size", 40 if _is_mobile else 14)
 	timer_label.add_theme_color_override("font_color", Color(0.8, 0.8, 0.7))
 	timer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	timer_label.custom_minimum_size = Vector2(100, 0) if _is_mobile else Vector2(50, 0)
+	timer_label.custom_minimum_size = Vector2(140, 0) if _is_mobile else Vector2(50, 0)
 	hbox.add_child(timer_label)
 
 	return hbox

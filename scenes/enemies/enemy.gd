@@ -93,19 +93,19 @@ func _ready() -> void:
 	var is_mobile = vp_size.x < 700 or (vp_size.x < vp_size.y)
 	# Scale enemy name label for mobile
 	if is_mobile:
-		name_label.add_theme_font_size_override("font_size", 18)
+		name_label.add_theme_font_size_override("font_size", 28)
 	# Initialize shared label settings once (static, shared across all enemies)
 	if not _dmg_settings_normal:
 		_dmg_settings_normal = LabelSettings.new()
-		_dmg_settings_normal.font_size = 28 if is_mobile else 14
+		_dmg_settings_normal.font_size = 40 if is_mobile else 14
 		_dmg_settings_normal.font_color = Color.WHITE
-		_dmg_settings_normal.outline_size = 3 if is_mobile else 2
+		_dmg_settings_normal.outline_size = 4 if is_mobile else 2
 		_dmg_settings_normal.outline_color = Color.BLACK
 	if not _dmg_settings_crit:
 		_dmg_settings_crit = LabelSettings.new()
-		_dmg_settings_crit.font_size = 44 if is_mobile else 28
+		_dmg_settings_crit.font_size = 56 if is_mobile else 28
 		_dmg_settings_crit.font_color = Color(1.0, 0.95, 0.1)
-		_dmg_settings_crit.outline_size = 4 if is_mobile else 3
+		_dmg_settings_crit.outline_size = 5 if is_mobile else 3
 		_dmg_settings_crit.outline_color = Color.BLACK
 
 	# Shadow
@@ -150,9 +150,9 @@ void fragment() {
 "
 	if not _info_label_settings:
 		_info_label_settings = LabelSettings.new()
-		_info_label_settings.font_size = 22 if is_mobile else 11
+		_info_label_settings.font_size = 32 if is_mobile else 11
 		_info_label_settings.font_color = Color(1.0, 0.6, 0.6)
-		_info_label_settings.outline_size = 3 if is_mobile else 2
+		_info_label_settings.outline_size = 4 if is_mobile else 2
 		_info_label_settings.outline_color = Color.BLACK
 	# Apply outline material to sprite
 	var outline_mat = ShaderMaterial.new()

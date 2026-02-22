@@ -1,9 +1,9 @@
 extends CanvasLayer
 
 @onready var panel: PanelContainer = $Panel
-@onready var equipment_grid: GridContainer = $Panel/MarginContainer/VBox/HBox/EquipmentPanel/EquipGrid
-@onready var bag_grid: GridContainer = $Panel/MarginContainer/VBox/HBox/BagPanel/BagGrid
-@onready var stats_label: Label = $Panel/MarginContainer/VBox/HBox/StatsPanel/StatsLabel
+@onready var equipment_grid: GridContainer = $Panel/MarginContainer/VBox/Scroll/HBox/EquipmentPanel/EquipGrid
+@onready var bag_grid: GridContainer = $Panel/MarginContainer/VBox/Scroll/HBox/BagPanel/BagGrid
+@onready var stats_label: Label = $Panel/MarginContainer/VBox/Scroll/HBox/StatsPanel/StatsLabel
 @onready var item_tooltip: PanelContainer = $ItemTooltip
 @onready var tooltip_label: Label = $ItemTooltip/MarginContainer/TooltipLabel
 
@@ -43,13 +43,22 @@ func _detect_mobile() -> void:
 		panel.offset_right = vp_size.x / 2.0 - margin
 		panel.offset_top = -vp_size.y / 2.0 + margin
 		panel.offset_bottom = vp_size.y / 2.0 - margin
-		$Panel/MarginContainer/VBox/TopBar/Title.add_theme_font_size_override("font_size", 36)
-		$Panel/MarginContainer/VBox/TopBar/CloseHint.add_theme_font_size_override("font_size", 26)
-		$Panel/MarginContainer/VBox/HBox/EquipmentPanel/Title.add_theme_font_size_override("font_size", 32)
-		$Panel/MarginContainer/VBox/HBox/BagPanel/Title.add_theme_font_size_override("font_size", 32)
-		$Panel/MarginContainer/VBox/HBox/StatsPanel/Title.add_theme_font_size_override("font_size", 32)
-		stats_label.add_theme_font_size_override("font_size", 26)
-		tooltip_label.add_theme_font_size_override("font_size", 26)
+		$Panel/MarginContainer/VBox/TopBar/Title.add_theme_font_size_override("font_size", 52)
+		# Replace keyboard hint with a tap-able close button on mobile
+		var close_hint = $Panel/MarginContainer/VBox/TopBar/CloseHint
+		close_hint.text = "CLOSE"
+		close_hint.queue_free()
+		var close_btn = Button.new()
+		close_btn.text = "CLOSE"
+		close_btn.custom_minimum_size = Vector2(200, 64)
+		close_btn.add_theme_font_size_override("font_size", 32)
+		close_btn.pressed.connect(toggle)
+		$Panel/MarginContainer/VBox/TopBar.add_child(close_btn)
+		$Panel/MarginContainer/VBox/Scroll/HBox/EquipmentPanel/Title.add_theme_font_size_override("font_size", 46)
+		$Panel/MarginContainer/VBox/Scroll/HBox/BagPanel/Title.add_theme_font_size_override("font_size", 46)
+		$Panel/MarginContainer/VBox/Scroll/HBox/StatsPanel/Title.add_theme_font_size_override("font_size", 46)
+		stats_label.add_theme_font_size_override("font_size", 38)
+		tooltip_label.add_theme_font_size_override("font_size", 38)
 
 func _refresh() -> void:
 	if not _player:
@@ -68,9 +77,9 @@ func _refresh_equipment() -> void:
 	for slot_name in slot_names:
 		var item = inv.equipment.get(slot_name, {})
 		var btn = Button.new()
-		btn.custom_minimum_size = Vector2(200, 80) if _is_mobile else Vector2(100, 40)
+		btn.custom_minimum_size = Vector2(260, 90) if _is_mobile else Vector2(100, 40)
 		if _is_mobile:
-			btn.add_theme_font_size_override("font_size", 22)
+			btn.add_theme_font_size_override("font_size", 32)
 		if item.is_empty():
 			btn.text = "[%s]" % slot_name.capitalize()
 			btn.modulate = Color(0.5, 0.5, 0.5)
@@ -91,9 +100,9 @@ func _refresh_bag() -> void:
 	for i in range(inv.bag.size()):
 		var item = inv.bag[i]
 		var btn = Button.new()
-		btn.custom_minimum_size = Vector2(180, 72) if _is_mobile else Vector2(90, 36)
+		btn.custom_minimum_size = Vector2(220, 84) if _is_mobile else Vector2(90, 36)
 		if _is_mobile:
-			btn.add_theme_font_size_override("font_size", 22)
+			btn.add_theme_font_size_override("font_size", 32)
 		btn.text = item.get("name", "?")
 		var rarity = item.get("rarity", 0)
 		btn.add_theme_color_override("font_color", ItemData.RARITY_COLORS.get(rarity, Color.WHITE))
@@ -106,9 +115,9 @@ func _refresh_bag() -> void:
 	# Fill remaining slots with empty
 	for i in range(inv.bag.size(), InventoryComponent.MAX_BAG_SLOTS):
 		var btn = Button.new()
-		btn.custom_minimum_size = Vector2(180, 72) if _is_mobile else Vector2(90, 36)
+		btn.custom_minimum_size = Vector2(220, 84) if _is_mobile else Vector2(90, 36)
 		if _is_mobile:
-			btn.add_theme_font_size_override("font_size", 22)
+			btn.add_theme_font_size_override("font_size", 32)
 		btn.text = "---"
 		btn.modulate = Color(0.4, 0.4, 0.4)
 		bag_grid.add_child(btn)

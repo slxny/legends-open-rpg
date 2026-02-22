@@ -36,12 +36,12 @@ func _detect_mobile() -> void:
 		panel.offset_right = vp_size.x / 2.0 - margin
 		panel.offset_top = -vp_size.y / 2.0 + margin
 		panel.offset_bottom = vp_size.y / 2.0 - margin
-		$Panel/MarginContainer/VBox/TopBar/Title.add_theme_font_size_override("font_size", 40)
-		gold_label.add_theme_font_size_override("font_size", 32)
-		close_button.add_theme_font_size_override("font_size", 28)
-		close_button.custom_minimum_size = Vector2(180, 60)
-		$Panel/MarginContainer/VBox/HBox/ShopPanel/Label.add_theme_font_size_override("font_size", 30)
-		$Panel/MarginContainer/VBox/HBox/SellPanel/Label.add_theme_font_size_override("font_size", 30)
+		$Panel/MarginContainer/VBox/TopBar/Title.add_theme_font_size_override("font_size", 56)
+		gold_label.add_theme_font_size_override("font_size", 44)
+		close_button.add_theme_font_size_override("font_size", 38)
+		close_button.custom_minimum_size = Vector2(220, 68)
+		$Panel/MarginContainer/VBox/HBox/ShopPanel/Label.add_theme_font_size_override("font_size", 42)
+		$Panel/MarginContainer/VBox/HBox/SellPanel/Label.add_theme_font_size_override("font_size", 42)
 
 func close() -> void:
 	_is_visible = false
@@ -65,23 +65,23 @@ func _refresh_shop() -> void:
 
 		var name_label = Label.new()
 		name_label.text = item.get("name", "?")
-		name_label.custom_minimum_size = Vector2(280 if _is_mobile else 140, 0)
+		name_label.custom_minimum_size = Vector2(360 if _is_mobile else 140, 0)
 		var rarity = item.get("rarity", 0)
 		name_label.add_theme_color_override("font_color", ItemData.RARITY_COLORS.get(rarity, Color.WHITE))
-		name_label.add_theme_font_size_override("font_size", 26 if _is_mobile else 13)
+		name_label.add_theme_font_size_override("font_size", 36 if _is_mobile else 13)
 		hbox.add_child(name_label)
 
 		var price_label = Label.new()
 		price_label.text = "%dg" % item.get("buy_price", 0)
 		price_label.add_theme_color_override("font_color", Color(1, 0.85, 0.2))
-		price_label.add_theme_font_size_override("font_size", 26 if _is_mobile else 13)
+		price_label.add_theme_font_size_override("font_size", 36 if _is_mobile else 13)
 		hbox.add_child(price_label)
 
 		var buy_btn = Button.new()
 		buy_btn.text = "Buy"
-		buy_btn.custom_minimum_size = Vector2(100, 56) if _is_mobile else Vector2(50, 28)
+		buy_btn.custom_minimum_size = Vector2(140, 64) if _is_mobile else Vector2(50, 28)
 		if _is_mobile:
-			buy_btn.add_theme_font_size_override("font_size", 24)
+			buy_btn.add_theme_font_size_override("font_size", 32)
 		var id = item_id
 		buy_btn.pressed.connect(func(): _buy_item(id))
 		hbox.add_child(buy_btn)
@@ -102,22 +102,22 @@ func _refresh_sell() -> void:
 
 		var name_label = Label.new()
 		name_label.text = item.get("name", "?")
-		name_label.custom_minimum_size = Vector2(280 if _is_mobile else 140, 0)
-		name_label.add_theme_font_size_override("font_size", 26 if _is_mobile else 13)
+		name_label.custom_minimum_size = Vector2(360 if _is_mobile else 140, 0)
+		name_label.add_theme_font_size_override("font_size", 36 if _is_mobile else 13)
 		hbox.add_child(name_label)
 
 		var sell_price = ItemData.get_sell_price(item.get("id", ""))
 		var price_label = Label.new()
 		price_label.text = "%dg" % sell_price
 		price_label.add_theme_color_override("font_color", Color(1, 0.85, 0.2))
-		price_label.add_theme_font_size_override("font_size", 26 if _is_mobile else 13)
+		price_label.add_theme_font_size_override("font_size", 36 if _is_mobile else 13)
 		hbox.add_child(price_label)
 
 		var sell_btn = Button.new()
 		sell_btn.text = "Sell"
-		sell_btn.custom_minimum_size = Vector2(100, 56) if _is_mobile else Vector2(50, 28)
+		sell_btn.custom_minimum_size = Vector2(140, 64) if _is_mobile else Vector2(50, 28)
 		if _is_mobile:
-			sell_btn.add_theme_font_size_override("font_size", 24)
+			sell_btn.add_theme_font_size_override("font_size", 32)
 		var idx = i
 		sell_btn.pressed.connect(func(): _sell_item(idx))
 		hbox.add_child(sell_btn)

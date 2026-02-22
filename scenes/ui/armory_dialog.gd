@@ -35,10 +35,10 @@ func _detect_mobile() -> void:
 		panel.offset_right = vp_size.x / 2.0 - margin
 		panel.offset_top = -vp_size.y / 2.0 + margin
 		panel.offset_bottom = vp_size.y / 2.0 - margin
-		$Panel/MarginContainer/VBox/TopBar/Title.add_theme_font_size_override("font_size", 40)
-		gold_label.add_theme_font_size_override("font_size", 32)
-		close_button.add_theme_font_size_override("font_size", 28)
-		close_button.custom_minimum_size = Vector2(180, 60)
+		$Panel/MarginContainer/VBox/TopBar/Title.add_theme_font_size_override("font_size", 56)
+		gold_label.add_theme_font_size_override("font_size", 44)
+		close_button.add_theme_font_size_override("font_size", 38)
+		close_button.custom_minimum_size = Vector2(220, 68)
 
 func close() -> void:
 	_is_visible = false
@@ -61,14 +61,14 @@ func _add_upgrade_section(title: String, current_level: int, upgrade_type: Strin
 	# Header
 	var header = Label.new()
 	header.text = "%s Forge" % title
-	header.add_theme_font_size_override("font_size", 32 if _is_mobile else 16)
+	header.add_theme_font_size_override("font_size", 44 if _is_mobile else 16)
 	header.add_theme_color_override("font_color", Color(1, 0.85, 0.5))
 	section.add_child(header)
 
 	# Level display
 	var level_label = Label.new()
 	level_label.text = "Level: %d / 100" % current_level
-	level_label.add_theme_font_size_override("font_size", 28 if _is_mobile else 14)
+	level_label.add_theme_font_size_override("font_size", 40 if _is_mobile else 14)
 	section.add_child(level_label)
 
 	# Current bonus
@@ -77,7 +77,7 @@ func _add_upgrade_section(title: String, current_level: int, upgrade_type: Strin
 		bonus_label.text = "Current: +%d Attack Damage" % (current_level * 2)
 	else:
 		bonus_label.text = "Current: +%d Armor, +%d Max HP" % [current_level, current_level * 3]
-	bonus_label.add_theme_font_size_override("font_size", 24 if _is_mobile else 12)
+	bonus_label.add_theme_font_size_override("font_size", 34 if _is_mobile else 12)
 	bonus_label.add_theme_color_override("font_color", Color(0.6, 0.8, 0.6))
 	section.add_child(bonus_label)
 
@@ -90,7 +90,7 @@ func _add_upgrade_section(title: String, current_level: int, upgrade_type: Strin
 			next_label.text = "Next (Lv%d): +%d Attack Damage" % [current_level + 1, (current_level + 1) * 2]
 		else:
 			next_label.text = "Next (Lv%d): +%d Armor, +%d Max HP" % [current_level + 1, current_level + 1, (current_level + 1) * 3]
-		next_label.add_theme_font_size_override("font_size", 24 if _is_mobile else 12)
+		next_label.add_theme_font_size_override("font_size", 34 if _is_mobile else 12)
 		next_label.add_theme_color_override("font_color", Color(0.5, 0.7, 1.0))
 		section.add_child(next_label)
 
@@ -99,7 +99,7 @@ func _add_upgrade_section(title: String, current_level: int, upgrade_type: Strin
 
 		var cost_label = Label.new()
 		cost_label.text = "%dg" % cost
-		cost_label.add_theme_font_size_override("font_size", 28 if _is_mobile else 14)
+		cost_label.add_theme_font_size_override("font_size", 40 if _is_mobile else 14)
 		cost_label.add_theme_color_override("font_color", Color(1, 0.85, 0.2))
 		hbox.add_child(cost_label)
 
@@ -109,9 +109,9 @@ func _add_upgrade_section(title: String, current_level: int, upgrade_type: Strin
 
 		var upgrade_btn = Button.new()
 		upgrade_btn.text = "Upgrade"
-		upgrade_btn.custom_minimum_size = Vector2(180, 64) if _is_mobile else Vector2(90, 32)
+		upgrade_btn.custom_minimum_size = Vector2(220, 72) if _is_mobile else Vector2(90, 32)
 		if _is_mobile:
-			upgrade_btn.add_theme_font_size_override("font_size", 26)
+			upgrade_btn.add_theme_font_size_override("font_size", 34)
 		var type = upgrade_type
 		upgrade_btn.pressed.connect(func(): _do_upgrade(type))
 		if GameManager.gold < cost:
@@ -122,7 +122,7 @@ func _add_upgrade_section(title: String, current_level: int, upgrade_type: Strin
 	else:
 		var max_label = Label.new()
 		max_label.text = "MAX LEVEL"
-		max_label.add_theme_font_size_override("font_size", 28 if _is_mobile else 14)
+		max_label.add_theme_font_size_override("font_size", 40 if _is_mobile else 14)
 		max_label.add_theme_color_override("font_color", Color(1.0, 0.6, 0.1))
 		section.add_child(max_label)
 

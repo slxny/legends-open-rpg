@@ -487,21 +487,22 @@ func _gen_level_up() -> AudioStreamWAV:
 	return _to_stream(samples)
 
 func _gen_beacon_heal() -> AudioStreamWAV:
-	# Gentle restorative chime — warm ascending tones with crystal shimmer
-	var samples = _make_samples(0.7)
-	# Soft warm base tone (C5)
-	_add_sine_segment(samples, 523.0, 0.3, 0.0, 0.5)
-	# Gentle ascending fifth (C5 -> G5)
-	_pitch_sweep_sine(samples, 523.0, 784.0, 0.2)
-	# Crystal overtones for that healing sparkle
-	_add_sine_segment(samples, 1046.0, 0.12, 0.05, 0.4)
-	_add_sine_segment(samples, 1318.0, 0.08, 0.1, 0.35)
-	# Soft high shimmer
-	_add_pitched_noise(samples, 5000.0, 2000.0, 0.025, 0.08)
-	# Warm third harmony (E5)
-	_add_sine_segment(samples, 659.0, 0.1, 0.08, 0.35)
-	_apply_envelope(samples, 0.04, 0.25, 0.4)
-	_soft_clip(samples, 1.2)
+	# Soft music-box arpeggio — gentle staggered chime notes, no horn-like sweeps
+	var samples = _make_samples(0.9)
+	# Ascending major arpeggio: C5 → E5 → G5 → C6, each a short pluck
+	var notes = [523.0, 659.0, 784.0, 1046.0]  # C5, E5, G5, C6
+	var spacing = 0.12  # time between each note onset
+	for idx in range(notes.size()):
+		var onset = idx * spacing
+		var vol = 0.18 - idx * 0.02  # soften higher notes slightly
+		var dur = 0.45 - idx * 0.05  # higher notes ring a bit shorter
+		_add_sine_segment(samples, notes[idx], vol, onset, dur)
+		# Add soft octave-above harmonic for bell-like quality
+		_add_sine_segment(samples, notes[idx] * 2.0, vol * 0.15, onset, dur * 0.6)
+	# Delicate high sparkle (very quiet, narrow band)
+	_add_pitched_noise(samples, 6000.0, 800.0, 0.012, 0.3)
+	_apply_envelope(samples, 0.02, 0.35, 0.53)
+	_normalize(samples, 0.55)
 	return _to_stream(samples)
 
 func _gen_dash_swoosh() -> AudioStreamWAV:

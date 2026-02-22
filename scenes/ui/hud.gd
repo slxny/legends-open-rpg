@@ -85,8 +85,8 @@ func _apply_mobile_layout() -> void:
 		bottom_panel.offset_top = -220
 		bottom_hbox.add_theme_constant_override("separation", 10)
 	else:
-		bottom_panel.offset_top = -400
-		bottom_hbox.add_theme_constant_override("separation", 20)
+		bottom_panel.offset_top = -380
+		bottom_hbox.add_theme_constant_override("separation", 10)
 
 	# ── Unit info: bigger text and bars ──
 	if is_landscape:
@@ -96,17 +96,17 @@ func _apply_mobile_layout() -> void:
 		xp_bar.custom_minimum_size.y = 24
 		unit_info.add_theme_constant_override("separation", 4)
 	else:
-		level_label.add_theme_font_size_override("font_size", 48)
-		hp_bar.custom_minimum_size.y = 56
-		mana_bar.custom_minimum_size.y = 56
-		xp_bar.custom_minimum_size.y = 42
-		unit_info.add_theme_constant_override("separation", 8)
+		level_label.add_theme_font_size_override("font_size", 38)
+		hp_bar.custom_minimum_size.y = 48
+		mana_bar.custom_minimum_size.y = 48
+		xp_bar.custom_minimum_size.y = 34
+		unit_info.add_theme_constant_override("separation", 6)
 
 	# ── Minimap: scale appropriately ──
 	if is_landscape:
 		minimap.custom_minimum_size = Vector2(160, 160)
 	else:
-		minimap.custom_minimum_size = Vector2(240, 240)
+		minimap.custom_minimum_size = Vector2(150, 150)
 
 	# ── Command card: size to fit available width ──
 	if is_landscape:
@@ -119,14 +119,15 @@ func _apply_mobile_layout() -> void:
 				child.custom_minimum_size = Vector2(86, 58)
 				child.add_theme_font_size_override("font_size", 18)
 	else:
-		command_card.custom_minimum_size.x = 500
-		command_label.add_theme_font_size_override("font_size", 36)
+		command_card.custom_minimum_size.x = 380
+		command_label.add_theme_font_size_override("font_size", 28)
 		command_grid.add_theme_constant_override("h_separation", 4)
 		command_grid.add_theme_constant_override("v_separation", 4)
 		for child in command_grid.get_children():
 			if child is Button:
-				child.custom_minimum_size = Vector2(158, 100)
-				child.add_theme_font_size_override("font_size", 30)
+				child.custom_minimum_size = Vector2(118, 84)
+				child.add_theme_font_size_override("font_size", 24)
+				child.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 func _add_mobile_menu_button() -> void:
 	var vp_size = get_viewport().get_visible_rect().size

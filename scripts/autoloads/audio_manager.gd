@@ -217,7 +217,7 @@ func _pregenerate_async() -> void:
 		"gold_pickup", "item_pickup", "level_up", "dash_swoosh",
 		"ability_whoosh", "power_strike", "whirlwind", "player_hurt",
 		"charge_loop", "charge_ready", "charge_release", "tree_chop",
-		"tree_fall", "rat_squeal"]
+		"tree_fall", "rat_squeal_1", "rat_squeal_2", "rat_squeal_3"]
 	var batch: int = 0
 	for sfx_name in sfx_names:
 		if _sfx_cache.has(sfx_name):
@@ -646,18 +646,34 @@ func _gen_tree_fall() -> AudioStreamWAV:
 	_soft_clip(samples, 1.4)
 	return _to_stream(samples)
 
-func _gen_rat_squeal() -> AudioStreamWAV:
-	# Short high-pitched rat squeak — piercing chirp with breathy rasp
-	var samples = _make_samples(0.14)
-	# Core squeal: sharp rising-then-falling high pitch
-	_pitch_sweep_sine(samples, 1800.0, 3200.0, 0.25)
-	_pitch_sweep_sine(samples, 2600.0, 2000.0, 0.15, 0.05)
-	# Second harmonic for shrillness
-	_pitch_sweep_sine(samples, 3600.0, 5000.0, 0.1)
-	# Breathy rasp layer — gives it that animal quality
-	_add_pitched_noise(samples, 3000.0, 2000.0, 0.12)
-	_apply_envelope(samples, 0.005, 0.03, 0.1)
-	_soft_clip(samples, 1.8)
+func _gen_rat_squeal_1() -> AudioStreamWAV:
+	# Soft short chirp — low-mid squeak, not piercing
+	var samples = _make_samples(0.10)
+	_pitch_sweep_sine(samples, 900.0, 1400.0, 0.18)
+	_pitch_sweep_sine(samples, 1200.0, 800.0, 0.10, 0.03)
+	_add_pitched_noise(samples, 1200.0, 800.0, 0.06)
+	_apply_envelope(samples, 0.003, 0.02, 0.07)
+	_soft_clip(samples, 1.2)
+	return _to_stream(samples)
+
+func _gen_rat_squeal_2() -> AudioStreamWAV:
+	# Quick nasal grunt — deeper, more of a chitter
+	var samples = _make_samples(0.08)
+	_pitch_sweep_sine(samples, 700.0, 1100.0, 0.16)
+	_pitch_sweep_sine(samples, 1000.0, 700.0, 0.08, 0.02)
+	_add_pitched_noise(samples, 900.0, 600.0, 0.07)
+	_apply_envelope(samples, 0.002, 0.02, 0.05)
+	_soft_clip(samples, 1.2)
+	return _to_stream(samples)
+
+func _gen_rat_squeal_3() -> AudioStreamWAV:
+	# Breathy hiss — shortest, almost just air
+	var samples = _make_samples(0.12)
+	_pitch_sweep_sine(samples, 800.0, 1200.0, 0.12)
+	_add_pitched_noise(samples, 1000.0, 1200.0, 0.10)
+	_pitch_sweep_sine(samples, 1100.0, 600.0, 0.06, 0.04)
+	_apply_envelope(samples, 0.004, 0.03, 0.08)
+	_soft_clip(samples, 1.0)
 	return _to_stream(samples)
 
 # ============================================================

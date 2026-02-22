@@ -79,6 +79,9 @@ const DMG_LABEL_POOL_MAX: int = 30
 # Shared drop node pool (avoids Area2D+CollisionShape2D+Sprite2D per drop)
 static var _drop_pool: Array[Area2D] = []
 const DROP_POOL_MAX: int = 20
+# Global rat squeal cooldown — prevents overlapping squeals from swarms
+static var _rat_squeal_cooldown: float = 0.0
+const RAT_SQUEAL_INTERVAL: float = 0.8
 
 func _ready() -> void:
 	add_to_group("enemies")
@@ -278,6 +281,10 @@ func _physics_process(delta: float) -> void:
 	if _is_dead:
 		return
 
+	# Tick rat squeal cooldown (static, shared across all enemies)
+	if _rat_squeal_cooldown > 0.0:
+		_rat_squeal_cooldown -= delta
+
 	# Distance-based sleep/wake check (throttled)
 	_sleep_check_timer -= delta
 	if _sleep_check_timer <= 0.0:
@@ -463,11 +470,18 @@ func _process_attack(delta: float) -> void:
 			var result = CombatManager.calculate_damage(get_stats_dict(), target.get_stats_dict())
 			target.take_damage(result["damage"], result["is_crit"])
 			_do_attack_lunge()
-			if sprite_type == "rat":
-				AudioManager.play_sfx("rat_squeal", -4.0)
+			if sprite_type == "rat" and randf() < 0.3:
+				_try_rat_squeal()
 			# Rare effect proc
 			if _effect_chance > 0.0 and randf() < _effect_chance:
 				_apply_effect_to_target(target)
+
+func _try_rat_squeal() -> void:
+	if _rat_squeal_cooldown > 0.0:
+		return
+	_rat_squeal_cooldown = RAT_SQUEAL_INTERVAL
+	var variant = randi_range(1, 3)
+	AudioManager.play_sfx("rat_squeal_%d" % variant, -8.0)
 
 func _process_return(delta: float) -> void:
 	var dist_sq = global_position.distance_squared_to(home_position)

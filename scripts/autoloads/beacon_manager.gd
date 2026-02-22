@@ -42,6 +42,9 @@ func _handle_shop(data: Dictionary, player: Node2D) -> void:
 func _handle_heal(data: Dictionary, player: Node2D) -> void:
 	if player and player.has_node("StatsComponent"):
 		var stats = player.get_node("StatsComponent")
+		# Skip if already at full HP and mana
+		if stats.current_hp >= stats.get_total_max_hp() and stats.current_mana >= stats.get_total_max_mana():
+			return
 		stats.current_hp = stats.get_total_max_hp()
 		stats.current_mana = stats.get_total_max_mana()
 		stats._emit_all()

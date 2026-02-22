@@ -114,9 +114,15 @@ func use_consumable(index: int) -> void:
 	var item_name = item.get("name", "Consumable")
 	match effect:
 		"heal":
+			if stats_component.current_hp >= stats_component.get_total_max_hp():
+				GameManager.game_message.emit("Already at full health!", Color(0.8, 0.8, 0.4))
+				return
 			stats_component.heal(item.get("heal_amount", 0))
 			GameManager.game_message.emit("Used %s (+%d HP)" % [item_name, item.get("heal_amount", 0)], Color(0.5, 1.0, 0.5))
 		"restore_mana":
+			if stats_component.current_mana >= stats_component.get_total_max_mana():
+				GameManager.game_message.emit("Already at full mana!", Color(0.8, 0.8, 0.4))
+				return
 			stats_component.restore_mana(item.get("mana_amount", 0))
 			GameManager.game_message.emit("Used %s (+%d Mana)" % [item_name, item.get("mana_amount", 0)], Color(0.4, 0.6, 1.0))
 		"buff_strength":

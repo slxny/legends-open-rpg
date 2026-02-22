@@ -115,9 +115,12 @@ func take_damage(amount: int) -> void:
 	if current_hp <= 0:
 		died.emit()
 
-func heal(amount: int) -> void:
+func heal(amount: int) -> bool:
+	if current_hp >= get_total_max_hp():
+		return false
 	current_hp = min(get_total_max_hp(), current_hp + amount)
 	hp_changed.emit(current_hp, get_total_max_hp())
+	return true
 
 func use_mana(amount: int) -> bool:
 	if current_mana >= amount:

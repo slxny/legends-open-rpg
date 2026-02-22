@@ -134,8 +134,11 @@ var _mobile_attack_held: bool = false   # True while mobile attack button is hel
 var _mobile_atk_canvas: CanvasLayer = null
 var _mobile_atk_btn: Button = null
 # Two-finger pinch-to-zoom tracking
-var _touch_points: Dictionary = {}      # touch index -> screen position
+var _touch_points: Dictionary = {}      # touch index -> screen position (unhandled only)
 var _pinch_prev_distance: float = 0.0   # Previous distance between two fingers
+# All screen touches — tracked in _input() so UI-consumed touches are included.
+# Used for attack direction and movement/diagonal detection on mobile.
+var _screen_touches: Dictionary = {}    # touch index -> screen position (all touches)
 const ZOOM_MIN_MOBILE := Vector2(2.5, 2.5)  # Less zoom-out on mobile (screen is small)
 const ZOOM_MAX_MOBILE := Vector2(7.0, 7.0)  # More zoom-in on mobile
 
@@ -345,10 +348,10 @@ func _physics_process(delta: float) -> void:
 				Input.get_axis("move_left", "move_right"),
 				Input.get_axis("move_up", "move_down")
 			)
-			# On mobile, consider click-to-move velocity OR active screen touch as movement
+			# On mobile, consider click-to-move velocity OR any non-ATK finger on screen as movement
 			var is_moving = move_input.length() > 0.25
 			if not is_moving and _is_mobile:
-				is_moving = velocity.length() > 30.0 or _touch_points.size() > 0
+				is_moving = velocity.length() > 30.0 or _get_non_atk_touches().size() > 0
 			var is_ranged = hero_class == "shadow_ranger"
 			if taps >= 3:
 				_try_special_attack(SpecialAttack.ARROW_RAIN if is_ranged else SpecialAttack.WHIRLWIND)
@@ -532,6 +535,18 @@ func _get_zoom_min() -> Vector2:
 func _get_zoom_max() -> Vector2:
 	return ZOOM_MAX_MOBILE if _is_mobile else ZOOM_MAX
 
+func _input(event: InputEvent) -> void:
+	# Track ALL screen touches (including those consumed by UI) for mobile
+	# attack direction and movement/diagonal detection.
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			_screen_touches[event.index] = event.position
+		else:
+			_screen_touches.erase(event.index)
+	elif event is InputEventScreenDrag:
+		if event.index in _screen_touches:
+			_screen_touches[event.index] = event.position
+
 func _unhandled_input(event: InputEvent) -> void:
 	var z_min = _get_zoom_min()
 	var z_max = _get_zoom_max()
@@ -690,11 +705,17 @@ func _try_manual_attack() -> void:
 	_set_facing(attack_dir)
 
 	# Diagonal keys + attack = dash strike / shadow step
-	# On mobile: two fingers on screen = diagonal intent, or moving diagonally via click-to-move
+	# On mobile: two non-ATK fingers on screen = diagonal intent, or moving diagonally
 	var is_diagonal = abs(input_raw.x) > 0.3 and abs(input_raw.y) > 0.3
 	if not is_diagonal and _is_mobile:
-		if _touch_points.size() >= 2:
-			# Two fingers on screen signals diagonal attack intent
+		var non_atk = _get_non_atk_touches()
+		if non_atk.size() >= 2:
+			# Two fingers on screen (not on ATK) signals diagonal attack intent
+			# Compute attack direction from player toward finger midpoint
+			var touch_dir = _get_mobile_touch_dir()
+			if touch_dir.length() > 0.1:
+				attack_dir = touch_dir
+				_set_facing(attack_dir)
 			is_diagonal = true
 		elif velocity.length() > 30.0:
 			var vel_norm = velocity.normalized()
@@ -1594,12 +1615,15 @@ func _create_mobile_attack_button() -> void:
 	_mobile_atk_btn.add_theme_font_size_override("font_size", 36 if is_landscape else 52)
 	_mobile_atk_btn.add_theme_color_override("font_color", Color(0.95, 0.85, 0.5))
 	_mobile_atk_btn.add_theme_color_override("font_pressed_color", Color(1.0, 1.0, 0.7))
+	# Pivot at center so scale animations expand outward
+	_mobile_atk_btn.pivot_offset = Vector2(btn_size / 2.0, btn_size / 2.0)
 
 	_mobile_atk_btn.button_down.connect(_on_mobile_attack_pressed)
 	_mobile_atk_btn.button_up.connect(_on_mobile_attack_released)
 	_mobile_atk_canvas.add_child(_mobile_atk_btn)
 
 func _on_mobile_attack_pressed() -> void:
+	_flash_atk_button()
 	# Count as a tap (same as spacebar press) for special attack detection
 	if not _is_paralyzed:
 		_tap_count += 1
@@ -1610,21 +1634,50 @@ func _on_mobile_attack_pressed() -> void:
 func _on_mobile_attack_released() -> void:
 	_mobile_attack_held = false
 
+var _atk_flash_tween: Tween = null
+
+func _flash_atk_button() -> void:
+	if not _mobile_atk_btn or not is_instance_valid(_mobile_atk_btn):
+		return
+	# Kill any in-progress flash so rapid taps restart cleanly
+	if _atk_flash_tween and _atk_flash_tween.is_valid():
+		_atk_flash_tween.kill()
+	# Scale punch + bright color flash
+	_mobile_atk_btn.scale = Vector2(1.18, 1.18)
+	_mobile_atk_btn.modulate = Color(2.0, 1.6, 0.6, 1.0)
+	_atk_flash_tween = create_tween()
+	_atk_flash_tween.set_parallel(true)
+	_atk_flash_tween.tween_property(_mobile_atk_btn, "scale", Vector2(1.0, 1.0), 0.15).set_ease(Tween.EASE_OUT)
+	_atk_flash_tween.tween_property(_mobile_atk_btn, "modulate", Color(1.0, 1.0, 1.0, 0.8), 0.2).set_ease(Tween.EASE_OUT)
+
+func _get_non_atk_touches() -> Dictionary:
+	# Return all active screen touches EXCEPT those on the ATK button.
+	# Uses _screen_touches (tracked in _input) so UI-consumed touches are included.
+	if not _mobile_atk_btn or not is_instance_valid(_mobile_atk_btn):
+		return _screen_touches
+	var atk_rect = _mobile_atk_btn.get_global_rect()
+	var result: Dictionary = {}
+	for idx in _screen_touches:
+		if not atk_rect.has_point(_screen_touches[idx]):
+			result[idx] = _screen_touches[idx]
+	return result
+
 func _get_mobile_touch_dir() -> Vector2:
 	# Derive an aim direction from active screen touches (fingers NOT on ATK button).
 	# Single finger: direction from player screen-pos to that finger.
 	# Two+ fingers: direction from player screen-pos to the midpoint of all fingers.
-	if _touch_points.is_empty():
+	var touches = _get_non_atk_touches()
+	if touches.is_empty():
 		return Vector2.ZERO
 	var player_screen_pos = get_viewport().get_canvas_transform() * global_position
 	var touch_center: Vector2
-	if _touch_points.size() == 1:
-		touch_center = _touch_points.values()[0]
+	if touches.size() == 1:
+		touch_center = touches.values()[0]
 	else:
 		var sum := Vector2.ZERO
-		for pos in _touch_points.values():
+		for pos in touches.values():
 			sum += pos
-		touch_center = sum / _touch_points.size()
+		touch_center = sum / touches.size()
 	var dir = (touch_center - player_screen_pos)
 	if dir.length() < 10.0:
 		return Vector2.ZERO

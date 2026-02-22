@@ -106,17 +106,60 @@ func use_consumable(index: int) -> void:
 		return
 	var item = consumables[index]
 	if item.is_empty():
+		GameManager.game_message.emit("No consumable in slot %d" % (index + 1), Color(1.0, 0.8, 0.3))
 		return
 	if not stats_component:
 		return
 	var effect = item.get("effect", "")
+	var item_name = item.get("name", "Consumable")
 	match effect:
 		"heal":
 			stats_component.heal(item.get("heal_amount", 0))
+			GameManager.game_message.emit("Used %s (+%d HP)" % [item_name, item.get("heal_amount", 0)], Color(0.5, 1.0, 0.5))
 		"restore_mana":
 			stats_component.restore_mana(item.get("mana_amount", 0))
+			GameManager.game_message.emit("Used %s (+%d Mana)" % [item_name, item.get("mana_amount", 0)], Color(0.4, 0.6, 1.0))
+		"buff_strength":
+			var amount = item.get("buff_amount", 0)
+			var duration = item.get("buff_duration", 30.0)
+			stats_component.apply_timed_buff("elixir_strength", "strength", amount, duration)
+			GameManager.game_message.emit("Used %s (+%d STR for %.0fs)" % [item_name, amount, duration], Color(1.0, 0.8, 0.3))
+		"buff_speed":
+			var amount = item.get("buff_amount", 0)
+			var duration = item.get("buff_duration", 30.0)
+			stats_component.apply_timed_buff("elixir_speed", "move_speed", amount, duration)
+			GameManager.game_message.emit("Used %s (+%d Speed for %.0fs)" % [item_name, amount, duration], Color(0.3, 1.0, 0.9))
+		_:
+			GameManager.game_message.emit("Used %s" % item_name, Color(0.8, 0.8, 0.8))
 	consumables[index] = {}
+	# Auto-replenish: move a consumable from bag into the empty slot
+	_replenish_slot(index)
 	inventory_changed.emit()
+
+## Move the first consumable found in the bag into the given quick-slot.
+func _replenish_slot(slot_index: int) -> void:
+	for i in range(bag.size()):
+		if bag[i].get("slot") == ItemData.Slot.CONSUMABLE:
+			consumables[slot_index] = bag[i]
+			bag.remove_at(i)
+			return
+
+## Move a consumable from the bag into the first empty quick-slot. Returns true on success.
+func move_bag_consumable_to_slot(bag_index: int) -> bool:
+	if bag_index < 0 or bag_index >= bag.size():
+		return false
+	var item = bag[bag_index]
+	if item.get("slot") != ItemData.Slot.CONSUMABLE:
+		return false
+	for i in range(consumables.size()):
+		if consumables[i].is_empty():
+			consumables[i] = item
+			bag.remove_at(bag_index)
+			inventory_changed.emit()
+			return true
+	# All consumable slots full
+	GameManager.game_message.emit("Consumable slots full!", Color(1.0, 0.3, 0.3))
+	return false
 
 func _apply_equipment_stats() -> void:
 	if not stats_component:

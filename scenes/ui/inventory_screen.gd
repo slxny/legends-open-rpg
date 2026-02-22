@@ -107,7 +107,10 @@ func _refresh_bag() -> void:
 		var rarity = item.get("rarity", 0)
 		btn.add_theme_color_override("font_color", ItemData.RARITY_COLORS.get(rarity, Color.WHITE))
 		var idx = i
-		btn.pressed.connect(func(): _player.inventory.equip_from_bag(idx); _refresh())
+		if item.get("slot") == ItemData.Slot.CONSUMABLE:
+			btn.pressed.connect(func(): _player.inventory.move_bag_consumable_to_slot(idx); _refresh())
+		else:
+			btn.pressed.connect(func(): _player.inventory.equip_from_bag(idx); _refresh())
 		btn.mouse_entered.connect(_show_tooltip.bind(item))
 		btn.mouse_exited.connect(_hide_tooltip)
 		bag_grid.add_child(btn)

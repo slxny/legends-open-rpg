@@ -212,6 +212,10 @@ func setup(player: Node2D) -> void:
 			_player.inventory.use_consumable(2)
 	)
 
+	# Update potion button labels when inventory changes
+	player.inventory.inventory_changed.connect(_update_potion_labels)
+	_update_potion_labels()
+
 	# Inventory toggle
 	inv_btn.pressed.connect(_on_inventory_pressed)
 
@@ -297,6 +301,20 @@ func _on_ability_cooldown(index: int, remaining: float, _total: float) -> void:
 		btn.disabled = true
 	else:
 		btn.disabled = false
+
+func _update_potion_labels() -> void:
+	if not _player or not is_instance_valid(_player):
+		return
+	var inv = _player.inventory
+	var btns = [potion_1_btn, potion_2_btn, potion_3_btn]
+	for i in range(3):
+		var item = inv.consumables[i] if i < inv.consumables.size() else {}
+		if item.is_empty():
+			btns[i].text = "%d\n---" % (i + 1)
+			btns[i].modulate = Color(0.5, 0.5, 0.5)
+		else:
+			btns[i].text = "%d\n%s" % [i + 1, item.get("name", "Potion")]
+			btns[i].modulate = Color.WHITE
 
 func _on_changelog_pressed() -> void:
 	var dialogs = get_tree().get_nodes_in_group("changelog_dialog")

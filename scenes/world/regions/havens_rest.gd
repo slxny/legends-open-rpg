@@ -208,6 +208,7 @@ func _on_heal_beacon(_b: Area2D) -> void:
 		stats.current_hp = stats.get_total_max_hp()
 		stats.current_mana = stats.get_total_max_mana()
 		stats._emit_all()
+		AudioManager.play_sfx("beacon_heal")
 		GameManager.game_message.emit("HP and Mana fully restored!", Color(0.2, 1.0, 0.2))
 
 func _on_info_beacon(_b: Area2D) -> void:

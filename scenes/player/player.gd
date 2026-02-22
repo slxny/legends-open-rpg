@@ -345,10 +345,10 @@ func _physics_process(delta: float) -> void:
 				Input.get_axis("move_left", "move_right"),
 				Input.get_axis("move_up", "move_down")
 			)
-			# On mobile, consider click-to-move velocity as movement input
+			# On mobile, consider click-to-move velocity OR active screen touch as movement
 			var is_moving = move_input.length() > 0.25
-			if not is_moving and _is_mobile and velocity.length() > 30.0:
-				is_moving = true
+			if not is_moving and _is_mobile:
+				is_moving = velocity.length() > 30.0 or _touch_points.size() > 0
 			var is_ranged = hero_class == "shadow_ranger"
 			if taps >= 3:
 				_try_special_attack(SpecialAttack.ARROW_RAIN if is_ranged else SpecialAttack.WHIRLWIND)
@@ -674,6 +674,15 @@ func _try_manual_attack() -> void:
 	var attack_dir: Vector2
 	if input_raw.length() > 0.25:
 		attack_dir = input_raw.normalized()
+	elif _is_mobile:
+		# On mobile: derive direction from active screen touches, then velocity, then facing
+		var touch_dir = _get_mobile_touch_dir()
+		if touch_dir.length() > 0.1:
+			attack_dir = touch_dir
+		elif velocity.length() > 30.0:
+			attack_dir = velocity.normalized()
+		else:
+			attack_dir = _facing
 	else:
 		attack_dir = _facing
 
@@ -681,11 +690,15 @@ func _try_manual_attack() -> void:
 	_set_facing(attack_dir)
 
 	# Diagonal keys + attack = dash strike / shadow step
-	# On mobile, check if actively moving diagonally via click-to-move
+	# On mobile: two fingers on screen = diagonal intent, or moving diagonally via click-to-move
 	var is_diagonal = abs(input_raw.x) > 0.3 and abs(input_raw.y) > 0.3
-	if not is_diagonal and _is_mobile and velocity.length() > 30.0:
-		var vel_norm = velocity.normalized()
-		is_diagonal = abs(vel_norm.x) > 0.3 and abs(vel_norm.y) > 0.3
+	if not is_diagonal and _is_mobile:
+		if _touch_points.size() >= 2:
+			# Two fingers on screen signals diagonal attack intent
+			is_diagonal = true
+		elif velocity.length() > 30.0:
+			var vel_norm = velocity.normalized()
+			is_diagonal = abs(vel_norm.x) > 0.3 and abs(vel_norm.y) > 0.3
 	if is_diagonal:
 		if hero_class == "shadow_ranger":
 			_execute_shadow_step(attack_dir)
@@ -1597,6 +1610,26 @@ func _on_mobile_attack_pressed() -> void:
 func _on_mobile_attack_released() -> void:
 	_mobile_attack_held = false
 
+func _get_mobile_touch_dir() -> Vector2:
+	# Derive an aim direction from active screen touches (fingers NOT on ATK button).
+	# Single finger: direction from player screen-pos to that finger.
+	# Two+ fingers: direction from player screen-pos to the midpoint of all fingers.
+	if _touch_points.is_empty():
+		return Vector2.ZERO
+	var player_screen_pos = get_viewport().get_canvas_transform() * global_position
+	var touch_center: Vector2
+	if _touch_points.size() == 1:
+		touch_center = _touch_points.values()[0]
+	else:
+		var sum := Vector2.ZERO
+		for pos in _touch_points.values():
+			sum += pos
+		touch_center = sum / _touch_points.size()
+	var dir = (touch_center - player_screen_pos)
+	if dir.length() < 10.0:
+		return Vector2.ZERO
+	return dir.normalized()
+
 func _get_world_mouse_pos() -> Vector2:
 	# Use the viewport's canvas transform so the result matches what is
 	# visually on screen, even when camera position_smoothing is active.
@@ -1683,13 +1716,17 @@ func _set_facing(dir: Vector2) -> void:
 		sprite.texture = _idle_texture
 
 func _get_aim_direction() -> Vector2:
-	# Prefer held arrow/WASD keys, fall back to last facing direction
+	# Prefer held arrow/WASD keys, then mobile touch direction, then last facing
 	var input_raw = Vector2(
 		Input.get_axis("move_left", "move_right"),
 		Input.get_axis("move_up", "move_down")
 	)
 	if input_raw.length() > 0.25:
 		return input_raw.normalized()
+	if _is_mobile:
+		var touch_dir = _get_mobile_touch_dir()
+		if touch_dir.length() > 0.1:
+			return touch_dir
 	return _facing
 
 func _use_ability(ability_key: String) -> void:

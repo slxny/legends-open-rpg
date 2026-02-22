@@ -70,13 +70,28 @@ func _build_menu() -> void:
 	vbox.add_theme_constant_override("separation", 16 if _is_mobile else 12)
 	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
 
-	# Title
+	# Top bar with title and close button
+	var top_bar = HBoxContainer.new()
+
 	var title = Label.new()
 	title.text = "PAUSED"
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 64 if _is_mobile else 28)
 	title.add_theme_color_override("font_color", Color(0.95, 0.8, 0.3))
-	vbox.add_child(title)
+	top_bar.add_child(title)
+
+	var spacer = Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top_bar.add_child(spacer)
+
+	var close_btn = Button.new()
+	close_btn.text = "X"
+	close_btn.custom_minimum_size = Vector2(120, 64) if _is_mobile else Vector2(40, 32)
+	close_btn.add_theme_font_size_override("font_size", 36 if _is_mobile else 16)
+	close_btn.add_theme_color_override("font_color", Color(1.0, 0.4, 0.3))
+	close_btn.pressed.connect(func(): close())
+	top_bar.add_child(close_btn)
+
+	vbox.add_child(top_bar)
 
 	var sep = HSeparator.new()
 	sep.add_theme_constant_override("separation", 8)

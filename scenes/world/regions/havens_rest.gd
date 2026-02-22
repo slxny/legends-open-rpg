@@ -347,13 +347,14 @@ func _generate_town() -> void:
 	for wx in range(-460, 461, 42):
 		_add_town_building(town, Vector2(wx, 370), "town_wall_h")
 	# West wall segments (skip gate area around y=0)
+	# Rotate the horizontal wall sprite 90° so the wall runs vertically
 	for wy in range(-360, 361, 42):
 		if abs(wy) > 60:
-			_add_town_building(town, Vector2(-480, wy), "town_wall_v")
+			_add_town_wall_rotated(town, Vector2(-480, wy), -PI / 2.0)
 	# East wall segments
 	for wy in range(-360, 361, 42):
 		if abs(wy) > 60:
-			_add_town_building(town, Vector2(460, wy), "town_wall_v")
+			_add_town_wall_rotated(town, Vector2(460, wy), PI / 2.0)
 
 	# ---- Watch towers at 4 corners ----
 	_add_town_building(town, Vector2(-460, -370), "watch_tower")
@@ -459,6 +460,15 @@ func _add_town_building(parent: Node2D, pos: Vector2, tex_name: String) -> void:
 	spr.position = pos
 	spr.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	spr.texture = SpriteGenerator.get_texture(tex_name)
+	spr.z_index = 0
+	parent.add_child(spr)
+
+func _add_town_wall_rotated(parent: Node2D, pos: Vector2, angle: float) -> void:
+	var spr = Sprite2D.new()
+	spr.position = pos
+	spr.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	spr.texture = SpriteGenerator.get_texture("town_wall_h")
+	spr.rotation = angle
 	spr.z_index = 0
 	parent.add_child(spr)
 

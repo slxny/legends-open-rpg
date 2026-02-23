@@ -217,7 +217,7 @@ func initialize(config: Dictionary) -> void:
 	_aggro_range_sq = aggro_range * aggro_range
 	_chase_range_sq = chase_range * chase_range
 	_attack_range_sq = stats.attack_range * stats.attack_range
-	var disengage = stats.attack_range * 2.5
+	var disengage = stats.attack_range * 4.0
 	_attack_disengage_sq = disengage * disengage
 	var alert_range = aggro_range * ALERT_RANGE_MULTIPLIER
 	_alert_range_sq = alert_range * alert_range
@@ -427,12 +427,16 @@ func _process_patrol(delta: float) -> void:
 		sprite.flip_h = false
 	move_and_slide()
 
-func _get_separation_push() -> Vector2:
+func _get_separation_push(in_attack: bool = false) -> Vector2:
 	var push = Vector2.ZERO
 	for slide_idx in range(get_slide_collision_count()):
 		var col = get_slide_collision(slide_idx)
 		if col and col.get_collider() and col.get_collider().is_in_group("enemies"):
 			push -= col.get_normal() * 60.0
+	# Cap total separation so swarms don't lock up — softer cap during attack
+	var max_push = 70.0 if in_attack else 120.0
+	if push.length_squared() > max_push * max_push:
+		push = push.normalized() * max_push
 	return push
 
 func _process_chase(delta: float) -> void:
@@ -451,6 +455,11 @@ func _process_chase(delta: float) -> void:
 	if dist_sq_to_target <= _attack_range_sq:
 		current_state = State.ATTACK
 		return
+
+	# Keep attack timer ticking while chasing so enemies pushed out of attack
+	# range by sibling separation don't lose all their attack progress
+	if _attack_timer > 0.0:
+		_attack_timer -= delta * 0.5  # Tick at half rate while closing in
 
 	var dir = (target.global_position - global_position).normalized()
 	velocity = dir * stats.move_speed + _get_separation_push()
@@ -479,14 +488,14 @@ func _process_attack(delta: float) -> void:
 		sprite.flip_h = false
 
 	# Keep enemies spread apart and maintain comfortable combat distance
-	var push = _get_separation_push()
+	var push = _get_separation_push(true)
 	var dist = to_target.length()
 	var ideal_dist = stats.attack_range * 0.7
 	if dist > 0.1:
 		var dir_from_target = -to_target.normalized()
 		if dist < ideal_dist:
 			# Too close — back away
-			push += dir_from_target * stats.move_speed * 0.5
+			push += dir_from_target * stats.move_speed * 0.3
 		elif dist > ideal_dist + 3.0:
 			# Drifting past ideal — close in to maintain melee contact
 			# Urgency scales with distance so enemies track moving targets

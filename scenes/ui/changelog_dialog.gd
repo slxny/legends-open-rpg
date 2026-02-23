@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.42.3"
+const GAME_VERSION := "v0.42.4"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.42.4",
+		"title": "Fix Mob Group Pathfinding & Attack",
+		"date": "2026-02-23",
+		"entries": [
+			"Enemies no longer physically block each other when chasing the hero",
+			"Mobs in a group now swarm and attack aggressively instead of lining up",
+			"Replaced hard enemy-to-enemy collision with soft proximity separation",
+			"Enemies in attack state close distance on the hero more urgently",
+		]
+	},
 	{
 		"version": "v0.42.3",
 		"title": "Game Messages Fit Portrait Screens",

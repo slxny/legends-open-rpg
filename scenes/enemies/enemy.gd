@@ -428,12 +428,22 @@ func _process_patrol(delta: float) -> void:
 	move_and_slide()
 
 func _get_separation_push(in_attack: bool = false) -> Vector2:
+	# Proximity-based soft separation — enemies repel each other without hard collisions
 	var push = Vector2.ZERO
-	for slide_idx in range(get_slide_collision_count()):
-		var col = get_slide_collision(slide_idx)
-		if col and col.get_collider() and col.get_collider().is_in_group("enemies"):
-			push -= col.get_normal() * 60.0
-	# Cap total separation so swarms don't lock up — softer cap during attack
+	var pos = global_position
+	var check_radius: float = 30.0
+	var check_radius_sq: float = check_radius * check_radius
+	for other in get_tree().get_nodes_in_group("enemies"):
+		if other == self or other._is_dead:
+			continue
+		var diff = pos - other.global_position
+		var dist_sq = diff.length_squared()
+		if dist_sq < check_radius_sq and dist_sq > 0.1:
+			var dist = sqrt(dist_sq)
+			# Inverse-linear falloff: stronger push when closer
+			var strength = (1.0 - dist / check_radius) * 150.0
+			push += diff.normalized() * strength
+	# Softer cap during attack so combat positioning isn't disrupted
 	var max_push = 70.0 if in_attack else 120.0
 	if push.length_squared() > max_push * max_push:
 		push = push.normalized() * max_push
@@ -488,20 +498,21 @@ func _process_attack(delta: float) -> void:
 		sprite.flip_h = false
 
 	# Keep enemies spread apart and maintain comfortable combat distance
-	var push = _get_separation_push(true)
+	var sep = _get_separation_push(true)
 	var dist = to_target.length()
 	var ideal_dist = stats.attack_range * 0.7
+	var move_toward = Vector2.ZERO
 	if dist > 0.1:
-		var dir_from_target = -to_target.normalized()
+		var dir_to_target = to_target.normalized()
 		if dist < ideal_dist:
-			# Too close — back away
-			push += dir_from_target * stats.move_speed * 0.3
+			# Too close — gentle back-away
+			move_toward = -dir_to_target * stats.move_speed * 0.2
 		elif dist > ideal_dist + 3.0:
-			# Drifting past ideal — close in to maintain melee contact
-			# Urgency scales with distance so enemies track moving targets
-			var urgency = clampf((dist - ideal_dist) / (stats.attack_range * 0.5), 0.3, 1.0)
-			push -= dir_from_target * stats.move_speed * urgency
-	velocity = push
+			# Beyond ideal range — aggressively close in to maintain melee contact
+			var urgency = clampf((dist - ideal_dist) / (stats.attack_range * 0.5), 0.4, 1.0)
+			move_toward = dir_to_target * stats.move_speed * urgency
+	# Movement toward target takes priority over separation
+	velocity = move_toward + sep * 0.6
 	move_and_slide()
 
 	_attack_timer -= delta

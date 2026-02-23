@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.43.1"
+const GAME_VERSION := "v0.43.2"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.43.2",
+		"title": "Larger Mobile Buttons",
+		"date": "2026-02-23",
+		"entries": [
+			"Close/X buttons are bigger and easier to tap on mobile across all dialogs",
+			"Shop Buy/Sell and Back buttons enlarged for mobile",
+			"Armory upgrade button enlarged for mobile",
+		]
+	},
 	{
 		"version": "v0.43.1",
 		"title": "Fix Mobile Chrome Fullscreen",
@@ -765,8 +775,8 @@ func _resize_panel(vp_size: Vector2) -> void:
 		panel.offset_right = vp_size.x / 2.0 - margin
 		panel.offset_top = -vp_size.y / 2.0 + margin
 		panel.offset_bottom = vp_size.y / 2.0 - margin
-		close_button.custom_minimum_size = Vector2(220, 68)
-		close_button.add_theme_font_size_override("font_size", 38)
+		close_button.custom_minimum_size = Vector2(280, 90)
+		close_button.add_theme_font_size_override("font_size", 44)
 		version_label.add_theme_font_size_override("font_size", 40)
 		$Panel/MarginContainer/VBox/TopBar/Title.add_theme_font_size_override("font_size", 56)
 	else:

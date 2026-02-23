@@ -37,8 +37,8 @@ func _detect_mobile() -> void:
 		panel.offset_bottom = vp_size.y / 2.0 - margin
 		$Panel/MarginContainer/VBox/TopBar/Title.add_theme_font_size_override("font_size", 56)
 		gold_label.add_theme_font_size_override("font_size", 44)
-		close_button.add_theme_font_size_override("font_size", 38)
-		close_button.custom_minimum_size = Vector2(220, 68)
+		close_button.add_theme_font_size_override("font_size", 44)
+		close_button.custom_minimum_size = Vector2(280, 90)
 
 func close() -> void:
 	_is_visible = false
@@ -109,7 +109,7 @@ func _add_upgrade_section(title: String, current_level: int, upgrade_type: Strin
 
 		var upgrade_btn = Button.new()
 		upgrade_btn.text = "Upgrade"
-		upgrade_btn.custom_minimum_size = Vector2(220, 72) if _is_mobile else Vector2(90, 32)
+		upgrade_btn.custom_minimum_size = Vector2(260, 90) if _is_mobile else Vector2(90, 32)
 		if _is_mobile:
 			upgrade_btn.add_theme_font_size_override("font_size", 34)
 		var type = upgrade_type

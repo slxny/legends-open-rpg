@@ -76,9 +76,9 @@ func _build_ui() -> void:
 	var fs_title = 48 if _is_mobile else 20
 	var fs_normal = 36 if _is_mobile else 14
 	var fs_small = 30 if _is_mobile else 12
-	var fs_btn = 34 if _is_mobile else 14
-	var btn_h = 76 if _is_mobile else 32
-	var tab_h = 80 if _is_mobile else 36
+	var fs_btn = 42 if _is_mobile else 14
+	var btn_h = 90 if _is_mobile else 32
+	var tab_h = 100 if _is_mobile else 36
 	var margin_px = 16 if _is_mobile else 12
 
 	# Root margin
@@ -227,13 +227,13 @@ func _build_ui() -> void:
 	detail_vbox.add_child(action_row)
 
 	_detail_action_btn = Button.new()
-	_detail_action_btn.custom_minimum_size = Vector2(180 if _is_mobile else 100, btn_h + 4)
+	_detail_action_btn.custom_minimum_size = Vector2(220 if _is_mobile else 100, btn_h + 4)
 	_detail_action_btn.add_theme_font_size_override("font_size", fs_btn)
 	action_row.add_child(_detail_action_btn)
 
 	_detail_close_btn = Button.new()
 	_detail_close_btn.text = "Back"
-	_detail_close_btn.custom_minimum_size = Vector2(140 if _is_mobile else 80, btn_h + 4)
+	_detail_close_btn.custom_minimum_size = Vector2(180 if _is_mobile else 80, btn_h + 4)
 	_detail_close_btn.add_theme_font_size_override("font_size", fs_btn)
 	_detail_close_btn.pressed.connect(_hide_detail)
 	action_row.add_child(_detail_close_btn)

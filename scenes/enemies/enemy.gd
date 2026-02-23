@@ -429,12 +429,18 @@ func _process_patrol(delta: float) -> void:
 
 func _get_separation_push(in_attack: bool = false) -> Vector2:
 	# Proximity-based soft separation — enemies repel each other without hard collisions
+	# Optimized: only check camp-mates (parent's children) instead of all enemies globally
 	var push = Vector2.ZERO
 	var pos = global_position
 	var check_radius: float = 30.0
 	var check_radius_sq: float = check_radius * check_radius
-	for other in get_tree().get_nodes_in_group("enemies"):
-		if other == self or other._is_dead:
+	var parent = get_parent()
+	if not parent:
+		return push
+	for other in parent.get_children():
+		if other == self:
+			continue
+		if not other.is_in_group("enemies") or other._is_dead:
 			continue
 		var diff = pos - other.global_position
 		var dist_sq = diff.length_squared()

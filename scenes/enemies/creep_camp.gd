@@ -2,7 +2,7 @@ extends Node2D
 
 @export var camp_type: String = "goblin"
 @export var enemy_count: int = 4
-@export var respawn_time: float = 45.0  # Faster respawn for more action
+@export var respawn_time: float = 30.0  # Fast respawn for dense outer areas
 
 # Creep camp definitions
 const CAMP_TYPES = {

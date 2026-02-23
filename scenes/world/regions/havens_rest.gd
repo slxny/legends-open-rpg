@@ -15,21 +15,21 @@ const CreepCampScene = preload("res://scenes/enemies/creep_camp.tscn")
 # [camp_type, min_distance, max_distance, camp_count, enemy_per_camp]
 const WAVE_SCHEDULE = [
 	# Wave 1 (3 min): Tougher wolves + skeleton reinforcements mid-range
-	{"time": 180.0, "type": "wolf", "min_dist": 1500.0, "max_dist": 2500.0, "camps": 3, "per_camp": 6, "msg": "Wolves are gathering in the wilds...", "color": Color(0.6, 0.6, 0.9)},
+	{"time": 180.0, "type": "wolf", "min_dist": 1500.0, "max_dist": 2500.0, "camps": 5, "per_camp": 6, "msg": "Wolves are gathering in the wilds...", "color": Color(0.6, 0.6, 0.9)},
 	# Wave 2 (5 min): Bandits push in, trolls appear mid
-	{"time": 300.0, "type": "troll", "min_dist": 2000.0, "max_dist": 3500.0, "camps": 3, "per_camp": 4, "msg": "Trolls emerge from the deep forest!", "color": Color(0.4, 0.8, 0.4)},
+	{"time": 300.0, "type": "troll", "min_dist": 2000.0, "max_dist": 3500.0, "camps": 5, "per_camp": 4, "msg": "Trolls emerge from the deep forest!", "color": Color(0.4, 0.8, 0.4)},
 	# Wave 3 (7 min): Dark mages + first mini-boss
-	{"time": 420.0, "type": "dark_mage", "min_dist": 2500.0, "max_dist": 4000.0, "camps": 4, "per_camp": 4, "msg": "Dark magic crackles in the air...", "color": Color(0.7, 0.3, 0.9)},
+	{"time": 420.0, "type": "dark_mage", "min_dist": 2500.0, "max_dist": 4000.0, "camps": 6, "per_camp": 4, "msg": "Dark magic crackles in the air...", "color": Color(0.7, 0.3, 0.9)},
 	# Wave 4 (10 min): Demon Knights arrive
-	{"time": 600.0, "type": "demon_knight", "min_dist": 3000.0, "max_dist": 4500.0, "camps": 3, "per_camp": 4, "msg": "Demon Knights march from the shadows!", "color": Color(1.0, 0.3, 0.3)},
+	{"time": 600.0, "type": "demon_knight", "min_dist": 3000.0, "max_dist": 4500.0, "camps": 5, "per_camp": 4, "msg": "Demon Knights march from the shadows!", "color": Color(1.0, 0.3, 0.3)},
 	# Wave 5 (13 min): Ancient Golems
-	{"time": 780.0, "type": "ancient_golem", "min_dist": 3500.0, "max_dist": 5000.0, "camps": 3, "per_camp": 3, "msg": "The earth trembles... Ancient Golems awaken!", "color": Color(0.7, 0.5, 0.2)},
+	{"time": 780.0, "type": "ancient_golem", "min_dist": 3500.0, "max_dist": 5000.0, "camps": 5, "per_camp": 3, "msg": "The earth trembles... Ancient Golems awaken!", "color": Color(0.7, 0.5, 0.2)},
 	# Wave 6 (17 min): Shadow Wraiths
-	{"time": 1020.0, "type": "shadow_wraith", "min_dist": 3000.0, "max_dist": 5000.0, "camps": 4, "per_camp": 3, "msg": "Shadow Wraiths phase into existence!", "color": Color(0.5, 0.2, 0.8)},
+	{"time": 1020.0, "type": "shadow_wraith", "min_dist": 3000.0, "max_dist": 5000.0, "camps": 6, "per_camp": 3, "msg": "Shadow Wraiths phase into existence!", "color": Color(0.5, 0.2, 0.8)},
 	# Wave 7 (22 min): Dragon Whelps
-	{"time": 1320.0, "type": "dragon_whelp", "min_dist": 3500.0, "max_dist": 5500.0, "camps": 3, "per_camp": 3, "msg": "Dragon Whelps descend from the peaks!", "color": Color(1.0, 0.5, 0.1)},
+	{"time": 1320.0, "type": "dragon_whelp", "min_dist": 3500.0, "max_dist": 5500.0, "camps": 5, "per_camp": 3, "msg": "Dragon Whelps descend from the peaks!", "color": Color(1.0, 0.5, 0.1)},
 	# Wave 8 (28 min): Infernals — endgame
-	{"time": 1680.0, "type": "infernal", "min_dist": 4000.0, "max_dist": 5500.0, "camps": 3, "per_camp": 2, "msg": "INFERNALS TEAR THROUGH THE VEIL!", "color": Color(1.0, 0.1, 0.1)},
+	{"time": 1680.0, "type": "infernal", "min_dist": 4000.0, "max_dist": 5500.0, "camps": 5, "per_camp": 3, "msg": "INFERNALS TEAR THROUGH THE VEIL!", "color": Color(1.0, 0.1, 0.1)},
 ]
 
 # Mini-boss spawn schedule: [time, boss_type, distance_from_town]
@@ -69,6 +69,17 @@ var _camp_positions := [
 	Vector2(-5000, -2800), Vector2(5000, 2800), Vector2(-4800, 3200),
 	# Ogre Bosses (edge)
 	Vector2(5200, -3500), Vector2(-5400, -3800),
+	# Extra Wolves (mid-outer)
+	Vector2(3200, -1400), Vector2(-2800, 1600), Vector2(1800, 2400), Vector2(-1200, -2600),
+	# Extra Spiders (mid-outer)
+	Vector2(2800, -1800), Vector2(-2200, 2400), Vector2(3000, 600), Vector2(-1400, -2800),
+	# Extra Trolls (outer)
+	Vector2(3800, 800), Vector2(-3600, -1200), Vector2(2400, -3000), Vector2(-2200, 3200),
+	Vector2(4200, -800), Vector2(-4000, 600),
+	# Extra Dark Mages (outer)
+	Vector2(4600, -2000), Vector2(-4800, 1400), Vector2(3200, 2800), Vector2(-3400, -3200),
+	# Extra Ogres (far)
+	Vector2(4600, 1800), Vector2(-4400, -3400),
 ]
 
 const HarvestableTree = preload("res://scenes/world/harvestable_tree.gd")
@@ -131,7 +142,7 @@ func _spawn_wave(wave: Dictionary) -> void:
 		var camp = CreepCampScene.instantiate()
 		camp.camp_type = camp_type
 		camp.enemy_count = per_camp
-		camp.respawn_time = 60.0 + _wave_rng.randf_range(-10.0, 10.0)
+		camp.respawn_time = 40.0 + _wave_rng.randf_range(-10.0, 10.0)
 		camp.position = pos
 		add_child(camp)
 		_spawned_camps.append(camp)
@@ -743,6 +754,31 @@ func _generate_decorations_async() -> void:
 	# Ogre Bosses
 	_add_camp_marker(deco_layer, Vector2(5200, -3460), "OGRE WARLORD Lv10-12")
 	_add_camp_marker(deco_layer, Vector2(-5400, -3760), "OGRE WARLORD Lv10-12")
+	# Extra Wolves
+	_add_camp_marker(deco_layer, Vector2(3200, -1360), "Wolves Lv2-3")
+	_add_camp_marker(deco_layer, Vector2(-2800, 1640), "Wolves Lv2-3")
+	_add_camp_marker(deco_layer, Vector2(1800, 2440), "Wolves Lv2-3")
+	_add_camp_marker(deco_layer, Vector2(-1200, -2560), "Wolves Lv2-3")
+	# Extra Spiders
+	_add_camp_marker(deco_layer, Vector2(2800, -1760), "Spiders Lv3-5")
+	_add_camp_marker(deco_layer, Vector2(-2200, 2440), "Spiders Lv3-5")
+	_add_camp_marker(deco_layer, Vector2(3000, 640), "Spiders Lv3-5")
+	_add_camp_marker(deco_layer, Vector2(-1400, -2760), "Spiders Lv3-5")
+	# Extra Trolls
+	_add_camp_marker(deco_layer, Vector2(3800, 840), "Trolls Lv5-7")
+	_add_camp_marker(deco_layer, Vector2(-3600, -1160), "Trolls Lv5-7")
+	_add_camp_marker(deco_layer, Vector2(2400, -2960), "Trolls Lv5-7")
+	_add_camp_marker(deco_layer, Vector2(-2200, 3240), "Trolls Lv5-7")
+	_add_camp_marker(deco_layer, Vector2(4200, -760), "Trolls Lv5-7")
+	_add_camp_marker(deco_layer, Vector2(-4000, 640), "Trolls Lv5-7")
+	# Extra Dark Mages
+	_add_camp_marker(deco_layer, Vector2(4600, -1960), "Dark Mages Lv5-8")
+	_add_camp_marker(deco_layer, Vector2(-4800, 1440), "Dark Mages Lv5-8")
+	_add_camp_marker(deco_layer, Vector2(3200, 2840), "Dark Mages Lv5-8")
+	_add_camp_marker(deco_layer, Vector2(-3400, -3160), "Dark Mages Lv5-8")
+	# Extra Ogres
+	_add_camp_marker(deco_layer, Vector2(4600, 1840), "Ogres Lv7-10")
+	_add_camp_marker(deco_layer, Vector2(-4400, -3360), "Ogres Lv7-10")
 
 	await get_tree().process_frame
 

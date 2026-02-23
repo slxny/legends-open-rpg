@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.45.1"
+const GAME_VERSION := "v0.46.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.46.0",
+		"title": "More Enemies in the Wilds & Performance Optimization",
+		"date": "2026-02-23",
+		"entries": [
+			"Added 20 new creep camps across mid-to-far zones (wolves, spiders, trolls, dark mages, ogres)",
+			"Wave spawns now deploy more camps per wave (3-4 → 5-6) for denser encounters",
+			"Reduced base respawn timer from 45s to 30s and wave respawn from 60s to 40s",
+			"Performance: enemy separation now checks only camp-mates instead of all enemies globally (O(n²) → O(k))",
+		]
+	},
 	{
 		"version": "v0.45.1",
 		"title": "More Opaque Panels & Fix Duplicate Close Button",

@@ -9,9 +9,18 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.43.0"
+const GAME_VERSION := "v0.43.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.43.1",
+		"title": "Fix Mobile Chrome Fullscreen",
+		"date": "2026-02-23",
+		"entries": [
+			"Fixed fullscreen not triggering on Chrome mobile by using a native JS listener",
+			"Fullscreen request now fires inside the browser's own event handler to satisfy user-activation requirements",
+		]
+	},
 	{
 		"version": "v0.43.0",
 		"title": "Mobile Fullscreen & PWA Support",

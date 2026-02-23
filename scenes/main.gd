@@ -19,24 +19,32 @@ var _pause_menu_scene: PackedScene = preload("res://scenes/ui/pause_menu.tscn")
 var _world: Node2D = null
 var _player: CharacterBody2D = null
 var _game_started := false
-var _web_fullscreen_requested := false
 
 func _ready() -> void:
 	hero_select.hero_chosen.connect(_on_hero_chosen)
-
-func _input(event: InputEvent) -> void:
-	# On web, request fullscreen on the first user tap/click to hide the address bar.
-	# Uses JavaScriptBridge for broader mobile browser support (Android Chrome, etc.).
-	# Note: iOS Safari does not support the Fullscreen API at all — users must
-	# "Add to Home Screen" to get a fullscreen PWA experience on iOS.
-	if not _web_fullscreen_requested and OS.has_feature("web"):
-		if (event is InputEventMouseButton and event.pressed) or \
-		   (event is InputEventScreenTouch and event.pressed):
-			_web_fullscreen_requested = true
-			if JavaScriptBridge.eval("'requestFullscreen' in document.documentElement", true):
-				JavaScriptBridge.eval("document.documentElement.requestFullscreen().catch(function(){})", true)
-			else:
-				DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+	# Register a native JS event listener on the canvas so fullscreen is
+	# requested inside the browser's own event handler (satisfies the "user
+	# activation" requirement that Chrome/mobile browsers enforce).
+	if OS.has_feature("web"):
+		JavaScriptBridge.eval("""
+			(function() {
+				var c = document.getElementById('canvas');
+				if (!c) c = document.querySelector('canvas');
+				if (!c) return;
+				function goFS(e) {
+					c.removeEventListener('pointerdown', goFS, true);
+					c.removeEventListener('touchstart', goFS, true);
+					var el = document.documentElement;
+					if (el.requestFullscreen) {
+						el.requestFullscreen().catch(function(){});
+					} else if (el.webkitRequestFullscreen) {
+						el.webkitRequestFullscreen();
+					}
+				}
+				c.addEventListener('pointerdown', goFS, true);
+				c.addEventListener('touchstart', goFS, true);
+			})();
+		""", true)
 
 func _on_hero_chosen(hero_class: String) -> void:
 	if _game_started:

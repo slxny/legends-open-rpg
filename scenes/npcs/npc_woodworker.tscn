@@ -37,7 +37,7 @@ collision_layer = 0
 collision_mask = 1
 script = ExtResource("2_beacon")
 beacon_color = Color(0.6, 0.4, 0.1, 1)
-beacon_label = "Woodworker"
+beacon_label = ""
 beacon_radius = 26.0
 
 [node name="Visual" type="Sprite2D" parent="Beacon"]
@@ -48,7 +48,6 @@ offset_left = -70.0
 offset_top = -16.0
 offset_right = 70.0
 offset_bottom = -2.0
-text = "Woodworker"
 horizontal_alignment = 1
 theme_override_font_sizes/font_size = 10
 theme_override_colors/font_color = Color(0.65, 0.45, 0.2, 1)

@@ -37,7 +37,7 @@ collision_layer = 0
 collision_mask = 1
 script = ExtResource("2_beacon")
 beacon_color = Color(1, 1, 0, 1)
-beacon_label = "Shop"
+beacon_label = ""
 beacon_radius = 24.0
 
 [node name="Visual" type="Sprite2D" parent="Beacon"]
@@ -48,7 +48,6 @@ offset_left = -60.0
 offset_top = -16.0
 offset_right = 60.0
 offset_bottom = -2.0
-text = "Shop"
 horizontal_alignment = 1
 theme_override_font_sizes/font_size = 10
 theme_override_colors/font_color = Color(1, 1, 0.5, 1)

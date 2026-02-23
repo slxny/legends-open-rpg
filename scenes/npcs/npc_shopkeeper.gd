@@ -11,9 +11,15 @@ extends StaticBody2D
 @onready var name_label: Label = $NameLabel
 @onready var shop_sprite: Sprite2D = $Sprite
 
+var _player: Node2D = null
+var _label_check_timer: float = 0.0
+const LABEL_VISIBLE_DISTANCE_SQ: float = 14400.0  # 120^2
+const LABEL_CHECK_INTERVAL: float = 0.3
+
 func _ready() -> void:
 	add_to_group("npcs")
 	name_label.text = shop_name
+	name_label.visible = false
 	var vp_size = get_viewport().get_visible_rect().size
 	if vp_size.x < 700 or (vp_size.x < vp_size.y):
 		name_label.add_theme_font_size_override("font_size", 18)
@@ -21,6 +27,21 @@ func _ready() -> void:
 	var tex = SpriteGenerator.get_texture("shop_building")
 	if tex:
 		shop_sprite.texture = tex
+	_label_check_timer = randf_range(0.0, LABEL_CHECK_INTERVAL)
+
+func _process(delta: float) -> void:
+	_label_check_timer -= delta
+	if _label_check_timer > 0.0:
+		return
+	_label_check_timer = LABEL_CHECK_INTERVAL
+	if not _player or not is_instance_valid(_player):
+		var players = get_tree().get_nodes_in_group("player")
+		if players.size() > 0:
+			_player = players[0]
+		else:
+			return
+	var dist_sq = global_position.distance_squared_to(_player.global_position)
+	name_label.visible = dist_sq < LABEL_VISIBLE_DISTANCE_SQ
 
 func _on_beacon_activated(_b: Area2D) -> void:
 	# Find the shop dialog in the scene tree and open it

@@ -46,6 +46,7 @@ var _sleep_check_timer: float = 0.0
 const SLEEP_DISTANCE_SQ: float = 640000.0  # 800^2 — sleep when player is >800px away
 const WAKE_DISTANCE_SQ: float = 490000.0   # 700^2 — wake when player is <700px (hysteresis)
 const SLEEP_CHECK_INTERVAL: float = 0.4    # Check sleep/wake ~2.5x per second
+const LABEL_VISIBLE_DISTANCE_SQ: float = 22500.0  # 150^2 — show name when player is close
 
 # Patrol state
 var _patrol_target: Vector2 = Vector2.ZERO
@@ -1036,6 +1037,9 @@ func _update_sleep_state() -> void:
 			_is_sleeping = true
 			visible = false
 			velocity = Vector2.ZERO
+	# Proximity-based label visibility for non-combat states
+	if not _is_selected and current_state != State.CHASE and current_state != State.ATTACK:
+		name_label.visible = dist_sq < LABEL_VISIBLE_DISTANCE_SQ
 
 func _get_world_node() -> Node:
 	if _cached_world_node and is_instance_valid(_cached_world_node):

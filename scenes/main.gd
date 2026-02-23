@@ -112,14 +112,30 @@ func _on_hero_chosen(hero_class: String) -> void:
 	_register_triggers()
 
 func _on_player_leveled_up(new_level: int) -> void:
-	var tier = "Adventurer"
-	if new_level >= 36:
-		tier = "Demigod"
-	elif new_level >= 26:
-		tier = "Master"
-	elif new_level >= 16:
-		tier = "Veteran"
-	GameManager.game_message.emit("LEVEL UP! You are now Level %d (%s)" % [new_level, tier], Color(1.0, 0.9, 0.2))
+	var gold_color = Color(1.0, 0.9, 0.2)
+	var stat_color = Color(0.6, 0.95, 0.6)
+	GameManager.game_message.emit("Level Up! Lv %d" % new_level, gold_color)
+
+	# Show individual stat gains as top-down notifications
+	var data = HeroData.get_hero(_player.stats.hero_class)
+	if data.is_empty():
+		return
+	var growth = data["growth_per_level"]
+	var gains: Array[String] = []
+	if growth.get("max_hp", 0) > 0:
+		gains.append("+%d HP" % int(growth["max_hp"]))
+	if growth.get("max_mana", 0) > 0:
+		gains.append("+%d Mana" % int(growth["max_mana"]))
+	if growth.get("strength", 0) > 0:
+		gains.append("+%d STR" % int(growth["strength"]))
+	if growth.get("agility", 0) > 0:
+		gains.append("+%d AGI" % int(growth["agility"]))
+	if growth.get("intelligence", 0) > 0:
+		gains.append("+%d INT" % int(growth["intelligence"]))
+	if growth.get("attack_damage", 0) > 0:
+		gains.append("+%d ATK" % int(growth["attack_damage"]))
+	for g in gains:
+		GameManager.game_message.emit(g, stat_color)
 
 func _on_player_died() -> void:
 	# Instant death — show fallen message, route to RespawnManager immediately

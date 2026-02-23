@@ -2507,7 +2507,6 @@ func _on_level_up_sprite_upgrade(new_level: int) -> void:
 	if tier > _current_sprite_tier:
 		_current_sprite_tier = tier
 		_apply_sprite_upgrade(tier)
-		GameManager.game_message.emit("LEVEL UP!", Color(1.0, 0.9, 0.2))
 		AudioManager.play_sfx("level_up")
 
 func _apply_sprite_upgrade(tier: int) -> void:

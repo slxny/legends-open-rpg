@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.40.2"
+const GAME_VERSION := "v0.41.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.41.0",
+		"title": "Cleaner Level-Up Notifications",
+		"date": "2026-02-23",
+		"entries": [
+			"Level-up message shortened to 'Level Up! Lv X' — no more hero tier text",
+			"Individual stat gains (+HP, +STR, etc.) now show as top-down notifications",
+			"Level-up no longer triggers big center screen text — top-down only",
+			"Removed duplicate LEVEL UP message from sprite upgrade milestones",
+		]
+	},
 	{
 		"version": "v0.40.2",
 		"title": "Fix ATK Button Hidden in Landscape",

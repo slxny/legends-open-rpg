@@ -222,7 +222,11 @@ func _pregenerate_async() -> void:
 		"forge_weapon", "forge_armor", "woodwork_bow", "woodwork_shield",
 		"woodwork_totem", "woodwork_watchtower", "shop_buy", "shop_sell",
 		"equip_weapon", "equip_armor", "equip_helm", "equip_boots",
-		"equip_ring", "equip_amulet", "potion_heal", "potion_mana", "potion_buff"]
+		"equip_ring", "equip_amulet", "potion_heal", "potion_mana", "potion_buff",
+		"death_rat", "death_goblin", "death_wolf", "death_bandit", "death_skeleton",
+		"death_spider", "death_troll", "death_dark_mage", "death_ogre", "death_ogre_boss",
+		"death_demon_knight", "death_ancient_golem", "death_shadow_wraith",
+		"death_dragon_whelp", "death_infernal"]
 	var batch: int = 0
 	for sfx_name in sfx_names:
 		if _sfx_cache.has(sfx_name):
@@ -393,6 +397,21 @@ func _generate_all_sfx() -> void:
 	_sfx_cache["potion_heal"] = _gen_potion_heal()
 	_sfx_cache["potion_mana"] = _gen_potion_mana()
 	_sfx_cache["potion_buff"] = _gen_potion_buff()
+	_sfx_cache["death_rat"] = _gen_death_rat()
+	_sfx_cache["death_goblin"] = _gen_death_goblin()
+	_sfx_cache["death_wolf"] = _gen_death_wolf()
+	_sfx_cache["death_bandit"] = _gen_death_bandit()
+	_sfx_cache["death_skeleton"] = _gen_death_skeleton()
+	_sfx_cache["death_spider"] = _gen_death_spider()
+	_sfx_cache["death_troll"] = _gen_death_troll()
+	_sfx_cache["death_dark_mage"] = _gen_death_dark_mage()
+	_sfx_cache["death_ogre"] = _gen_death_ogre()
+	_sfx_cache["death_ogre_boss"] = _gen_death_ogre_boss()
+	_sfx_cache["death_demon_knight"] = _gen_death_demon_knight()
+	_sfx_cache["death_ancient_golem"] = _gen_death_ancient_golem()
+	_sfx_cache["death_shadow_wraith"] = _gen_death_shadow_wraith()
+	_sfx_cache["death_dragon_whelp"] = _gen_death_dragon_whelp()
+	_sfx_cache["death_infernal"] = _gen_death_infernal()
 
 func _gen_sword_swing() -> AudioStreamWAV:
 	# Warm blade slice — smooth swoosh with subtle metal edge
@@ -1261,6 +1280,343 @@ func _gen_potion_buff() -> AudioStreamWAV:
 	_add_sine_segment(samples, 1046.0, 0.10, 0.25, 0.12)
 	_apply_envelope(samples, 0.002, 0.14, 0.29)
 	_soft_clip(samples, 1.5)
+	return _to_stream(samples)
+
+# ---- Unique enemy death SFX per creature type ----
+
+func _gen_death_rat() -> AudioStreamWAV:
+	# Cute squeaky groan — descending warble, not too high pitched
+	# Like a tiny sad "meeew" trailing off
+	var samples = _make_samples(0.30)
+	# Descending squeak — starts mid-range, drops cutely
+	_pitch_sweep_sine(samples, 580.0, 340.0, 0.25)
+	_pitch_sweep_sine(samples, 870.0, 510.0, 0.12)
+	# Sub-harmonic for body so it's not thin/piercing
+	_pitch_sweep_sine(samples, 290.0, 170.0, 0.08)
+	# Gentle warble for that cute dying-squeak character
+	for i in range(samples.size()):
+		var t = float(i) / SAMPLE_RATE
+		samples[i] *= 0.8 + 0.2 * sin(t * 25.0 * TAU)
+	_apply_envelope(samples, 0.005, 0.06, 0.23)
+	_soft_clip(samples, 1.2)
+	return _to_stream(samples)
+
+func _gen_death_goblin() -> AudioStreamWAV:
+	# Surprised little yelp — short "yip!" with a descending tail
+	# Comically startled, like "oh no!" in goblin-speak
+	var samples = _make_samples(0.28)
+	# Quick ascending "yi-" onset
+	_pitch_sweep_sine(samples, 350.0, 520.0, 0.15, 0.0)
+	# Then descending "-ip" drop
+	_pitch_sweep_sine(samples, 520.0, 280.0, 0.18, 0.06)
+	# Nasal harmonic for goblin character
+	_pitch_sweep_sine(samples, 700.0, 420.0, 0.08, 0.02)
+	# Warble for goblin-speak feel
+	for i in range(samples.size()):
+		var t = float(i) / SAMPLE_RATE
+		samples[i] *= 0.85 + 0.15 * sin(t * 20.0 * TAU)
+	# Soft noise layer for breathiness
+	_add_pitched_noise(samples, 600.0, 400.0, 0.04)
+	_apply_envelope(samples, 0.004, 0.05, 0.22)
+	_soft_clip(samples, 1.2)
+	return _to_stream(samples)
+
+func _gen_death_wolf() -> AudioStreamWAV:
+	# Sad little whimper — descending howl that trails off
+	# Sympathetic, not scary — like a puppy's sad sigh
+	var samples = _make_samples(0.40)
+	# Descending whimper tone — starts with a brief rise then falls
+	_pitch_sweep_sine(samples, 380.0, 440.0, 0.12, 0.0)  # Brief rise
+	_pitch_sweep_sine(samples, 440.0, 200.0, 0.22, 0.06)  # Long sad fall
+	# Warm harmonic
+	_pitch_sweep_sine(samples, 660.0, 300.0, 0.08, 0.06)
+	# Sub body
+	_pitch_sweep_sine(samples, 220.0, 100.0, 0.08, 0.0)
+	# Gentle tremolo for whimper vibrato
+	for i in range(samples.size()):
+		var t = float(i) / SAMPLE_RATE
+		samples[i] *= 0.88 + 0.12 * sin(t * 14.0 * TAU)
+	_apply_envelope(samples, 0.008, 0.10, 0.29)
+	_soft_clip(samples, 1.1)
+	return _to_stream(samples)
+
+func _gen_death_bandit() -> AudioStreamWAV:
+	# Human-like grunt — short "oof" with breathy exhale
+	# Like getting the wind knocked out
+	var samples = _make_samples(0.22)
+	# Low vocal grunt
+	_pitch_sweep_sine(samples, 180.0, 120.0, 0.3)
+	_pitch_sweep_sine(samples, 360.0, 240.0, 0.12)
+	# Breathy noise for vocal quality
+	_add_pitched_noise(samples, 500.0, 350.0, 0.1, 0.0)
+	_add_pitched_noise(samples, 900.0, 400.0, 0.05, 0.02)
+	# Quick onset transient
+	var onset = _make_samples(0.02)
+	_add_pitched_noise(onset, 1200.0, 800.0, 0.15)
+	_apply_envelope(onset, 0.001, 0.004, 0.015)
+	_mix_into(samples, onset)
+	_apply_envelope(samples, 0.003, 0.04, 0.17)
+	_soft_clip(samples, 1.3)
+	return _to_stream(samples)
+
+func _gen_death_skeleton() -> AudioStreamWAV:
+	# Bone clatter collapse — rattling cascade of bones falling apart
+	# Dry, crispy, satisfying scatter sound
+	var samples = _make_samples(0.35)
+	# Series of quick bone clicks at descending pitches (collapsing top-down)
+	var click_data = [
+		[0.0, 1800.0], [0.03, 1500.0], [0.06, 1300.0], [0.10, 1100.0],
+		[0.13, 900.0], [0.17, 700.0], [0.21, 550.0],
+	]
+	for cd in click_data:
+		var click = _make_samples(0.04)
+		_add_sine(click, cd[1], 0.15)
+		_add_pitched_noise(click, cd[1], 500.0, 0.1)
+		_apply_envelope(click, 0.001, 0.005, 0.034)
+		_mix_into(samples, click, int(float(cd[0]) * SAMPLE_RATE))
+	# Dry rattle noise throughout
+	_add_pitched_noise(samples, 1400.0, 800.0, 0.06)
+	# Thud as skull hits ground
+	var skull = _make_samples(0.06)
+	_pitch_sweep_sine(skull, 250.0, 120.0, 0.25)
+	_apply_envelope(skull, 0.002, 0.01, 0.05)
+	_mix_into(samples, skull, int(0.24 * SAMPLE_RATE))
+	_apply_envelope(samples, 0.002, 0.12, 0.22)
+	_soft_clip(samples, 1.3)
+	return _to_stream(samples)
+
+func _gen_death_spider() -> AudioStreamWAV:
+	# Wet squish pop — satisfying burst with gooey splat
+	# Gross-cute, like popping a water balloon
+	var samples = _make_samples(0.22)
+	# Pop transient — quick burst
+	var pop = _make_samples(0.025)
+	_pitch_sweep_sine(pop, 400.0, 150.0, 0.35)
+	_add_pitched_noise(pop, 1600.0, 1000.0, 0.2)
+	_apply_envelope(pop, 0.001, 0.004, 0.02)
+	_mix_into(samples, pop)
+	# Wet splat — squelchy mid-range noise
+	_add_pitched_noise(samples, 600.0, 400.0, 0.12, 0.02)
+	_add_pitched_noise(samples, 300.0, 200.0, 0.08, 0.02)
+	# Bubbly goo — quick irregular wobbles
+	for i in range(int(0.03 * SAMPLE_RATE), int(0.15 * SAMPLE_RATE)):
+		var t = float(i) / SAMPLE_RATE
+		samples[i] += sin(t * 200.0 * TAU + sin(t * 15.0 * TAU) * 4.0) * 0.08
+	# Sub thud
+	_pitch_sweep_sine(samples, 120.0, 50.0, 0.2)
+	_apply_envelope(samples, 0.002, 0.04, 0.18)
+	_soft_clip(samples, 1.4)
+	return _to_stream(samples)
+
+func _gen_death_troll() -> AudioStreamWAV:
+	# Deep bellowing groan — heavy bass moan, slow and weighty
+	# Like a large creature sighing its last breath
+	var samples = _make_samples(0.45)
+	# Deep descending groan
+	_pitch_sweep_sine(samples, 140.0, 70.0, 0.4)
+	_pitch_sweep_sine(samples, 210.0, 105.0, 0.2)
+	# Vocal harmonics for groan texture
+	_pitch_sweep_sine(samples, 280.0, 140.0, 0.1)
+	# Breathy layer
+	_add_pitched_noise(samples, 350.0, 250.0, 0.06, 0.0)
+	# Slow tremolo for groan vibrato
+	for i in range(samples.size()):
+		var t = float(i) / SAMPLE_RATE
+		samples[i] *= 0.85 + 0.15 * sin(t * 8.0 * TAU)
+	# Ground thud at end (body falling)
+	var thud = _make_samples(0.08)
+	_pitch_sweep_sine(thud, 80.0, 35.0, 0.3)
+	_apply_envelope(thud, 0.002, 0.015, 0.063)
+	_mix_into(samples, thud, int(0.30 * SAMPLE_RATE))
+	_apply_envelope(samples, 0.005, 0.12, 0.32)
+	_soft_clip(samples, 1.3)
+	return _to_stream(samples)
+
+func _gen_death_dark_mage() -> AudioStreamWAV:
+	# Magical fizzle — energy dissipating with sparkly decay
+	# Like a spell backfiring and fading away
+	var samples = _make_samples(0.40)
+	# Descending magical tone — spell energy dispersing
+	_pitch_sweep_sine(samples, 700.0, 200.0, 0.2)
+	_pitch_sweep_sine(samples, 1050.0, 300.0, 0.1)
+	# Crackling fizzle — energy breaking apart
+	_add_pitched_noise(samples, 2000.0, 1200.0, 0.08, 0.0)
+	_add_pitched_noise(samples, 3500.0, 1000.0, 0.04, 0.05)
+	# Eerie diminished interval (B4 -> F4) — spooky fade
+	_add_sine_segment(samples, 494.0, 0.15, 0.05, 0.20)
+	_add_sine_segment(samples, 349.0, 0.18, 0.12, 0.22)
+	# Brief moan underneath
+	_pitch_sweep_sine(samples, 200.0, 100.0, 0.08, 0.0)
+	# Sparkle decay
+	_add_pitched_noise(samples, 5000.0, 1500.0, 0.02, 0.15)
+	_apply_envelope(samples, 0.003, 0.10, 0.29)
+	_soft_clip(samples, 1.2)
+	return _to_stream(samples)
+
+func _gen_death_ogre() -> AudioStreamWAV:
+	# Thunderous bass thud with groan — massive body hitting the ground
+	# Earth-shaking weight, slow and heavy
+	var samples = _make_samples(0.50)
+	# Deep bellow
+	_pitch_sweep_sine(samples, 110.0, 55.0, 0.45)
+	_pitch_sweep_sine(samples, 165.0, 82.0, 0.2)
+	# Vocal groan harmonic
+	_pitch_sweep_sine(samples, 220.0, 110.0, 0.1)
+	# Heavy ground impact
+	var impact = _make_samples(0.08)
+	_pitch_sweep_sine(impact, 80.0, 30.0, 0.5)
+	_add_pitched_noise(impact, 600.0, 400.0, 0.15)
+	_apply_envelope(impact, 0.002, 0.015, 0.063)
+	_mix_into(samples, impact, int(0.25 * SAMPLE_RATE))
+	# Slow vibrato
+	for i in range(samples.size()):
+		var t = float(i) / SAMPLE_RATE
+		samples[i] *= 0.85 + 0.15 * sin(t * 6.0 * TAU)
+	_apply_envelope(samples, 0.005, 0.15, 0.34)
+	_soft_clip(samples, 1.5)
+	return _to_stream(samples)
+
+func _gen_death_ogre_boss() -> AudioStreamWAV:
+	# Even deeper than ogre — rumbling earthquake thud
+	var samples = _make_samples(0.60)
+	# Subterranean bellow
+	_pitch_sweep_sine(samples, 90.0, 40.0, 0.5)
+	_pitch_sweep_sine(samples, 135.0, 60.0, 0.25)
+	_pitch_sweep_sine(samples, 180.0, 80.0, 0.12)
+	# Massive ground impact
+	var impact = _make_samples(0.10)
+	_pitch_sweep_sine(impact, 60.0, 25.0, 0.55)
+	_add_pitched_noise(impact, 400.0, 300.0, 0.2)
+	_apply_envelope(impact, 0.002, 0.02, 0.078)
+	_mix_into(samples, impact, int(0.28 * SAMPLE_RATE))
+	# Rumbling aftershock
+	_add_pitched_noise(samples, 200.0, 150.0, 0.05, 0.32)
+	for i in range(samples.size()):
+		var t = float(i) / SAMPLE_RATE
+		samples[i] *= 0.82 + 0.18 * sin(t * 5.0 * TAU)
+	_apply_envelope(samples, 0.005, 0.18, 0.41)
+	_soft_clip(samples, 1.6)
+	return _to_stream(samples)
+
+func _gen_death_demon_knight() -> AudioStreamWAV:
+	# Metallic crash with dark echo — armor clattering + dark tone
+	# Dramatic fall of a dark warrior
+	var samples = _make_samples(0.45)
+	# Armor crash — metallic clatter
+	var crash = _make_samples(0.05)
+	_add_pitched_noise(crash, 2500.0, 1800.0, 0.3)
+	_add_pitched_noise(crash, 1200.0, 800.0, 0.2)
+	_add_sine(crash, 1500.0, 0.1)
+	_apply_envelope(crash, 0.001, 0.008, 0.041)
+	_mix_into(samples, crash)
+	# Dark descending tone — ominous
+	_pitch_sweep_sine(samples, 250.0, 80.0, 0.3)
+	_pitch_sweep_sine(samples, 375.0, 120.0, 0.15)
+	# Diminished chord echo — eerie E-Bb-Db
+	_add_sine_segment(samples, 164.8, 0.08, 0.10, 0.30)
+	_add_sine_segment(samples, 233.1, 0.06, 0.12, 0.28)
+	_add_sine_segment(samples, 277.2, 0.05, 0.14, 0.25)
+	# Metallic ring tail
+	_add_sine_segment(samples, 900.0, 0.06, 0.02, 0.25)
+	_apply_envelope(samples, 0.002, 0.12, 0.32)
+	_soft_clip(samples, 1.4)
+	return _to_stream(samples)
+
+func _gen_death_ancient_golem() -> AudioStreamWAV:
+	# Stone crumble with grinding — rocks falling apart
+	# Heavy, earthy, satisfying collapse
+	var samples = _make_samples(0.50)
+	# Grinding stone — low rumble with gritty noise
+	_pitch_sweep_sine(samples, 160.0, 60.0, 0.35)
+	_pitch_sweep_sine(samples, 240.0, 90.0, 0.15)
+	_add_pitched_noise(samples, 400.0, 300.0, 0.12, 0.0)
+	# Cascading rock chunks — descending thuds
+	var rock_times = [0.08, 0.16, 0.24, 0.30]
+	var rock_freqs = [220.0, 180.0, 140.0, 100.0]
+	for j in range(4):
+		var rock = _make_samples(0.06)
+		_pitch_sweep_sine(rock, rock_freqs[j], rock_freqs[j] * 0.5, 0.3)
+		_add_pitched_noise(rock, 800.0, 500.0, 0.08)
+		_apply_envelope(rock, 0.002, 0.012, 0.046)
+		_mix_into(samples, rock, int(rock_times[j] * SAMPLE_RATE))
+	# Final heavy collapse
+	var collapse = _make_samples(0.10)
+	_pitch_sweep_sine(collapse, 80.0, 30.0, 0.5)
+	_apply_envelope(collapse, 0.002, 0.02, 0.078)
+	_mix_into(samples, collapse, int(0.35 * SAMPLE_RATE))
+	_apply_envelope(samples, 0.003, 0.15, 0.34)
+	_soft_clip(samples, 1.5)
+	return _to_stream(samples)
+
+func _gen_death_shadow_wraith() -> AudioStreamWAV:
+	# Eerie ghostly dissipation — phasing out of existence
+	# Otherworldly, ethereal, slightly unsettling but satisfying
+	var samples = _make_samples(0.50)
+	# Ethereal descending wail — phasing out
+	_pitch_sweep_sine(samples, 600.0, 150.0, 0.2)
+	_pitch_sweep_sine(samples, 900.0, 225.0, 0.1)
+	# Phase modulation for ghostly warble
+	for i in range(samples.size()):
+		var t = float(i) / SAMPLE_RATE
+		var phase_mod = sin(t * 400.0 * TAU + sin(t * 6.0 * TAU) * 3.0) * 0.1
+		samples[i] += phase_mod
+		# Deepening wobble as it fades
+		samples[i] *= 0.8 + 0.2 * sin(t * (12.0 - t * 10.0) * TAU)
+	# Airy whisper noise
+	_add_pitched_noise(samples, 1800.0, 1200.0, 0.05, 0.0)
+	_add_pitched_noise(samples, 3000.0, 800.0, 0.02, 0.1)
+	# Low ethereal hum
+	_add_sine_segment(samples, 130.0, 0.08, 0.0, 0.40)
+	_apply_envelope(samples, 0.01, 0.12, 0.37)
+	_normalize(samples, 0.65)
+	return _to_stream(samples)
+
+func _gen_death_dragon_whelp() -> AudioStreamWAV:
+	# Fiery screech dying out — brief roar that crackles and fizzles
+	# Baby dragon's last fiery breath
+	var samples = _make_samples(0.40)
+	# Rising screech onset
+	_pitch_sweep_sine(samples, 300.0, 550.0, 0.15, 0.0)
+	# Then descending roar
+	_pitch_sweep_sine(samples, 550.0, 180.0, 0.25, 0.08)
+	# Harmonic for roar body
+	_pitch_sweep_sine(samples, 450.0, 270.0, 0.1, 0.04)
+	# Fire crackle — mid-high noise
+	_add_pitched_noise(samples, 1800.0, 1200.0, 0.08, 0.02)
+	_add_pitched_noise(samples, 3000.0, 1000.0, 0.04, 0.06)
+	# Fizzle tail — ember sounds
+	_add_pitched_noise(samples, 1200.0, 600.0, 0.03, 0.20)
+	# Warmth underneath
+	_pitch_sweep_sine(samples, 150.0, 60.0, 0.1, 0.0)
+	_apply_envelope(samples, 0.004, 0.10, 0.29)
+	_soft_clip(samples, 1.4)
+	return _to_stream(samples)
+
+func _gen_death_infernal() -> AudioStreamWAV:
+	# Hellfire burst fizzling — demonic explosion collapsing inward
+	# Dark, powerful, satisfying implosion
+	var samples = _make_samples(0.55)
+	# Initial fire burst
+	var burst = _make_samples(0.04)
+	_add_pitched_noise(burst, 2000.0, 1500.0, 0.3)
+	_add_pitched_noise(burst, 800.0, 600.0, 0.2)
+	_apply_envelope(burst, 0.001, 0.006, 0.033)
+	_mix_into(samples, burst)
+	# Deep demonic descending tone
+	_pitch_sweep_sine(samples, 200.0, 50.0, 0.4)
+	_pitch_sweep_sine(samples, 300.0, 75.0, 0.2)
+	# Fire crackle throughout
+	_add_pitched_noise(samples, 1500.0, 1000.0, 0.06, 0.02)
+	# Dark rumble
+	_add_sine_segment(samples, 55.0, 0.15, 0.05, 0.40)
+	_add_sine_segment(samples, 82.0, 0.08, 0.05, 0.35)
+	# Implosion effect — reversed pitch sweep sucking inward
+	_pitch_sweep_sine(samples, 100.0, 300.0, 0.08, 0.25)
+	# Diminished chord for dark finality
+	_add_sine_segment(samples, 138.6, 0.06, 0.10, 0.30)
+	_add_sine_segment(samples, 164.8, 0.04, 0.12, 0.28)
+	_apply_envelope(samples, 0.002, 0.15, 0.39)
+	_soft_clip(samples, 1.6)
 	return _to_stream(samples)
 
 # ============================================================

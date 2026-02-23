@@ -591,7 +591,11 @@ func _die() -> void:
 	input_pickable = false
 	if sprite and sprite.material:
 		sprite.material.set_shader_parameter("enabled", false)
-	AudioManager.play_sfx("enemy_death", -3.0)
+	var death_sfx = "death_" + sprite_type
+	if AudioManager.get_sfx(death_sfx):
+		AudioManager.play_sfx(death_sfx, -3.0)
+	else:
+		AudioManager.play_sfx("enemy_death", -3.0)
 	died.emit(self, xp_reward, gold_reward)
 	_spawn_gold_drop(gold_reward)
 	if not drop_table.is_empty():

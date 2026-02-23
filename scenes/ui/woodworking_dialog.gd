@@ -12,6 +12,50 @@ var _player: Node2D = null
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
+func _make_btn_normal_style() -> StyleBoxFlat:
+	var s = StyleBoxFlat.new()
+	s.bg_color = Color(0.16, 0.18, 0.14, 0.9)
+	s.set_corner_radius_all(8)
+	s.set_content_margin_all(8 if _is_mobile else 4)
+	s.border_color = Color(0.4, 0.45, 0.3, 0.6)
+	s.set_border_width_all(1)
+	return s
+
+func _make_btn_hover_style() -> StyleBoxFlat:
+	var s = StyleBoxFlat.new()
+	s.bg_color = Color(0.24, 0.28, 0.20, 0.95)
+	s.set_corner_radius_all(8)
+	s.set_content_margin_all(8 if _is_mobile else 4)
+	s.border_color = Color(0.8, 0.9, 0.4, 0.8)
+	s.set_border_width_all(2)
+	return s
+
+func _make_btn_pressed_style() -> StyleBoxFlat:
+	var s = StyleBoxFlat.new()
+	s.bg_color = Color(0.30, 0.34, 0.18, 0.95)
+	s.set_corner_radius_all(8)
+	s.set_content_margin_all(8 if _is_mobile else 4)
+	s.border_color = Color(0.95, 1.0, 0.5, 0.95)
+	s.set_border_width_all(2)
+	return s
+
+func _make_btn_disabled_style() -> StyleBoxFlat:
+	var s = StyleBoxFlat.new()
+	s.bg_color = Color(0.12, 0.12, 0.14, 0.6)
+	s.set_corner_radius_all(8)
+	s.set_content_margin_all(8 if _is_mobile else 4)
+	s.border_color = Color(0.25, 0.25, 0.25, 0.4)
+	s.set_border_width_all(1)
+	return s
+
+func _style_action_btn(btn: Button) -> void:
+	btn.add_theme_stylebox_override("normal", _make_btn_normal_style())
+	btn.add_theme_stylebox_override("hover", _make_btn_hover_style())
+	btn.add_theme_stylebox_override("pressed", _make_btn_pressed_style())
+	btn.add_theme_stylebox_override("disabled", _make_btn_disabled_style())
+	btn.add_theme_stylebox_override("focus", _make_btn_hover_style())
+	btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+
 # Four upgrade tracks — each costs wood and improves a different axis
 # Costs scale: base * (level + 1)^1.3
 const UPGRADES = {
@@ -125,26 +169,26 @@ func _add_upgrade_row(key: String) -> void:
 	var level = _get_level(key)
 	var max_lvl = info["max_level"]
 	var section = VBoxContainer.new()
-	section.add_theme_constant_override("separation", 3)
+	section.add_theme_constant_override("separation", 8 if _is_mobile else 3)
 
 	# Header
 	var header = Label.new()
 	header.text = info["title"]
-	header.add_theme_font_size_override("font_size", 42 if _is_mobile else 15)
+	header.add_theme_font_size_override("font_size", 48 if _is_mobile else 15)
 	header.add_theme_color_override("font_color", info["color"])
 	section.add_child(header)
 
 	# Description
 	var desc = Label.new()
 	desc.text = info["desc"]
-	desc.add_theme_font_size_override("font_size", 32 if _is_mobile else 11)
+	desc.add_theme_font_size_override("font_size", 36 if _is_mobile else 11)
 	desc.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
 	section.add_child(desc)
 
 	# Current bonus
 	var bonus = Label.new()
 	bonus.text = "Lv %d/%d — %s" % [level, max_lvl, _get_bonus_text(key, level)]
-	bonus.add_theme_font_size_override("font_size", 34 if _is_mobile else 12)
+	bonus.add_theme_font_size_override("font_size", 38 if _is_mobile else 12)
 	bonus.add_theme_color_override("font_color", Color(0.6, 0.85, 0.6))
 	section.add_child(bonus)
 
@@ -153,16 +197,18 @@ func _add_upgrade_row(key: String) -> void:
 		# Next level
 		var next = Label.new()
 		next.text = "Next: %s" % _get_bonus_text(key, level + 1)
-		next.add_theme_font_size_override("font_size", 32 if _is_mobile else 11)
+		next.add_theme_font_size_override("font_size", 36 if _is_mobile else 11)
 		next.add_theme_color_override("font_color", Color(0.5, 0.7, 1.0))
 		section.add_child(next)
 
 		# Cost + button
 		var hbox = HBoxContainer.new()
+		hbox.alignment = BoxContainer.ALIGNMENT_CENTER
 		var cost_lbl = Label.new()
 		cost_lbl.text = "%d wood" % cost
-		cost_lbl.add_theme_font_size_override("font_size", 36 if _is_mobile else 13)
+		cost_lbl.add_theme_font_size_override("font_size", 40 if _is_mobile else 13)
 		cost_lbl.add_theme_color_override("font_color", Color(0.65, 0.45, 0.2))
+		cost_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		hbox.add_child(cost_lbl)
 
 		var spacer = Control.new()
@@ -171,11 +217,14 @@ func _add_upgrade_row(key: String) -> void:
 
 		var btn = Button.new()
 		btn.text = "Build"
-		btn.custom_minimum_size = Vector2(200, 68) if _is_mobile else Vector2(80, 30)
-		if _is_mobile:
-			btn.add_theme_font_size_override("font_size", 34)
+		btn.custom_minimum_size = Vector2(300, 100) if _is_mobile else Vector2(90, 34)
+		btn.add_theme_font_size_override("font_size", 42 if _is_mobile else 13)
+		_style_action_btn(btn)
 		var k = key
-		btn.pressed.connect(func(): _do_upgrade(k))
+		btn.pressed.connect(func():
+			AudioManager.play_sfx("ui_tap", -4.0)
+			_do_upgrade(k)
+		)
 		if GameManager.wood < cost:
 			btn.disabled = true
 		hbox.add_child(btn)
@@ -183,7 +232,7 @@ func _add_upgrade_row(key: String) -> void:
 	else:
 		var max_label = Label.new()
 		max_label.text = "MAX LEVEL"
-		max_label.add_theme_font_size_override("font_size", 36 if _is_mobile else 13)
+		max_label.add_theme_font_size_override("font_size", 40 if _is_mobile else 13)
 		max_label.add_theme_color_override("font_color", Color(1.0, 0.6, 0.1))
 		section.add_child(max_label)
 
@@ -211,7 +260,11 @@ func _do_upgrade(key: String) -> void:
 		"%s upgraded to level %d!" % [UPGRADES[key]["title"], new_lvl],
 		UPGRADES[key]["color"]
 	)
-	AudioManager.play_sfx("woodwork_" + key)
+	AudioManager.play_sfx("woodwork_" + key, -6.0)
+	# Brief green-tinted flash on the panel to confirm the build
+	var tw = create_tween()
+	tw.tween_property(panel, "modulate", Color(0.9, 1.2, 0.85), 0.1)
+	tw.tween_property(panel, "modulate", Color(1, 1, 1), 0.25)
 
 func _apply_woodwork_bonuses() -> void:
 	if not _player:

@@ -73,12 +73,12 @@ func _build_ui() -> void:
 	for child in panel.get_children():
 		child.queue_free()
 
-	var fs_title = 48 if _is_mobile else 20
-	var fs_normal = 36 if _is_mobile else 14
-	var fs_small = 30 if _is_mobile else 12
-	var fs_btn = 42 if _is_mobile else 14
-	var btn_h = 90 if _is_mobile else 32
-	var tab_h = 100 if _is_mobile else 36
+	var fs_title = 52 if _is_mobile else 20
+	var fs_normal = 40 if _is_mobile else 14
+	var fs_small = 34 if _is_mobile else 12
+	var fs_btn = 44 if _is_mobile else 14
+	var btn_h = 100 if _is_mobile else 32
+	var tab_h = 110 if _is_mobile else 36
 	var margin_px = 16 if _is_mobile else 12
 
 	# Root margin
@@ -161,7 +161,7 @@ func _build_ui() -> void:
 
 	_item_list = VBoxContainer.new()
 	_item_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_item_list.add_theme_constant_override("separation", 6 if _is_mobile else 2)
+	_item_list.add_theme_constant_override("separation", 10 if _is_mobile else 2)
 	_item_scroll.add_child(_item_list)
 
 	_no_items_label = Label.new()
@@ -232,15 +232,18 @@ func _build_ui() -> void:
 	detail_vbox.add_child(action_row)
 
 	_detail_action_btn = Button.new()
-	_detail_action_btn.custom_minimum_size = Vector2(220 if _is_mobile else 100, btn_h + 4)
+	_detail_action_btn.custom_minimum_size = Vector2(280 if _is_mobile else 100, btn_h + 10 if _is_mobile else btn_h + 4)
 	_detail_action_btn.add_theme_font_size_override("font_size", fs_btn)
 	action_row.add_child(_detail_action_btn)
 
 	_detail_close_btn = Button.new()
 	_detail_close_btn.text = "Back"
-	_detail_close_btn.custom_minimum_size = Vector2(180 if _is_mobile else 80, btn_h + 4)
+	_detail_close_btn.custom_minimum_size = Vector2(220 if _is_mobile else 80, btn_h + 10 if _is_mobile else btn_h + 4)
 	_detail_close_btn.add_theme_font_size_override("font_size", fs_btn)
-	_detail_close_btn.pressed.connect(_hide_detail)
+	_detail_close_btn.pressed.connect(func():
+		AudioManager.play_sfx("ui_tap", -4.0)
+		_hide_detail()
+	)
 	action_row.add_child(_detail_close_btn)
 
 func _switch_tab(tab: int) -> void:
@@ -270,8 +273,8 @@ func _refresh() -> void:
 		_build_sell_list()
 
 func _build_buy_list() -> void:
-	var fs = 36 if _is_mobile else 14
-	var row_h = 80 if _is_mobile else 30
+	var fs = 40 if _is_mobile else 14
+	var row_h = 100 if _is_mobile else 30
 	var has_items = false
 
 	for item_id in _shop_items:
@@ -287,8 +290,8 @@ func _build_buy_list() -> void:
 		_no_items_label.text = "Nothing for sale"
 
 func _build_sell_list() -> void:
-	var fs = 36 if _is_mobile else 14
-	var row_h = 80 if _is_mobile else 30
+	var fs = 40 if _is_mobile else 14
+	var row_h = 100 if _is_mobile else 30
 	var has_items = false
 
 	if _player:

@@ -150,18 +150,18 @@ func _refresh_equipment() -> void:
 
 	var inv = _player.inventory
 	var slot_names = ["weapon", "armor", "helm", "boots", "ring", "amulet"]
-	var btn_size = Vector2(0, 96) if _is_mobile else Vector2(0, 32)
-	var font_size = 34 if _is_mobile else 12
+	var btn_size = Vector2(0, 110) if _is_mobile else Vector2(0, 32)
+	var font_size = 38 if _is_mobile else 12
 
 	for slot_name in slot_names:
 		var item = inv.equipment.get(slot_name, {})
 		var row = HBoxContainer.new()
-		row.add_theme_constant_override("separation", 6 if _is_mobile else 3)
+		row.add_theme_constant_override("separation", 10 if _is_mobile else 3)
 
 		# Slot label
 		var slot_label = Label.new()
 		slot_label.text = slot_name.capitalize() + ":"
-		slot_label.custom_minimum_size = Vector2(80 if not _is_mobile else 170, 0)
+		slot_label.custom_minimum_size = Vector2(80 if not _is_mobile else 190, 0)
 		slot_label.add_theme_font_size_override("font_size", font_size)
 		slot_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
 		slot_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -200,8 +200,8 @@ func _refresh_equipment() -> void:
 		if not item.is_empty():
 			var unequip_btn = Button.new()
 			unequip_btn.text = "X"
-			unequip_btn.custom_minimum_size = Vector2(36, 0) if not _is_mobile else Vector2(80, 80)
-			unequip_btn.add_theme_font_size_override("font_size", font_size)
+			unequip_btn.custom_minimum_size = Vector2(36, 0) if not _is_mobile else Vector2(96, 96)
+			unequip_btn.add_theme_font_size_override("font_size", 38 if _is_mobile else font_size)
 			unequip_btn.add_theme_color_override("font_color", Color(1.0, 0.4, 0.4))
 			unequip_btn.tooltip_text = "Unequip"
 			var s_name = slot_name
@@ -220,14 +220,14 @@ func _refresh_bag() -> void:
 
 	var inv = _player.inventory
 	var cols = 3 if not _is_mobile else 2
-	var btn_height = 32 if not _is_mobile else 92
-	var font_size = 11 if not _is_mobile else 30
+	var btn_height = 32 if not _is_mobile else 110
+	var font_size = 11 if not _is_mobile else 34
 
 	var grid = GridContainer.new()
 	grid.columns = cols
 	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	grid.add_theme_constant_override("h_separation", 6 if _is_mobile else 3)
-	grid.add_theme_constant_override("v_separation", 6 if _is_mobile else 3)
+	grid.add_theme_constant_override("h_separation", 10 if _is_mobile else 3)
+	grid.add_theme_constant_override("v_separation", 10 if _is_mobile else 3)
 
 	for i in range(inv.bag.size()):
 		var item = inv.bag[i]

@@ -9,9 +9,23 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.56.0"
+const GAME_VERSION := "v0.57.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.57.0",
+		"title": "Mobile UI Overhaul — Bigger Buttons & Better Feedback",
+		"date": "2026-02-23",
+		"entries": [
+			"Armory: upgrade buttons enlarged (320x110), styled hover/pressed/disabled states, tap SFX on press, forge sound lowered",
+			"Woodworker: build buttons enlarged (300x100), styled hover/pressed/disabled states, tap SFX on press, build sound lowered",
+			"Shop: item rows taller (100px), action buttons bigger (280/220), fonts increased across all labels",
+			"Inventory: equipment slots taller (110px), bag grid items taller (110px), unequip buttons bigger (96x96), wider grid spacing",
+			"Both armory and woodworker now flash the panel on successful upgrade for visual confirmation",
+			"All upgrade/build buttons now have proper hover glow, press feedback, and disabled styling",
+			"Item list spacing increased on mobile for easier tapping between rows",
+		]
+	},
 	{
 		"version": "v0.56.0",
 		"title": "Overhauled Tutorial Tooltips",

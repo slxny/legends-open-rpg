@@ -9,9 +9,21 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.47.1"
+const GAME_VERSION := "v0.48.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.48.0",
+		"title": "Tooltip & Hint System Overhaul",
+		"date": "2026-02-23",
+		"entries": [
+			"Fixed tutorial hints being invisible (positioned off-screen due to anchor bug)",
+			"Added gameplay hints: inventory, potions, beacons, trees, pause menu Help",
+			"Mobile: hold Q or E for 0.6s to see ability tooltip (mana cost, cooldown, damage)",
+			"Mobile: tap hint popups to dismiss them early",
+			"Desktop: hover Q/E buttons for ability tooltips (unchanged)",
+		]
+	},
 	{
 		"version": "v0.47.1",
 		"title": "Fix Top Bar Cutoff on Mobile Fullscreen",

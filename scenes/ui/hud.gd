@@ -52,6 +52,7 @@ var _hint_label: RichTextLabel = null
 var _hint_queue: Array[Dictionary] = []
 var _hint_timer: Timer = null
 var _hint_showing: bool = false
+var _hint_tween: Tween = null
 
 # Command overlay (mobile portrait)
 var _cmd_overlay: PanelContainer = null
@@ -472,8 +473,11 @@ func setup(player: Node2D) -> void:
 			_player._use_ability("ability_2")
 	)
 
-	# Tooltip hover — desktop only (on mobile, tap should cast, not tooltip)
-	if not _is_mobile:
+	# Tooltips: desktop hover, mobile long-press
+	if _is_mobile:
+		_setup_mobile_ability_tooltip(ability_1_btn, "ability_1")
+		_setup_mobile_ability_tooltip(ability_2_btn, "ability_2")
+	else:
 		ability_1_btn.mouse_entered.connect(_on_ability_hover.bind(ability_1_btn, "ability_1"))
 		ability_1_btn.mouse_exited.connect(_on_ability_unhover)
 		ability_2_btn.mouse_entered.connect(_on_ability_hover.bind(ability_2_btn, "ability_2"))
@@ -710,6 +714,37 @@ func _on_ability_unhover() -> void:
 	_tooltip_timer.stop()
 	_tooltip_panel.visible = false
 
+func _setup_mobile_ability_tooltip(btn: Button, ability_key: String) -> void:
+	var hold_timer = Timer.new()
+	hold_timer.one_shot = true
+	hold_timer.wait_time = 0.6
+	add_child(hold_timer)
+	hold_timer.timeout.connect(func():
+		if not _tooltip_data.has(ability_key):
+			return
+		_tooltip_label.text = _tooltip_data[ability_key]
+		_tooltip_panel.visible = true
+		# Position above button (same logic as desktop _show_tooltip)
+		await get_tree().process_frame
+		var btn_rect = btn.get_global_rect()
+		var tip_size = _tooltip_panel.size
+		var x_pos = btn_rect.position.x + btn_rect.size.x / 2.0 - tip_size.x / 2.0
+		var y_pos = btn_rect.position.y - tip_size.y - 8.0
+		x_pos = clampf(x_pos, 4, get_viewport().get_visible_rect().size.x - tip_size.x - 4)
+		if y_pos < 4:
+			y_pos = btn_rect.position.y + btn_rect.size.y + 8.0
+		_tooltip_panel.position = Vector2(x_pos, y_pos)
+	)
+	btn.button_down.connect(func(): hold_timer.start())
+	btn.button_up.connect(func():
+		hold_timer.stop()
+		if _tooltip_panel.visible:
+			# Auto-hide tooltip after 2s
+			var hide_tw = create_tween()
+			hide_tw.tween_interval(2.0)
+			hide_tw.tween_callback(func(): _tooltip_panel.visible = false)
+	)
+
 func _show_tooltip() -> void:
 	if _hovered_btn == null:
 		return
@@ -732,7 +767,12 @@ func _create_hint_panel() -> void:
 	_hint_panel = PanelContainer.new()
 	_hint_panel.visible = false
 	_hint_panel.z_index = 50
-	_hint_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# On mobile, allow tap-to-dismiss; on desktop, ignore mouse so it doesn't block
+	if _is_mobile:
+		_hint_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+		_hint_panel.gui_input.connect(_on_hint_tapped)
+	else:
+		_hint_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_hint_panel.anchors_preset = Control.PRESET_CENTER_BOTTOM
 	_hint_panel.anchor_left = 0.5
 	_hint_panel.anchor_right = 0.5
@@ -889,19 +929,39 @@ func _start_tutorial_hints(hero_data: Dictionary) -> void:
 			"delay": 18.0,
 			"text": "[color=#f0d866]TIP:[/color]  [color=#aaaaaa][b]Tap[/b][/color] enemies to auto-attack  |  [color=#aaaaaa][b]Pinch[/b][/color] to zoom in/out",
 		})
-		# Repeat long-press hint twice more at longer intervals
+		_hint_queue.append({
+			"delay": 25.0,
+			"text": "[color=#f0d866]TIP:[/color]  [color=#aaddff][b]Hold Q or E for a moment[/b][/color] to see ability details — mana cost, cooldown, and damage",
+		})
+		_hint_queue.append({
+			"delay": 30.0,
+			"text": "[color=#f0d866]TIP:[/color]  Tap [color=#88ddff][b]Items[/b][/color] to open your inventory  |  Tap [color=#66ff88][b]potion slots[/b][/color] (1, 2, 3) to use consumables",
+		})
+		_hint_queue.append({
+			"delay": 45.0,
+			"text": "[color=#f0d866]TIP:[/color]  Walk onto [color=#aaddff][b]colored beacons[/b][/color] for Shops, Armory, and Tavern  |  Attack [color=#88cc66][b]trees[/b][/color] to chop wood",
+		})
+		# Repeat long-press hint at a longer interval
 		_hint_queue.append({
 			"delay": 120.0,
 			"text": "[color=#f0d866]REMINDER:[/color]  [color=#aaddff][b]Hold your hero for 2s[/b][/color] to check your stats anytime",
-		})
-		_hint_queue.append({
-			"delay": 300.0,
-			"text": "[color=#f0d866]REMINDER:[/color]  [color=#aaddff][b]Hold hero 2s[/b][/color] for detailed stats — track your STR, AGI, INT growth",
 		})
 	else:
 		_hint_queue.append({
 			"delay": 18.0,
 			"text": "[color=#f0d866]TIP:[/color]  [color=#aaaaaa][b]Left-click[/b][/color] enemies to auto-attack  |  [color=#aaaaaa][b]Right-click[/b][/color] your hero for stats",
+		})
+		_hint_queue.append({
+			"delay": 30.0,
+			"text": "[color=#f0d866]TIP:[/color]  [color=#88ddff][b]I[/b][/color] for inventory  |  [color=#66ff88][b]1, 2, 3[/b][/color] to use potions  |  [color=#aaaaaa]Hover Q/E for ability details[/color]",
+		})
+		_hint_queue.append({
+			"delay": 45.0,
+			"text": "[color=#f0d866]TIP:[/color]  Walk onto [color=#aaddff][b]colored beacons[/b][/color] for Shops, Armory, and Tavern  |  Attack [color=#88cc66][b]trees[/b][/color] to chop wood",
+		})
+		_hint_queue.append({
+			"delay": 60.0,
+			"text": "[color=#f0d866]TIP:[/color]  Press [color=#aaaaaa][b]Esc[/b][/color] to pause  |  [color=#aaaaaa][b]Help[/b][/color] in the pause menu has all controls and tips",
 		})
 
 	# Start the first hint after its delay
@@ -918,28 +978,44 @@ func _show_next_hint() -> void:
 	_hint_panel.visible = true
 	_hint_panel.modulate.a = 0.0
 
-	# Position above the bottom panel
+	# Position above the bottom panel using offsets (hint_panel has bottom anchors)
 	await get_tree().process_frame
-	var screen_w = get_viewport().get_visible_rect().size.x
 	var panel_w = _hint_panel.size.x
+	var panel_h = _hint_panel.size.y
 	var vp_size_hint = get_viewport().get_visible_rect().size
 	var is_landscape_hint = vp_size_hint.x > vp_size_hint.y
-	var bottom_offset = -125.0
+	var bottom_offset = 125.0
 	if _is_mobile:
-		bottom_offset = -140.0 if is_landscape_hint else -150.0
-	_hint_panel.position = Vector2((screen_w - panel_w) / 2.0, bottom_offset - _hint_panel.size.y - 10)
+		bottom_offset = 140.0 if is_landscape_hint else 150.0
+	_hint_panel.offset_left = -panel_w / 2.0
+	_hint_panel.offset_right = panel_w / 2.0
+	_hint_panel.offset_bottom = -(bottom_offset + 10)
+	_hint_panel.offset_top = -(bottom_offset + panel_h + 10)
 
-	# Fade in
-	var tween = create_tween()
-	tween.tween_property(_hint_panel, "modulate:a", 1.0, 0.4)
-	# Hold for 6 seconds
-	tween.tween_interval(6.0)
-	# Fade out
-	tween.tween_property(_hint_panel, "modulate:a", 0.0, 0.6)
-	tween.tween_callback(func():
+	# Fade in → hold → fade out
+	if _hint_tween and _hint_tween.is_valid():
+		_hint_tween.kill()
+	_hint_tween = create_tween()
+	_hint_tween.tween_property(_hint_panel, "modulate:a", 1.0, 0.4)
+	_hint_tween.tween_interval(6.0)
+	_hint_tween.tween_property(_hint_panel, "modulate:a", 0.0, 0.6)
+	_hint_tween.tween_callback(_on_hint_finished)
+
+func _on_hint_finished() -> void:
+	_hint_panel.visible = false
+	_hint_tween = null
+	if not _hint_queue.is_empty():
+		_hint_timer.wait_time = _hint_queue[0]["delay"]
+		_hint_timer.start()
+
+func _on_hint_tapped(event: InputEvent) -> void:
+	if event is InputEventScreenTouch and event.pressed:
+		# Dismiss the current hint immediately on tap
+		if _hint_tween and _hint_tween.is_valid():
+			_hint_tween.kill()
 		_hint_panel.visible = false
-		# Schedule the next hint
+		_hint_tween = null
+		# Schedule next hint sooner (2s instead of full delay)
 		if not _hint_queue.is_empty():
-			_hint_timer.wait_time = _hint_queue[0]["delay"]
+			_hint_timer.wait_time = min(_hint_queue[0]["delay"], 2.0)
 			_hint_timer.start()
-	)

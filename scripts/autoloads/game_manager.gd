@@ -2,6 +2,7 @@ extends Node
 
 signal gold_changed(new_amount: int)
 signal wood_changed(new_amount: int)
+signal kills_changed(new_total: int)
 signal hero_selected(hero_class: String)
 signal game_started
 signal item_picked_up(item_name: String)
@@ -22,6 +23,18 @@ var wood: int = 0:
 var total_kills: int = 0
 var killed_bosses: Array[String] = []
 var found_artifacts: Array[String] = []
+
+# Kill milestone rewards
+const KILL_MILESTONES: Array[Dictionary] = [
+	{"kills": 100, "gold": 50, "rarities": [ItemData.Rarity.COMMON, ItemData.Rarity.UNCOMMON]},
+	{"kills": 200, "gold": 100, "rarities": [ItemData.Rarity.UNCOMMON]},
+	{"kills": 500, "gold": 250, "rarities": [ItemData.Rarity.RARE]},
+	{"kills": 1000, "gold": 500, "rarities": [ItemData.Rarity.RARE, ItemData.Rarity.EPIC]},
+	{"kills": 2000, "gold": 1000, "rarities": [ItemData.Rarity.EPIC]},
+	{"kills": 5000, "gold": 2500, "rarities": [ItemData.Rarity.EPIC, ItemData.Rarity.LEGENDARY]},
+	{"kills": 10000, "gold": 5000, "rarities": [ItemData.Rarity.LEGENDARY]},
+]
+var _claimed_milestones: Array[int] = []
 
 # Armory upgrade levels (0 = no upgrades, 100 = max)
 var weapon_upgrade_level: int = 0
@@ -72,8 +85,10 @@ func start_game() -> void:
 
 func record_kill(enemy_name: String) -> void:
 	total_kills += 1
+	kills_changed.emit(total_kills)
 	DeathCounterSystem.add_value("total_kills", 1)
 	DeathCounterSystem.add_value("kills_%s" % enemy_name, 1)
+	_check_kill_milestone()
 
 func record_boss_kill(boss_id: String) -> void:
 	if boss_id not in killed_bosses:
@@ -84,3 +99,74 @@ func record_artifact(artifact_id: String) -> void:
 	if artifact_id not in found_artifacts:
 		found_artifacts.append(artifact_id)
 	DeathCounterSystem.set_flag("artifact_%s" % artifact_id)
+
+func _check_kill_milestone() -> void:
+	for milestone in KILL_MILESTONES:
+		var threshold: int = milestone["kills"]
+		if total_kills >= threshold and threshold not in _claimed_milestones:
+			_claimed_milestones.append(threshold)
+			# Grant gold
+			var gold_reward: int = milestone["gold"]
+			add_gold(gold_reward)
+			# Pick a random equipment item matching the milestone rarities
+			var rarities: Array = milestone["rarities"]
+			var candidates: Array[String] = []
+			for item_id in ItemData.ITEMS:
+				var item = ItemData.ITEMS[item_id]
+				if item.get("slot", -1) == ItemData.Slot.CONSUMABLE:
+					continue
+				if item.get("rarity", -1) in rarities:
+					candidates.append(item_id)
+			if candidates.size() > 0:
+				var chosen_id = candidates[randi() % candidates.size()]
+				var item = ItemData.get_item(chosen_id)
+				ItemData._roll_affixes(item)
+				_spawn_milestone_drop(item)
+			# Celebration message
+			var rarity_name = ItemData.RARITY_NAMES.get(rarities[rarities.size() - 1], "")
+			game_message.emit(
+				"%d Kills! +%dg + %s gear drop!" % [threshold, gold_reward, rarity_name],
+				Color(1.0, 0.85, 0.2)
+			)
+
+func _spawn_milestone_drop(item: Dictionary) -> void:
+	var players = get_tree().get_nodes_in_group("player")
+	if players.is_empty():
+		return
+	var player = players[0]
+	# Build a ground drop Area2D
+	var drop = Area2D.new()
+	drop.collision_layer = 32
+	drop.collision_mask = 0
+	var shape_node = CollisionShape2D.new()
+	var circle = CircleShape2D.new()
+	circle.radius = 8.0
+	shape_node.shape = circle
+	drop.add_child(shape_node)
+	var visual = Sprite2D.new()
+	visual.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	visual.name = "Visual"
+	drop.add_child(visual)
+
+	drop.position = player.global_position + Vector2(randf_range(-15, 15), randf_range(-15, 15))
+	drop.add_to_group("ground_items")
+	drop.set_meta("item_data", item)
+
+	visual.texture = SpriteGenerator.get_texture("crystal_teal")
+	var rarity = item.get("rarity", 0)
+	visual.modulate = ItemData.RARITY_COLORS.get(rarity, Color.WHITE)
+
+	# Add to world
+	var world_nodes = get_tree().get_nodes_in_group("world")
+	var world: Node = world_nodes[0] if world_nodes.size() > 0 else get_tree().current_scene
+	world.add_child(drop)
+
+	var float_tween = drop.create_tween().set_loops()
+	float_tween.tween_property(visual, "position:y", -2.0, 0.6).set_trans(Tween.TRANS_SINE)
+	float_tween.tween_property(visual, "position:y", 0.0, 0.6).set_trans(Tween.TRANS_SINE)
+
+	# Announce the drop
+	var rarity_name = ItemData.RARITY_NAMES.get(rarity, "")
+	if rarity >= ItemData.Rarity.RARE:
+		var color = ItemData.RARITY_COLORS.get(rarity, Color.WHITE)
+		game_message.emit("%s %s dropped!" % [rarity_name, item.get("name", "Item")], color)

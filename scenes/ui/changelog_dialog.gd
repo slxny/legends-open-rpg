@@ -9,9 +9,35 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.58.1"
+const GAME_VERSION := "v0.60.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.60.0",
+		"title": "Kill Counter & Milestone Rewards",
+		"date": "2026-02-23",
+		"entries": [
+			"Replaced alignment display with a kill counter in the top bar",
+			"Kill counter tracks total enemies slain and updates in real-time",
+			"Milestone rewards at 100, 200, 500, 1K, 2K, 5K, and 10K kills",
+			"Each milestone grants gold and a random gear drop near the player",
+			"Higher milestones drop rarer gear (Common → Legendary)",
+			"Milestone progress saved and restored with save/load",
+		]
+	},
+	{
+		"version": "v0.59.0",
+		"title": "Potion system overhaul: stacking % health potions",
+		"date": "2026-02-23",
+		"entries": [
+			"Replaced all consumables with 3 potion types: Small (33% HP), Medium (50% HP), Great (100% HP)",
+			"Potions now stack up to 99x in 3 dedicated HUD slots",
+			"Healing scales with max HP — potions stay useful at every level",
+			"Weak enemies drop Small Potions, mid enemies drop Medium, strong enemies drop Great",
+			"Shop updated with all 3 potion tiers",
+			"Removed mana potions and elixirs (simplified to health potions only)",
+		]
+	},
 	{
 		"version": "v0.58.1",
 		"title": "Fix mobile command overlay potion indices",

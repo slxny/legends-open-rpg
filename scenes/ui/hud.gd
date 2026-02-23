@@ -1,13 +1,13 @@
 extends CanvasLayer
 
 ## SC:BW-style HUD with dark bottom console panel, segmented bars,
-## 3x3 command card, alignment display, and save/load buttons.
+## 3x3 command card, kill counter, and save/load buttons.
 
 # Top bar refs
 @onready var top_bar: HBoxContainer = $TopBar
 @onready var gold_label: Label = $TopBar/GoldLabel
 @onready var wood_label: Label = $TopBar/WoodLabel
-@onready var alignment_label: Label = $TopBar/AlignmentLabel
+@onready var kills_label: Label = $TopBar/KillsLabel
 
 # Bottom console panel refs
 @onready var bottom_panel: PanelContainer = $BottomPanel
@@ -79,13 +79,13 @@ func _apply_mobile_layout() -> void:
 		top_bar.offset_right = -right_pad
 		gold_label.add_theme_font_size_override("font_size", 10)
 		wood_label.add_theme_font_size_override("font_size", 10)
-		alignment_label.add_theme_font_size_override("font_size", 9)
+		kills_label.add_theme_font_size_override("font_size", 9)
 	else:
 		top_bar.offset_bottom = 72
 		top_bar.offset_right = -right_pad
 		gold_label.add_theme_font_size_override("font_size", 44)
 		wood_label.add_theme_font_size_override("font_size", 44)
-		alignment_label.add_theme_font_size_override("font_size", 38)
+		kills_label.add_theme_font_size_override("font_size", 38)
 
 	# ── PORTRAIT: [MAP] [bars] [OPT] layout ──
 	if not is_landscape:
@@ -304,15 +304,16 @@ func _update_overlay_potions() -> void:
 		return
 	var grid = _cmd_overlay.get_child(0).get_child(1) as GridContainer  # vbox -> grid
 	var inv = _player.inventory
+	var names = ["Small", "Medium", "Great"]
 	# Potion buttons are children 1, 2, 3 of the grid (after Log button)
 	for i in range(3):
 		var btn = grid.get_child(1 + i) as Button
-		var item = inv.consumables[i] if i < inv.consumables.size() else {}
-		if item.is_empty():
+		var count = inv.potion_counts[i]
+		if count <= 0:
 			btn.text = "%d\n---" % (i + 1)
 			btn.modulate = Color(0.5, 0.5, 0.5)
 		else:
-			btn.text = "%d\n%s" % [i + 1, item.get("name", "Potion")]
+			btn.text = "%d\n%s x%d" % [i + 1, names[i], count]
 			btn.modulate = Color.WHITE
 
 func _build_map_overlay() -> void:
@@ -416,7 +417,7 @@ func setup(player: Node2D) -> void:
 	stats.leveled_up.connect(_on_leveled_up)
 	GameManager.gold_changed.connect(_on_gold_changed)
 	GameManager.wood_changed.connect(_on_wood_changed)
-	AlignmentManager.alignment_changed.connect(_on_alignment_changed)
+	GameManager.kills_changed.connect(_on_kills_changed)
 
 	var hero_data = HeroData.get_hero(player.hero_class)
 
@@ -459,7 +460,7 @@ func setup(player: Node2D) -> void:
 	level_label.text = "%s  Lv %d  Adventurer" % [hero_data.get("name", "Hero"), stats.level]
 	_on_gold_changed(GameManager.gold)
 	_on_wood_changed(GameManager.wood)
-	_update_alignment_display()
+	_on_kills_changed(GameManager.total_kills)
 
 	# Start tutorial hints after a short delay
 	_start_tutorial_hints(hero_data)
@@ -499,28 +500,8 @@ func _on_gold_changed(amount: int) -> void:
 func _on_wood_changed(amount: int) -> void:
 	wood_label.text = "Wood: %d" % amount
 
-func _on_alignment_changed(_player_id: int, _value: int) -> void:
-	_update_alignment_display()
-
-func _update_alignment_display() -> void:
-	var faction = AlignmentManager.get_faction_name(0)
-	var val = AlignmentManager.get_alignment(0)
-	var color: Color
-	match faction:
-		"Holy":
-			color = Color(1.0, 0.95, 0.5)
-		"Good":
-			color = Color(0.5, 1.0, 0.5)
-		"Neutral":
-			color = Color(0.7, 0.7, 0.7)
-		"Dark":
-			color = Color(0.7, 0.4, 0.8)
-		"Evil":
-			color = Color(1.0, 0.2, 0.2)
-		_:
-			color = Color.WHITE
-	alignment_label.text = "%s (%+d)" % [faction, val]
-	alignment_label.add_theme_color_override("font_color", color)
+func _on_kills_changed(total: int) -> void:
+	kills_label.text = "Kills: %d" % total
 
 
 func _update_potion_labels() -> void:
@@ -528,13 +509,14 @@ func _update_potion_labels() -> void:
 		return
 	var inv = _player.inventory
 	var btns = [potion_1_btn, potion_2_btn, potion_3_btn]
+	var names = ["Small", "Medium", "Great"]
 	for i in range(3):
-		var item = inv.consumables[i] if i < inv.consumables.size() else {}
-		if item.is_empty():
+		var count = inv.potion_counts[i]
+		if count <= 0:
 			btns[i].text = "%d\n---" % (i + 1)
 			btns[i].modulate = Color(0.5, 0.5, 0.5)
 		else:
-			btns[i].text = "%d\n%s" % [i + 1, item.get("name", "Potion")]
+			btns[i].text = "%d\n%s x%d" % [i + 1, names[i], count]
 			btns[i].modulate = Color.WHITE
 
 func _on_changelog_pressed() -> void:

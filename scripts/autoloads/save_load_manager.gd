@@ -55,8 +55,9 @@ func save_game() -> void:
 	data["bag"] = _serialize_bag(player.inventory)
 	data["consumables"] = _serialize_consumables(player.inventory)
 
-	# Total kills
+	# Total kills and milestones
 	data["total_kills"] = GameManager.total_kills
+	data["claimed_milestones"] = GameManager._claimed_milestones.duplicate()
 
 	# All death counters (complete state)
 	data["death_counters"] = DeathCounterSystem.get_all()
@@ -114,6 +115,11 @@ func load_game() -> bool:
 
 	# Restore kills/artifacts/bosses
 	GameManager.total_kills = data.get("total_kills", 0)
+	var loaded_milestones = data.get("claimed_milestones", [])
+	GameManager._claimed_milestones.clear()
+	for m in loaded_milestones:
+		GameManager._claimed_milestones.append(int(m))
+	GameManager.kills_changed.emit(GameManager.total_kills)
 	GameManager.killed_bosses = Array(data.get("killed_bosses", []), TYPE_STRING, "", null)
 	GameManager.found_artifacts = Array(data.get("artifacts", []), TYPE_STRING, "", null)
 	GameManager.weapon_upgrade_level = data.get("weapon_upgrade_level", 0)
@@ -227,13 +233,7 @@ func _serialize_bag(inv: InventoryComponent) -> Array:
 	return result
 
 func _serialize_consumables(inv: InventoryComponent) -> Array:
-	var result: Array = []
-	for item in inv.consumables:
-		if not item.is_empty():
-			result.append(item.get("id", ""))
-		else:
-			result.append("")
-	return result
+	return inv.potion_counts.duplicate()
 
 func _deserialize_equipment(inv: InventoryComponent, data: Dictionary) -> void:
 	for slot_name in data:
@@ -253,11 +253,11 @@ func _deserialize_bag(inv: InventoryComponent, data: Array) -> void:
 				inv.bag.append(item)
 
 func _deserialize_consumables(inv: InventoryComponent, data: Array) -> void:
-	for i in range(min(data.size(), inv.consumables.size())):
-		var item_id = data[i]
-		if item_id is String and not item_id.is_empty():
-			var item = ItemData.get_item(item_id)
-			if not item.is_empty():
-				inv.consumables[i] = item
-		else:
-			inv.consumables[i] = {}
+	for i in range(min(data.size(), inv.potion_counts.size())):
+		if data[i] is int or data[i] is float:
+			inv.potion_counts[i] = int(data[i])
+		elif data[i] is String and not data[i].is_empty():
+			# Legacy save: old consumable ID string — convert to 1 potion
+			var potion_index = inv.POTION_IDS.find(data[i])
+			if potion_index >= 0:
+				inv.potion_counts[potion_index] += 1

@@ -751,6 +751,10 @@ func _show_tooltip() -> void:
 	_tooltip_panel.visible = true
 	# Position above the hovered button
 	await get_tree().process_frame
+	# Re-check after await — user may have unhovered during the frame
+	if _hovered_btn == null:
+		_tooltip_panel.visible = false
+		return
 	var btn_rect = _hovered_btn.get_global_rect()
 	var tip_size = _tooltip_panel.size
 	var x_pos = btn_rect.position.x + btn_rect.size.x / 2.0 - tip_size.x / 2.0

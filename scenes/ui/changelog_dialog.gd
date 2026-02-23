@@ -9,9 +9,17 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.48.0"
+const GAME_VERSION := "v0.48.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.48.1",
+		"title": "Fix Desktop Tooltip Race Condition",
+		"date": "2026-02-23",
+		"entries": [
+			"Fixed potential crash when quickly moving mouse away from ability buttons during tooltip delay",
+		]
+	},
 	{
 		"version": "v0.48.0",
 		"title": "Tooltip & Hint System Overhaul",

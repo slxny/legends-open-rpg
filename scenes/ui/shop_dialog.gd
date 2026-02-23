@@ -77,8 +77,8 @@ func _build_ui() -> void:
 	var fs_normal = 36 if _is_mobile else 14
 	var fs_small = 30 if _is_mobile else 12
 	var fs_btn = 34 if _is_mobile else 14
-	var btn_h = 64 if _is_mobile else 32
-	var tab_h = 72 if _is_mobile else 36
+	var btn_h = 76 if _is_mobile else 32
+	var tab_h = 80 if _is_mobile else 36
 	var margin_px = 16 if _is_mobile else 12
 
 	# Root margin
@@ -156,7 +156,7 @@ func _build_ui() -> void:
 
 	_item_list = VBoxContainer.new()
 	_item_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_item_list.add_theme_constant_override("separation", 4 if _is_mobile else 2)
+	_item_list.add_theme_constant_override("separation", 6 if _is_mobile else 2)
 	_item_scroll.add_child(_item_list)
 
 	_no_items_label = Label.new()
@@ -239,6 +239,7 @@ func _build_ui() -> void:
 	action_row.add_child(_detail_close_btn)
 
 func _switch_tab(tab: int) -> void:
+	AudioManager.play_sfx("ui_tap", -4.0)
 	_current_tab = tab
 	_hide_detail()
 	_refresh()
@@ -264,8 +265,8 @@ func _refresh() -> void:
 		_build_sell_list()
 
 func _build_buy_list() -> void:
-	var fs = 34 if _is_mobile else 14
-	var row_h = 60 if _is_mobile else 30
+	var fs = 36 if _is_mobile else 14
+	var row_h = 80 if _is_mobile else 30
 	var has_items = false
 
 	for item_id in _shop_items:
@@ -281,8 +282,8 @@ func _build_buy_list() -> void:
 		_no_items_label.text = "Nothing for sale"
 
 func _build_sell_list() -> void:
-	var fs = 34 if _is_mobile else 14
-	var row_h = 60 if _is_mobile else 30
+	var fs = 36 if _is_mobile else 14
+	var row_h = 80 if _is_mobile else 30
 	var has_items = false
 
 	if _player:
@@ -301,13 +302,30 @@ func _build_sell_list() -> void:
 
 func _create_item_row(item: Dictionary, item_id: String, bag_index: int, fs: int, row_h: int) -> Control:
 	var row_style = StyleBoxFlat.new()
-	row_style.bg_color = Color(0.15, 0.15, 0.2, 0.6)
-	row_style.set_corner_radius_all(4)
-	row_style.set_content_margin_all(6 if _is_mobile else 4)
+	row_style.bg_color = Color(0.16, 0.16, 0.22, 0.7)
+	row_style.set_corner_radius_all(6)
+	row_style.set_content_margin_all(10 if _is_mobile else 4)
+	row_style.border_color = Color(0.3, 0.28, 0.22, 0.4)
+	row_style.set_border_width_all(1)
+
+	var hover_style = StyleBoxFlat.new()
+	hover_style.bg_color = Color(0.24, 0.22, 0.30, 0.85)
+	hover_style.set_corner_radius_all(6)
+	hover_style.set_content_margin_all(10 if _is_mobile else 4)
+	hover_style.border_color = Color(0.9, 0.75, 0.3, 0.7)
+	hover_style.set_border_width_all(2)
+
+	var pressed_style = StyleBoxFlat.new()
+	pressed_style.bg_color = Color(0.30, 0.28, 0.18, 0.9)
+	pressed_style.set_corner_radius_all(6)
+	pressed_style.set_content_margin_all(10 if _is_mobile else 4)
+	pressed_style.border_color = Color(1.0, 0.85, 0.4, 0.9)
+	pressed_style.set_border_width_all(2)
 
 	var row_panel = PanelContainer.new()
 	row_panel.add_theme_stylebox_override("panel", row_style)
 	row_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row_panel.custom_minimum_size = Vector2(0, row_h)
 
 	var hbox = HBoxContainer.new()
 	hbox.add_theme_constant_override("separation", 8)
@@ -321,6 +339,7 @@ func _create_item_row(item: Dictionary, item_id: String, bag_index: int, fs: int
 	name_label.add_theme_color_override("font_color", ItemData.RARITY_COLORS.get(rarity, Color.WHITE))
 	name_label.add_theme_font_size_override("font_size", fs)
 	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	hbox.add_child(name_label)
 
 	# Price
@@ -331,17 +350,46 @@ func _create_item_row(item: Dictionary, item_id: String, bag_index: int, fs: int
 		price_label.text = "%dg" % ItemData.get_sell_price(item.get("id", ""))
 	price_label.add_theme_color_override("font_color", Color(1, 0.85, 0.2))
 	price_label.add_theme_font_size_override("font_size", fs)
+	price_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	hbox.add_child(price_label)
 
-	# Make entire row clickable
+	# Make entire row clickable with visual feedback
 	var btn_overlay = Button.new()
 	btn_overlay.flat = true
 	btn_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	btn_overlay.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	# Apply transparent styles so hover/press show through the panel
+	var btn_normal = StyleBoxFlat.new()
+	btn_normal.bg_color = Color(0, 0, 0, 0)
+	btn_normal.set_corner_radius_all(6)
+	var btn_hover = StyleBoxFlat.new()
+	btn_hover.bg_color = Color(1.0, 0.85, 0.3, 0.08)
+	btn_hover.set_corner_radius_all(6)
+	btn_hover.border_color = Color(0.9, 0.75, 0.3, 0.5)
+	btn_hover.set_border_width_all(1)
+	var btn_pressed = StyleBoxFlat.new()
+	btn_pressed.bg_color = Color(1.0, 0.85, 0.3, 0.15)
+	btn_pressed.set_corner_radius_all(6)
+	btn_pressed.border_color = Color(1.0, 0.85, 0.4, 0.7)
+	btn_pressed.set_border_width_all(2)
+	btn_overlay.add_theme_stylebox_override("normal", btn_normal)
+	btn_overlay.add_theme_stylebox_override("hover", btn_hover)
+	btn_overlay.add_theme_stylebox_override("pressed", btn_pressed)
+	btn_overlay.add_theme_stylebox_override("focus", btn_hover)
 	var _id = item_id
 	var _idx = bag_index
 	var _item = item
-	btn_overlay.pressed.connect(func(): _show_detail(_item, _id, _idx))
+	btn_overlay.pressed.connect(func():
+		AudioManager.play_sfx("ui_tap", -4.0)
+		_show_detail(_item, _id, _idx)
+	)
+	btn_overlay.mouse_entered.connect(func():
+		AudioManager.play_sfx("ui_hover", -8.0)
+		row_panel.add_theme_stylebox_override("panel", hover_style)
+	)
+	btn_overlay.mouse_exited.connect(func():
+		row_panel.add_theme_stylebox_override("panel", row_style)
+	)
 	row_panel.add_child(btn_overlay)
 
 	return row_panel

@@ -9,9 +9,24 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.38.0"
+const GAME_VERSION := "v0.38.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.38.1",
+		"title": "Mobile Button Improvements for Inventory & Shop",
+		"date": "2026-02-23",
+		"entries": [
+			"Inventory equipment buttons enlarged from 80px to 96px on mobile with bigger 34px font",
+			"Inventory bag grid buttons enlarged from 76px to 92px on mobile with bigger 30px font",
+			"Shop item rows enlarged from 60px to 80px on mobile with bigger 36px font",
+			"Shop tab and action buttons enlarged for easier tapping on mobile",
+			"All inventory and shop buttons now have styled normal/hover/pressed states with golden borders",
+			"Added subtle tap SFX on button press and soft hover SFX on mouse enter",
+			"Empty inventory slots now have a distinct dimmed style instead of just modulated opacity",
+			"Shop item rows highlight with a golden border on hover and brighten on press",
+		]
+	},
 	{
 		"version": "v0.38.0",
 		"title": "Landscape HUD Radical Compaction",

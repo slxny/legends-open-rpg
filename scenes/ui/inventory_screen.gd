@@ -17,6 +17,44 @@ var _selected_item: Dictionary = {}
 const TAB_ACTIVE_COLOR := Color(1.0, 0.85, 0.4)
 const TAB_INACTIVE_COLOR := Color(0.6, 0.6, 0.6)
 
+# Style helpers for item buttons
+func _make_item_style(is_empty: bool) -> StyleBoxFlat:
+	var s = StyleBoxFlat.new()
+	if is_empty:
+		s.bg_color = Color(0.12, 0.12, 0.15, 0.4)
+	else:
+		s.bg_color = Color(0.16, 0.16, 0.22, 0.7)
+	s.set_corner_radius_all(6)
+	s.set_content_margin_all(6 if _is_mobile else 3)
+	s.border_color = Color(0.3, 0.28, 0.22, 0.4)
+	s.set_border_width_all(1)
+	return s
+
+func _make_hover_style() -> StyleBoxFlat:
+	var s = StyleBoxFlat.new()
+	s.bg_color = Color(0.24, 0.22, 0.30, 0.85)
+	s.set_corner_radius_all(6)
+	s.set_content_margin_all(6 if _is_mobile else 3)
+	s.border_color = Color(0.9, 0.75, 0.3, 0.7)
+	s.set_border_width_all(2)
+	return s
+
+func _make_pressed_style() -> StyleBoxFlat:
+	var s = StyleBoxFlat.new()
+	s.bg_color = Color(0.30, 0.28, 0.18, 0.9)
+	s.set_corner_radius_all(6)
+	s.set_content_margin_all(6 if _is_mobile else 3)
+	s.border_color = Color(1.0, 0.85, 0.4, 0.9)
+	s.set_border_width_all(2)
+	return s
+
+func _style_item_btn(btn: Button, is_empty: bool) -> void:
+	btn.add_theme_stylebox_override("normal", _make_item_style(is_empty))
+	btn.add_theme_stylebox_override("hover", _make_hover_style())
+	btn.add_theme_stylebox_override("pressed", _make_pressed_style())
+	btn.add_theme_stylebox_override("focus", _make_hover_style())
+	btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if not is_empty else Control.CURSOR_ARROW
+
 func _ready() -> void:
 	panel.visible = false
 	equip_tab_btn.pressed.connect(_switch_tab.bind(0))
@@ -56,10 +94,10 @@ func _detect_mobile() -> void:
 		panel.offset_top = margin
 		panel.offset_bottom = -margin
 		$Panel/MarginContainer/VBox/TopBar/Title.add_theme_font_size_override("font_size", 48)
-		equip_tab_btn.add_theme_font_size_override("font_size", 36)
-		equip_tab_btn.custom_minimum_size.y = 70
-		bag_tab_btn.add_theme_font_size_override("font_size", 36)
-		bag_tab_btn.custom_minimum_size.y = 70
+		equip_tab_btn.add_theme_font_size_override("font_size", 38)
+		equip_tab_btn.custom_minimum_size.y = 80
+		bag_tab_btn.add_theme_font_size_override("font_size", 38)
+		bag_tab_btn.custom_minimum_size.y = 80
 		detail_label.add_theme_font_size_override("font_size", 34)
 		stats_label.add_theme_font_size_override("font_size", 32)
 		# Replace keyboard hint with close button
@@ -83,6 +121,7 @@ func _detect_mobile() -> void:
 		panel.offset_bottom = -120.0
 
 func _switch_tab(tab: int) -> void:
+	AudioManager.play_sfx("ui_tap", -4.0)
 	_current_tab = tab
 	_selected_item = {}
 	_refresh()
@@ -108,19 +147,21 @@ func _refresh_equipment() -> void:
 
 	var inv = _player.inventory
 	var slot_names = ["weapon", "armor", "helm", "boots", "ring", "amulet"]
-	var btn_size = Vector2(0, 80) if _is_mobile else Vector2(0, 32)
-	var font_size = 30 if _is_mobile else 12
+	var btn_size = Vector2(0, 96) if _is_mobile else Vector2(0, 32)
+	var font_size = 34 if _is_mobile else 12
 
 	for slot_name in slot_names:
 		var item = inv.equipment.get(slot_name, {})
 		var row = HBoxContainer.new()
+		row.add_theme_constant_override("separation", 6 if _is_mobile else 3)
 
 		# Slot label
 		var slot_label = Label.new()
 		slot_label.text = slot_name.capitalize() + ":"
-		slot_label.custom_minimum_size = Vector2(80 if not _is_mobile else 160, 0)
+		slot_label.custom_minimum_size = Vector2(80 if not _is_mobile else 170, 0)
 		slot_label.add_theme_font_size_override("font_size", font_size)
 		slot_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
+		slot_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		row.add_child(slot_label)
 
 		# Item button
@@ -131,34 +172,41 @@ func _refresh_equipment() -> void:
 
 		if item.is_empty():
 			btn.text = "-- empty --"
-			btn.modulate = Color(0.5, 0.5, 0.5)
+			_style_item_btn(btn, true)
 		else:
 			btn.text = item.get("name", "?")
 			var rarity = item.get("rarity", 0)
 			btn.add_theme_color_override("font_color", ItemData.RARITY_COLORS.get(rarity, Color.WHITE))
+			_style_item_btn(btn, false)
 			var bound_item = item
 			var bound_slot = slot_name
 			btn.pressed.connect(func():
+				AudioManager.play_sfx("ui_tap", -4.0)
 				_selected_item = bound_item
 				_refresh_detail()
 			)
 			btn.mouse_entered.connect(func():
+				AudioManager.play_sfx("ui_hover", -8.0)
 				_selected_item = bound_item
 				_refresh_detail()
 			)
 
 		row.add_child(btn)
 
-		# Unequip button (small)
+		# Unequip button
 		if not item.is_empty():
 			var unequip_btn = Button.new()
 			unequip_btn.text = "X"
-			unequip_btn.custom_minimum_size = Vector2(36, 0) if not _is_mobile else Vector2(70, 0)
+			unequip_btn.custom_minimum_size = Vector2(36, 0) if not _is_mobile else Vector2(80, 80)
 			unequip_btn.add_theme_font_size_override("font_size", font_size)
 			unequip_btn.add_theme_color_override("font_color", Color(1.0, 0.4, 0.4))
 			unequip_btn.tooltip_text = "Unequip"
 			var s_name = slot_name
-			unequip_btn.pressed.connect(func(): inv.unequip(s_name))
+			unequip_btn.pressed.connect(func():
+				AudioManager.play_sfx("ui_tap", -4.0)
+				inv.unequip(s_name)
+			)
+			_style_item_btn(unequip_btn, false)
 			row.add_child(unequip_btn)
 
 		content_vbox.add_child(row)
@@ -169,14 +217,14 @@ func _refresh_bag() -> void:
 
 	var inv = _player.inventory
 	var cols = 3 if not _is_mobile else 2
-	var btn_height = 32 if not _is_mobile else 76
-	var font_size = 11 if not _is_mobile else 28
+	var btn_height = 32 if not _is_mobile else 92
+	var font_size = 11 if not _is_mobile else 30
 
 	var grid = GridContainer.new()
 	grid.columns = cols
 	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	grid.add_theme_constant_override("h_separation", 3)
-	grid.add_theme_constant_override("v_separation", 3)
+	grid.add_theme_constant_override("h_separation", 6 if _is_mobile else 3)
+	grid.add_theme_constant_override("v_separation", 6 if _is_mobile else 3)
 
 	for i in range(inv.bag.size()):
 		var item = inv.bag[i]
@@ -188,14 +236,22 @@ func _refresh_bag() -> void:
 		var rarity = item.get("rarity", 0)
 		btn.add_theme_color_override("font_color", ItemData.RARITY_COLORS.get(rarity, Color.WHITE))
 		btn.clip_text = true
+		_style_item_btn(btn, false)
 
 		var idx = i
 		var bound_item = item
 		if item.get("slot") == ItemData.Slot.CONSUMABLE:
-			btn.pressed.connect(func(): _player.inventory.move_bag_consumable_to_slot(idx); _refresh())
+			btn.pressed.connect(func():
+				AudioManager.play_sfx("ui_tap", -4.0)
+				_player.inventory.move_bag_consumable_to_slot(idx); _refresh()
+			)
 		else:
-			btn.pressed.connect(func(): _player.inventory.equip_from_bag(idx); _refresh())
+			btn.pressed.connect(func():
+				AudioManager.play_sfx("ui_tap", -4.0)
+				_player.inventory.equip_from_bag(idx); _refresh()
+			)
 		btn.mouse_entered.connect(func():
+			AudioManager.play_sfx("ui_hover", -8.0)
 			_selected_item = bound_item
 			_refresh_detail()
 		)
@@ -209,7 +265,7 @@ func _refresh_bag() -> void:
 		btn.custom_minimum_size = Vector2(0, btn_height)
 		btn.add_theme_font_size_override("font_size", font_size)
 		btn.text = "---"
-		btn.modulate = Color(0.35, 0.35, 0.35)
+		_style_item_btn(btn, true)
 		grid.add_child(btn)
 
 	content_vbox.add_child(grid)

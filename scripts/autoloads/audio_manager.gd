@@ -1160,6 +1160,23 @@ func _gen_shop_sell() -> AudioStreamWAV:
 	_soft_clip(samples, 1.2)
 	return _to_stream(samples)
 
+func _gen_ui_tap() -> AudioStreamWAV:
+	# Short crisp tap — subtle click for button presses
+	var samples = _make_samples(0.08)
+	_add_sine(samples, 1800.0, 0.18)
+	_add_sine(samples, 900.0, 0.08)
+	_add_pitched_noise(samples, 2400.0, 600.0, 0.04)
+	_apply_envelope(samples, 0.001, 0.01, 0.06)
+	_soft_clip(samples, 1.1)
+	return _to_stream(samples)
+
+func _gen_ui_hover() -> AudioStreamWAV:
+	# Soft tick for hover / focus — barely audible high blip
+	var samples = _make_samples(0.05)
+	_add_sine(samples, 2600.0, 0.08)
+	_apply_envelope(samples, 0.001, 0.008, 0.04)
+	return _to_stream(samples)
+
 func _gen_equip_weapon() -> AudioStreamWAV:
 	# Sword drawn from sheath — sharp metallic slide ending in a bright ring
 	var samples = _make_samples(0.35)

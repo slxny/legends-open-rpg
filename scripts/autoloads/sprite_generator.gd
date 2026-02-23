@@ -26,13 +26,17 @@ func get_texture(name: String) -> ImageTexture:
 ## select screen so everything is cached before the world loads.
 func _pregenerate_async() -> void:
 	var batch: int = 0
-	const PER_FRAME: int = 10  # Larger batches to finish pre-gen faster
+	# Mobile/web CPUs are much slower — keep batches small to avoid
+	# frame drops that make the splash or hero-select screen appear frozen.
+	var per_frame: int = 10
+	if OS.has_feature("web") or OS.has_feature("mobile"):
+		per_frame = 3
 	for sprite_name in _all_sprite_names():
 		if textures.has(sprite_name):
 			continue
 		_gen_or_load(sprite_name)
 		batch += 1
-		if batch >= PER_FRAME:
+		if batch >= per_frame:
 			batch = 0
 			await get_tree().process_frame
 

@@ -9,9 +9,21 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.57.0"
+const GAME_VERSION := "v0.57.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.57.1",
+		"title": "Fix Mobile Browser Loading Hang",
+		"date": "2026-02-23",
+		"entries": [
+			"Defer 13 scene preloads from boot to hero-select — Godot splash no longer blocks on synchronous resource loading",
+			"Reduce sprite pre-generation batch size on mobile/web (10 → 3 per frame) to prevent frame drops during loading",
+			"Reduce SFX pre-generation batch size on mobile/web (8 → 3 per frame) to keep hero-select screen responsive",
+			"Avoid Thread-based music generation on web — falls back to main-thread to prevent SharedArrayBuffer hangs on mobile browsers",
+			"Enable mobile VRAM texture compression in web export for lower GPU memory pressure on phones",
+		]
+	},
 	{
 		"version": "v0.57.0",
 		"title": "Mobile UI Overhaul — Bigger Buttons & Better Feedback",

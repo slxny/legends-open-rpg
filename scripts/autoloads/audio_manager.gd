@@ -53,12 +53,31 @@ func _play_or_gen_music(music_name: String) -> void:
 		return
 	if not has_method("_gen_" + music_name):
 		return
+	# On web, Thread requires SharedArrayBuffer which may not be available on
+	# mobile browsers (coi-serviceworker hasn't activated yet, or the browser
+	# restricts it).  Fall back to main-thread generation via call_deferred
+	# to avoid hanging.
+	if OS.has_feature("web"):
+		call_deferred("_deferred_gen_music", music_name)
+		return
 	# If a generation thread is already running, queue this track
 	if _music_gen_thread != null:
 		_music_gen_queued = music_name
 		return
 	_music_gen_thread = Thread.new()
 	_music_gen_thread.start(_threaded_gen_music.bind(music_name))
+
+## Web fallback: generate music on the main thread via call_deferred.
+## This will cause a brief hitch but avoids Thread/SharedArrayBuffer issues
+## that can hang mobile browsers entirely.
+func _deferred_gen_music(music_name: String) -> void:
+	var method_name = "_gen_" + music_name
+	if has_method(method_name):
+		var stream = call(method_name)
+		_music_cache[music_name] = stream
+		_music_player.stream = stream
+		_music_player.volume_db = _music_volume_db
+		_music_player.play()
 
 func _threaded_gen_music(music_name: String) -> void:
 	var method_name = "_gen_" + music_name
@@ -229,12 +248,15 @@ func _pregenerate_async() -> void:
 		"death_demon_knight", "death_ancient_golem", "death_shadow_wraith",
 		"death_dragon_whelp", "death_infernal"]
 	var batch: int = 0
+	var per_frame: int = 8
+	if OS.has_feature("web") or OS.has_feature("mobile"):
+		per_frame = 3
 	for sfx_name in sfx_names:
 		if _sfx_cache.has(sfx_name):
 			continue
 		_ensure_sfx(sfx_name)
 		batch += 1
-		if batch >= 8:
+		if batch >= per_frame:
 			batch = 0
 			await get_tree().process_frame
 

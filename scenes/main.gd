@@ -1,18 +1,23 @@
 extends Node
 
-var _player_scene: PackedScene = preload("res://scenes/player/player.tscn")
-var _world_scene: PackedScene = preload("res://scenes/world/world.tscn")
-var _hud_scene: PackedScene = preload("res://scenes/ui/hud.tscn")
-var _inventory_scene: PackedScene = preload("res://scenes/ui/inventory_screen.tscn")
-var _shop_scene: PackedScene = preload("res://scenes/ui/shop_dialog.tscn")
-var _armory_scene: PackedScene = preload("res://scenes/ui/armory_dialog.tscn")
-var _tavern_scene: PackedScene = preload("res://scenes/ui/tavern_dialog.tscn")
-var _woodwork_scene: PackedScene = preload("res://scenes/ui/woodworking_dialog.tscn")
-var _hero_stats_scene: PackedScene = preload("res://scenes/ui/hero_stats_panel.tscn")
-var _messages_scene: PackedScene = preload("res://scenes/ui/game_messages.tscn")
-var _center_msg_scene: PackedScene = preload("res://scenes/ui/center_message_system.tscn")
-var _changelog_scene: PackedScene = preload("res://scenes/ui/changelog_dialog.tscn")
-var _pause_menu_scene: PackedScene = preload("res://scenes/ui/pause_menu.tscn")
+# Scenes are loaded on demand when the hero is chosen, not at boot.
+# preload() resolves synchronously when main.tscn loads (while the Godot
+# splash is showing), and 13 packed scenes block mobile browsers long enough
+# to appear frozen.  Using load() inside _on_hero_chosen defers the work
+# until after the splash clears and the hero-select screen is interactive.
+var _player_scene: PackedScene
+var _world_scene: PackedScene
+var _hud_scene: PackedScene
+var _inventory_scene: PackedScene
+var _shop_scene: PackedScene
+var _armory_scene: PackedScene
+var _tavern_scene: PackedScene
+var _woodwork_scene: PackedScene
+var _hero_stats_scene: PackedScene
+var _messages_scene: PackedScene
+var _center_msg_scene: PackedScene
+var _changelog_scene: PackedScene
+var _pause_menu_scene: PackedScene
 
 @onready var hero_select: Control = $HeroSelect
 
@@ -96,6 +101,22 @@ func _on_hero_chosen(hero_class: String) -> void:
 	_game_started = true
 	# Remove hero selection screen
 	hero_select.queue_free()
+
+	# Load scenes now — deferred from boot to game-start so the Godot splash
+	# doesn't block on 13 synchronous preloads (fixes mobile browser hang).
+	_player_scene = load("res://scenes/player/player.tscn")
+	_world_scene = load("res://scenes/world/world.tscn")
+	_hud_scene = load("res://scenes/ui/hud.tscn")
+	_inventory_scene = load("res://scenes/ui/inventory_screen.tscn")
+	_shop_scene = load("res://scenes/ui/shop_dialog.tscn")
+	_armory_scene = load("res://scenes/ui/armory_dialog.tscn")
+	_tavern_scene = load("res://scenes/ui/tavern_dialog.tscn")
+	_woodwork_scene = load("res://scenes/ui/woodworking_dialog.tscn")
+	_hero_stats_scene = load("res://scenes/ui/hero_stats_panel.tscn")
+	_messages_scene = load("res://scenes/ui/game_messages.tscn")
+	_center_msg_scene = load("res://scenes/ui/center_message_system.tscn")
+	_changelog_scene = load("res://scenes/ui/changelog_dialog.tscn")
+	_pause_menu_scene = load("res://scenes/ui/pause_menu.tscn")
 
 	# Start game
 	GameManager.start_game()

@@ -922,22 +922,28 @@ func _execute_power_strike(attack_dir: Vector2) -> void:
 	var frames = _combo_swings[2] if _combo_swings.size() > 2 else []
 
 	var tween = create_tween()
-	# Long dramatic wind-up: pull WAY back
+	# Anticipation squash before wind-up
 	if frames.size() >= 3:
 		tween.tween_callback(func(): sprite.texture = frames[0])
-	tween.tween_property(sprite, "position", base_pos - dir * 8.0 + Vector2(0, -6), 0.14)
-	tween.tween_property(sprite, "scale", Vector2(1.25, 0.8), 0.06)
+	tween.tween_property(sprite, "scale", Vector2(1.3, 0.7), 0.05).set_ease(Tween.EASE_OUT)
+	# Bouncy wind-up: pull back with vertical spring
+	tween.tween_property(sprite, "position", base_pos - dir * 10.0 + Vector2(0, -8), 0.12).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	tween.tween_property(sprite, "scale", Vector2(0.85, 1.3), 0.06).set_ease(Tween.EASE_OUT)
+	# Bounce at peak of wind-up
+	tween.tween_property(sprite, "position", base_pos - dir * 7.0 + Vector2(0, -10), 0.05).set_ease(Tween.EASE_IN_OUT)
+	tween.tween_property(sprite, "scale", Vector2(1.2, 0.75), 0.04).set_ease(Tween.EASE_IN)
 	# Flash gold during wind-up
 	tween.tween_callback(func(): sprite.modulate = Color(1.2, 1.1, 0.7))
 	if frames.size() >= 3:
 		tween.tween_callback(func(): sprite.texture = frames[1])
-	# SLAM forward
-	tween.tween_property(sprite, "position", base_pos + dir * 16.0, 0.05)
-	tween.tween_property(sprite, "scale", Vector2(0.85, 1.25), 0.03)
+	# SLAM forward with overshoot
+	tween.tween_property(sprite, "position", base_pos + dir * 22.0, 0.05).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_BACK)
+	tween.tween_property(sprite, "scale", Vector2(0.75, 1.35), 0.03).set_ease(Tween.EASE_OUT)
 	if frames.size() >= 3:
 		tween.tween_callback(func(): sprite.texture = frames[2])
-	# Impact
-	tween.tween_property(sprite, "position", base_pos + dir * 20.0, 0.03)
+	# Impact bounce-back
+	tween.tween_property(sprite, "position", base_pos + dir * 16.0, 0.04).set_ease(Tween.EASE_OUT)
+	tween.tween_property(sprite, "scale", Vector2(1.3, 0.75), 0.03).set_ease(Tween.EASE_OUT)
 	tween.tween_callback(func():
 		sprite.modulate = Color.WHITE
 		if hit_target and is_instance_valid(hit_target):
@@ -955,8 +961,14 @@ func _execute_power_strike(attack_dir: Vector2) -> void:
 		AudioManager.play_sfx("power_strike")
 		_spawn_effect_label("POWER STRIKE!", Color(1.0, 0.85, 0.2))
 	)
-	tween.tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.08)
-	tween.tween_interval(0.06)
+	# Bouncy recovery oscillations
+	tween.tween_property(sprite, "position", base_pos + dir * 20.0, 0.04).set_ease(Tween.EASE_OUT)
+	tween.tween_property(sprite, "scale", Vector2(0.9, 1.15), 0.04).set_ease(Tween.EASE_OUT)
+	tween.tween_property(sprite, "position", base_pos + dir * 14.0, 0.05).set_ease(Tween.EASE_IN_OUT)
+	tween.tween_property(sprite, "scale", Vector2(1.12, 0.9), 0.04).set_ease(Tween.EASE_IN_OUT)
+	tween.tween_property(sprite, "scale", Vector2(0.95, 1.06), 0.04).set_ease(Tween.EASE_IN_OUT)
+	tween.tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.05).set_ease(Tween.EASE_IN_OUT)
+	tween.tween_interval(0.03)
 	_anim_return_to_idle(tween, base_pos)
 
 func _execute_whirlwind(attack_dir: Vector2) -> void:

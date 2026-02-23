@@ -297,6 +297,6 @@ func _get_buff_description(buff_id: String) -> String:
 	return BUFF_DESCS.get(buff_id, "")
 
 func _unhandled_input(event: InputEvent) -> void:
-	if _is_visible and (event.is_action_pressed("ui_cancel") or event.is_action_pressed("ability_1")):
+	if _is_visible and event.is_action_pressed("ui_cancel"):
 		close()
 		get_viewport().set_input_as_handled()

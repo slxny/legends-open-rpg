@@ -498,7 +498,7 @@ func _sell_item(bag_index: int) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if not _is_visible:
 		return
-	if event.is_action_pressed("ui_cancel") or event.is_action_pressed("ability_1"):
+	if event.is_action_pressed("ui_cancel"):
 		if _detail_panel.visible:
 			_hide_detail()
 		else:

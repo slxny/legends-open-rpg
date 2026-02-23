@@ -1,9 +1,8 @@
-[gd_scene load_steps=10 format=3 uid="uid://bplayerscn"]
+[gd_scene load_steps=9 format=3 uid="uid://bplayerscn"]
 
 [ext_resource type="Script" path="res://scenes/player/player.gd" id="1_player"]
 [ext_resource type="Script" path="res://scripts/components/stats_component.gd" id="2_stats"]
 [ext_resource type="Script" path="res://scripts/components/inventory_component.gd" id="3_inv"]
-[ext_resource type="Script" path="res://scripts/components/ability_manager.gd" id="4_ability"]
 [ext_resource type="Shader" path="res://scenes/player/hero_outline.gdshader" id="5_outline"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_outline"]
@@ -59,9 +58,6 @@ script = ExtResource("2_stats")
 
 [node name="InventoryComponent" type="Node" parent="."]
 script = ExtResource("3_inv")
-
-[node name="AbilityManager" type="Node" parent="."]
-script = ExtResource("4_ability")
 
 [connection signal="body_entered" from="AttackArea" to="." method="_on_attack_area_body_entered"]
 [connection signal="body_exited" from="AttackArea" to="." method="_on_attack_area_body_exited"]

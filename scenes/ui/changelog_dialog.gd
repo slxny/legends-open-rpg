@@ -9,9 +9,23 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.57.0"
+const GAME_VERSION := "v0.58.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.58.0",
+		"title": "Remove Q/E Abilities",
+		"date": "2026-02-23",
+		"entries": [
+			"Removed Q and E ability attacks (Cleave, Shield Wall, Multi-Shot, Evasion) from the game entirely",
+			"Removed ability buttons and tooltips from HUD on both desktop and mobile",
+			"Removed ability buttons from mobile portrait command overlay",
+			"Removed ability descriptions from hero select screen",
+			"Removed ability hint tooltips from tutorial system",
+			"Removed AbilityManager component and all ability data from hero definitions",
+			"Dialogs now close with Escape only (Q no longer used as close shortcut)",
+		]
+	},
 	{
 		"version": "v0.57.0",
 		"title": "Mobile UI Overhaul — Bigger Buttons & Better Feedback",
@@ -1073,6 +1087,6 @@ func _build_entries() -> void:
 		entries_container.add_child(spacer)
 
 func _unhandled_input(event: InputEvent) -> void:
-	if _is_visible and (event.is_action_pressed("ui_cancel") or event.is_action_pressed("ability_1")):
+	if _is_visible and event.is_action_pressed("ui_cancel"):
 		close()
 		get_viewport().set_input_as_handled()

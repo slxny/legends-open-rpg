@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.41.1"
+const GAME_VERSION := "v0.42.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.42.0",
+		"title": "Long-Press Hero for Stats (Mobile)",
+		"date": "2026-02-23",
+		"entries": [
+			"Hold your hero for 2 seconds on mobile to open the detailed stats panel",
+			"Same panel as desktop right-click — shows HP, Mana, STR, AGI, INT, buffs",
+			"Cancels if finger moves too far, so it won't interfere with movement or ATK",
+			"Tutorial hints at ~20s, ~3min, and ~8min remind players about this feature",
+		]
+	},
 	{
 		"version": "v0.41.1",
 		"title": "Fix ATK Button Positioning in Landscape",

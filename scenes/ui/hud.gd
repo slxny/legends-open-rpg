@@ -781,6 +781,10 @@ func _start_tutorial_hints(hero_data: Dictionary) -> void:
 				"delay": 4.0,
 				"text": "[color=#f0d866]TIP:[/color]  Tap [color=#66ccff][b]Q[/b][/color] for [color=#f0d866]%s[/color]  and  [color=#66ccff][b]E[/b][/color] for [color=#f0d866]%s[/color]" % [ab1_name, ab2_name],
 			},
+			{
+				"delay": 15.0,
+				"text": "[color=#f0d866]TIP:[/color]  [color=#aaddff][b]Hold your hero for 2s[/b][/color] to view detailed stats — HP, Mana, STR, and more",
+			},
 		]
 	else:
 		_hint_queue = [
@@ -873,6 +877,15 @@ func _start_tutorial_hints(hero_data: Dictionary) -> void:
 		_hint_queue.append({
 			"delay": 18.0,
 			"text": "[color=#f0d866]TIP:[/color]  [color=#aaaaaa][b]Tap[/b][/color] enemies to auto-attack  |  [color=#aaaaaa][b]Pinch[/b][/color] to zoom in/out",
+		})
+		# Repeat long-press hint twice more at longer intervals
+		_hint_queue.append({
+			"delay": 120.0,
+			"text": "[color=#f0d866]REMINDER:[/color]  [color=#aaddff][b]Hold your hero for 2s[/b][/color] to check your stats anytime",
+		})
+		_hint_queue.append({
+			"delay": 300.0,
+			"text": "[color=#f0d866]REMINDER:[/color]  [color=#aaddff][b]Hold hero 2s[/b][/color] for detailed stats — track your STR, AGI, INT growth",
 		})
 	else:
 		_hint_queue.append({

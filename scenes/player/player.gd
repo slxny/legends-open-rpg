@@ -143,6 +143,12 @@ var _pinch_prev_distance: float = 0.0   # Previous distance between two fingers
 # All screen touches — tracked in _input() so UI-consumed touches are included.
 # Used for attack direction and movement/diagonal detection on mobile.
 var _screen_touches: Dictionary = {}    # touch index -> screen position (all touches)
+# Long-press on hero to open stats panel (mobile)
+var _longpress_touch_index: int = -1
+var _longpress_start_pos: Vector2 = Vector2.ZERO
+var _longpress_timer: float = 0.0
+const LONGPRESS_DURATION := 2.0
+const LONGPRESS_MAX_DRIFT := 20.0  # Cancel if finger moves more than this (pixels)
 const ZOOM_MIN_MOBILE := Vector2(2.5, 2.5)  # Less zoom-out on mobile (screen is small)
 const ZOOM_MAX_MOBILE := Vector2(7.0, 7.0)  # More zoom-in on mobile
 
@@ -262,6 +268,13 @@ func move_to(world_pos: Vector2) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	# Long-press timer for stats panel (runs even when dead/paralyzed)
+	if _longpress_touch_index >= 0:
+		_longpress_timer += delta
+		if _longpress_timer >= LONGPRESS_DURATION:
+			_longpress_touch_index = -1
+			_toggle_hero_stats_panel()
+
 	# Dead: no movement, no actions — waiting for respawn
 	if _is_dead:
 		velocity = Vector2.ZERO
@@ -581,6 +594,26 @@ func _input(event: InputEvent) -> void:
 					_mobile_atk_touch_index = -1
 					_on_mobile_attack_released()
 					get_viewport().set_input_as_handled()
+
+	# Long-press on hero to open stats panel (mobile only)
+	if _is_mobile:
+		if event is InputEventScreenTouch:
+			if event.pressed:
+				# Only start tracking if NOT on ATK button and near the player
+				var on_atk = _mobile_atk_btn and is_instance_valid(_mobile_atk_btn) and _mobile_atk_btn.get_global_rect().has_point(event.position)
+				if not on_atk and _longpress_touch_index == -1:
+					var player_screen = _get_player_screen_pos()
+					if event.position.distance_to(player_screen) < 80.0:
+						_longpress_touch_index = event.index
+						_longpress_start_pos = event.position
+						_longpress_timer = 0.0
+			else:
+				if event.index == _longpress_touch_index:
+					_longpress_touch_index = -1
+		elif event is InputEventScreenDrag:
+			if event.index == _longpress_touch_index:
+				if event.position.distance_to(_longpress_start_pos) > LONGPRESS_MAX_DRIFT:
+					_longpress_touch_index = -1
 
 func _unhandled_input(event: InputEvent) -> void:
 	if _is_dead:
@@ -2431,6 +2464,10 @@ func _toggle_hero_stats_panel() -> void:
 	var panels = get_tree().get_nodes_in_group("hero_stats_panel")
 	if panels.size() > 0:
 		panels[0].toggle()
+
+func _get_player_screen_pos() -> Vector2:
+	var canvas_transform = get_viewport().get_canvas_transform()
+	return canvas_transform * global_position
 
 func _get_pooled_vfx() -> Sprite2D:
 	if _vfx_pool.size() > 0:

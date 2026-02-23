@@ -9,9 +9,21 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.57.5"
+const GAME_VERSION := "v0.57.6"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.57.6",
+		"title": "Desktop hero select screen overhaul",
+		"date": "2026-02-23",
+		"entries": [
+			"Larger hero cards (420x520) with bigger fonts across the board",
+			"Hero name now 36px uppercase with hero color accent",
+			"Styled select buttons with hero-colored normal/hover/pressed states",
+			"Bigger game title (64px), subtitle (22px), byline (20px), and version button (18px)",
+			"Added color accent bar at top of each card",
+		]
+	},
 	{
 		"version": "v0.57.5",
 		"title": "Fix hero load: restore _spawn_projectile",

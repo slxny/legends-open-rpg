@@ -54,14 +54,15 @@ func _apply_responsive_layout() -> void:
 		if hero_container is HBoxContainer:
 			_switch_to_vertical_layout()
 	else:
-		margin.add_theme_constant_override("margin_left", 40)
-		margin.add_theme_constant_override("margin_top", 30)
-		margin.add_theme_constant_override("margin_right", 40)
-		margin.add_theme_constant_override("margin_bottom", 30)
-		vbox.add_theme_constant_override("separation", 20)
-		title_label.add_theme_font_size_override("font_size", 36)
-		subtitle_label.add_theme_font_size_override("font_size", 16)
-		hero_container.add_theme_constant_override("separation", 30)
+		margin.add_theme_constant_override("margin_left", 60)
+		margin.add_theme_constant_override("margin_top", 40)
+		margin.add_theme_constant_override("margin_right", 60)
+		margin.add_theme_constant_override("margin_bottom", 40)
+		vbox.add_theme_constant_override("separation", 24)
+		title_label.add_theme_font_size_override("font_size", 44)
+		subtitle_label.add_theme_font_size_override("font_size", 22)
+		subtitle_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
+		hero_container.add_theme_constant_override("separation", 40)
 
 func _switch_to_vertical_layout() -> void:
 	# Replace HBoxContainer with VBoxContainer for vertical card stacking
@@ -181,45 +182,46 @@ func _create_mobile_hero_card(hero_key: String, data: Dictionary) -> PanelContai
 
 func _create_desktop_hero_card(hero_key: String, data: Dictionary) -> PanelContainer:
 	var panel = PanelContainer.new()
+	var hero_color: Color = data.get("color", Color.WHITE)
 
-	var card_min_w: float = 300
-	var card_min_h: float = 440
+	var card_min_w: float = 420
+	var card_min_h: float = 520
 
 	panel.custom_minimum_size = Vector2(card_min_w, card_min_h)
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_cards[hero_key] = panel
 
 	var style = StyleBoxFlat.new()
-	style.bg_color = Color(0.1, 0.1, 0.14)
-	style.border_color = data.get("color", Color.WHITE).darkened(0.3)
-	style.set_border_width_all(2)
-	style.set_corner_radius_all(4)
-	var card_padding = 16
+	style.bg_color = Color(0.09, 0.09, 0.13)
+	style.border_color = hero_color.darkened(0.35)
+	style.set_border_width_all(3)
+	style.set_corner_radius_all(10)
+	var card_padding = 24
 	style.set_content_margin_all(card_padding)
 	panel.add_theme_stylebox_override("panel", style)
 
 	var card_vbox = VBoxContainer.new()
-	card_vbox.add_theme_constant_override("separation", 10)
+	card_vbox.add_theme_constant_override("separation", 14)
 
-	# Font sizes
-	var name_font_size = 24
-	var desc_font_size = 13
-	var icon_font_size = 11
-	var stats_font_size = 12
-	var btn_font_size = 14
+	# Color bar accent at top
+	var color_bar = ColorRect.new()
+	color_bar.custom_minimum_size = Vector2(0, 6)
+	color_bar.color = hero_color
+	card_vbox.add_child(color_bar)
 
 	# Hero sprite preview area
 	var preview_bg = ColorRect.new()
-	var preview_h = 100
+	var preview_h = 130
 	preview_bg.custom_minimum_size = Vector2(0, preview_h)
-	preview_bg.color = Color(0.06, 0.06, 0.08)
+	preview_bg.color = Color(0.05, 0.05, 0.07)
 	card_vbox.add_child(preview_bg)
 
 	# Hero figure centered in preview
 	var hero_fig = ColorRect.new()
-	var fig_w = 24
-	var fig_h = 32
+	var fig_w = 32
+	var fig_h = 44
 	hero_fig.custom_minimum_size = Vector2(fig_w, fig_h)
-	hero_fig.color = data.get("color", Color.WHITE)
+	hero_fig.color = hero_color
 	preview_bg.add_child(hero_fig)
 	preview_bg.resized.connect(func():
 		hero_fig.position = Vector2(
@@ -232,24 +234,24 @@ func _create_desktop_hero_card(hero_key: String, data: Dictionary) -> PanelConta
 		(preview_h - fig_h) / 2.0
 	)
 
-	# Class icon indicator
+	# Class type tag
 	var icon_label = Label.new()
 	var primary = data.get("primary_stat", "strength")
 	match primary:
-		"strength": icon_label.text = "[ MELEE ]"
-		"agility": icon_label.text = "[ RANGED ]"
-		"intelligence": icon_label.text = "[ CASTER ]"
+		"strength": icon_label.text = "MELEE"
+		"agility": icon_label.text = "RANGED"
+		"intelligence": icon_label.text = "CASTER"
 	icon_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	icon_label.add_theme_font_size_override("font_size", icon_font_size)
+	icon_label.add_theme_font_size_override("font_size", 18)
 	icon_label.add_theme_color_override("font_color", Color(0.5, 0.5, 0.6))
 	card_vbox.add_child(icon_label)
 
-	# Name
+	# Name — large and colored
 	var name_label = Label.new()
-	name_label.text = data.get("name", "Unknown")
+	name_label.text = data.get("name", "Unknown").to_upper()
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	name_label.add_theme_font_size_override("font_size", name_font_size)
-	name_label.add_theme_color_override("font_color", data.get("color", Color.WHITE).lightened(0.3))
+	name_label.add_theme_font_size_override("font_size", 36)
+	name_label.add_theme_color_override("font_color", hero_color.lightened(0.3))
 	card_vbox.add_child(name_label)
 
 	# Description
@@ -257,8 +259,8 @@ func _create_desktop_hero_card(hero_key: String, data: Dictionary) -> PanelConta
 	desc_label.text = data.get("description", "")
 	desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD
 	desc_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	desc_label.add_theme_font_size_override("font_size", desc_font_size)
-	desc_label.add_theme_color_override("font_color", Color(0.65, 0.65, 0.65))
+	desc_label.add_theme_font_size_override("font_size", 18)
+	desc_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.65))
 	card_vbox.add_child(desc_label)
 
 	# Separator
@@ -276,7 +278,7 @@ func _create_desktop_hero_card(hero_key: String, data: Dictionary) -> PanelConta
 	var stats_label = Label.new()
 	stats_label.text = stats_text
 	stats_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	stats_label.add_theme_font_size_override("font_size", stats_font_size)
+	stats_label.add_theme_font_size_override("font_size", 18)
 	stats_label.add_theme_color_override("font_color", Color(0.9, 0.85, 0.5))
 	card_vbox.add_child(stats_label)
 
@@ -285,31 +287,47 @@ func _create_desktop_hero_card(hero_key: String, data: Dictionary) -> PanelConta
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	card_vbox.add_child(spacer)
 
-	# Select button
+	# Select button — styled with hero color
 	var button = Button.new()
 	button.text = "SELECT"
-	button.custom_minimum_size = Vector2(0, 44)
-	button.add_theme_font_size_override("font_size", btn_font_size)
+	button.custom_minimum_size = Vector2(0, 56)
+	button.add_theme_font_size_override("font_size", 22)
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.pressed.connect(_on_hero_selected.bind(hero_key))
+
+	var btn_style = StyleBoxFlat.new()
+	btn_style.bg_color = hero_color.darkened(0.5)
+	btn_style.set_corner_radius_all(8)
+	btn_style.set_content_margin_all(8)
+	button.add_theme_stylebox_override("normal", btn_style)
+
+	var btn_hover = StyleBoxFlat.new()
+	btn_hover.bg_color = hero_color.darkened(0.25)
+	btn_hover.set_corner_radius_all(8)
+	btn_hover.set_content_margin_all(8)
+	button.add_theme_stylebox_override("hover", btn_hover)
+
+	var btn_pressed = StyleBoxFlat.new()
+	btn_pressed.bg_color = hero_color
+	btn_pressed.set_corner_radius_all(8)
+	btn_pressed.set_content_margin_all(8)
+	button.add_theme_stylebox_override("pressed", btn_pressed)
 
 	card_vbox.add_child(button)
 
 	panel.add_child(card_vbox)
 
-	# Hover effects on entire card, not just the button
+	# Hover effects on entire card
 	panel.mouse_entered.connect(func():
-		style.border_color = data.get("color", Color.WHITE)
-		style.border_width_top = 3
-		style.border_width_bottom = 3
-		style.border_width_left = 3
-		style.border_width_right = 3
+		style.border_color = hero_color
+		style.set_border_width_all(4)
 	)
 	panel.mouse_exited.connect(func():
-		style.border_color = data.get("color", Color.WHITE).darkened(0.3)
-		style.set_border_width_all(2)
+		style.border_color = hero_color.darkened(0.35)
+		style.set_border_width_all(3)
 	)
 
-	# Clicking anywhere on the card selects the hero — not just the button
+	# Clicking anywhere on the card selects the hero
 	panel.gui_input.connect(func(event: InputEvent):
 		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 			_on_hero_selected(hero_key)
@@ -330,7 +348,7 @@ func _build_game_title() -> void:
 	var deco_top = Label.new()
 	deco_top.text = "~ ~ ~"
 	deco_top.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	deco_top.add_theme_font_size_override("font_size", 28 if _is_mobile else 14)
+	deco_top.add_theme_font_size_override("font_size", 28 if _is_mobile else 20)
 	deco_top.add_theme_color_override("font_color", Color(0.7, 0.55, 0.2, 0.6))
 	top_line.add_child(deco_top)
 	title_section.add_child(top_line)
@@ -339,7 +357,7 @@ func _build_game_title() -> void:
 	var game_title = Label.new()
 	game_title.text = "OPEN LEGENDS RPG"
 	game_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	game_title.add_theme_font_size_override("font_size", 72 if _is_mobile else 48)
+	game_title.add_theme_font_size_override("font_size", 72 if _is_mobile else 64)
 	game_title.add_theme_color_override("font_color", Color(0.95, 0.8, 0.3))
 	title_section.add_child(game_title)
 
@@ -347,7 +365,7 @@ func _build_game_title() -> void:
 	var game_sub = Label.new()
 	game_sub.text = "FORGE YOUR LEGEND"
 	game_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	game_sub.add_theme_font_size_override("font_size", 28 if _is_mobile else 16)
+	game_sub.add_theme_font_size_override("font_size", 28 if _is_mobile else 22)
 	game_sub.add_theme_color_override("font_color", Color(0.6, 0.5, 0.3, 0.7))
 	title_section.add_child(game_sub)
 
@@ -357,7 +375,7 @@ func _build_game_title() -> void:
 	var deco_bot = Label.new()
 	deco_bot.text = "~ ~ ~"
 	deco_bot.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	deco_bot.add_theme_font_size_override("font_size", 28 if _is_mobile else 14)
+	deco_bot.add_theme_font_size_override("font_size", 28 if _is_mobile else 20)
 	deco_bot.add_theme_color_override("font_color", Color(0.7, 0.55, 0.2, 0.6))
 	bot_line.add_child(deco_bot)
 	title_section.add_child(bot_line)
@@ -375,7 +393,7 @@ func _build_byline() -> void:
 	byline.fit_content = true
 	byline.scroll_active = false
 	byline.autowrap_mode = TextServer.AUTOWRAP_OFF
-	var font_size = 28 if _is_mobile else 14
+	var font_size = 28 if _is_mobile else 20
 	byline.append_text("[center][font_size=%d][color=#8888aa]by [url=https://OpenClassActions.com][color=#99aadd]Steve Levine[/color][/url][/color][/font_size][/center]" % font_size)
 	byline.meta_clicked.connect(func(meta): OS.shell_open(str(meta)))
 	byline.custom_minimum_size = Vector2(300 if _is_mobile else 150, 0)
@@ -390,9 +408,9 @@ func _build_version_button() -> void:
 	var version_btn = Button.new()
 	var _cl_script = preload("res://scenes/ui/changelog_dialog.gd")
 	version_btn.text = "Version Log (%s)" % _cl_script.GAME_VERSION
-	var ver_btn_w = 480 if _is_mobile else 200
-	var ver_btn_h = 96 if _is_mobile else 36
-	var ver_font_size = 33 if _is_mobile else 13
+	var ver_btn_w = 480 if _is_mobile else 280
+	var ver_btn_h = 96 if _is_mobile else 44
+	var ver_font_size = 33 if _is_mobile else 18
 	version_btn.custom_minimum_size = Vector2(ver_btn_w, ver_btn_h)
 	version_btn.add_theme_font_size_override("font_size", ver_font_size)
 	version_btn.pressed.connect(_on_version_log_pressed)

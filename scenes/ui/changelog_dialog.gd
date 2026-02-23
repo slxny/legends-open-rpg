@@ -9,9 +9,21 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.44.2"
+const GAME_VERSION := "v0.45.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.45.0",
+		"title": "Safari & Cross-Browser Fullscreen Fix",
+		"date": "2026-02-23",
+		"entries": [
+			"iOS Safari: shows a one-time hint to 'Add to Home Screen' for fullscreen (API not supported by Apple)",
+			"iOS Safari: maximizes viewport via CSS so the game fills as much screen as possible",
+			"Fullscreen now re-engages on next tap if the user exits it (listeners no longer removed)",
+			"Added vendor prefixes for older Firefox, Edge, and Safari fullscreen APIs",
+			"Tries multiple fullscreen targets (document, body, canvas) for broader compatibility",
+		]
+	},
 	{
 		"version": "v0.44.2",
 		"title": "More Forgiving Multi-Tap Specials",

@@ -22,44 +22,69 @@ var _game_started := false
 
 func _ready() -> void:
 	hero_select.hero_chosen.connect(_on_hero_chosen)
-	# Register a native JS event listener on the canvas so fullscreen is
-	# requested inside the browser's own event handler (satisfies the "user
-	# activation" requirement that Chrome/mobile browsers enforce).
-	# Uses touchend / click rather than touchstart / pointerdown because
-	# Chrome may treat touchstart listeners as passive, which does not
-	# grant the transient user-activation needed for requestFullscreen().
-	# Listeners stay attached until fullscreen is actually achieved so a
-	# silently-rejected first attempt doesn't leave the user stuck.
+	# Request fullscreen on first user interaction (tap/click).
+	# Listeners stay attached permanently so fullscreen re-engages if the
+	# user exits it (e.g. swipe gesture, Escape key).
+	# iOS Safari does NOT support the Fullscreen API for any element, so we
+	# maximize the viewport via CSS/scroll and prompt "Add to Home Screen".
 	if OS.has_feature("web"):
 		JavaScriptBridge.eval("""
 			(function() {
 				var c = document.getElementById('canvas');
 				if (!c) c = document.querySelector('canvas');
 				if (!c) return;
-				var done = false;
+
+				var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+					(navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+				function isFS() {
+					return !!(document.fullscreenElement || document.webkitFullscreenElement ||
+						document.mozFullScreenElement || document.msFullscreenElement);
+				}
+
+				function tryFS(el) {
+					try {
+						if (el.requestFullscreen)        return el.requestFullscreen({ navigationUI: 'hide' });
+						if (el.webkitRequestFullscreen)  return el.webkitRequestFullscreen();
+						if (el.webkitRequestFullScreen)  return el.webkitRequestFullScreen();
+						if (el.mozRequestFullScreen)      return el.mozRequestFullScreen();
+						if (el.msRequestFullscreen)       return el.msRequestFullscreen();
+					} catch(e) {}
+					return null;
+				}
+
+				var iosHinted = false;
 				function goFS() {
-					if (done) return;
-					if (document.fullscreenElement || document.webkitFullscreenElement) {
-						done = true;
-						c.removeEventListener('touchend', goFS, true);
-						c.removeEventListener('click', goFS, true);
+					if (isFS()) return;
+
+					if (isIOS) {
+						if (window.navigator.standalone) return;
+						document.documentElement.style.height = '100vh';
+						document.body.style.height = '100vh';
+						document.body.style.overflow = 'hidden';
+						window.scrollTo(0, 1);
+						if (!iosHinted) {
+							iosHinted = true;
+							var d = document.createElement('div');
+							d.textContent = 'For fullscreen: tap Share then \"Add to Home Screen\"';
+							d.style.cssText = 'position:fixed;bottom:0;left:0;right:0;padding:12px;' +
+								'background:rgba(0,0,0,0.85);color:#FFD866;font-size:15px;' +
+								'text-align:center;z-index:99999;font-family:sans-serif;';
+							document.body.appendChild(d);
+							setTimeout(function(){ d.style.transition='opacity 0.5s'; d.style.opacity='0'; }, 6000);
+							setTimeout(function(){ d.remove(); }, 6600);
+						}
 						return;
 					}
-					var el = document.documentElement;
-					var p;
-					if (el.requestFullscreen) {
-						p = el.requestFullscreen();
-					} else if (el.webkitRequestFullscreen) {
-						el.webkitRequestFullscreen();
-					}
-					if (p && p.then) {
-						p.then(function() {
-							done = true;
-							c.removeEventListener('touchend', goFS, true);
-							c.removeEventListener('click', goFS, true);
-						}).catch(function(){});
+
+					var p = tryFS(document.documentElement);
+					if (!p) p = tryFS(document.body);
+					if (!p) p = tryFS(c);
+					if (p && typeof p.then === 'function') {
+						p.then(function(){}).catch(function(){});
 					}
 				}
+
 				c.addEventListener('touchend', goFS, true);
 				c.addEventListener('click', goFS, true);
 			})();

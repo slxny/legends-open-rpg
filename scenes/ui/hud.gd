@@ -67,7 +67,7 @@ func _ready() -> void:
 
 func _detect_mobile() -> void:
 	var vp_size = get_viewport().get_visible_rect().size
-	_is_mobile = DisplayServer.is_touchscreen_available() or min(vp_size.x, vp_size.y) < 700
+	_is_mobile = DisplayServer.is_touchscreen_available() and min(vp_size.x, vp_size.y) < 1200
 	_is_portrait = _is_mobile and vp_size.y >= vp_size.x
 
 func _apply_mobile_layout() -> void:

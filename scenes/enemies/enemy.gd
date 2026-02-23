@@ -95,7 +95,7 @@ func _ready() -> void:
 	name_label.visible = false
 	# Detect mobile for font scaling
 	var vp_size = get_viewport().get_visible_rect().size
-	var is_mobile = DisplayServer.is_touchscreen_available() or min(vp_size.x, vp_size.y) < 700
+	var is_mobile = DisplayServer.is_touchscreen_available() and min(vp_size.x, vp_size.y) < 1200
 	# Scale enemy name label for mobile — larger font, moved higher so it
 	# doesn't overlap the sprite and block taps
 	if is_mobile:

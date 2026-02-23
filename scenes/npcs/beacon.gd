@@ -47,7 +47,7 @@ func _ready() -> void:
 	if not beacon_label.is_empty():
 		label.text = beacon_label
 		var vp_size = get_viewport().get_visible_rect().size
-		if DisplayServer.is_touchscreen_available() or min(vp_size.x, vp_size.y) < 700:
+		if DisplayServer.is_touchscreen_available() and min(vp_size.x, vp_size.y) < 1200:
 			label.add_theme_font_size_override("font_size", 18)
 		label.pivot_offset = label.size / 2.0
 	else:

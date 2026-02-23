@@ -9,9 +9,17 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.30.1"
+const GAME_VERSION := "v0.30.2"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.30.2",
+		"title": "Version Display Fix",
+		"date": "2026-02-23",
+		"entries": [
+			"Hero select version button now auto-reads from changelog (no more stale version)",
+		]
+	},
 	{
 		"version": "v0.30.1",
 		"title": "Beacon Rendering Fix",

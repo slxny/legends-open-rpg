@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.36.0"
+const GAME_VERSION := "v0.36.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.36.1",
+		"title": "Full Beacon Immunity",
+		"date": "2026-02-23",
+		"entries": [
+			"Heal beacon now blocks ALL damage at the stats level — no code path can bypass it",
+			"Mana is no longer consumed while on heal beacon (abilities are free)",
+			"Enemy effects (knockback, paralyze, slow) are blocked while on heal beacon",
+		]
+	},
 	{
 		"version": "v0.36.0",
 		"title": "Landscape HUD Ultra-Compact",

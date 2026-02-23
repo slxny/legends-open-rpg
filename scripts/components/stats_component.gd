@@ -106,6 +106,9 @@ func get_stats_dict() -> Dictionary:
 	}
 
 func take_damage(amount: int) -> void:
+	# Beacon immunity — owner on heal beacon blocks all damage
+	if owner and owner.get("is_on_heal_beacon"):
+		return
 	# Check dodge
 	if temp_dodge > 0.0 and randf() < temp_dodge:
 		# Dodged!
@@ -123,6 +126,9 @@ func heal(amount: int) -> bool:
 	return true
 
 func use_mana(amount: int) -> bool:
+	# Beacon immunity — free mana while on heal beacon
+	if owner and owner.get("is_on_heal_beacon"):
+		return true  # Allow ability but don't spend mana
 	if current_mana >= amount:
 		current_mana -= amount
 		mana_changed.emit(current_mana, get_total_max_mana())

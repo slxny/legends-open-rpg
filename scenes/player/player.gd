@@ -816,6 +816,8 @@ func _process_status_effects(delta: float) -> void:
 			_clear_effect_vfx()
 
 func apply_effect(effect_type: String, duration: float, value: float = 0.0) -> void:
+	if is_on_heal_beacon:
+		return  # Immune to all effects while on heal beacon
 	match effect_type:
 		"knockback":
 			var dir = value  # Reuse value slot... actually we need direction
@@ -831,6 +833,8 @@ func apply_effect(effect_type: String, duration: float, value: float = 0.0) -> v
 			_spawn_effect_vfx(Color(0.2, 0.5, 1.0, 0.5), duration, "SLOWED!")
 
 func apply_knockback_effect(dir: Vector2, force: float) -> void:
+	if is_on_heal_beacon:
+		return  # Immune to knockback while on heal beacon
 	# Strong knockback from enemy effect proc
 	velocity = dir * force
 	_spawn_effect_label("KNOCKBACK!", Color(1.0, 0.6, 0.1))

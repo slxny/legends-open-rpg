@@ -126,7 +126,7 @@ const CLICK_RADIUS_MOBILE: float = 55.0  # Larger touch target on mobile
 var _player_dmg_pool: Array[Label] = []
 const PLAYER_DMG_POOL_MAX: int = 10
 const CHARGE_GRACE: float = 0.15  # Hold this long before suppressing basic attacks
-const TAP_RESOLVE_TIME: float = 0.12  # 120ms buffer — ~7 frames, barely perceptible
+const TAP_RESOLVE_TIME: float = 0.18  # 180ms buffer — more forgiving for multi-tap specials
 const CHARGE_THRESHOLD: float = 1.5   # Hold 1.5s for charged slash
 
 # Screen shake state (procedural, no tween)

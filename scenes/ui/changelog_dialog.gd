@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.44.1"
+const GAME_VERSION := "v0.44.2"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.44.2",
+		"title": "More Forgiving Multi-Tap Specials",
+		"date": "2026-02-23",
+		"entries": [
+			"Tap window for double-tap and triple-tap special attacks widened from 120ms to 180ms",
+			"Whirlwind (triple-tap) and Power Strike (double-tap) are now much easier to trigger",
+			"Same improvement applies to both desktop spacebar and mobile ATK button",
+		]
+	},
 	{
 		"version": "v0.44.1",
 		"title": "Fix Charge Attack Getting Stuck on Mobile",

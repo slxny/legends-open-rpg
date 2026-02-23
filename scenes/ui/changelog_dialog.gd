@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.30.2"
+const GAME_VERSION := "v0.31.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.31.0",
+		"title": "Heal Beacon Improvements",
+		"date": "2026-02-23",
+		"entries": [
+			"Heal beacon now heals continuously while standing anywhere on it",
+			"Heal SFX only plays when stepping on, not while staying on the beacon",
+			"Fixed beacon collision areas not matching visual size (shared shape bug)",
+		]
+	},
 	{
 		"version": "v0.30.2",
 		"title": "Version Display Fix",

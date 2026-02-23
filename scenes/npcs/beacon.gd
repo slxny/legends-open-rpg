@@ -17,7 +17,7 @@ signal activated(beacon: Area2D)
 
 var _player_inside: bool = false
 var _heal_tick_timer: float = 0.0
-const HEAL_TICK_INTERVAL := 1.0  # Heal every second while standing on a heal beacon
+const HEAL_TICK_INTERVAL := 0.15  # Heal frequently while standing on a heal beacon
 const ZOOM_REF := 3.0
 
 # Map beacon colors to texture names
@@ -53,9 +53,10 @@ func _ready() -> void:
 	else:
 		label.visible = false
 
-	# Set collision shape
+	# Set collision shape — make unique so instances don't share the sub-resource
 	var shape = $CollisionShape2D
 	if shape and shape.shape is CircleShape2D:
+		shape.shape = shape.shape.duplicate()
 		shape.shape.radius = beacon_radius
 
 func _process(delta: float) -> void:

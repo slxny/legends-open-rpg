@@ -297,6 +297,14 @@ func _is_player_in_activation_range() -> bool:
 		return global_position.distance_squared_to(_cached_player.global_position) < ACTIVATION_DISTANCE_SQ
 	return false
 
+func _get_player_level() -> int:
+	if not _cached_player or not is_instance_valid(_cached_player):
+		var players = get_tree().get_nodes_in_group("player")
+		_cached_player = players[0] if players.size() > 0 else null
+	if _cached_player and is_instance_valid(_cached_player) and _cached_player.stats:
+		return _cached_player.stats.level
+	return 1
+
 func _spawn_enemies_staggered(is_respawn: bool) -> void:
 	var type_data = CAMP_TYPES.get(camp_type, CAMP_TYPES["goblin"])
 	_alive_count = enemy_count
@@ -306,9 +314,22 @@ func _spawn_enemies_staggered(is_respawn: bool) -> void:
 		_times_respawned += 1
 
 	var spread = 30.0 + enemy_count * 4.0
+	var player_level = _get_player_level()
+	var type_max = type_data["level_range"][1]
 	_spawn_queue.clear()
 	for i in range(enemy_count):
-		var level = randi_range(type_data["level_range"][0], type_data["level_range"][1])
+		var base_level = randi_range(type_data["level_range"][0], type_data["level_range"][1])
+
+		# Scale enemy level to at least match the player's level (+0 to 2 bonus)
+		var scaled_level = max(base_level, player_level + randi_range(0, 2))
+
+		# Compute effective stats level: dampen growth for levels above natural range
+		# Boosted levels contribute at 60% rate so enemies are tougher but still beatable
+		var stats_level = scaled_level
+		if scaled_level > type_max:
+			var boost = scaled_level - type_max
+			stats_level = type_max + int(ceil(boost * 0.6))
+
 		var weakness_factor = 1.0
 		if is_respawn:
 			weakness_factor = max(0.6, 1.0 - _times_respawned * 0.1)
@@ -316,7 +337,8 @@ func _spawn_enemies_staggered(is_respawn: bool) -> void:
 		_spawn_queue.append({
 			"offset": Vector2(randf_range(-spread, spread), randf_range(-spread, spread)),
 			"type_data": type_data,
-			"level": level,
+			"level": scaled_level,
+			"stats_level": stats_level,
 			"weakness_factor": weakness_factor,
 			"is_respawn": is_respawn,
 		})
@@ -327,6 +349,7 @@ func _instantiate_enemy(pending: Dictionary) -> void:
 	enemy.position = pending["offset"]
 	var type_data = pending["type_data"]
 	var level = pending["level"]
+	var stats_level = pending["stats_level"]
 	var weakness_factor = pending["weakness_factor"]
 	var is_respawn = pending["is_respawn"]
 	var is_mini_boss = type_data.get("is_mini_boss", false)
@@ -334,6 +357,7 @@ func _instantiate_enemy(pending: Dictionary) -> void:
 	var config = {
 		"name": type_data["name"],
 		"level": level,
+		"stats_level": stats_level,
 		"sprite_type": type_data["sprite_type"],
 		"move_speed": type_data["move_speed"],
 		"attack_range": type_data["attack_range"],
@@ -345,7 +369,13 @@ func _instantiate_enemy(pending: Dictionary) -> void:
 		"is_mini_boss": is_mini_boss,
 	}
 	if type_data.has("attack_damage"):
-		config["attack_damage"] = type_data["attack_damage"]
+		var base_atk = type_data["attack_damage"]
+		var type_max = type_data["level_range"][1]
+		if stats_level > type_max:
+			# Scale explicit attack damage for boosted levels
+			config["attack_damage"] = base_atk + (stats_level - type_max) * 3
+		else:
+			config["attack_damage"] = base_atk
 
 	add_child(enemy)
 	enemy.initialize(config)

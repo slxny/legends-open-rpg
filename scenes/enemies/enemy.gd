@@ -195,13 +195,16 @@ func initialize(config: Dictionary) -> void:
 	sprite_type = config.get("sprite_type", "goblin")
 	is_mini_boss = config.get("is_mini_boss", false)
 
-	stats.max_hp = 30 + enemy_level * 15
+	# Use stats_level for attribute scaling (dampened when boosted above natural range)
+	# while enemy_level is the display level shown to the player
+	var sl = config.get("stats_level", enemy_level)
+	stats.max_hp = 30 + sl * 15
 	stats.current_hp = stats.max_hp
-	stats.strength = 5 + enemy_level * 2
-	stats.agility = 3 + enemy_level
-	stats.intelligence = 2 + enemy_level
-	stats.armor = enemy_level
-	stats.attack_damage = config.get("attack_damage", 5 + enemy_level * 3)
+	stats.strength = 5 + sl * 2
+	stats.agility = 3 + sl
+	stats.intelligence = 2 + sl
+	stats.armor = sl
+	stats.attack_damage = config.get("attack_damage", 5 + sl * 3)
 	stats.attack_range = config.get("attack_range", 35.0)
 	stats.move_speed = config.get("move_speed", 80.0)
 	stats.primary_stat = "strength"

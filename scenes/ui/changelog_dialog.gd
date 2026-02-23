@@ -9,9 +9,22 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.42.1"
+const GAME_VERSION := "v0.42.2"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.42.2",
+		"title": "Sleeker Hero Stats Panel",
+		"date": "2026-02-23",
+		"entries": [
+			"Redesigned hero stats panel with a darker, semi-transparent backdrop",
+			"Color-coded stat labels: HP in red, Mana in blue, bonuses in green/red",
+			"Buff entries now have subtle tinted backgrounds and arrow icons",
+			"Styled close button with hover effects and rounded corners",
+			"Panel background uses rounded corners, border glow, and drop shadow",
+			"Fixed readability on both desktop and mobile",
+		]
+	},
 	{
 		"version": "v0.42.1",
 		"title": "Bigger MAP & OPT Buttons in Portrait",

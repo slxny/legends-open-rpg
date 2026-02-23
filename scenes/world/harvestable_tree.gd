@@ -18,6 +18,7 @@ var _sprite: Sprite2D = null
 var _hp_bar: SCBar = null
 var _shadow: Sprite2D = null
 var _info_label: Label = null
+const ZOOM_REF := 3.0
 
 # Pre-allocated label settings (shared across all trees)
 static var _dmg_label: LabelSettings = null
@@ -147,6 +148,7 @@ func _ready() -> void:
 			_hp_bar.position = Vector2(-15, -58)
 	_hp_bar.visible = false
 	add_child(_hp_bar)
+	_hp_bar.pivot_offset = _hp_bar.size / 2.0
 
 	_hp_bar.set_value(current_hp, max_hp)
 
@@ -161,6 +163,12 @@ func _on_mouse_entered() -> void:
 func _on_mouse_exited() -> void:
 	if _sprite and _sprite.material:
 		_sprite.material.set_shader_parameter("enabled", false)
+
+func _get_zoom_compensation() -> float:
+	var cam = get_viewport().get_camera_2d()
+	if cam:
+		return ZOOM_REF / cam.zoom.x
+	return 1.0
 
 func show_wood_info() -> void:
 	if _is_chopped:
@@ -184,6 +192,8 @@ func show_wood_info() -> void:
 			_info_label.position = Vector2(-45, -62)
 		TreeSize.LARGE:
 			_info_label.position = Vector2(-45, -76)
+	var _zc = _get_zoom_compensation()
+	_info_label.scale = Vector2(_zc, _zc)
 	add_child(_info_label)
 	# Fade out after a moment
 	var tween = create_tween()
@@ -203,6 +213,8 @@ func take_damage(amount: int, _is_crit: bool = false) -> void:
 		current_hp = 0
 	_hp_bar.set_value(current_hp, max_hp)
 	_hp_bar.visible = true
+	var _zc = _get_zoom_compensation()
+	_hp_bar.scale = Vector2(_zc, _zc)
 	_spawn_damage_number(amount)
 	_do_hit_shake()
 	AudioManager.play_sfx("tree_chop", -2.0)
@@ -307,6 +319,8 @@ func _spawn_damage_number(amount: int) -> void:
 	label.text = str(amount)
 	label.position = Vector2(randf_range(-8, 8), -35)
 	label.label_settings = _dmg_label
+	var _zc = _get_zoom_compensation()
+	label.scale = Vector2(_zc, _zc)
 	add_child(label)
 	var tween = create_tween()
 	tween.tween_property(label, "position:y", label.position.y - 20, 0.5)

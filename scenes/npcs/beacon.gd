@@ -16,6 +16,7 @@ signal activated(beacon: Area2D)
 @onready var label: Label = $Label
 
 var _player_inside: bool = false
+const ZOOM_REF := 3.0
 
 # Map beacon colors to texture names
 const BEACON_TEXTURE_MAP = {
@@ -46,6 +47,7 @@ func _ready() -> void:
 		var vp_size = get_viewport().get_visible_rect().size
 		if vp_size.x < 700 or (vp_size.x < vp_size.y):
 			label.add_theme_font_size_override("font_size", 18)
+		label.pivot_offset = label.size / 2.0
 	else:
 		label.visible = false
 
@@ -53,6 +55,13 @@ func _ready() -> void:
 	var shape = $CollisionShape2D
 	if shape and shape.shape is CircleShape2D:
 		shape.shape.radius = beacon_radius
+
+func _process(_delta: float) -> void:
+	if label.visible:
+		var cam = get_viewport().get_camera_2d()
+		if cam:
+			var comp = ZOOM_REF / cam.zoom.x
+			label.scale = Vector2(comp, comp)
 
 func _on_body_entered(body: Node2D) -> void:
 	if body.is_in_group("player"):

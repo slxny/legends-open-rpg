@@ -47,6 +47,7 @@ const SLEEP_DISTANCE_SQ: float = 640000.0  # 800^2 — sleep when player is >800
 const WAKE_DISTANCE_SQ: float = 490000.0   # 700^2 — wake when player is <700px (hysteresis)
 const SLEEP_CHECK_INTERVAL: float = 0.4    # Check sleep/wake ~2.5x per second
 const LABEL_VISIBLE_DISTANCE_SQ: float = 22500.0  # 150^2 — show name when player is close
+const ZOOM_REF := 3.0  # Reference zoom level where font sizes are calibrated
 
 # Patrol state
 var _patrol_target: Vector2 = Vector2.ZERO
@@ -114,6 +115,10 @@ func _ready() -> void:
 		_dmg_settings_crit.font_color = Color(1.0, 0.95, 0.1)
 		_dmg_settings_crit.outline_size = 5 if is_mobile else 3
 		_dmg_settings_crit.outline_color = Color.BLACK
+
+	# Set pivot for zoom compensation (scale from center, not top-left)
+	name_label.pivot_offset = name_label.size / 2.0
+	hp_bar.pivot_offset = hp_bar.size / 2.0
 
 	# Shadow
 	_shadow = Sprite2D.new()
@@ -270,6 +275,8 @@ func show_info() -> void:
 	_info_label.label_settings = _info_label_settings
 	_info_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_info_label.position = Vector2(-55, -58)
+	var _zc = _get_zoom_compensation()
+	_info_label.scale = Vector2(_zc, _zc)
 	add_child(_info_label)
 	# Fade out after a moment
 	var tween = create_tween()
@@ -281,6 +288,12 @@ func show_info() -> void:
 			_info_label = null
 		hide_selection()
 	)
+
+func _get_zoom_compensation() -> float:
+	var cam = get_viewport().get_camera_2d()
+	if cam:
+		return ZOOM_REF / cam.zoom.x
+	return 1.0
 
 func _physics_process(delta: float) -> void:
 	if _is_dead:
@@ -325,6 +338,17 @@ func _physics_process(delta: float) -> void:
 			_process_attack(delta)
 		State.RETURN:
 			_process_return(delta)
+
+	# Zoom-compensate in-world labels so text stays readable at all zoom levels
+	if name_label.visible or hp_bar.visible:
+		var _zc = _get_zoom_compensation()
+		var _zs = Vector2(_zc, _zc)
+		if name_label.visible:
+			name_label.scale = _zs
+		if hp_bar.visible:
+			hp_bar.scale = _zs
+		if _info_label and is_instance_valid(_info_label):
+			_info_label.scale = _zs
 
 func _process_idle(delta: float) -> void:
 	velocity = Vector2.ZERO
@@ -973,17 +997,18 @@ func _spawn_damage_number(amount: int, is_crit: bool) -> void:
 		label = _dmg_label_pool.pop_back()
 	else:
 		label = Label.new()
+	var _zc = _get_zoom_compensation()
 	label.text = str(amount) + ("!" if is_crit else "")
 	label.position = Vector2(randf_range(-10, 10) if not is_crit else randf_range(-6, 6), -30)
 	label.label_settings = _dmg_settings_crit if is_crit else _dmg_settings_normal
 	label.modulate.a = 1.0
-	label.scale = Vector2.ONE
+	label.scale = Vector2(_zc, _zc)
 	add_child(label)
 	var tween = create_tween()
 	if is_crit:
-		label.scale = Vector2(0.4, 0.4)
-		tween.tween_property(label, "scale", Vector2(1.3, 1.3), 0.08).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-		tween.tween_property(label, "scale", Vector2(1.0, 1.0), 0.05)
+		label.scale = Vector2(0.4 * _zc, 0.4 * _zc)
+		tween.tween_property(label, "scale", Vector2(1.3 * _zc, 1.3 * _zc), 0.08).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		tween.tween_property(label, "scale", Vector2(_zc, _zc), 0.05)
 		tween.set_parallel(true)
 		tween.tween_property(label, "position:y", label.position.y - 40, 0.7)
 		tween.tween_property(label, "modulate:a", 0.0, 0.7).set_delay(0.2)

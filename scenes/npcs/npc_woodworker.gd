@@ -10,6 +10,7 @@ var _player: Node2D = null
 var _label_check_timer: float = 0.0
 const LABEL_VISIBLE_DISTANCE_SQ: float = 14400.0  # 120^2
 const LABEL_CHECK_INTERVAL: float = 0.3
+const ZOOM_REF := 3.0
 
 func _ready() -> void:
 	add_to_group("npcs")
@@ -18,6 +19,7 @@ func _ready() -> void:
 	var vp_size = get_viewport().get_visible_rect().size
 	if vp_size.x < 700 or (vp_size.x < vp_size.y):
 		name_label.add_theme_font_size_override("font_size", 18)
+	name_label.pivot_offset = name_label.size / 2.0
 	beacon.activated.connect(_on_beacon_activated)
 	var tex = SpriteGenerator.get_texture("woodworking_bench")
 	if tex:
@@ -37,6 +39,11 @@ func _process(delta: float) -> void:
 			return
 	var dist_sq = global_position.distance_squared_to(_player.global_position)
 	name_label.visible = dist_sq < LABEL_VISIBLE_DISTANCE_SQ
+	if name_label.visible:
+		var cam = get_viewport().get_camera_2d()
+		if cam:
+			var comp = ZOOM_REF / cam.zoom.x
+			name_label.scale = Vector2(comp, comp)
 
 func _on_beacon_activated(_b: Area2D) -> void:
 	var dialogs = get_tree().get_nodes_in_group("woodworking_dialog")

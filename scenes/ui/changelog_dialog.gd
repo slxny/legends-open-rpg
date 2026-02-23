@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.39.1"
+const GAME_VERSION := "v0.39.2"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.39.2",
+		"title": "Reliable Mobile Detection via Touchscreen API",
+		"date": "2026-02-23",
+		"entries": [
+			"Mobile detection now uses DisplayServer.is_touchscreen_available() as primary check",
+			"Fixes mobile layout not loading on high-res phones where both dimensions exceed 700px",
+			"Works reliably in both portrait and landscape on all mobile devices",
+		]
+	},
 	{
 		"version": "v0.39.1",
 		"title": "Fix Mobile Detection in Landscape",
@@ -592,7 +602,7 @@ func open() -> void:
 	_is_visible = true
 	panel.visible = true
 	var vp_size = get_viewport().get_visible_rect().size
-	_is_mobile = min(vp_size.x, vp_size.y) < 700
+	_is_mobile = DisplayServer.is_touchscreen_available() or min(vp_size.x, vp_size.y) < 700
 	_resize_panel(vp_size)
 	_build_entries()
 	scroll.scroll_vertical = 0

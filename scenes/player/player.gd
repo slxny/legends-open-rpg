@@ -245,7 +245,7 @@ func _ready() -> void:
 
 	# Mobile detection and attack button setup
 	var vp_size = get_viewport().get_visible_rect().size
-	_is_mobile = min(vp_size.x, vp_size.y) < 700
+	_is_mobile = DisplayServer.is_touchscreen_available() or min(vp_size.x, vp_size.y) < 700
 	if _is_mobile:
 		_click_circle.radius = CLICK_RADIUS_MOBILE
 		_create_mobile_attack_button()

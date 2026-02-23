@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.39.5"
+const GAME_VERSION := "v0.40.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.40.0",
+		"title": "Mobile MAP Button & Minimap Overlay",
+		"date": "2026-02-23",
+		"entries": [
+			"Bottom bar now has CMD and MAP buttons stacked in portrait mode",
+			"MAP button opens a fullwidth minimap overlay with click-to-move support",
+			"Minimap renders at any size — dots and fog scale with the control",
+			"Only one overlay open at a time (CMD closes MAP and vice versa)",
+		]
+	},
 	{
 		"version": "v0.39.5",
 		"title": "Smooth Bars & Uniform Thickness",

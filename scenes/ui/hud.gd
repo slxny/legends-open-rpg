@@ -57,6 +57,10 @@ var _hint_showing: bool = false
 var _cmd_overlay: PanelContainer = null
 var _cmd_overlay_visible: bool = false
 
+# Minimap overlay (mobile portrait)
+var _map_overlay: PanelContainer = null
+var _map_overlay_visible: bool = false
+
 func _ready() -> void:
 	_detect_mobile()
 	if _is_mobile:
@@ -88,9 +92,8 @@ func _apply_mobile_layout() -> void:
 
 	# ── PORTRAIT: minimal bar strip + command overlay button ──
 	if not is_landscape:
-		# Hide command card and minimap entirely
+		# Hide command card (minimap gets reparented into overlay later)
 		command_card.visible = false
-		minimap.visible = false
 		level_label.visible = false
 
 		# Compact bottom panel: just HP/MP/XP bars + CMD button
@@ -101,18 +104,48 @@ func _apply_mobile_layout() -> void:
 		bottom_hbox.add_theme_constant_override("separation", 4)
 		unit_info.add_theme_constant_override("separation", 2)
 
-		# Add a CMD button inside the bottom bar to open the commands overlay
+		# Two stacked buttons: CMD + MAP, sharing the right side of the bar
+		var btn_col = VBoxContainer.new()
+		btn_col.add_theme_constant_override("separation", 2)
+		btn_col.custom_minimum_size = Vector2(90, 0)
+		bottom_hbox.add_child(btn_col)
+
+		var btn_style_normal = StyleBoxFlat.new()
+		btn_style_normal.bg_color = Color(0.12, 0.11, 0.08, 0.95)
+		btn_style_normal.border_color = Color(0.5, 0.4, 0.18, 0.8)
+		btn_style_normal.set_border_width_all(1)
+		btn_style_normal.set_corner_radius_all(4)
+		btn_style_normal.set_content_margin_all(0)
+
+		var btn_style_pressed = btn_style_normal.duplicate()
+		btn_style_pressed.bg_color = Color(0.25, 0.2, 0.08, 0.95)
+		btn_style_pressed.border_color = Color(0.9, 0.75, 0.3, 1.0)
+
 		var cmd_btn = Button.new()
 		cmd_btn.text = "CMD"
-		cmd_btn.custom_minimum_size = Vector2(90, 0)
 		cmd_btn.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		cmd_btn.add_theme_font_size_override("font_size", 30)
+		cmd_btn.add_theme_font_size_override("font_size", 18)
 		cmd_btn.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
+		cmd_btn.add_theme_stylebox_override("normal", btn_style_normal)
+		cmd_btn.add_theme_stylebox_override("pressed", btn_style_pressed)
+		cmd_btn.add_theme_stylebox_override("hover", btn_style_normal)
 		cmd_btn.pressed.connect(_toggle_cmd_overlay)
-		bottom_hbox.add_child(cmd_btn)
+		btn_col.add_child(cmd_btn)
 
-		# Build the command overlay (hidden by default)
+		var map_btn = Button.new()
+		map_btn.text = "MAP"
+		map_btn.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		map_btn.add_theme_font_size_override("font_size", 18)
+		map_btn.add_theme_color_override("font_color", Color(0.5, 0.85, 1.0))
+		map_btn.add_theme_stylebox_override("normal", btn_style_normal.duplicate())
+		map_btn.add_theme_stylebox_override("pressed", btn_style_pressed.duplicate())
+		map_btn.add_theme_stylebox_override("hover", btn_style_normal.duplicate())
+		map_btn.pressed.connect(_toggle_map_overlay)
+		btn_col.add_child(map_btn)
+
+		# Build overlays (hidden by default)
 		_build_cmd_overlay()
+		_build_map_overlay()
 		return
 
 	# ── LANDSCAPE: compact strip, same bar heights as desktop ──
@@ -270,6 +303,11 @@ func _build_cmd_overlay() -> void:
 	add_child(_cmd_overlay)
 
 func _toggle_cmd_overlay() -> void:
+	# Close MAP overlay if open
+	if _map_overlay and _map_overlay_visible:
+		_map_overlay_visible = false
+		_map_overlay.visible = false
+
 	_cmd_overlay_visible = !_cmd_overlay_visible
 	_cmd_overlay.visible = _cmd_overlay_visible
 	if _cmd_overlay_visible:
@@ -298,6 +336,68 @@ func _update_overlay_potions() -> void:
 		else:
 			btn.text = "%d\n%s" % [i + 1, item.get("name", "Potion")]
 			btn.modulate = Color.WHITE
+
+func _build_map_overlay() -> void:
+	_map_overlay = PanelContainer.new()
+	_map_overlay.visible = false
+	_map_overlay.z_index = 90
+
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.04, 0.04, 0.06, 0.96)
+	style.border_color = Color(0.3, 0.4, 0.55, 0.8)
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(10)
+	style.set_content_margin_all(12)
+	_map_overlay.add_theme_stylebox_override("panel", style)
+
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 6)
+	_map_overlay.add_child(vbox)
+
+	# Title row with close button
+	var title_row = HBoxContainer.new()
+	title_row.add_theme_constant_override("separation", 8)
+	vbox.add_child(title_row)
+	var title = Label.new()
+	title.text = "Map"
+	title.add_theme_font_size_override("font_size", 36)
+	title.add_theme_color_override("font_color", Color(0.7, 0.85, 1.0))
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title_row.add_child(title)
+	var close_btn = Button.new()
+	close_btn.text = "X"
+	close_btn.custom_minimum_size = Vector2(70, 60)
+	close_btn.add_theme_font_size_override("font_size", 34)
+	close_btn.pressed.connect(_toggle_map_overlay)
+	title_row.add_child(close_btn)
+
+	# Reparent the minimap into the overlay and scale it up
+	minimap.get_parent().remove_child(minimap)
+	minimap.custom_minimum_size = Vector2(0, 0)
+	minimap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	minimap.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	minimap.visible = true
+	vbox.add_child(minimap)
+
+	add_child(_map_overlay)
+
+func _toggle_map_overlay() -> void:
+	# Close CMD overlay if open
+	if _cmd_overlay_visible:
+		_cmd_overlay_visible = false
+		_cmd_overlay.visible = false
+
+	_map_overlay_visible = !_map_overlay_visible
+	_map_overlay.visible = _map_overlay_visible
+	if _map_overlay_visible:
+		AudioManager.play_sfx("ui_tap", -4.0)
+		await get_tree().process_frame
+		var vp_size = get_viewport().get_visible_rect().size
+		var overlay_w = vp_size.x - 32
+		# Make the map overlay tall enough for a good view
+		var map_h = vp_size.x * 0.65  # Roughly proportional to world ratio
+		_map_overlay.size = Vector2(overlay_w, map_h)
+		_map_overlay.position = Vector2(16, vp_size.y - bottom_panel.size.y - _map_overlay.size.y - 8)
 
 func _add_mobile_menu_button() -> void:
 	var vp_size = get_viewport().get_visible_rect().size

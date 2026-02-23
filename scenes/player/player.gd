@@ -1634,19 +1634,34 @@ func _create_mobile_attack_button() -> void:
 	_mobile_atk_canvas.layer = 11  # Above HUD (which is layer 10)
 	add_child(_mobile_atk_canvas)
 
+	_mobile_atk_btn = Button.new()
+	_mobile_atk_btn.text = "ATK"
+	_mobile_atk_btn.modulate = Color(1.0, 1.0, 1.0, 0.8)
+	_mobile_atk_btn.add_theme_color_override("font_color", Color(0.95, 0.85, 0.5))
+	_mobile_atk_btn.add_theme_color_override("font_pressed_color", Color(1.0, 1.0, 0.7))
+
+	# NOTE: button_down/button_up signals are NOT connected here.  Touch
+	# detection is handled manually in _input() via InputEventScreenTouch so
+	# that multitouch works (Godot's Button only responds to the first finger).
+	_mobile_atk_canvas.add_child(_mobile_atk_btn)
+
+	# Defer positioning to ensure viewport size is finalized
+	_reposition_atk_button()
+	get_viewport().size_changed.connect(_reposition_atk_button)
+
+func _reposition_atk_button() -> void:
+	if not _mobile_atk_btn or not is_instance_valid(_mobile_atk_btn):
+		return
 	var vp_size = get_viewport().get_visible_rect().size
 	var is_landscape = vp_size.x > vp_size.y
 	var btn_size = 120 if is_landscape else 180
 
-	_mobile_atk_btn = Button.new()
-	_mobile_atk_btn.text = "ATK"
 	_mobile_atk_btn.custom_minimum_size = Vector2(btn_size, btn_size)
 	_mobile_atk_btn.size = Vector2(btn_size, btn_size)
 	# Position: lower-right, above the HUD bottom panel
 	var margin_right = 30 if is_landscape else 40
 	var margin_bottom = 160 if is_landscape else 170
 	_mobile_atk_btn.position = Vector2(vp_size.x - btn_size - margin_right, vp_size.y - btn_size - margin_bottom)
-	_mobile_atk_btn.modulate = Color(1.0, 1.0, 1.0, 0.8)
 
 	# Style: dark background with gold border for SC:BW feel
 	var style_normal = StyleBoxFlat.new()
@@ -1666,15 +1681,7 @@ func _create_mobile_attack_button() -> void:
 	_mobile_atk_btn.add_theme_stylebox_override("hover", style_hover)
 
 	_mobile_atk_btn.add_theme_font_size_override("font_size", 36 if is_landscape else 52)
-	_mobile_atk_btn.add_theme_color_override("font_color", Color(0.95, 0.85, 0.5))
-	_mobile_atk_btn.add_theme_color_override("font_pressed_color", Color(1.0, 1.0, 0.7))
-	# Pivot at center so scale animations expand outward
 	_mobile_atk_btn.pivot_offset = Vector2(btn_size / 2.0, btn_size / 2.0)
-
-	# NOTE: button_down/button_up signals are NOT connected here.  Touch
-	# detection is handled manually in _input() via InputEventScreenTouch so
-	# that multitouch works (Godot's Button only responds to the first finger).
-	_mobile_atk_canvas.add_child(_mobile_atk_btn)
 
 func _on_mobile_attack_pressed() -> void:
 	_flash_atk_button()

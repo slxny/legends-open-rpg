@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.41.0"
+const GAME_VERSION := "v0.41.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.41.1",
+		"title": "Fix ATK Button Positioning in Landscape",
+		"date": "2026-02-23",
+		"entries": [
+			"ATK button now repositions on viewport resize via size_changed signal",
+			"Fixes button placed off-screen when viewport size differs at _ready() time",
+			"Button adapts correctly when switching between portrait and landscape",
+		]
+	},
 	{
 		"version": "v0.41.0",
 		"title": "Cleaner Level-Up Notifications",

@@ -9,9 +9,17 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.57.4"
+const GAME_VERSION := "v0.57.5"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.57.5",
+		"title": "Fix hero load: restore _spawn_projectile",
+		"date": "2026-02-23",
+		"entries": [
+			"Restored _spawn_projectile() to player.gd — was deleted during ability removal but is still used by Shadow Ranger's normal ranged attack and Shadow Step special attack",
+		]
+	},
 	{
 		"version": "v0.57.4",
 		"title": "Fix hero not loading after ability removal",

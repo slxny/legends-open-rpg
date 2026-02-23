@@ -1975,6 +1975,40 @@ func _get_aim_direction() -> Vector2:
 	return _facing
 
 
+func _spawn_projectile(direction: Vector2, speed: float, max_range: float, dmg_mult: float) -> void:
+	var projectile = Area2D.new()
+	projectile.position = global_position
+	projectile.collision_layer = 0
+	projectile.collision_mask = 2
+
+	var shape_node = CollisionShape2D.new()
+	var circle = CircleShape2D.new()
+	circle.radius = 5.0
+	shape_node.shape = circle
+	projectile.add_child(shape_node)
+
+	var visual = Sprite2D.new()
+	visual.texture = SpriteGenerator.get_texture("arrow_projectile")
+	visual.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	projectile.add_child(visual)
+
+	projectile.rotation = direction.angle()
+	_get_world_node().add_child(projectile)
+
+	var tween = create_tween()
+	var end_pos = global_position + direction * max_range
+	var travel_time = max_range / speed
+	tween.tween_property(projectile, "position", end_pos, travel_time)
+	tween.tween_callback(projectile.queue_free)
+
+	projectile.body_entered.connect(func(body: Node2D):
+		if body.is_in_group("enemies") and body.has_method("take_damage"):
+			var result = CombatManager.calculate_damage(stats.get_stats_dict(), body.get_stats_dict(), dmg_mult)
+			body.take_damage(result["damage"], result["is_crit"])
+			_spawn_impact_vfx(body.global_position)
+			projectile.queue_free()
+	)
+
 func _perform_attack(target: Node2D, attack_dir: Vector2 = Vector2.RIGHT) -> void:
 	_is_attack_animating = true
 	attacked.emit(target)

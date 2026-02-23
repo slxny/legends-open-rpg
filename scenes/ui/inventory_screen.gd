@@ -72,15 +72,15 @@ func _detect_mobile() -> void:
 		close_btn.pressed.connect(toggle)
 		$Panel/MarginContainer/VBox/TopBar.add_child(close_btn)
 	else:
-		# Desktop: compact right-side panel
+		# Desktop: compact right-side panel, stops above the 115px bottom HUD
 		panel.anchor_left = 1.0
 		panel.anchor_top = 0.08
 		panel.anchor_right = 1.0
-		panel.anchor_bottom = 0.92
+		panel.anchor_bottom = 1.0
 		panel.offset_left = -280.0
 		panel.offset_right = -8.0
 		panel.offset_top = 0.0
-		panel.offset_bottom = 0.0
+		panel.offset_bottom = -120.0
 
 func _switch_tab(tab: int) -> void:
 	_current_tab = tab

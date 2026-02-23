@@ -9,9 +9,18 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.37.1"
+const GAME_VERSION := "v0.37.2"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.37.2",
+		"title": "Fix Bag Overlay Item Stats Hidden Behind HUD",
+		"date": "2026-02-23",
+		"entries": [
+			"Fixed inventory item stats panel being hidden behind the bottom HUD on desktop",
+			"Inventory panel now stops above the bottom HUD so item details are always fully visible",
+		]
+	},
 	{
 		"version": "v0.37.1",
 		"title": "Fix Beacon Healing & Immunity",

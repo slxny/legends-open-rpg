@@ -27,7 +27,7 @@ func _ready() -> void:
 
 func _detect_mobile() -> void:
 	var vp_size = get_viewport().get_visible_rect().size
-	_is_mobile = vp_size.x < 700 or (vp_size.x < vp_size.y)
+	_is_mobile = min(vp_size.x, vp_size.y) < 700
 
 func _on_viewport_resized() -> void:
 	var was_mobile = _is_mobile

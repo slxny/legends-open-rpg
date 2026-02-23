@@ -47,7 +47,7 @@ func _ready() -> void:
 	if not beacon_label.is_empty():
 		label.text = beacon_label
 		var vp_size = get_viewport().get_visible_rect().size
-		if vp_size.x < 700 or (vp_size.x < vp_size.y):
+		if min(vp_size.x, vp_size.y) < 700:
 			label.add_theme_font_size_override("font_size", 18)
 		label.pivot_offset = label.size / 2.0
 	else:

@@ -50,7 +50,7 @@ func open(shop_items: Array[String]) -> void:
 
 func _detect_mobile() -> void:
 	var vp_size = get_viewport().get_visible_rect().size
-	_is_mobile = vp_size.x < 700 or (vp_size.x < vp_size.y)
+	_is_mobile = min(vp_size.x, vp_size.y) < 700
 	if _is_mobile:
 		var margin = 8.0
 		panel.offset_left = -vp_size.x / 2.0 + margin

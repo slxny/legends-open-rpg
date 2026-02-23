@@ -17,7 +17,7 @@ func _ready() -> void:
 	name_label.text = armory_name
 	name_label.visible = false
 	var vp_size = get_viewport().get_visible_rect().size
-	if vp_size.x < 700 or (vp_size.x < vp_size.y):
+	if min(vp_size.x, vp_size.y) < 700:
 		name_label.add_theme_font_size_override("font_size", 18)
 	name_label.pivot_offset = name_label.size / 2.0
 	beacon.activated.connect(_on_beacon_activated)

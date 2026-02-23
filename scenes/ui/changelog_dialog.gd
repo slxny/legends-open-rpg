@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.39.0"
+const GAME_VERSION := "v0.39.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.39.1",
+		"title": "Fix Mobile Detection in Landscape",
+		"date": "2026-02-23",
+		"entries": [
+			"Fixed mobile detection across all screens — landscape on mobile now correctly uses mobile layout",
+			"Hero select screen in landscape on mobile now shows same mobile cards instead of desktop layout",
+			"Detection changed from width-only check to min-dimension check (works for both orientations)",
+		]
+	},
 	{
 		"version": "v0.39.0",
 		"title": "Minimal Mobile HUD — Maximum Map Visibility",
@@ -582,7 +592,7 @@ func open() -> void:
 	_is_visible = true
 	panel.visible = true
 	var vp_size = get_viewport().get_visible_rect().size
-	_is_mobile = vp_size.x < 700 or (vp_size.x < vp_size.y)
+	_is_mobile = min(vp_size.x, vp_size.y) < 700
 	_resize_panel(vp_size)
 	_build_entries()
 	scroll.scroll_vertical = 0

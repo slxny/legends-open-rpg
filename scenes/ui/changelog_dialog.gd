@@ -9,9 +9,17 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.30.0"
+const GAME_VERSION := "v0.30.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.30.1",
+		"title": "Beacon Rendering Fix",
+		"date": "2026-02-23",
+		"entries": [
+			"Fixed hero disappearing behind heal beacon and other beacons",
+		]
+	},
 	{
 		"version": "v0.30.0",
 		"title": "Rat Swarm AI Fix",

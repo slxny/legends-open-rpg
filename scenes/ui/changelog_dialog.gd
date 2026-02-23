@@ -9,9 +9,18 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.57.3"
+const GAME_VERSION := "v0.57.4"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.57.4",
+		"title": "Fix hero not loading after ability removal",
+		"date": "2026-02-23",
+		"entries": [
+			"Fixed crash on hero load: hud.gd setup() still referenced player.ability_mgr after AbilityManager was removed",
+			"Removed leftover ability_font_size unused variable from hero_select.gd",
+		]
+	},
 	{
 		"version": "v0.57.3",
 		"title": "Remove Q/E Abilities",

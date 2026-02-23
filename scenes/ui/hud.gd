@@ -409,7 +409,6 @@ func setup(player: Node2D) -> void:
 	_player = player
 	minimap.setup(player)
 	var stats: StatsComponent = player.stats
-	var ability_mgr: AbilityManager = player.ability_mgr
 
 	stats.hp_changed.connect(_on_hp_changed)
 	stats.mana_changed.connect(_on_mana_changed)

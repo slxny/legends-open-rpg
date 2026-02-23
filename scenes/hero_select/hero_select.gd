@@ -205,7 +205,6 @@ func _create_desktop_hero_card(hero_key: String, data: Dictionary) -> PanelConta
 	var desc_font_size = 13
 	var icon_font_size = 11
 	var stats_font_size = 12
-	var ability_font_size = 11
 	var btn_font_size = 14
 
 	# Hero sprite preview area

@@ -70,10 +70,10 @@ func _apply_mobile_layout() -> void:
 
 	# ── Top bar: scale font sizes for readability ──
 	if is_landscape:
-		top_bar.offset_bottom = 32
-		gold_label.add_theme_font_size_override("font_size", 18)
-		wood_label.add_theme_font_size_override("font_size", 18)
-		alignment_label.add_theme_font_size_override("font_size", 16)
+		top_bar.offset_bottom = 26
+		gold_label.add_theme_font_size_override("font_size", 14)
+		wood_label.add_theme_font_size_override("font_size", 14)
+		alignment_label.add_theme_font_size_override("font_size", 12)
 	else:
 		top_bar.offset_bottom = 72
 		gold_label.add_theme_font_size_override("font_size", 44)
@@ -82,19 +82,19 @@ func _apply_mobile_layout() -> void:
 
 	# ── Bottom panel: compact for landscape, taller for portrait ──
 	if is_landscape:
-		bottom_panel.offset_top = -130
-		bottom_hbox.add_theme_constant_override("separation", 6)
+		bottom_panel.offset_top = -90
+		bottom_hbox.add_theme_constant_override("separation", 3)
 	else:
 		bottom_panel.offset_top = -380
 		bottom_hbox.add_theme_constant_override("separation", 10)
 
 	# ── Unit info: compact bars in landscape ──
 	if is_landscape:
-		level_label.add_theme_font_size_override("font_size", 16)
-		hp_bar.custom_minimum_size.y = 22
-		mana_bar.custom_minimum_size.y = 22
-		xp_bar.custom_minimum_size.y = 14
-		unit_info.add_theme_constant_override("separation", 2)
+		level_label.add_theme_font_size_override("font_size", 12)
+		hp_bar.custom_minimum_size.y = 14
+		mana_bar.custom_minimum_size.y = 14
+		xp_bar.custom_minimum_size.y = 8
+		unit_info.add_theme_constant_override("separation", 1)
 	else:
 		level_label.add_theme_font_size_override("font_size", 38)
 		hp_bar.custom_minimum_size.y = 48
@@ -104,20 +104,20 @@ func _apply_mobile_layout() -> void:
 
 	# ── Minimap: smaller in landscape to save space ──
 	if is_landscape:
-		minimap.custom_minimum_size = Vector2(110, 90)
+		minimap.custom_minimum_size = Vector2(80, 65)
 	else:
 		minimap.custom_minimum_size = Vector2(150, 150)
 
 	# ── Command card: compact in landscape ──
 	if is_landscape:
-		command_card.custom_minimum_size.x = 240
-		command_label.add_theme_font_size_override("font_size", 12)
-		command_grid.add_theme_constant_override("h_separation", 2)
-		command_grid.add_theme_constant_override("v_separation", 2)
+		command_card.custom_minimum_size.x = 200
+		command_label.add_theme_font_size_override("font_size", 9)
+		command_grid.add_theme_constant_override("h_separation", 1)
+		command_grid.add_theme_constant_override("v_separation", 1)
 		for child in command_grid.get_children():
 			if child is Button:
-				child.custom_minimum_size = Vector2(74, 36)
-				child.add_theme_font_size_override("font_size", 13)
+				child.custom_minimum_size = Vector2(64, 24)
+				child.add_theme_font_size_override("font_size", 10)
 	else:
 		command_card.custom_minimum_size.x = 380
 		command_label.add_theme_font_size_override("font_size", 28)
@@ -135,8 +135,8 @@ func _add_mobile_menu_button() -> void:
 	var menu_btn = Button.new()
 	menu_btn.text = "Menu"
 	if is_landscape:
-		menu_btn.custom_minimum_size = Vector2(70, 26)
-		menu_btn.add_theme_font_size_override("font_size", 16)
+		menu_btn.custom_minimum_size = Vector2(60, 22)
+		menu_btn.add_theme_font_size_override("font_size", 13)
 	else:
 		menu_btn.custom_minimum_size = Vector2(140, 60)
 		menu_btn.add_theme_font_size_override("font_size", 34)

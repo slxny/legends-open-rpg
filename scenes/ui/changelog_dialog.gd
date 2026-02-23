@@ -9,9 +9,23 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.37.2"
+const GAME_VERSION := "v0.38.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.38.0",
+		"title": "Landscape HUD Radical Compaction",
+		"date": "2026-02-23",
+		"entries": [
+			"Landscape bottom panel slashed from 64px to 36px — nearly half the old height",
+			"Minimap and hero name hidden in landscape to reclaim all wasted space",
+			"HP/MP bars shrunk to 8px, XP bar to 3px with zero spacing between them",
+			"Save/Load/Log buttons hidden in landscape (use Menu instead) — grid drops from 3x3 to 3x2",
+			"Command buttons reduced to 52x14px for minimal footprint",
+			"Top bar and menu button also shrunk for maximum game view",
+			"ATK button repositioned closer to the thinner panel",
+		]
+	},
 	{
 		"version": "v0.37.2",
 		"title": "Fix Bag Overlay Item Stats Hidden Behind HUD",

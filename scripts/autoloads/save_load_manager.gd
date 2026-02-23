@@ -1,8 +1,9 @@
 extends Node
 
 ## Save/Load system — JSON serialization of all game state.
-## Saves: level, xp, gold, alignment, owned_towns, artifacts,
-## explored_tiles, inventory, boss_flags, death_counters.
+## Saves: level, xp, skill_points, gold, wood, alignment, owned_towns,
+## artifacts, explored_tiles, inventory, boss_flags, death_counters,
+## armory upgrades, woodwork upgrades.
 
 const SAVE_PATH := "user://savegame.json"
 
@@ -20,6 +21,7 @@ func save_game() -> void:
 	data["hero_class"] = player.hero_class
 	data["level"] = player.stats.level
 	data["xp"] = player.stats.xp
+	data["skill_points"] = player.stats.skill_points
 	data["current_hp"] = player.stats.current_hp
 	data["current_mana"] = player.stats.current_mana
 	data["position_x"] = player.global_position.x
@@ -27,6 +29,7 @@ func save_game() -> void:
 
 	# Economy
 	data["gold"] = GameManager.gold
+	data["wood"] = GameManager.wood
 
 	# Alignment
 	data["alignment"] = AlignmentManager.get_alignment(0)
@@ -61,6 +64,12 @@ func save_game() -> void:
 	# Armory upgrades
 	data["weapon_upgrade_level"] = GameManager.weapon_upgrade_level
 	data["armor_upgrade_level"] = GameManager.armor_upgrade_level
+
+	# Woodwork upgrades
+	data["woodwork_bow_level"] = GameManager.woodwork_bow_level
+	data["woodwork_shield_level"] = GameManager.woodwork_shield_level
+	data["woodwork_totem_level"] = GameManager.woodwork_totem_level
+	data["woodwork_watchtower_level"] = GameManager.woodwork_watchtower_level
 
 	# Write to file
 	var json_string = JSON.stringify(data, "\t")
@@ -98,6 +107,7 @@ func load_game() -> bool:
 	# Restore economy
 	GameManager.gold = data.get("gold", 0)
 	EconomyManager.set_gold(data.get("gold", 0), 0)
+	GameManager.wood = data.get("wood", 0)
 
 	# Restore alignment
 	AlignmentManager.set_alignment(data.get("alignment", 0), 0)
@@ -108,6 +118,12 @@ func load_game() -> bool:
 	GameManager.found_artifacts = Array(data.get("artifacts", []), TYPE_STRING, "", null)
 	GameManager.weapon_upgrade_level = data.get("weapon_upgrade_level", 0)
 	GameManager.armor_upgrade_level = data.get("armor_upgrade_level", 0)
+
+	# Restore woodwork upgrades
+	GameManager.woodwork_bow_level = data.get("woodwork_bow_level", 0)
+	GameManager.woodwork_shield_level = data.get("woodwork_shield_level", 0)
+	GameManager.woodwork_totem_level = data.get("woodwork_totem_level", 0)
+	GameManager.woodwork_watchtower_level = data.get("woodwork_watchtower_level", 0)
 
 	# Restore explored tiles
 	if data.has("explored_tiles"):
@@ -128,12 +144,46 @@ func apply_to_player(player: Node2D) -> void:
 
 	var data = _pending_load
 
-	# Restore hero stats
+	# Restore hero stats — player already called initialize_from_hero() which
+	# set base stats at level 1.  We need to re-apply all level-up growth so
+	# the actual attributes (max_hp, strength, etc.) match the saved level.
 	if player.stats:
-		player.stats.level = data.get("level", 1)
+		var saved_level = data.get("level", 1)
+		var hero_data = HeroData.get_hero(player.hero_class)
+		if not hero_data.is_empty() and saved_level > 1:
+			var growth = hero_data["growth_per_level"]
+			for i in range(saved_level - 1):
+				player.stats.max_hp += int(growth.get("max_hp", 0))
+				player.stats.max_mana += int(growth.get("max_mana", 0))
+				player.stats.strength += int(growth.get("strength", 0))
+				player.stats.agility += int(growth.get("agility", 0))
+				player.stats.intelligence += int(growth.get("intelligence", 0))
+				player.stats._armor_growth_accum += growth.get("armor", 0.0)
+				if player.stats._armor_growth_accum >= 1.0:
+					var gain = int(player.stats._armor_growth_accum)
+					player.stats.armor += gain
+					player.stats._armor_growth_accum -= gain
+				player.stats.attack_damage += int(growth.get("attack_damage", 0))
+
+		player.stats.level = saved_level
 		player.stats.xp = data.get("xp", 0)
-		player.stats.current_hp = data.get("current_hp", player.stats.get_total_max_hp())
-		player.stats.current_mana = data.get("current_mana", player.stats.get_total_max_mana())
+		player.stats.skill_points = data.get("skill_points", 0)
+
+		# Re-apply armory upgrade bonuses (levels already restored in load_game)
+		player.stats.armory_weapon_bonus = GameManager.weapon_upgrade_level * 2
+		player.stats.armory_armor_bonus = GameManager.armor_upgrade_level
+		player.stats.armory_hp_bonus = GameManager.armor_upgrade_level * 3
+
+		# Re-apply woodwork upgrade bonuses
+		player.stats.woodwork_attack_bonus = GameManager.woodwork_bow_level * 2
+		player.stats.woodwork_armor_bonus = GameManager.woodwork_shield_level
+		player.stats.woodwork_hp_bonus = GameManager.woodwork_shield_level * 4
+		player.stats.woodwork_xp_mult = GameManager.woodwork_watchtower_level * 0.08
+
+		# Set current HP/mana AFTER stats are fully recalculated
+		# (clamped to actual max so old saves don't exceed the cap)
+		player.stats.current_hp = min(data.get("current_hp", player.stats.get_total_max_hp()), player.stats.get_total_max_hp())
+		player.stats.current_mana = min(data.get("current_mana", player.stats.get_total_max_mana()), player.stats.get_total_max_mana())
 		player.stats._emit_all()
 
 	# Restore position

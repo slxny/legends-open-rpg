@@ -9,9 +9,22 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.48.1"
+const GAME_VERSION := "v0.49.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.49.0",
+		"title": "Fix Save/Load — All Stats & Resources Now Saved",
+		"date": "2026-02-23",
+		"entries": [
+			"Wood amount is now saved and restored (was lost on every load)",
+			"All woodwork upgrade levels (Bow, Shield, Totem, Watchtower) are now saved",
+			"Hero stats (HP, STR, AGI, INT, armor, ATK, mana) now properly recalculated on load from level growth",
+			"Armory and woodwork stat bonuses re-applied on load (weapon/armor/HP/XP bonuses were zeroed out)",
+			"Skill points are now saved and restored",
+			"Backwards-compatible: old saves load safely with defaults for new fields",
+		]
+	},
 	{
 		"version": "v0.48.1",
 		"title": "Fix Desktop Tooltip Race Condition",

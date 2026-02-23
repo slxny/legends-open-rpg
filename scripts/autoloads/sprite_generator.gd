@@ -26,7 +26,7 @@ func get_texture(name: String) -> ImageTexture:
 ## select screen so everything is cached before the world loads.
 func _pregenerate_async() -> void:
 	var batch: int = 0
-	const PER_FRAME: int = 3  # Keep batches small to avoid frame hitches
+	const PER_FRAME: int = 10  # Larger batches to finish pre-gen faster
 	for sprite_name in _all_sprite_names():
 		if textures.has(sprite_name):
 			continue

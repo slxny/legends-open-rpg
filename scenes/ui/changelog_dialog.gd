@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.31.0"
+const GAME_VERSION := "v0.32.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.32.0",
+		"title": "Loading Performance Optimization",
+		"date": "2026-02-23",
+		"entries": [
+			"Reduced hero select loading lag (faster sprite and audio pre-generation)",
+			"Reduced world loading lag (terrain and town now load asynchronously)",
+			"Smoother transition when traveling outside the city walls",
+		]
+	},
 	{
 		"version": "v0.31.0",
 		"title": "Heal Beacon Improvements",

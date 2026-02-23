@@ -234,7 +234,7 @@ func _pregenerate_async() -> void:
 			continue
 		_ensure_sfx(sfx_name)
 		batch += 1
-		if batch >= 3:
+		if batch >= 8:
 			batch = 0
 			await get_tree().process_frame
 

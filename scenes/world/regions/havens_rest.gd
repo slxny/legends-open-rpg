@@ -84,8 +84,8 @@ func _ready() -> void:
 
 	_wave_rng.seed = 42
 
-	_generate_terrain()
-	_generate_town()
+	_generate_terrain_async()
+	_generate_town_async()
 	_generate_decorations_async()
 	_generate_harvestable_trees_async()
 
@@ -219,7 +219,10 @@ func _on_info_beacon(_b: Area2D) -> void:
 # TERRAIN: Tiled ground textures for SC:BW look
 # ============================================================
 
-func _generate_terrain() -> void:
+func _generate_terrain_async() -> void:
+	var _batch: int = 0
+	const BATCH: int = 30
+
 	# Main jungle ground — single Sprite2D with texture repeat covering the expanded map
 	var ground_sprite = Sprite2D.new()
 	ground_sprite.texture = SpriteGenerator.get_texture("ground_jungle")
@@ -246,32 +249,33 @@ func _generate_terrain() -> void:
 	add_child(town_stone)
 
 	# Green grass quadrants overlaid on stone (the uncovered stone forms paths)
-	# NW quadrant
 	_add_grass_quad(Vector2(-460, -360), Vector2(380, 280))
-	# NE quadrant
 	_add_grass_quad(Vector2(80, -360), Vector2(380, 280))
-	# SW quadrant
 	_add_grass_quad(Vector2(-460, 80), Vector2(380, 280))
-	# SE quadrant
 	_add_grass_quad(Vector2(80, 80), Vector2(380, 280))
+
+	await get_tree().process_frame
 
 	# Dark creep ground patches near each camp
 	for camp_pos in _camp_positions:
 		_add_creep_ground(camp_pos, randf_range(140, 200))
+		_batch += 1
+		if _batch >= BATCH:
+			_batch = 0
+			await get_tree().process_frame
 
 	# --- Large terrain variation overlays: tinted blobs that break up repetition ---
 	var blob_rng = RandomNumberGenerator.new()
 	blob_rng.seed = 777
-	# Variety of earth/green tints that blend naturally with jungle ground
 	var blob_tints = [
-		Color(0.15, 0.25, 0.1, 1.0),  # Darker green (dense canopy)
-		Color(0.12, 0.22, 0.08, 1.0), # Deep moss
-		Color(0.2, 0.3, 0.12, 1.0),   # Lighter clearing
-		Color(0.18, 0.15, 0.08, 1.0), # Brown-earth
-		Color(0.1, 0.2, 0.15, 1.0),   # Blue-green (damp area)
-		Color(0.22, 0.2, 0.1, 1.0),   # Dry patch
-		Color(0.08, 0.18, 0.06, 1.0), # Very dark (shadow)
-		Color(0.16, 0.28, 0.1, 1.0),  # Bright grass
+		Color(0.15, 0.25, 0.1, 1.0),
+		Color(0.12, 0.22, 0.08, 1.0),
+		Color(0.2, 0.3, 0.12, 1.0),
+		Color(0.18, 0.15, 0.08, 1.0),
+		Color(0.1, 0.2, 0.15, 1.0),
+		Color(0.22, 0.2, 0.1, 1.0),
+		Color(0.08, 0.18, 0.06, 1.0),
+		Color(0.16, 0.28, 0.1, 1.0),
 	]
 	for _i in range(45):
 		var pos = Vector2(blob_rng.randf_range(-5800, 5800), blob_rng.randf_range(-4300, 4300))
@@ -287,6 +291,10 @@ func _generate_terrain() -> void:
 		blob.modulate = blob_tints[blob_rng.randi() % blob_tints.size()]
 		blob.z_index = -9
 		add_child(blob)
+		_batch += 1
+		if _batch >= BATCH:
+			_batch = 0
+			await get_tree().process_frame
 
 	# Scattered dirt patches across the expanded map
 	var rng = RandomNumberGenerator.new()
@@ -295,6 +303,10 @@ func _generate_terrain() -> void:
 		var pos = Vector2(rng.randf_range(-5700, 5700), rng.randf_range(-4200, 4200))
 		if pos.length() > 550:  # Avoid town area
 			_add_dirt_ground_patch(pos)
+			_batch += 1
+			if _batch >= BATCH:
+				_batch = 0
+				await get_tree().process_frame
 
 func _add_creep_ground(center: Vector2, radius: float) -> void:
 	# Multiple overlapping dark ground sprites to form organic creep shape
@@ -337,7 +349,7 @@ func _add_grass_quad(pos: Vector2, size: Vector2) -> void:
 # TOWN: Structured buildings, walls, and decorations
 # ============================================================
 
-func _generate_town() -> void:
+func _generate_town_async() -> void:
 	var town = $Decorations  # Reuse deco layer for z-sorting
 
 	# ---- Town walls / ramparts around perimeter ----
@@ -348,7 +360,6 @@ func _generate_town() -> void:
 	for wx in range(-460, 461, 42):
 		_add_town_building(town, Vector2(wx, 370), "town_wall_h")
 	# West wall segments (skip gate area around y=0)
-	# Rotate the horizontal wall sprite 90° so the wall runs vertically
 	for wy in range(-360, 361, 42):
 		if abs(wy) > 60:
 			_add_town_wall_rotated(town, Vector2(-480, wy), -PI / 2.0)
@@ -356,6 +367,8 @@ func _generate_town() -> void:
 	for wy in range(-360, 361, 42):
 		if abs(wy) > 60:
 			_add_town_wall_rotated(town, Vector2(460, wy), PI / 2.0)
+
+	await get_tree().process_frame
 
 	# ---- Watch towers at 4 corners ----
 	_add_town_building(town, Vector2(-460, -370), "watch_tower")
@@ -388,11 +401,12 @@ func _generate_town() -> void:
 		if abs(wy) > 50:  # Skip gate openings
 			_add_wall_torch(town, Vector2(-475, wy))  # West wall
 			_add_wall_torch(town, Vector2(455, wy))    # East wall
-	# Gate entrance torches — flanking both sides of each gate
 	_add_wall_torch(town, Vector2(-475, -55))
 	_add_wall_torch(town, Vector2(-475, 55))
 	_add_wall_torch(town, Vector2(455, -55))
 	_add_wall_torch(town, Vector2(455, 55))
+
+	await get_tree().process_frame
 
 	# ---- Lamp posts along the main roads ----
 	for lx in [-160, -80, 80, 160]:
@@ -524,7 +538,7 @@ func _add_wall_torch(parent: Node2D, pos: Vector2) -> void:
 func _generate_decorations_async() -> void:
 	var deco_layer = $Decorations
 	var _nodes_this_frame: int = 0
-	const BATCH_SIZE: int = 80  # Yield after this many nodes to keep frames smooth
+	const BATCH_SIZE: int = 200  # Larger batches to finish loading faster
 
 	# ---- Border trees: double-row along all 4 walls (wider spacing for perf) ----
 	for x in range(-5950, 5951, 90):
@@ -869,7 +883,7 @@ func _generate_harvestable_trees_async() -> void:
 					tree_size = 2
 			_spawn_harvestable_tree(tree_layer, pos, tree_size)
 			_htree_count += 1
-			if _htree_count >= 20:
+			if _htree_count >= 40:
 				_htree_count = 0
 				await get_tree().process_frame
 

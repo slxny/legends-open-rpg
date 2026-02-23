@@ -67,7 +67,7 @@ func _ready() -> void:
 
 func _detect_mobile() -> void:
 	var vp_size = get_viewport().get_visible_rect().size
-	_is_mobile = DisplayServer.is_touchscreen_available() and min(vp_size.x, vp_size.y) < 1200
+	_is_mobile = DisplayServer.is_touchscreen_available()
 	_is_portrait = _is_mobile and vp_size.y >= vp_size.x
 
 func _apply_mobile_layout() -> void:
@@ -93,10 +93,10 @@ func _apply_mobile_layout() -> void:
 		minimap.visible = false
 		level_label.visible = false
 
-		# Ultra-thin bottom panel: just HP/MP/XP bars + CMD button
-		var bar_h = 28
-		var xp_h = 16
-		var panel_h = bar_h * 2 + xp_h + 10  # ~100px
+		# Compact bottom panel: just HP/MP/XP bars + CMD button
+		var bar_h = 44
+		var xp_h = 24
+		var panel_h = bar_h * 2 + xp_h + 14  # ~126px
 		bottom_panel.offset_top = -panel_h
 		bottom_hbox.add_theme_constant_override("separation", 4)
 
@@ -803,7 +803,7 @@ func _show_next_hint() -> void:
 	var is_landscape_hint = vp_size_hint.x > vp_size_hint.y
 	var bottom_offset = -125.0
 	if _is_mobile:
-		bottom_offset = -46.0 if is_landscape_hint else -100.0
+		bottom_offset = -46.0 if is_landscape_hint else -140.0
 	_hint_panel.position = Vector2((screen_w - panel_w) / 2.0, bottom_offset - _hint_panel.size.y - 10)
 
 	# Fade in

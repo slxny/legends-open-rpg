@@ -16,7 +16,7 @@ var _is_mobile: bool = false
 
 func _ready() -> void:
 	var vp_size = get_viewport().get_visible_rect().size
-	_is_mobile = DisplayServer.is_touchscreen_available() and min(vp_size.x, vp_size.y) < 1200
+	_is_mobile = DisplayServer.is_touchscreen_available()
 	_label_settings = LabelSettings.new()
 	_label_settings.font_size = 32 if _is_mobile else 13
 	_label_settings.font_color = Color(0.95, 0.95, 0.95)

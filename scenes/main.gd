@@ -25,24 +25,43 @@ func _ready() -> void:
 	# Register a native JS event listener on the canvas so fullscreen is
 	# requested inside the browser's own event handler (satisfies the "user
 	# activation" requirement that Chrome/mobile browsers enforce).
+	# Uses touchend / click rather than touchstart / pointerdown because
+	# Chrome may treat touchstart listeners as passive, which does not
+	# grant the transient user-activation needed for requestFullscreen().
+	# Listeners stay attached until fullscreen is actually achieved so a
+	# silently-rejected first attempt doesn't leave the user stuck.
 	if OS.has_feature("web"):
 		JavaScriptBridge.eval("""
 			(function() {
 				var c = document.getElementById('canvas');
 				if (!c) c = document.querySelector('canvas');
 				if (!c) return;
-				function goFS(e) {
-					c.removeEventListener('pointerdown', goFS, true);
-					c.removeEventListener('touchstart', goFS, true);
+				var done = false;
+				function goFS() {
+					if (done) return;
+					if (document.fullscreenElement || document.webkitFullscreenElement) {
+						done = true;
+						c.removeEventListener('touchend', goFS, true);
+						c.removeEventListener('click', goFS, true);
+						return;
+					}
 					var el = document.documentElement;
+					var p;
 					if (el.requestFullscreen) {
-						el.requestFullscreen().catch(function(){});
+						p = el.requestFullscreen();
 					} else if (el.webkitRequestFullscreen) {
 						el.webkitRequestFullscreen();
 					}
+					if (p && p.then) {
+						p.then(function() {
+							done = true;
+							c.removeEventListener('touchend', goFS, true);
+							c.removeEventListener('click', goFS, true);
+						}).catch(function(){});
+					}
 				}
-				c.addEventListener('pointerdown', goFS, true);
-				c.addEventListener('touchstart', goFS, true);
+				c.addEventListener('touchend', goFS, true);
+				c.addEventListener('click', goFS, true);
 			})();
 		""", true)
 

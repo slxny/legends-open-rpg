@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.43.2"
+const GAME_VERSION := "v0.43.3"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.43.3",
+		"title": "Fix Chrome Mobile Fullscreen (Again)",
+		"date": "2026-02-23",
+		"entries": [
+			"Switched fullscreen trigger from touchstart/pointerdown to touchend/click events",
+			"Chrome treats touchstart as passive, which silently blocks fullscreen requests",
+			"Fullscreen listeners now persist until fullscreen actually succeeds instead of removing on first tap",
+		]
+	},
 	{
 		"version": "v0.43.2",
 		"title": "Larger Mobile Buttons",

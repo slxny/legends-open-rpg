@@ -434,12 +434,19 @@ func _physics_process(delta: float) -> void:
 				if not _is_charging and _charge_time < CHARGE_GRACE:
 					_try_manual_attack()
 		else:
-			if _is_charging and not _is_attack_animating:
+			if _is_charging:
 				_is_charging = false
 				_stop_charge_vfx()
-				var is_ranged = hero_class == "shadow_ranger"
-				_try_special_attack(SpecialAttack.SNIPER_SHOT if is_ranged else SpecialAttack.CHARGED_SLASH)
+				if not _is_attack_animating:
+					var is_ranged = hero_class == "shadow_ranger"
+					_try_special_attack(SpecialAttack.SNIPER_SHOT if is_ranged else SpecialAttack.CHARGED_SLASH)
 			_charge_time = 0.0
+
+	# Safety: force-clear stuck charge if touch release was lost (browser/OS swallowed it)
+	if _is_charging and not Input.is_action_pressed("attack") and not _mobile_attack_held:
+		_is_charging = false
+		_stop_charge_vfx()
+		_charge_time = 0.0
 
 	# Procedural screen shake tick
 	if _shake_time_left > 0.0:

@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.44.0"
+const GAME_VERSION := "v0.44.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.44.1",
+		"title": "Fix Charge Attack Getting Stuck on Mobile",
+		"date": "2026-02-23",
+		"entries": [
+			"Fixed charge attack VFX getting stuck if finger lifts during an attack animation",
+			"Added safety fallback that force-clears charge state if touch release event is lost",
+			"Charge glow and sprite shake now always stop immediately on release",
+		]
+	},
 	{
 		"version": "v0.44.0",
 		"title": "Hero Immunity Visual Feedback",

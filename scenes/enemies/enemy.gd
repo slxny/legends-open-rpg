@@ -609,6 +609,8 @@ func _die() -> void:
 
 	if sprite_type == "skeleton":
 		_die_crumble()
+	elif sprite_type == "rat":
+		_die_rat_explode()
 	elif is_mini_boss:
 		_spawn_blood_splatter()
 		_die_boss()
@@ -646,6 +648,59 @@ func _die_crumble() -> void:
 	# Fade the flattened remains
 	tween.tween_property(sprite, "modulate:a", 0.0, 0.3)
 	tween.tween_callback(queue_free)
+
+func _die_rat_explode() -> void:
+	# Rats explode into bloody chunks — quick violent pop with gibs flying everywhere
+	_spawn_rat_gibs()
+	# Multiple blood splatters for the gore
+	for _i in range(randi_range(2, 4)):
+		_spawn_blood_splatter()
+	var base_pos = sprite.position
+	var tween = create_tween()
+	# Quick swell — rat puffs up
+	tween.tween_property(sprite, "scale", Vector2(1.4, 1.4), 0.04)
+	tween.parallel().tween_property(sprite, "modulate", Color(1.5, 0.7, 0.7), 0.04)
+	# POP — flash red-white and vanish instantly
+	tween.tween_property(sprite, "modulate", Color(2.0, 1.0, 0.8), 0.02)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.8, 0.3), 0.02)
+	# Gone
+	tween.tween_property(sprite, "modulate:a", 0.0, 0.03)
+	tween.tween_callback(queue_free)
+
+func _spawn_rat_gibs() -> void:
+	var gib_tex = SpriteGenerator.get_texture("rat_gib")
+	if not gib_tex:
+		return
+	var world = _get_world_node()
+	for _i in range(randi_range(5, 9)):
+		var gib = Sprite2D.new()
+		gib.texture = gib_tex
+		gib.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		gib.global_position = global_position + Vector2(randf_range(-4, 4), randf_range(-6, 2))
+		gib.rotation = randf() * TAU
+		gib.scale = Vector2(randf_range(0.6, 1.2), randf_range(0.6, 1.2))
+		gib.z_index = -1
+		# Random red tint variation for each chunk
+		gib.modulate = Color(
+			randf_range(0.8, 1.2),
+			randf_range(0.6, 0.9),
+			randf_range(0.6, 0.9),
+			randf_range(0.7, 1.0)
+		)
+		world.add_child(gib)
+		# Scatter outward explosively — faster and further than bone fragments
+		var dir = Vector2(randf_range(-1, 1), randf_range(-1, 1)).normalized()
+		var force = randf_range(18, 40)
+		var dest = gib.global_position + dir * force + Vector2(0, randf_range(4, 12))
+		var t = gib.create_tween()
+		t.set_parallel(true)
+		t.tween_property(gib, "global_position", dest, randf_range(0.15, 0.3)).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		t.tween_property(gib, "rotation", gib.rotation + randf_range(-6.0, 6.0), 0.3)
+		t.set_parallel(false)
+		# Linger briefly then fade
+		t.tween_interval(randf_range(1.0, 2.5))
+		t.tween_property(gib, "modulate:a", 0.0, 0.6)
+		t.tween_callback(gib.queue_free)
 
 func _die_boss() -> void:
 	# Dramatic mini-boss death: expand, flash bright, shake violently, explode outward

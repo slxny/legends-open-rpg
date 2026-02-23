@@ -59,7 +59,7 @@ func _all_sprite_names() -> Array[String]:
 	# VFX & UI (needed by player/enemies)
 	names.append_array(["selection_green", "selection_red", "iso_shadow",
 		"slash_arc", "arrow_projectile", "blood_splatter", "skull_icon",
-		"bone_fragment"])
+		"bone_fragment", "rat_gib"])
 	# Beacons & items
 	names.append_array(["beacon_green", "beacon_yellow", "beacon_blue",
 		"beacon_red", "beacon_cyan",
@@ -3635,6 +3635,22 @@ func _gen_bone_fragment() -> void:
 	img.set_pixel(1, 2, bone_dark)
 	img.set_pixel(4, 3, bone_dark)
 	textures["bone_fragment"] = ImageTexture.create_from_image(img)
+
+func _gen_rat_gib() -> void:
+	# Small bloody meat chunk for rat explosion death effect
+	var img = Image.create(6, 6, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var meat = Color(0.6, 0.15, 0.1)
+	var meat_dark = Color(0.4, 0.08, 0.05)
+	var meat_light = Color(0.75, 0.22, 0.12)
+	# Irregular chunk shape
+	_fill_rect(img, 1, 1, 3, 4, meat)
+	_fill_rect(img, 2, 0, 2, 5, meat_dark)
+	img.set_pixel(1, 1, meat_light)
+	img.set_pixel(3, 3, meat_light)
+	img.set_pixel(0, 2, meat)
+	img.set_pixel(4, 2, meat_dark)
+	textures["rat_gib"] = ImageTexture.create_from_image(img)
 
 # ============================================================
 # SELECTION CIRCLES & VFX

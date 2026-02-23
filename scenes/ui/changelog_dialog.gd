@@ -9,9 +9,18 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.40.0"
+const GAME_VERSION := "v0.40.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.40.1",
+		"title": "Thicker Mobile HP/MP/XP Bars",
+		"date": "2026-02-23",
+		"entries": [
+			"HP/MP/XP bars doubled to 40px on mobile (portrait and landscape)",
+			"ATK button and hint panel repositioned for taller bottom panel",
+		]
+	},
 	{
 		"version": "v0.40.0",
 		"title": "Mobile MAP Button & Minimap Overlay",

@@ -1644,7 +1644,7 @@ func _create_mobile_attack_button() -> void:
 	_mobile_atk_btn.size = Vector2(btn_size, btn_size)
 	# Position: lower-right, above the HUD bottom panel
 	var margin_right = 30 if is_landscape else 40
-	var margin_bottom = 100 if is_landscape else 110
+	var margin_bottom = 160 if is_landscape else 170
 	_mobile_atk_btn.position = Vector2(vp_size.x - btn_size - margin_right, vp_size.y - btn_size - margin_bottom)
 	_mobile_atk_btn.modulate = Color(1.0, 1.0, 1.0, 0.8)
 

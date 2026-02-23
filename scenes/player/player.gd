@@ -24,6 +24,7 @@ var _is_chopping_tree: bool = false  # When true, spacebar hold = repeat chop (n
 # Click-to-move
 var _move_target: Vector2 = Vector2.ZERO
 var _is_moving_to_target: bool = false
+var _stuck_time: float = 0.0  # Tracks how long we've been colliding while moving
 
 var _shadow: Sprite2D = null
 
@@ -272,6 +273,7 @@ func _ready() -> void:
 func move_to(world_pos: Vector2) -> void:
 	_move_target = world_pos
 	_is_moving_to_target = true
+	_stuck_time = 0.0
 	_spawn_move_indicator(_move_target)
 
 
@@ -338,6 +340,23 @@ func _physics_process(delta: float) -> void:
 		velocity = velocity.move_toward(Vector2.ZERO, FRICTION * delta)
 
 	move_and_slide()
+
+	# Obstacle avoidance: when stuck on a tree/building, steer around it
+	if _is_moving_to_target and get_slide_collision_count() > 0 and desired_velocity.length_squared() > 1.0:
+		_stuck_time += delta
+		if _stuck_time > 0.15:
+			var col = get_slide_collision(0)
+			var normal = col.get_normal()
+			# Pick the perpendicular direction that is closest to the target
+			var perp1 = Vector2(-normal.y, normal.x)
+			var perp2 = Vector2(normal.y, -normal.x)
+			var target_dir = (_move_target - global_position).normalized()
+			var avoid_dir = perp1 if perp1.dot(target_dir) > perp2.dot(target_dir) else perp2
+			velocity = avoid_dir * stats.get_total_move_speed() * 0.8
+			move_and_slide()
+	else:
+		_stuck_time = 0.0
+
 	_update_walk_anim(delta)
 	stats.process_regen(delta)
 

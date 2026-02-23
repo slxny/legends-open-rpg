@@ -218,7 +218,7 @@ func initialize(config: Dictionary) -> void:
 	_aggro_range_sq = aggro_range * aggro_range
 	_chase_range_sq = chase_range * chase_range
 	_attack_range_sq = stats.attack_range * stats.attack_range
-	var disengage = stats.attack_range * 4.0
+	var disengage = stats.attack_range * 2.0
 	_attack_disengage_sq = disengage * disengage
 	var alert_range = aggro_range * ALERT_RANGE_MULTIPLIER
 	_alert_range_sq = alert_range * alert_range
@@ -512,20 +512,25 @@ func _process_attack(delta: float) -> void:
 	if dist > 0.1:
 		var dir_to_target = to_target.normalized()
 		if dist < ideal_dist:
-			# Too close — gentle back-away
 			move_toward = -dir_to_target * stats.move_speed * 0.2
 		elif dist > ideal_dist + 3.0:
-			# Beyond ideal range — aggressively close in to maintain melee contact
 			var urgency = clampf((dist - ideal_dist) / (stats.attack_range * 0.5), 0.4, 1.0)
 			move_toward = dir_to_target * stats.move_speed * urgency
-	# Movement toward target takes priority over separation
-	velocity = move_toward + sep * 0.6
+
+		# Project separation perpendicular to target direction so enemies
+		# fan out around the player instead of being pushed away from them
+		var perp = Vector2(-dir_to_target.y, dir_to_target.x)
+		sep = perp * sep.dot(perp)
+
+	velocity = move_toward + sep * 0.3
 	move_and_slide()
 
 	_attack_timer -= delta
 	if _attack_timer <= 0:
 		_attack_timer = attack_cooldown
-		if target.has_method("take_damage"):
+		# Only deal damage if still close enough to actually hit
+		var hit_range_sq = stats.attack_range * stats.attack_range * 2.25  # 1.5x range
+		if dist_sq <= hit_range_sq and target.has_method("take_damage"):
 			var result = CombatManager.calculate_damage(get_stats_dict(), target.get_stats_dict())
 			target.take_damage(result["damage"], result["is_crit"])
 			_do_attack_lunge()

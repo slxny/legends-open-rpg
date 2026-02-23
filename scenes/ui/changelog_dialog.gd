@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.50.0"
+const GAME_VERSION := "v0.51.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.51.0",
+		"title": "Fix Enemies Getting Stuck & Hero Pathfinding",
+		"date": "2026-02-23",
+		"entries": [
+			"Fixed enemies getting stuck oscillating instead of attacking (separation push now fans out around player, not away)",
+			"Reduced disengage range from 4x to 2x attack range so enemies stay in combat",
+			"Enemies now check range before dealing damage (no phantom hits from across the screen)",
+			"Hero now steers around trees and buildings instead of getting stuck on them",
+		]
+	},
 	{
 		"version": "v0.50.0",
 		"title": "Troll Combat Overhaul — Slow Heavy Attacks",

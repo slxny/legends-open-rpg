@@ -9,9 +9,18 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.33.0"
+const GAME_VERSION := "v0.33.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.33.1",
+		"title": "Heal Beacon Full Area Fix",
+		"date": "2026-02-23",
+		"entries": [
+			"Heal beacon now uses distance check so the entire visible area heals",
+			"Heal SFX only plays once on entry, resets when you leave and return",
+		]
+	},
 	{
 		"version": "v0.33.0",
 		"title": "Shop UI Redesign",

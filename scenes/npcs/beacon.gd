@@ -17,6 +17,8 @@ signal activated(beacon: Area2D)
 
 var _player_inside: bool = false
 var _heal_tick_timer: float = 0.0
+var _heal_range_sq: float = 0.0  # Squared beacon radius for distance healing check
+var _played_heal_sfx: bool = false  # Track whether SFX already played this visit
 const HEAL_TICK_INTERVAL := 0.15  # Heal frequently while standing on a heal beacon
 const ZOOM_REF := 3.0
 
@@ -58,6 +60,8 @@ func _ready() -> void:
 	if shape and shape.shape is CircleShape2D:
 		shape.shape = shape.shape.duplicate()
 		shape.shape.radius = beacon_radius
+	# Pre-compute squared range for distance-based heal check (generous margin)
+	_heal_range_sq = (beacon_radius + 20.0) * (beacon_radius + 20.0)
 
 func _process(delta: float) -> void:
 	if label.visible:
@@ -66,30 +70,39 @@ func _process(delta: float) -> void:
 			var comp = ZOOM_REF / cam.zoom.x
 			label.scale = Vector2(comp, comp)
 
-	# Continuous healing while player stands on a heal beacon (no sound)
-	if _player_inside and beacon_type == "heal":
+	# Continuous healing: check distance to player every tick (more reliable than
+	# body_entered/body_exited alone, covers the full visual beacon area)
+	if beacon_type == "heal":
 		_heal_tick_timer += delta
 		if _heal_tick_timer >= HEAL_TICK_INTERVAL:
 			_heal_tick_timer -= HEAL_TICK_INTERVAL
 			var players = get_tree().get_nodes_in_group("player")
 			for player in players:
-				if is_instance_valid(player) and player.has_node("StatsComponent"):
+				if not is_instance_valid(player) or not player.has_node("StatsComponent"):
+					continue
+				var dist_sq = global_position.distance_squared_to(player.global_position)
+				if dist_sq <= _heal_range_sq:
+					# Player is on the beacon — heal and track SFX
+					if not _played_heal_sfx:
+						_played_heal_sfx = true
+						BeaconManager.activate(beacon_type, beacon_data, player)
 					var stats = player.get_node("StatsComponent")
 					if stats.current_hp < stats.get_total_max_hp() or stats.current_mana < stats.get_total_max_mana():
 						stats.current_hp = stats.get_total_max_hp()
 						stats.current_mana = stats.get_total_max_mana()
 						stats._emit_all()
+				else:
+					# Player left the beacon — reset SFX flag so it plays on re-entry
+					_played_heal_sfx = false
 
 func _on_body_entered(body: Node2D) -> void:
 	if body.is_in_group("player"):
 		_player_inside = true
-		_heal_tick_timer = 0.0
 		activated.emit(self)
-		# Route through BeaconManager for centralized dispatch
-		if not beacon_type.is_empty():
+		# Route through BeaconManager for non-heal types (heal is distance-based)
+		if not beacon_type.is_empty() and beacon_type != "heal":
 			BeaconManager.activate(beacon_type, beacon_data, body)
 
 func _on_body_exited(body: Node2D) -> void:
 	if body.is_in_group("player"):
 		_player_inside = false
-		_heal_tick_timer = 0.0

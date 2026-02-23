@@ -9,9 +9,18 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.42.2"
+const GAME_VERSION := "v0.42.3"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.42.3",
+		"title": "Game Messages Fit Portrait Screens",
+		"date": "2026-02-23",
+		"entries": [
+			"Info beacon and other game messages now word-wrap on narrow screens",
+			"Message container stretches to full viewport width with padding",
+		]
+	},
 	{
 		"version": "v0.42.2",
 		"title": "Sleeker Hero Stats Panel",

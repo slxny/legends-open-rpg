@@ -7,12 +7,11 @@ layer = 15
 script = ExtResource("1_msg")
 
 [node name="MessageContainer" type="VBoxContainer" parent="."]
-anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -300.0
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 12.0
 offset_top = 40.0
-offset_right = 300.0
+offset_right = -12.0
 offset_bottom = 200.0
 grow_horizontal = 2
 theme_override_constants/separation = 4

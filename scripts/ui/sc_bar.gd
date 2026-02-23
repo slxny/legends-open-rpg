@@ -47,37 +47,20 @@ func _draw() -> void:
 
 	var ratio = clampf(current_val / max_val, 0.0, 1.0)
 
-	# Determine segment count
-	var segs = segment_count
-	if segs <= 0:
-		segs = clampi(int(max_val / 10.0), 4, 40)
-
-	var seg_gap = 1.0
-	var total_gaps = (segs - 1) * seg_gap
-	var seg_width = (inner_size.x - total_gaps) / float(segs)
-	if seg_width < 2.0:
-		seg_width = 2.0
-		segs = int((inner_size.x + seg_gap) / (seg_width + seg_gap))
-
-	var filled_segs = int(ceil(ratio * segs))
-
 	# Get bar color based on mode and fill ratio
 	var bar_color = _get_bar_color(ratio)
-	var bar_color_dark = bar_color.darkened(0.3)
 
-	for i in range(segs):
-		var seg_x = inner_pos.x + i * (seg_width + seg_gap)
-		var seg_rect = Rect2(Vector2(seg_x, inner_pos.y), Vector2(seg_width, inner_size.y))
+	# Empty portion
+	draw_rect(Rect2(inner_pos, inner_size), Color(0.06, 0.06, 0.08))
 
-		if i < filled_segs:
-			# Filled segment — slight gradient (top lighter)
-			draw_rect(seg_rect, bar_color)
-			# Highlight on top pixel row
-			var highlight_rect = Rect2(seg_rect.position, Vector2(seg_rect.size.x, max(1, seg_rect.size.y * 0.3)))
-			draw_rect(highlight_rect, bar_color.lightened(0.25))
-		else:
-			# Empty segment — very dark
-			draw_rect(seg_rect, Color(0.06, 0.06, 0.08))
+	# Filled portion — continuous bar
+	var filled_width = inner_size.x * ratio
+	if filled_width > 0:
+		var filled_rect = Rect2(inner_pos, Vector2(filled_width, inner_size.y))
+		draw_rect(filled_rect, bar_color)
+		# Highlight on top portion for depth
+		var highlight_rect = Rect2(inner_pos, Vector2(filled_width, max(1, inner_size.y * 0.3)))
+		draw_rect(highlight_rect, bar_color.lightened(0.25))
 
 	# Label overlay
 	if show_label and not label_text.is_empty():

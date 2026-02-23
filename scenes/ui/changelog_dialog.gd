@@ -9,9 +9,24 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.36.2"
+const GAME_VERSION := "v0.37.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.37.0",
+		"title": "Inventory UI Redesign",
+		"date": "2026-02-23",
+		"entries": [
+			"Redesigned inventory as a compact right-side panel that no longer blocks the map",
+			"Added tabbed Equipment/Bag layout so items and gear aren't crammed together",
+			"Item stats now shown inline when hovering or tapping — no more off-screen tooltips",
+			"Compact hero stats bar at the bottom shows HP, MP, ATK, armor, and attributes at a glance",
+			"Equipment tab shows slot labels with unequip buttons for easy gear management",
+			"Bag tab uses a clean grid with item names color-coded by rarity",
+			"Panel is semi-transparent so the game world stays visible behind it",
+			"Full-screen layout on mobile with larger tap targets and text",
+		]
+	},
 	{
 		"version": "v0.36.2",
 		"title": "Beacon Immunity Timing Fix",

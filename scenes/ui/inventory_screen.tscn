@@ -7,28 +7,26 @@ layer = 20
 script = ExtResource("1_inv")
 
 [node name="Panel" type="PanelContainer" parent="."]
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -320.0
-offset_top = -240.0
-offset_right = 320.0
-offset_bottom = 240.0
-grow_horizontal = 2
+anchor_left = 1.0
+anchor_top = 0.1
+anchor_right = 1.0
+anchor_bottom = 0.88
+offset_left = -280.0
+offset_right = -8.0
+grow_horizontal = 0
 grow_vertical = 2
+self_modulate = Color(1, 1, 1, 0.92)
 
 [node name="MarginContainer" type="MarginContainer" parent="Panel"]
 layout_mode = 2
-theme_override_constants/margin_left = 12
-theme_override_constants/margin_top = 12
-theme_override_constants/margin_right = 12
-theme_override_constants/margin_bottom = 12
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 8
 
 [node name="VBox" type="VBoxContainer" parent="Panel/MarginContainer"]
 layout_mode = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 4
 
 [node name="TopBar" type="HBoxContainer" parent="Panel/MarginContainer/VBox"]
 layout_mode = 2
@@ -36,7 +34,7 @@ layout_mode = 2
 [node name="Title" type="Label" parent="Panel/MarginContainer/VBox/TopBar"]
 layout_mode = 2
 text = "Inventory"
-theme_override_font_sizes/font_size = 18
+theme_override_font_sizes/font_size = 15
 
 [node name="Spacer" type="Control" parent="Panel/MarginContainer/VBox/TopBar"]
 layout_mode = 2
@@ -44,80 +42,67 @@ size_flags_horizontal = 3
 
 [node name="CloseHint" type="Label" parent="Panel/MarginContainer/VBox/TopBar"]
 layout_mode = 2
-text = "Close [Q] or [I]"
-theme_override_font_sizes/font_size = 13
-theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
+text = "[I] Close"
+theme_override_font_sizes/font_size = 11
+theme_override_colors/font_color = Color(0.5, 0.5, 0.5, 1)
 
-[node name="Scroll" type="ScrollContainer" parent="Panel/MarginContainer/VBox"]
+[node name="TabBar" type="HBoxContainer" parent="Panel/MarginContainer/VBox"]
 layout_mode = 2
-size_flags_vertical = 3
+theme_override_constants/separation = 4
 
-[node name="HBox" type="HBoxContainer" parent="Panel/MarginContainer/VBox/Scroll"]
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
-theme_override_constants/separation = 16
-
-[node name="EquipmentPanel" type="VBoxContainer" parent="Panel/MarginContainer/VBox/Scroll/HBox"]
+[node name="EquipTab" type="Button" parent="Panel/MarginContainer/VBox/TabBar"]
 layout_mode = 2
 size_flags_horizontal = 3
-
-[node name="Title" type="Label" parent="Panel/MarginContainer/VBox/Scroll/HBox/EquipmentPanel"]
-layout_mode = 2
+custom_minimum_size = Vector2(0, 28)
 text = "Equipment"
-theme_override_font_sizes/font_size = 16
+theme_override_font_sizes/font_size = 13
 
-[node name="EquipGrid" type="GridContainer" parent="Panel/MarginContainer/VBox/Scroll/HBox/EquipmentPanel"]
-layout_mode = 2
-columns = 2
-
-[node name="BagPanel" type="VBoxContainer" parent="Panel/MarginContainer/VBox/Scroll/HBox"]
+[node name="BagTab" type="Button" parent="Panel/MarginContainer/VBox/TabBar"]
 layout_mode = 2
 size_flags_horizontal = 3
-
-[node name="Title" type="Label" parent="Panel/MarginContainer/VBox/Scroll/HBox/BagPanel"]
-layout_mode = 2
+custom_minimum_size = Vector2(0, 28)
 text = "Bag"
-theme_override_font_sizes/font_size = 16
-
-[node name="BagGrid" type="GridContainer" parent="Panel/MarginContainer/VBox/Scroll/HBox/BagPanel"]
-layout_mode = 2
-columns = 4
-
-[node name="StatsPanel" type="VBoxContainer" parent="Panel/MarginContainer/VBox/Scroll/HBox"]
-layout_mode = 2
-custom_minimum_size = Vector2(130, 0)
-
-[node name="Title" type="Label" parent="Panel/MarginContainer/VBox/Scroll/HBox/StatsPanel"]
-layout_mode = 2
-text = "Stats"
-theme_override_font_sizes/font_size = 16
-
-[node name="StatsLabel" type="Label" parent="Panel/MarginContainer/VBox/Scroll/HBox/StatsPanel"]
-layout_mode = 2
-text = "Level: 1"
 theme_override_font_sizes/font_size = 13
 
-[node name="ItemTooltip" type="PanelContainer" parent="."]
-anchors_preset = 3
-anchor_left = 1.0
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -250.0
-offset_top = -150.0
-grow_horizontal = 0
-grow_vertical = 0
-visible = false
-
-[node name="MarginContainer" type="MarginContainer" parent="ItemTooltip"]
+[node name="Sep1" type="HSeparator" parent="Panel/MarginContainer/VBox"]
 layout_mode = 2
-theme_override_constants/margin_left = 8
-theme_override_constants/margin_top = 8
-theme_override_constants/margin_right = 8
-theme_override_constants/margin_bottom = 8
 
-[node name="TooltipLabel" type="Label" parent="ItemTooltip/MarginContainer"]
+[node name="ContentScroll" type="ScrollContainer" parent="Panel/MarginContainer/VBox"]
 layout_mode = 2
-text = "Item tooltip"
-theme_override_font_sizes/font_size = 13
+size_flags_vertical = 3
+
+[node name="ContentVBox" type="VBoxContainer" parent="Panel/MarginContainer/VBox/ContentScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 3
+
+[node name="Sep2" type="HSeparator" parent="Panel/MarginContainer/VBox"]
+layout_mode = 2
+
+[node name="DetailPanel" type="PanelContainer" parent="Panel/MarginContainer/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 60)
+
+[node name="DetailMargin" type="MarginContainer" parent="Panel/MarginContainer/VBox/DetailPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 4
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 4
+
+[node name="DetailLabel" type="Label" parent="Panel/MarginContainer/VBox/DetailPanel/DetailMargin"]
+layout_mode = 2
+text = "Select an item..."
+theme_override_font_sizes/font_size = 11
+theme_override_colors/font_color = Color(0.8, 0.78, 0.72, 1)
+autowrap_mode = 3
+
+[node name="Sep3" type="HSeparator" parent="Panel/MarginContainer/VBox"]
+layout_mode = 2
+
+[node name="StatsLabel" type="Label" parent="Panel/MarginContainer/VBox"]
+layout_mode = 2
+text = "HP: - / -  ATK: -"
+theme_override_font_sizes/font_size = 11
+theme_override_colors/font_color = Color(0.7, 0.8, 0.7, 1)

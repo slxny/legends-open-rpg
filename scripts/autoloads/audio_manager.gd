@@ -940,14 +940,14 @@ func _gen_forge_armor() -> AudioStreamWAV:
 
 func _gen_woodwork_bow() -> AudioStreamWAV:
 	# Taut bowstring snap with woody resonance — string being drawn and released
-	# Sharp twang followed by vibrating string hum, satisfying elastic snap
+	# Sharp twang followed by vibrating string hum, uplifting ascending snap
 	var samples = _make_samples(0.45)
-	# Bowstring twang — sharp pitched snap that vibrates
-	var twang_freq = 330.0  # E4
+	# Bowstring twang — sharp pitched snap that rises with energy
+	var twang_freq = 300.0  # D4 start, rises to feel positive
 	for i in range(samples.size()):
 		var t = float(i) / SAMPLE_RATE
-		# Vibrating string with natural decay and slight pitch drop
-		var freq = twang_freq * (1.0 - t * 0.08)
+		# Vibrating string with ascending pitch — feels powerful and rewarding
+		var freq = twang_freq * (1.0 + t * 0.15)
 		samples[i] += sin(t * freq * TAU) * 0.35
 		# Harmonics of the string
 		samples[i] += sin(t * freq * 2.0 * TAU) * 0.15
@@ -962,9 +962,9 @@ func _gen_woodwork_bow() -> AudioStreamWAV:
 	_add_pitched_noise(snap, 4000.0, 2500.0, 0.3)
 	_apply_envelope(snap, 0.001, 0.003, 0.016)
 	_mix_into(samples, snap)
-	# Ascending confirmation note
-	_add_sine_segment(samples, 494.0, 0.15, 0.25, 0.15)  # B4
-	_add_sine_segment(samples, 988.0, 0.05, 0.25, 0.12)
+	# Ascending confirmation note — bright and rewarding
+	_add_sine_segment(samples, 523.0, 0.15, 0.25, 0.15)  # C5
+	_add_sine_segment(samples, 1047.0, 0.05, 0.25, 0.12)
 	_apply_envelope(samples, 0.002, 0.10, 0.35)
 	_soft_clip(samples, 1.4)
 	return _to_stream(samples)

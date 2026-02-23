@@ -9,9 +9,17 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.46.0"
+const GAME_VERSION := "v0.46.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.46.1",
+		"title": "Fix Reinforced Bow Build SFX",
+		"date": "2026-02-23",
+		"entries": [
+			"Reinforced bow craft sound now ascends in pitch instead of descending, matching other positive upgrade sounds",
+		]
+	},
 	{
 		"version": "v0.46.0",
 		"title": "More Enemies in the Wilds & Performance Optimization",

@@ -648,13 +648,16 @@ func _input(event: InputEvent) -> void:
 						_longpress_touch_index = event.index
 						_longpress_start_pos = event.position
 						_longpress_timer = 0.0
+						_set_longpress_outline(true)
 			else:
 				if event.index == _longpress_touch_index:
 					_longpress_touch_index = -1
+					_set_longpress_outline(false)
 		elif event is InputEventScreenDrag:
 			if event.index == _longpress_touch_index:
 				if event.position.distance_to(_longpress_start_pos) > LONGPRESS_MAX_DRIFT:
 					_longpress_touch_index = -1
+					_set_longpress_outline(false)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if _is_dead:
@@ -2562,9 +2565,15 @@ func _spawn_move_indicator(pos: Vector2) -> void:
 	tween.tween_callback(_recycle_vfx.bind(indicator))
 
 func _toggle_hero_stats_panel() -> void:
+	_set_longpress_outline(false)
 	var panels = get_tree().get_nodes_in_group("hero_stats_panel")
 	if panels.size() > 0:
 		panels[0].toggle()
+
+func _set_longpress_outline(on: bool) -> void:
+	var mat = sprite.material as ShaderMaterial
+	if mat:
+		mat.set_shader_parameter("enabled", on)
 
 func _get_player_screen_pos() -> Vector2:
 	var canvas_transform = get_viewport().get_canvas_transform()

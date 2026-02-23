@@ -9,9 +9,18 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.53.0"
+const GAME_VERSION := "v0.54.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.54.0",
+		"title": "Hero Long-Press Outline Feedback",
+		"date": "2026-02-23",
+		"entries": [
+			"Touching and holding on the hero (mobile) now highlights the character with a bright green outline while holding",
+			"Outline disappears when finger lifts, drifts away, or the stats panel opens",
+		]
+	},
 	{
 		"version": "v0.53.0",
 		"title": "Proximity Beacon Labels & Longer Tooltips",

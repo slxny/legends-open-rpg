@@ -1,9 +1,16 @@
-[gd_scene load_steps=8 format=3 uid="uid://bplayerscn"]
+[gd_scene load_steps=10 format=3 uid="uid://bplayerscn"]
 
 [ext_resource type="Script" path="res://scenes/player/player.gd" id="1_player"]
 [ext_resource type="Script" path="res://scripts/components/stats_component.gd" id="2_stats"]
 [ext_resource type="Script" path="res://scripts/components/inventory_component.gd" id="3_inv"]
 [ext_resource type="Script" path="res://scripts/components/ability_manager.gd" id="4_ability"]
+[ext_resource type="Shader" path="res://scenes/player/hero_outline.gdshader" id="5_outline"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_outline"]
+shader = ExtResource("5_outline")
+shader_parameter/outline_color = Color(0.2, 1, 0.3, 1)
+shader_parameter/outline_width = 2.0
+shader_parameter/enabled = false
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_player"]
 radius = 10.0
@@ -23,6 +30,7 @@ script = ExtResource("1_player")
 [node name="Sprite" type="Sprite2D" parent="."]
 texture_filter = 0
 offset = Vector2(0, -20)
+material = SubResource("ShaderMaterial_outline")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 shape = SubResource("CircleShape2D_player")

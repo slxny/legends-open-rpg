@@ -71,18 +71,25 @@ func _apply_mobile_layout() -> void:
 	var vp_size = get_viewport().get_visible_rect().size
 	var is_landscape = vp_size.x > vp_size.y
 
-	# ── Top bar: scale font sizes for readability & keep off screen edges ──
-	var safe_right = DisplayServer.get_display_safe_area().position.x
-	var right_pad = max(16, safe_right)
+	# ── Top bar: scale font sizes for readability & keep off safe area ──
+	var safe_area = DisplayServer.get_display_safe_area()
+	var screen_size = DisplayServer.screen_get_size()
+	var safe_left = max(16, safe_area.position.x)
+	var safe_top = max(4, safe_area.position.y)
+	var safe_right = max(16, screen_size.x - safe_area.end.x)
 	if is_landscape:
-		top_bar.offset_bottom = 18
-		top_bar.offset_right = -right_pad
+		top_bar.offset_left = safe_left
+		top_bar.offset_top = safe_top
+		top_bar.offset_bottom = safe_top + 18
+		top_bar.offset_right = -safe_right
 		gold_label.add_theme_font_size_override("font_size", 10)
 		wood_label.add_theme_font_size_override("font_size", 10)
 		kills_label.add_theme_font_size_override("font_size", 9)
 	else:
-		top_bar.offset_bottom = 72
-		top_bar.offset_right = -right_pad
+		top_bar.offset_left = safe_left
+		top_bar.offset_top = safe_top
+		top_bar.offset_bottom = safe_top + 72
+		top_bar.offset_right = -safe_right
 		gold_label.add_theme_font_size_override("font_size", 44)
 		wood_label.add_theme_font_size_override("font_size", 44)
 		kills_label.add_theme_font_size_override("font_size", 38)

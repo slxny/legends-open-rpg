@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.60.0"
+const GAME_VERSION := "v0.60.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.60.1",
+		"title": "Fix top bar cut off by rounded corners on mobile",
+		"date": "2026-02-23",
+		"entries": [
+			"Top bar now respects display safe area on all sides (left, top, right)",
+			"Menu button and Kills label no longer hidden behind rounded screen corners",
+			"Works in both portrait and landscape orientations",
+		]
+	},
 	{
 		"version": "v0.60.0",
 		"title": "Kill Counter & Milestone Rewards",

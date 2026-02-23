@@ -771,12 +771,9 @@ func _create_hint_panel() -> void:
 	_hint_panel = PanelContainer.new()
 	_hint_panel.visible = false
 	_hint_panel.z_index = 50
-	# On mobile, allow tap-to-dismiss; on desktop, ignore mouse so it doesn't block
+	_hint_panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	if _is_mobile:
-		_hint_panel.mouse_filter = Control.MOUSE_FILTER_STOP
 		_hint_panel.gui_input.connect(_on_hint_tapped)
-	else:
-		_hint_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_hint_panel.anchors_preset = Control.PRESET_CENTER_BOTTOM
 	_hint_panel.anchor_left = 0.5
 	_hint_panel.anchor_right = 0.5
@@ -796,21 +793,47 @@ func _create_hint_panel() -> void:
 	style.content_margin_bottom = 10
 	_hint_panel.add_theme_stylebox_override("panel", style)
 
+	var hbox = HBoxContainer.new()
+	hbox.alignment = BoxContainer.ALIGNMENT_BEGIN
+	hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
 	_hint_label = RichTextLabel.new()
 	_hint_label.bbcode_enabled = true
 	_hint_label.fit_content = true
 	_hint_label.scroll_active = false
 	_hint_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_hint_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_hint_label.add_theme_color_override("default_color", Color(0.85, 0.85, 0.8))
 	if _is_mobile:
-		_hint_label.custom_minimum_size = Vector2(700, 0)
+		_hint_label.custom_minimum_size = Vector2(650, 0)
 		_hint_label.add_theme_font_size_override("normal_font_size", 38)
 		_hint_label.add_theme_font_size_override("bold_font_size", 40)
 	else:
-		_hint_label.custom_minimum_size = Vector2(500, 0)
+		_hint_label.custom_minimum_size = Vector2(460, 0)
 		_hint_label.add_theme_font_size_override("normal_font_size", 14)
 		_hint_label.add_theme_font_size_override("bold_font_size", 15)
-	_hint_panel.add_child(_hint_label)
+	hbox.add_child(_hint_label)
+
+	# Close (X) button — always available on both mobile and desktop
+	var close_btn = Button.new()
+	close_btn.text = "X"
+	close_btn.flat = true
+	close_btn.mouse_filter = Control.MOUSE_FILTER_STOP
+	close_btn.focus_mode = Control.FOCUS_NONE
+	close_btn.add_theme_color_override("font_color", Color(0.6, 0.6, 0.55))
+	close_btn.add_theme_color_override("font_hover_color", Color(1.0, 0.85, 0.3))
+	close_btn.add_theme_color_override("font_pressed_color", Color(1.0, 1.0, 1.0))
+	if _is_mobile:
+		close_btn.custom_minimum_size = Vector2(60, 60)
+		close_btn.add_theme_font_size_override("font_size", 44)
+	else:
+		close_btn.custom_minimum_size = Vector2(28, 28)
+		close_btn.add_theme_font_size_override("font_size", 16)
+	close_btn.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	close_btn.pressed.connect(_dismiss_hint)
+	hbox.add_child(close_btn)
+
+	_hint_panel.add_child(hbox)
 
 	_hint_timer = Timer.new()
 	_hint_timer.one_shot = true
@@ -818,154 +841,170 @@ func _create_hint_panel() -> void:
 	add_child(_hint_timer)
 	add_child(_hint_panel)
 
+func _dismiss_hint() -> void:
+	if _hint_tween and _hint_tween.is_valid():
+		_hint_tween.kill()
+	_hint_panel.visible = false
+	_hint_tween = null
+	if not _hint_queue.is_empty():
+		_hint_timer.wait_time = min(_hint_queue[0]["delay"], 2.0)
+		_hint_timer.start()
+
 func _start_tutorial_hints(hero_data: Dictionary) -> void:
 	var ab1_name = "Ability 1"
 	var ab2_name = "Ability 2"
+	var ab1_desc = ""
+	var ab2_desc = ""
 	if hero_data.has("abilities"):
 		var ab = hero_data["abilities"]
 		if ab.has("ability_1"):
 			ab1_name = ab["ability_1"]["name"]
+			ab1_desc = ab["ability_1"].get("description", "")
 		if ab.has("ability_2"):
 			ab2_name = ab["ability_2"]["name"]
+			ab2_desc = ab["ability_2"].get("description", "")
 
 	var is_ranged = _player and _player.hero_class == "shadow_ranger"
+	var hero_name = "Blade Knight" if not is_ranged else "Shadow Ranger"
+	var ATK = "[color=#ff9966][b]ATK button[/b][/color]" if _is_mobile else "[color=#ff9966][b]SPACE[/b][/color]"
+	var DIAG = "[color=#66eeff][b]Move diagonally + tap ATK[/b][/color]" if _is_mobile else "[color=#66eeff][b]Diagonal keys + SPACE[/b][/color]"
 
+	_hint_queue = []
+
+	# --- 1. Abilities (hero-specific, platform-aware) ---
 	if _is_mobile:
-		_hint_queue = [
-			{
-				"delay": 4.0,
-				"text": "[color=#f0d866]TIP:[/color]  Tap [color=#66ccff][b]Q[/b][/color] for [color=#f0d866]%s[/color]  and  [color=#66ccff][b]E[/b][/color] for [color=#f0d866]%s[/color]" % [ab1_name, ab2_name],
-			},
-			{
-				"delay": 15.0,
-				"text": "[color=#f0d866]TIP:[/color]  [color=#aaddff][b]Hold your hero for 2s[/b][/color] to view detailed stats — HP, Mana, STR, and more",
-			},
-		]
+		_hint_queue.append({
+			"delay": 4.0,
+			"text": "[color=#f0d866]TIP:[/color]  Tap the [color=#66ccff][b]left ability[/b][/color] for [color=#f0d866]%s[/color] — %s" % [ab1_name, ab1_desc],
+		})
+		_hint_queue.append({
+			"delay": 15.0,
+			"text": "[color=#f0d866]TIP:[/color]  Tap the [color=#66ccff][b]right ability[/b][/color] for [color=#f0d866]%s[/color] — %s" % [ab2_name, ab2_desc],
+		})
 	else:
-		_hint_queue = [
-			{
-				"delay": 4.0,
-				"text": "[color=#f0d866]TIP:[/color]  Press [color=#66ccff][b]Q[/b][/color] for [color=#f0d866]%s[/color]  and  [color=#66ccff][b]E[/b][/color] for [color=#f0d866]%s[/color]" % [ab1_name, ab2_name],
-			},
-		]
+		_hint_queue.append({
+			"delay": 4.0,
+			"text": "[color=#f0d866]TIP:[/color]  Press [color=#66ccff][b]Q[/b][/color] for [color=#f0d866]%s[/color] — %s" % [ab1_name, ab1_desc],
+		})
+		_hint_queue.append({
+			"delay": 15.0,
+			"text": "[color=#f0d866]TIP:[/color]  Press [color=#66ccff][b]E[/b][/color] for [color=#f0d866]%s[/color] — %s" % [ab2_name, ab2_desc],
+		})
 
+	# --- 2. Special attacks (hero-specific, platform-aware) ---
 	if is_ranged:
-		if _is_mobile:
-			_hint_queue.append_array([
-				{
-					"delay": 18.0,
-					"text": "[color=#f0d866]TIP:[/color]  [color=#ff9966][b]Double-tap ATK[/b][/color] while moving for a [color=#ffcc44]Piercing Shot[/color] — arrow passes through all enemies!",
-				},
-				{
-					"delay": 18.0,
-					"text": "[color=#f0d866]TIP:[/color]  [color=#6699ff][b]Triple-tap ATK[/b][/color] for [color=#6699ff]Arrow Rain[/color] — arrows rain down on a target area!",
-				},
-				{
-					"delay": 18.0,
-					"text": "[color=#f0d866]TIP:[/color]  [color=#ffdd55][b]Hold ATK 1.5s[/b][/color] then release for a [color=#ffcc44]Sniper Shot[/color] — long-range precision hit!",
-				},
-				{
-					"delay": 18.0,
-					"text": "[color=#f0d866]TIP:[/color]  [color=#66eebb][b]Move diagonally + tap ATK[/b][/color] for a [color=#66eebb]Shadow Step[/color] — dodge back and fire a spread!",
-				},
-			])
-		else:
-			_hint_queue.append_array([
-				{
-					"delay": 18.0,
-					"text": "[color=#f0d866]TIP:[/color]  [color=#ff9966][b]Double-tap SPACE[/b][/color] while moving for a [color=#ffcc44]Piercing Shot[/color] — arrow passes through all enemies!",
-				},
-				{
-					"delay": 18.0,
-					"text": "[color=#f0d866]TIP:[/color]  [color=#6699ff][b]Triple-tap SPACE[/b][/color] for [color=#6699ff]Arrow Rain[/color] — arrows rain down on a target area!",
-				},
-				{
-					"delay": 18.0,
-					"text": "[color=#f0d866]TIP:[/color]  [color=#ffdd55][b]Hold SPACE 1.5s[/b][/color] then release for a [color=#ffcc44]Sniper Shot[/color] — long-range precision hit!",
-				},
-				{
-					"delay": 18.0,
-					"text": "[color=#f0d866]TIP:[/color]  [color=#66eebb][b]Diagonal keys + SPACE[/b][/color] for a [color=#66eebb]Shadow Step[/color] — dodge back and fire a spread!",
-				},
-			])
+		_hint_queue.append_array([
+			{
+				"delay": 18.0,
+				"text": "[color=#f0d866]TIP:[/color]  [color=#ff9966][b]Double-tap %s[/b][/color] while moving → [color=#ffcc44]Piercing Shot[/color] — arrow passes through all enemies!" % ("ATK" if _is_mobile else "SPACE"),
+			},
+			{
+				"delay": 18.0,
+				"text": "[color=#f0d866]TIP:[/color]  [color=#6699ff][b]Triple-tap %s[/b][/color] → [color=#6699ff]Arrow Rain[/color] — 6 arrows rain down on a target area!" % ("ATK" if _is_mobile else "SPACE"),
+			},
+			{
+				"delay": 18.0,
+				"text": "[color=#f0d866]TIP:[/color]  [color=#ffdd55][b]Hold %s for 1.5s[/b][/color] then release → [color=#ffcc44]Sniper Shot[/color] — massive long-range precision hit!" % ("ATK" if _is_mobile else "SPACE"),
+			},
+			{
+				"delay": 18.0,
+				"text": "[color=#f0d866]TIP:[/color]  %s → [color=#66eebb]Shadow Step[/color] — dodge backward and fire a 3-arrow spread!" % DIAG,
+			},
+		])
 	else:
-		if _is_mobile:
-			_hint_queue.append_array([
-				{
-					"delay": 18.0,
-					"text": "[color=#f0d866]TIP:[/color]  [color=#ff9966][b]Double-tap ATK[/b][/color] while moving for a [color=#ffcc44]Power Strike[/color] — heavy single-target hit!",
-				},
-				{
-					"delay": 18.0,
-					"text": "[color=#f0d866]TIP:[/color]  [color=#cc88ff][b]Triple-tap ATK[/b][/color] for a [color=#cc88ff]Whirlwind[/color] — spin attack hitting all nearby enemies!",
-				},
-				{
-					"delay": 18.0,
-					"text": "[color=#f0d866]TIP:[/color]  [color=#ffdd55][b]Hold ATK 1.5s[/b][/color] then release for a [color=#ffcc44]Charged Slash[/color] — dash through enemies!",
-				},
-				{
-					"delay": 18.0,
-					"text": "[color=#f0d866]TIP:[/color]  [color=#66eeff][b]Move diagonally + tap ATK[/b][/color] for a [color=#66eeff]Dash Strike[/color] — quick dash through foes!",
-				},
-			])
-		else:
-			_hint_queue.append_array([
-				{
-					"delay": 18.0,
-					"text": "[color=#f0d866]TIP:[/color]  [color=#ff9966][b]Double-tap SPACE[/b][/color] while moving for a [color=#ffcc44]Power Strike[/color] — heavy single-target hit!",
-				},
-				{
-					"delay": 18.0,
-					"text": "[color=#f0d866]TIP:[/color]  [color=#cc88ff][b]Triple-tap SPACE[/b][/color] for a [color=#cc88ff]Whirlwind[/color] — spin attack hitting all nearby enemies!",
-				},
-				{
-					"delay": 18.0,
-					"text": "[color=#f0d866]TIP:[/color]  [color=#ffdd55][b]Hold SPACE 1.5s[/b][/color] then release for a [color=#ffcc44]Charged Slash[/color] — dash through enemies!",
-				},
-				{
-					"delay": 18.0,
-					"text": "[color=#f0d866]TIP:[/color]  [color=#66eeff][b]Diagonal keys + SPACE[/b][/color] for a [color=#66eeff]Dash Strike[/color] — quick dash through foes!",
-				},
-			])
+		_hint_queue.append_array([
+			{
+				"delay": 18.0,
+				"text": "[color=#f0d866]TIP:[/color]  [color=#ff9966][b]Double-tap %s[/b][/color] while moving → [color=#ffcc44]Power Strike[/color] — 1.4x heavy single-target hit!" % ("ATK" if _is_mobile else "SPACE"),
+			},
+			{
+				"delay": 18.0,
+				"text": "[color=#f0d866]TIP:[/color]  [color=#cc88ff][b]Triple-tap %s[/b][/color] → [color=#cc88ff]Whirlwind[/color] — 720° spin hitting every enemy around you!" % ("ATK" if _is_mobile else "SPACE"),
+			},
+			{
+				"delay": 18.0,
+				"text": "[color=#f0d866]TIP:[/color]  [color=#ffdd55][b]Hold %s for 1.5s[/b][/color] then release → [color=#ffcc44]Charged Slash[/color] — dash through enemies for 1.6x damage!" % ("ATK" if _is_mobile else "SPACE"),
+			},
+			{
+				"delay": 18.0,
+				"text": "[color=#f0d866]TIP:[/color]  %s → [color=#66eeff]Dash Strike[/color] — quick spin-dash through foes!" % DIAG,
+			},
+		])
 
+	# --- 3. Controls (platform-specific) ---
 	if _is_mobile:
 		_hint_queue.append({
 			"delay": 18.0,
 			"text": "[color=#f0d866]TIP:[/color]  [color=#aaaaaa][b]Tap[/b][/color] enemies to auto-attack  |  [color=#aaaaaa][b]Pinch[/b][/color] to zoom in/out",
 		})
 		_hint_queue.append({
-			"delay": 25.0,
-			"text": "[color=#f0d866]TIP:[/color]  [color=#aaddff][b]Hold Q or E for a moment[/b][/color] to see ability details — mana cost, cooldown, and damage",
+			"delay": 15.0,
+			"text": "[color=#f0d866]TIP:[/color]  [color=#aaddff][b]Touch and hold your hero for 2s[/b][/color] to view detailed stats — HP, Mana, STR, buffs, and more",
 		})
 		_hint_queue.append({
-			"delay": 30.0,
-			"text": "[color=#f0d866]TIP:[/color]  Tap [color=#88ddff][b]Items[/b][/color] to open your inventory  |  Tap [color=#66ff88][b]potion slots[/b][/color] (1, 2, 3) to use consumables",
+			"delay": 20.0,
+			"text": "[color=#f0d866]TIP:[/color]  [color=#aaddff][b]Hold an ability button[/b][/color] to see its details — mana cost, cooldown, and damage",
 		})
 		_hint_queue.append({
-			"delay": 45.0,
-			"text": "[color=#f0d866]TIP:[/color]  Walk onto [color=#aaddff][b]colored beacons[/b][/color] for Shops, Armory, and Tavern  |  Attack [color=#88cc66][b]trees[/b][/color] to chop wood",
-		})
-		# Repeat long-press hint at a longer interval
-		_hint_queue.append({
-			"delay": 120.0,
-			"text": "[color=#f0d866]REMINDER:[/color]  [color=#aaddff][b]Hold your hero for 2s[/b][/color] to check your stats anytime",
+			"delay": 20.0,
+			"text": "[color=#f0d866]TIP:[/color]  Tap [color=#88ddff][b]Items[/b][/color] to open your inventory  |  Tap [color=#66ff88][b]potion slots[/b][/color] to use consumables in battle",
 		})
 	else:
 		_hint_queue.append({
 			"delay": 18.0,
-			"text": "[color=#f0d866]TIP:[/color]  [color=#aaaaaa][b]Left-click[/b][/color] enemies to auto-attack  |  [color=#aaaaaa][b]Right-click[/b][/color] your hero for stats",
+			"text": "[color=#f0d866]TIP:[/color]  [color=#aaaaaa][b]Left-click[/b][/color] enemies to auto-attack  |  [color=#aaaaaa][b]Right-click[/b][/color] your hero for stats panel",
 		})
 		_hint_queue.append({
-			"delay": 30.0,
-			"text": "[color=#f0d866]TIP:[/color]  [color=#88ddff][b]I[/b][/color] for inventory  |  [color=#66ff88][b]1, 2, 3[/b][/color] to use potions  |  [color=#aaaaaa]Hover Q/E for ability details[/color]",
+			"delay": 20.0,
+			"text": "[color=#f0d866]TIP:[/color]  [color=#88ddff][b]I[/b][/color] for inventory  |  [color=#66ff88][b]1, 2, 3[/b][/color] to use potions  |  Hover [color=#66ccff][b]Q[/b][/color]/[color=#66ccff][b]E[/b][/color] for ability details",
 		})
-		_hint_queue.append({
-			"delay": 45.0,
-			"text": "[color=#f0d866]TIP:[/color]  Walk onto [color=#aaddff][b]colored beacons[/b][/color] for Shops, Armory, and Tavern  |  Attack [color=#88cc66][b]trees[/b][/color] to chop wood",
-		})
+
+	# --- 4. Healing & beacons ---
+	_hint_queue.append({
+		"delay": 25.0,
+		"text": "[color=#f0d866]TIP:[/color]  Step onto a [color=#66ff88][b]green beacon[/b][/color] to fully restore HP and Mana — you're also [color=#66ff88]immune to all damage[/color] while standing on it",
+	})
+
+	# --- 5. Shops & town ---
+	_hint_queue.append({
+		"delay": 25.0,
+		"text": "[color=#f0d866]TIP:[/color]  Walk onto [color=#ffdd55][b]yellow beacons[/b][/color] near buildings for Shops, Armory, and Tavern  |  Buy gear, potions, and upgrade your equipment",
+	})
+
+	# --- 6. Trees & wood ---
+	_hint_queue.append({
+		"delay": 25.0,
+		"text": "[color=#f0d866]TIP:[/color]  Attack [color=#88cc66][b]trees[/b][/color] to chop wood — small trees drop ~15, medium ~30, large ~60  |  Wood is used for building and upgrades",
+	})
+
+	# --- 7. Item drops & equipment ---
+	_hint_queue.append({
+		"delay": 25.0,
+		"text": "[color=#f0d866]TIP:[/color]  Enemies drop [color=#ddaaff][b]equipment[/b][/color] and [color=#ffdd55][b]gold[/b][/color] when killed  |  Walk over drops to pick them up  |  Equip gear from your inventory for stat boosts",
+	})
+
+	# --- 8. Leveling & sprite upgrades ---
+	_hint_queue.append({
+		"delay": 25.0,
+		"text": "[color=#f0d866]TIP:[/color]  Your %s [color=#ffcc44][b]upgrades visually[/b][/color] every 5 levels — stronger armor and new details appear as you grow!" % hero_name,
+	})
+
+	# --- 9. Minibosses ---
+	_hint_queue.append({
+		"delay": 30.0,
+		"text": "[color=#f0d866]TIP:[/color]  Watch for [color=#ff6666][b]red beacons[/b][/color] — they spawn [color=#ff6666]minibosses[/color] with high HP and big rewards  |  Come prepared with potions and full mana!",
+	})
+
+	# --- 10. Pause / help ---
+	if _is_mobile:
 		_hint_queue.append({
 			"delay": 60.0,
-			"text": "[color=#f0d866]TIP:[/color]  Press [color=#aaaaaa][b]Esc[/b][/color] to pause  |  [color=#aaaaaa][b]Help[/b][/color] in the pause menu has all controls and tips",
+			"text": "[color=#f0d866]REMINDER:[/color]  [color=#aaddff][b]Touch and hold your hero[/b][/color] to check stats anytime — see buffs, debuffs, armor, dodge, and more",
+		})
+	else:
+		_hint_queue.append({
+			"delay": 30.0,
+			"text": "[color=#f0d866]TIP:[/color]  Press [color=#aaaaaa][b]Esc[/b][/color] to pause  |  The [color=#aaaaaa][b]Help[/b][/color] menu has all controls and tips",
 		})
 
 	# Start the first hint after its delay

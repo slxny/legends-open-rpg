@@ -9,9 +9,23 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.55.0"
+const GAME_VERSION := "v0.56.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.56.0",
+		"title": "Overhauled Tutorial Tooltips",
+		"date": "2026-02-23",
+		"entries": [
+			"Tooltips are now hero-specific — Blade Knight and Shadow Ranger get their own ability and special attack tips",
+			"Mobile tooltips no longer reference keyboard keys (Q/E/SPACE) — uses 'ATK button' and 'left/right ability' instead",
+			"Desktop tooltips use proper key names (Q, E, SPACE, I, Esc)",
+			"Added close (X) button to tooltip panel — works on both mobile and desktop",
+			"New tips: heal beacons and immunity, shops and town upgrades, tree chopping and wood yields, item drops and equipment, visual sprite upgrades every 5 levels, miniboss red beacons",
+			"Ability tips now include their description (what the ability actually does)",
+			"Special attack tips include damage multipliers and projectile counts",
+		]
+	},
 	{
 		"version": "v0.55.0",
 		"title": "Hero Sprite Tier Upgrades",

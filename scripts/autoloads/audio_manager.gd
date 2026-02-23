@@ -213,28 +213,34 @@ func _create_players() -> void:
 ## (see _play_or_gen_music) — each is 60s+ of PCM at 22050Hz, far too
 ## heavy for the main thread even spread across frames.
 func _pregenerate_async() -> void:
-	var sfx_names = ["sword_swing", "hit_impact", "crit_hit", "enemy_death",
-		"gold_pickup", "item_pickup", "level_up", "dash_swoosh",
-		"ability_whoosh", "power_strike", "whirlwind", "player_hurt",
-		"charge_loop", "charge_ready", "charge_release", "tree_chop",
-		"tree_fall", "rat_squeal_1", "rat_squeal_2", "rat_squeal_3",
-		"debuff_apply", "player_death", "respawn_countdown", "respawn_complete",
-		"forge_weapon", "forge_armor", "woodwork_bow", "woodwork_shield",
-		"woodwork_totem", "woodwork_watchtower", "wench_buff", "wench_debuff",
-		"shop_buy", "shop_sell",
-		"equip_weapon", "equip_armor", "equip_helm", "equip_boots",
-		"equip_ring", "equip_amulet", "potion_heal", "potion_mana", "potion_buff",
-		"death_rat", "death_goblin", "death_wolf", "death_bandit", "death_skeleton",
-		"death_spider", "death_troll", "death_dark_mage", "death_ogre", "death_ogre_boss",
-		"death_demon_knight", "death_ancient_golem", "death_shadow_wraith",
-		"death_dragon_whelp", "death_infernal"]
+	# Only pre-generate sounds that fire within the first ~30 seconds of play.
+	# Everything else is already lazy-loaded by _ensure_sfx() on first use —
+	# a single lazy-gen takes <5 ms and is imperceptible.
+	# Keeping this list small is critical on mobile browsers: each batch holds
+	# the JS thread for ~10-50 ms, and a long queue of batches causes the
+	# hero-select screen to appear frozen right after the engine boots.
+	var sfx_names = [
+		# Combat fundamentals — play on the first enemy hit
+		"sword_swing", "hit_impact", "crit_hit", "enemy_death",
+		# Player feedback — play almost immediately
+		"player_hurt", "player_death",
+		# Pickups & progression — play within seconds of game start
+		"gold_pickup", "item_pickup", "level_up",
+		# Abilities — used from first combat
+		"dash_swoosh", "ability_whoosh", "power_strike",
+		# Respawn flow — needed right after first death
+		"respawn_countdown", "respawn_complete",
+	]
+	# Wait one extra frame before starting so the engine has fully settled.
+	# On slow mobile devices this avoids a CPU spike in the very first frame.
+	await get_tree().process_frame
 	var batch: int = 0
 	for sfx_name in sfx_names:
 		if _sfx_cache.has(sfx_name):
 			continue
 		_ensure_sfx(sfx_name)
 		batch += 1
-		if batch >= 8:
+		if batch >= 3:
 			batch = 0
 			await get_tree().process_frame
 

@@ -25,14 +25,19 @@ func get_texture(name: String) -> ImageTexture:
 ## Background pre-generation: spreads work across frames during the hero
 ## select screen so everything is cached before the world loads.
 func _pregenerate_async() -> void:
+	# Use a smaller per-frame batch on web/mobile to keep frame times short.
+	# Desktop can handle 10/frame fine; mobile browsers stall visibly above ~4.
+	# Wait one extra frame first so the engine is fully settled before the
+	# first batch runs — avoids a CPU spike on the very first rendered frame.
+	var per_frame: int = 4 if OS.has_feature("web") else 10
+	await get_tree().process_frame
 	var batch: int = 0
-	const PER_FRAME: int = 10  # Larger batches to finish pre-gen faster
 	for sprite_name in _all_sprite_names():
 		if textures.has(sprite_name):
 			continue
 		_gen_or_load(sprite_name)
 		batch += 1
-		if batch >= PER_FRAME:
+		if batch >= per_frame:
 			batch = 0
 			await get_tree().process_frame
 

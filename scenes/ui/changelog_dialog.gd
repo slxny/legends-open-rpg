@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.57.1"
+const GAME_VERSION := "v0.57.2"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.57.2",
+		"title": "Fix intermittent mobile browser hang on load",
+		"date": "2026-02-23",
+		"entries": [
+			"export_presets: inject AudioContext pre-unlock script in HTML head — prevents Godot audio server stall on iOS/Android (browsers block AudioContext until first user gesture)",
+			"AudioManager: trim startup pregeneration from 57 sounds down to 14 essentials — reduces JS thread hold time by ~4x on first frames; all other sounds lazy-load imperceptibly on first use",
+			"AudioManager: add one-frame settle delay before pregeneration starts, and reduce batch size from 8 to 3 per frame",
+			"SpriteGenerator: reduce web batch size from 10 to 4 sprites/frame; add one-frame settle delay before first batch — keeps hero-select screen responsive on slow mobile CPUs",
+		]
+	},
 	{
 		"version": "v0.57.1",
 		"title": "Warmer Hero Respawn Sound",

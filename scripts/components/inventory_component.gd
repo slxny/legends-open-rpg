@@ -84,6 +84,7 @@ func equip_from_bag(bag_index: int) -> void:
 	if not old_item.is_empty():
 		bag.append(old_item)
 	_apply_equipment_stats()
+	AudioManager.play_sfx("equip_" + slot_name)
 	equipment_changed.emit()
 	inventory_changed.emit()
 
@@ -118,22 +119,26 @@ func use_consumable(index: int) -> void:
 				GameManager.game_message.emit("Already at full health!", Color(0.8, 0.8, 0.4))
 				return
 			stats_component.heal(item.get("heal_amount", 0))
+			AudioManager.play_sfx("potion_heal")
 			GameManager.game_message.emit("Used %s (+%d HP)" % [item_name, item.get("heal_amount", 0)], Color(0.5, 1.0, 0.5))
 		"restore_mana":
 			if stats_component.current_mana >= stats_component.get_total_max_mana():
 				GameManager.game_message.emit("Already at full mana!", Color(0.8, 0.8, 0.4))
 				return
 			stats_component.restore_mana(item.get("mana_amount", 0))
+			AudioManager.play_sfx("potion_mana")
 			GameManager.game_message.emit("Used %s (+%d Mana)" % [item_name, item.get("mana_amount", 0)], Color(0.4, 0.6, 1.0))
 		"buff_strength":
 			var amount = item.get("buff_amount", 0)
 			var duration = item.get("buff_duration", 30.0)
 			stats_component.apply_timed_buff("elixir_strength", "strength", amount, duration)
+			AudioManager.play_sfx("potion_buff")
 			GameManager.game_message.emit("Used %s (+%d STR for %.0fs)" % [item_name, amount, duration], Color(1.0, 0.8, 0.3))
 		"buff_speed":
 			var amount = item.get("buff_amount", 0)
 			var duration = item.get("buff_duration", 30.0)
 			stats_component.apply_timed_buff("elixir_speed", "move_speed", amount, duration)
+			AudioManager.play_sfx("potion_buff")
 			GameManager.game_message.emit("Used %s (+%d Speed for %.0fs)" % [item_name, amount, duration], Color(0.3, 1.0, 0.9))
 		_:
 			GameManager.game_message.emit("Used %s" % item_name, Color(0.8, 0.8, 0.8))

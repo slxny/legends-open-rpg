@@ -220,7 +220,9 @@ func _pregenerate_async() -> void:
 		"tree_fall", "rat_squeal_1", "rat_squeal_2", "rat_squeal_3",
 		"debuff_apply", "player_death", "respawn_countdown", "respawn_complete",
 		"forge_weapon", "forge_armor", "woodwork_bow", "woodwork_shield",
-		"woodwork_totem", "woodwork_watchtower", "shop_buy", "shop_sell"]
+		"woodwork_totem", "woodwork_watchtower", "shop_buy", "shop_sell",
+		"equip_weapon", "equip_armor", "equip_helm", "equip_boots",
+		"equip_ring", "equip_amulet", "potion_heal", "potion_mana", "potion_buff"]
 	var batch: int = 0
 	for sfx_name in sfx_names:
 		if _sfx_cache.has(sfx_name):
@@ -382,6 +384,15 @@ func _generate_all_sfx() -> void:
 	_sfx_cache["woodwork_watchtower"] = _gen_woodwork_watchtower()
 	_sfx_cache["shop_buy"] = _gen_shop_buy()
 	_sfx_cache["shop_sell"] = _gen_shop_sell()
+	_sfx_cache["equip_weapon"] = _gen_equip_weapon()
+	_sfx_cache["equip_armor"] = _gen_equip_armor()
+	_sfx_cache["equip_helm"] = _gen_equip_helm()
+	_sfx_cache["equip_boots"] = _gen_equip_boots()
+	_sfx_cache["equip_ring"] = _gen_equip_ring()
+	_sfx_cache["equip_amulet"] = _gen_equip_amulet()
+	_sfx_cache["potion_heal"] = _gen_potion_heal()
+	_sfx_cache["potion_mana"] = _gen_potion_mana()
+	_sfx_cache["potion_buff"] = _gen_potion_buff()
 
 func _gen_sword_swing() -> AudioStreamWAV:
 	# Warm blade slice — smooth swoosh with subtle metal edge
@@ -1041,6 +1052,215 @@ func _gen_shop_sell() -> AudioStreamWAV:
 	_add_pitched_noise(samples, 5500.0, 1200.0, 0.02, 0.11)
 	_apply_envelope(samples, 0.002, 0.10, 0.24)
 	_soft_clip(samples, 1.2)
+	return _to_stream(samples)
+
+func _gen_equip_weapon() -> AudioStreamWAV:
+	# Sword drawn from sheath — sharp metallic slide ending in a bright ring
+	var samples = _make_samples(0.35)
+	# Sheath slide — ascending metallic friction
+	_pitch_sweep_sine(samples, 1200.0, 2800.0, 0.12, 0.0)
+	_add_pitched_noise(samples, 2500.0, 1800.0, 0.1, 0.0)
+	# Blade ring at the end — weapon is ready
+	_add_sine_segment(samples, 1400.0, 0.3, 0.12, 0.20)
+	_add_sine_segment(samples, 2800.0, 0.12, 0.12, 0.15)
+	_add_sine_segment(samples, 4200.0, 0.05, 0.12, 0.10)
+	# Quick low thud of hand gripping the hilt
+	_pitch_sweep_sine(samples, 200.0, 100.0, 0.15, 0.0)
+	_apply_envelope(samples, 0.003, 0.10, 0.24)
+	_soft_clip(samples, 1.4)
+	return _to_stream(samples)
+
+func _gen_equip_armor() -> AudioStreamWAV:
+	# Heavy armor being fastened — layered metallic clasps with weighty settle
+	var samples = _make_samples(0.40)
+	# Clasp buckle sound — two quick clicks
+	var click1 = _make_samples(0.03)
+	_add_pitched_noise(click1, 2800.0, 1500.0, 0.25)
+	_add_sine(click1, 1800.0, 0.15)
+	_apply_envelope(click1, 0.001, 0.005, 0.024)
+	_mix_into(samples, click1)
+	var click2 = _make_samples(0.03)
+	_add_pitched_noise(click2, 3200.0, 1500.0, 0.25)
+	_add_sine(click2, 2000.0, 0.15)
+	_apply_envelope(click2, 0.001, 0.005, 0.024)
+	_mix_into(samples, click2, int(0.08 * SAMPLE_RATE))
+	# Heavy armor settle — deep resonant clank
+	_pitch_sweep_sine(samples, 300.0, 150.0, 0.3, 0.14)
+	_add_sine_segment(samples, 600.0, 0.15, 0.14, 0.20)
+	_add_sine_segment(samples, 900.0, 0.08, 0.14, 0.15)
+	# Weight settling hum
+	_add_sine_segment(samples, 180.0, 0.12, 0.16, 0.20)
+	_apply_envelope(samples, 0.002, 0.14, 0.26)
+	_soft_clip(samples, 1.3)
+	return _to_stream(samples)
+
+func _gen_equip_helm() -> AudioStreamWAV:
+	# Helmet placed on head — dull metallic tap with muffled resonance
+	var samples = _make_samples(0.25)
+	# Solid tap — helmet meeting head
+	var tap = _make_samples(0.03)
+	_add_pitched_noise(tap, 2000.0, 1200.0, 0.2)
+	_add_sine(tap, 800.0, 0.2)
+	_apply_envelope(tap, 0.001, 0.006, 0.023)
+	_mix_into(samples, tap)
+	# Hollow helmet resonance — lower and more rounded than armor
+	_add_sine_segment(samples, 450.0, 0.25, 0.02, 0.18)
+	_add_sine_segment(samples, 900.0, 0.08, 0.02, 0.12)
+	# Visor click
+	_add_sine_segment(samples, 1600.0, 0.1, 0.10, 0.05)
+	_apply_envelope(samples, 0.002, 0.06, 0.19)
+	_soft_clip(samples, 1.2)
+	return _to_stream(samples)
+
+func _gen_equip_boots() -> AudioStreamWAV:
+	# Boots laced and stomped — leather stretch followed by firm ground stomp
+	var samples = _make_samples(0.30)
+	# Leather creak/stretch
+	_add_pitched_noise(samples, 800.0, 500.0, 0.1, 0.0)
+	_pitch_sweep_sine(samples, 300.0, 450.0, 0.08, 0.0)
+	# Stomp — firm thud with ground resonance
+	var stomp = _make_samples(0.10)
+	_pitch_sweep_sine(stomp, 140.0, 60.0, 0.45)
+	_pitch_sweep_sine(stomp, 280.0, 120.0, 0.2)
+	_add_pitched_noise(stomp, 1000.0, 600.0, 0.12)
+	_apply_envelope(stomp, 0.002, 0.02, 0.08)
+	_mix_into(samples, stomp, int(0.10 * SAMPLE_RATE))
+	# Light step confidence tap
+	var tap = _make_samples(0.05)
+	_pitch_sweep_sine(tap, 180.0, 90.0, 0.2)
+	_apply_envelope(tap, 0.002, 0.01, 0.04)
+	_mix_into(samples, tap, int(0.20 * SAMPLE_RATE))
+	_apply_envelope(samples, 0.003, 0.10, 0.19)
+	_soft_clip(samples, 1.3)
+	return _to_stream(samples)
+
+func _gen_equip_ring() -> AudioStreamWAV:
+	# Ring slid onto finger — delicate crystalline chime with magical shimmer
+	var samples = _make_samples(0.35)
+	# Tiny metallic slide
+	_pitch_sweep_sine(samples, 2000.0, 3000.0, 0.06, 0.0)
+	# Crystal chime — pure and bell-like
+	_add_sine_segment(samples, 2093.0, 0.3, 0.04, 0.25)   # C7
+	_add_sine_segment(samples, 4186.0, 0.1, 0.04, 0.18)   # C8 overtone
+	_add_sine_segment(samples, 2637.0, 0.12, 0.06, 0.20)  # E7
+	# Magical pulse — ring activating
+	_add_sine_segment(samples, 1047.0, 0.08, 0.08, 0.22)  # C6 warmth
+	# Faint sparkle
+	_add_pitched_noise(samples, 7000.0, 1500.0, 0.015, 0.05)
+	_apply_envelope(samples, 0.005, 0.08, 0.26)
+	_normalize(samples, 0.65)
+	return _to_stream(samples)
+
+func _gen_equip_amulet() -> AudioStreamWAV:
+	# Amulet clasped around neck — chain links settling with warm mystical hum
+	var samples = _make_samples(0.40)
+	# Chain links — series of tiny clinks
+	var link_times = [0.0, 0.03, 0.055, 0.08]
+	for lt in link_times:
+		var clink = _make_samples(0.025)
+		_add_sine(clink, 3400.0 + randf() * 400.0, 0.12)
+		_add_pitched_noise(clink, 4000.0, 1200.0, 0.05)
+		_apply_envelope(clink, 0.001, 0.004, 0.02)
+		_mix_into(samples, clink, int(lt * SAMPLE_RATE))
+	# Clasp snap
+	var snap = _make_samples(0.02)
+	_add_pitched_noise(snap, 2800.0, 1500.0, 0.2)
+	_apply_envelope(snap, 0.001, 0.004, 0.015)
+	_mix_into(samples, snap, int(0.10 * SAMPLE_RATE))
+	# Mystical hum — amulet's magic activating against the chest
+	_add_sine_segment(samples, 220.0, 0.15, 0.12, 0.25)
+	_add_sine_segment(samples, 330.0, 0.10, 0.14, 0.22)
+	_add_sine_segment(samples, 440.0, 0.06, 0.16, 0.18)
+	# Gentle wobble for magical feel
+	for i in range(int(0.12 * SAMPLE_RATE), samples.size()):
+		var t = float(i) / SAMPLE_RATE
+		samples[i] *= 0.9 + 0.1 * sin(t * 7.0 * TAU)
+	_apply_envelope(samples, 0.002, 0.14, 0.26)
+	_soft_clip(samples, 1.2)
+	return _to_stream(samples)
+
+func _gen_potion_heal() -> AudioStreamWAV:
+	# Cork pop followed by warm liquid gulp and soothing heal chime
+	# Unique bubbly, restorative feeling — distinct from any other SFX
+	var samples = _make_samples(0.50)
+	# Cork pop — quick bright burst
+	var pop = _make_samples(0.025)
+	_pitch_sweep_sine(pop, 800.0, 400.0, 0.3)
+	_add_pitched_noise(pop, 3000.0, 2000.0, 0.2)
+	_apply_envelope(pop, 0.001, 0.004, 0.02)
+	_mix_into(samples, pop)
+	# Liquid glug — bubbly warble
+	for i in range(int(0.03 * SAMPLE_RATE), int(0.18 * SAMPLE_RATE)):
+		var t = float(i) / SAMPLE_RATE
+		# Bubbling — irregular pitch wobbles
+		var bubble = sin(t * 280.0 * TAU) * 0.12
+		bubble += sin(t * 350.0 * TAU + sin(t * 12.0 * TAU) * 3.0) * 0.08
+		samples[i] += bubble
+	# Healing chime — warm ascending major third (C5 -> E5)
+	_add_sine_segment(samples, 523.0, 0.25, 0.18, 0.15)   # C5
+	_add_sine_segment(samples, 659.0, 0.30, 0.24, 0.20)   # E5
+	_add_sine_segment(samples, 1046.0, 0.08, 0.18, 0.12)  # C6 shimmer
+	_add_sine_segment(samples, 1318.0, 0.06, 0.24, 0.15)  # E6 shimmer
+	# Warm restorative glow — soft bass pad
+	_add_sine_segment(samples, 261.6, 0.10, 0.18, 0.28)
+	# Sparkle of health restored
+	_add_pitched_noise(samples, 5000.0, 1200.0, 0.02, 0.24)
+	_apply_envelope(samples, 0.002, 0.16, 0.32)
+	_soft_clip(samples, 1.3)
+	return _to_stream(samples)
+
+func _gen_potion_mana() -> AudioStreamWAV:
+	# Cork pop with cool crystalline cascade — magical energy rushing in
+	# Distinctly different from heal: cooler, more "electric" and shimmery
+	var samples = _make_samples(0.50)
+	# Cork pop — slightly higher pitched than heal potion
+	var pop = _make_samples(0.025)
+	_pitch_sweep_sine(pop, 900.0, 500.0, 0.25)
+	_add_pitched_noise(pop, 3500.0, 2000.0, 0.18)
+	_apply_envelope(pop, 0.001, 0.004, 0.02)
+	_mix_into(samples, pop)
+	# Crystalline cascade — descending sparkle like magic flowing
+	_add_sine_segment(samples, 1568.0, 0.15, 0.03, 0.12)  # G6
+	_add_sine_segment(samples, 1318.0, 0.18, 0.07, 0.12)  # E6
+	_add_sine_segment(samples, 1046.0, 0.20, 0.11, 0.14)  # C6
+	_add_sine_segment(samples, 784.0, 0.22, 0.15, 0.16)   # G5
+	# Each note has a high harmonic shimmer
+	_add_sine_segment(samples, 3136.0, 0.04, 0.03, 0.08)
+	_add_sine_segment(samples, 2637.0, 0.04, 0.07, 0.08)
+	_add_sine_segment(samples, 2093.0, 0.05, 0.11, 0.10)
+	# Cool magical hum underneath
+	_add_sine_segment(samples, 196.0, 0.12, 0.05, 0.35)   # G3
+	_add_sine_segment(samples, 294.0, 0.06, 0.05, 0.30)   # D4
+	# Arcane sparkle
+	_add_pitched_noise(samples, 6000.0, 1500.0, 0.025, 0.05)
+	_add_pitched_noise(samples, 8000.0, 1000.0, 0.015, 0.12)
+	_apply_envelope(samples, 0.002, 0.15, 0.33)
+	_soft_clip(samples, 1.2)
+	return _to_stream(samples)
+
+func _gen_potion_buff() -> AudioStreamWAV:
+	# Elixir power surge — cork pop then rising power chord with energy crackle
+	# Feels empowering and intense — you just drank raw power
+	var samples = _make_samples(0.45)
+	# Quick cork pop
+	var pop = _make_samples(0.02)
+	_pitch_sweep_sine(pop, 700.0, 350.0, 0.25)
+	_add_pitched_noise(pop, 2800.0, 1800.0, 0.15)
+	_apply_envelope(pop, 0.001, 0.003, 0.016)
+	_mix_into(samples, pop)
+	# Rising power chord — ascending with growing intensity
+	_pitch_sweep_sine(samples, 220.0, 440.0, 0.25, 0.03)
+	_pitch_sweep_sine(samples, 330.0, 660.0, 0.15, 0.05)
+	_pitch_sweep_sine(samples, 440.0, 880.0, 0.08, 0.07)
+	# Energy crackle — high frequency bursts
+	_add_pitched_noise(samples, 3000.0, 2000.0, 0.06, 0.10)
+	_add_pitched_noise(samples, 4500.0, 1500.0, 0.04, 0.15)
+	# Power confirmation tone — strong fifth interval (C5 + G5)
+	_add_sine_segment(samples, 523.0, 0.3, 0.25, 0.16)
+	_add_sine_segment(samples, 784.0, 0.25, 0.27, 0.14)
+	_add_sine_segment(samples, 1046.0, 0.10, 0.25, 0.12)
+	_apply_envelope(samples, 0.002, 0.14, 0.29)
+	_soft_clip(samples, 1.5)
 	return _to_stream(samples)
 
 # ============================================================

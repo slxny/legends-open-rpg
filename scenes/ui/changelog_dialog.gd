@@ -9,9 +9,18 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.47.0"
+const GAME_VERSION := "v0.47.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.47.1",
+		"title": "Fix Top Bar Cutoff on Mobile Fullscreen",
+		"date": "2026-02-23",
+		"entries": [
+			"Top resource bar (Gold, Wood, Alignment) no longer gets clipped at the right edge on mobile fullscreen",
+			"Added safe-area-aware right padding so labels stay visible on devices with notches or rounded corners",
+		]
+	},
 	{
 		"version": "v0.47.0",
 		"title": "Enemy Scaling Overhaul",

@@ -78,14 +78,18 @@ func _apply_mobile_layout() -> void:
 	var vp_size = get_viewport().get_visible_rect().size
 	var is_landscape = vp_size.x > vp_size.y
 
-	# ── Top bar: scale font sizes for readability ──
+	# ── Top bar: scale font sizes for readability & keep off screen edges ──
+	var safe_right = DisplayServer.get_display_safe_area().position.x
+	var right_pad = max(16, safe_right)
 	if is_landscape:
 		top_bar.offset_bottom = 18
+		top_bar.offset_right = -right_pad
 		gold_label.add_theme_font_size_override("font_size", 10)
 		wood_label.add_theme_font_size_override("font_size", 10)
 		alignment_label.add_theme_font_size_override("font_size", 9)
 	else:
 		top_bar.offset_bottom = 72
+		top_bar.offset_right = -right_pad
 		gold_label.add_theme_font_size_override("font_size", 44)
 		wood_label.add_theme_font_size_override("font_size", 44)
 		alignment_label.add_theme_font_size_override("font_size", 38)

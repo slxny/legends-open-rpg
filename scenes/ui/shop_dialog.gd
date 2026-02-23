@@ -116,9 +116,14 @@ func _build_ui() -> void:
 	top_bar.add_child(_gold_label)
 
 	_close_btn = Button.new()
-	_close_btn.text = "X"
-	_close_btn.custom_minimum_size = Vector2(tab_h, tab_h)
-	_close_btn.add_theme_font_size_override("font_size", fs_btn)
+	if _is_mobile:
+		_close_btn.text = "X"
+		_close_btn.custom_minimum_size = Vector2(120, 100)
+		_close_btn.add_theme_font_size_override("font_size", 50)
+	else:
+		_close_btn.text = "Close [Q]"
+		_close_btn.custom_minimum_size = Vector2(90, 30)
+		_close_btn.add_theme_font_size_override("font_size", fs_btn)
 	_close_btn.pressed.connect(close)
 	top_bar.add_child(_close_btn)
 

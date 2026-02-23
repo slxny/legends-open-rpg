@@ -209,8 +209,8 @@ func _build_cmd_overlay() -> void:
 	title_row.add_child(title)
 	var close_btn = Button.new()
 	close_btn.text = "X"
-	close_btn.custom_minimum_size = Vector2(70, 60)
-	close_btn.add_theme_font_size_override("font_size", 34)
+	close_btn.custom_minimum_size = Vector2(120, 100)
+	close_btn.add_theme_font_size_override("font_size", 50)
 	close_btn.pressed.connect(_toggle_cmd_overlay)
 	title_row.add_child(close_btn)
 
@@ -376,8 +376,8 @@ func _build_map_overlay() -> void:
 	title_row.add_child(title)
 	var close_btn = Button.new()
 	close_btn.text = "X"
-	close_btn.custom_minimum_size = Vector2(70, 60)
-	close_btn.add_theme_font_size_override("font_size", 34)
+	close_btn.custom_minimum_size = Vector2(120, 100)
+	close_btn.add_theme_font_size_override("font_size", 50)
 	close_btn.pressed.connect(_toggle_map_overlay)
 	title_row.add_child(close_btn)
 

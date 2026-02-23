@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.51.1"
+const GAME_VERSION := "v0.52.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.52.0",
+		"title": "Shop Q-Key & Consistent Mobile Close Buttons",
+		"date": "2026-02-23",
+		"entries": [
+			"Shop now shows Close [Q] hint on desktop (was missing Q shortcut label)",
+			"Mobile close buttons no longer show [Q] text — just a clean X",
+			"All mobile X/close buttons are now the same larger size across every panel and modal",
+		]
+	},
 	{
 		"version": "v0.51.1",
 		"title": "Cap Rat Spawn Level to Hero Level",
@@ -948,8 +958,9 @@ func _resize_panel(vp_size: Vector2) -> void:
 		panel.offset_right = vp_size.x / 2.0 - margin
 		panel.offset_top = -vp_size.y / 2.0 + margin
 		panel.offset_bottom = vp_size.y / 2.0 - margin
-		close_button.custom_minimum_size = Vector2(280, 90)
-		close_button.add_theme_font_size_override("font_size", 44)
+		close_button.text = "X"
+		close_button.custom_minimum_size = Vector2(120, 100)
+		close_button.add_theme_font_size_override("font_size", 50)
 		version_label.add_theme_font_size_override("font_size", 40)
 		$Panel/MarginContainer/VBox/TopBar/Title.add_theme_font_size_override("font_size", 56)
 	else:

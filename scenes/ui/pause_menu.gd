@@ -85,8 +85,8 @@ func _build_menu() -> void:
 
 	var close_btn = Button.new()
 	close_btn.text = "X"
-	close_btn.custom_minimum_size = Vector2(140, 90) if _is_mobile else Vector2(40, 32)
-	close_btn.add_theme_font_size_override("font_size", 44 if _is_mobile else 16)
+	close_btn.custom_minimum_size = Vector2(120, 100) if _is_mobile else Vector2(40, 32)
+	close_btn.add_theme_font_size_override("font_size", 50 if _is_mobile else 16)
 	close_btn.add_theme_color_override("font_color", Color(1.0, 0.4, 0.3))
 	close_btn.pressed.connect(func(): close())
 	top_bar.add_child(close_btn)
@@ -192,10 +192,10 @@ func _show_help_dialog() -> void:
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(spacer)
 	var close_btn = Button.new()
-	close_btn.text = "Close"
-	close_btn.custom_minimum_size = Vector2(260, 90) if _is_mobile else Vector2(80, 32)
+	close_btn.text = "X" if _is_mobile else "Close"
+	close_btn.custom_minimum_size = Vector2(120, 100) if _is_mobile else Vector2(80, 32)
 	if _is_mobile:
-		close_btn.add_theme_font_size_override("font_size", 44)
+		close_btn.add_theme_font_size_override("font_size", 50)
 	close_btn.pressed.connect(func(): help_layer.queue_free())
 	top.add_child(close_btn)
 	vbox.add_child(top)

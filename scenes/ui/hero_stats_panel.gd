@@ -99,8 +99,9 @@ func _detect_mobile() -> void:
 		panel.offset_top = -vp_size.y / 2.0 + margin
 		panel.offset_bottom = vp_size.y / 2.0 - margin
 		$Panel/MarginContainer/VBox/TopBar/Title.add_theme_font_size_override("font_size", 48)
-		close_button.add_theme_font_size_override("font_size", 44)
-		close_button.custom_minimum_size = Vector2(280, 90)
+		close_button.text = "X"
+		close_button.add_theme_font_size_override("font_size", 50)
+		close_button.custom_minimum_size = Vector2(120, 100)
 		stats_label.add_theme_font_size_override("normal_font_size", 34)
 		$Panel/MarginContainer/VBox/Scroll/ScrollContent/BuffsTitle.add_theme_font_size_override("font_size", 40)
 

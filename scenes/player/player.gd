@@ -133,6 +133,7 @@ var _is_mobile: bool = false
 var _mobile_attack_held: bool = false   # True while mobile attack button is held
 var _mobile_atk_canvas: CanvasLayer = null
 var _mobile_atk_btn: Button = null
+var _mobile_atk_touch_index: int = -1  # Touch index currently pressing the ATK button
 # Two-finger pinch-to-zoom tracking
 var _touch_points: Dictionary = {}      # touch index -> screen position (unhandled only)
 var _pinch_prev_distance: float = 0.0   # Previous distance between two fingers
@@ -546,6 +547,25 @@ func _input(event: InputEvent) -> void:
 	elif event is InputEventScreenDrag:
 		if event.index in _screen_touches:
 			_screen_touches[event.index] = event.position
+
+	# Manual multitouch handling for the ATK button.  Godot's Button control
+	# only responds to the first screen touch (via mouse emulation).  A second
+	# finger tapping ATK while another finger is already on screen is silently
+	# ignored by Button.  We detect ATK-button touches directly from the raw
+	# InputEventScreenTouch so every finger is handled independently.
+	if _is_mobile and _mobile_atk_btn and is_instance_valid(_mobile_atk_btn):
+		if event is InputEventScreenTouch:
+			var atk_rect = _mobile_atk_btn.get_global_rect()
+			if event.pressed:
+				if atk_rect.has_point(event.position) and _mobile_atk_touch_index == -1:
+					_mobile_atk_touch_index = event.index
+					_on_mobile_attack_pressed()
+					get_viewport().set_input_as_handled()
+			else:
+				if event.index == _mobile_atk_touch_index:
+					_mobile_atk_touch_index = -1
+					_on_mobile_attack_released()
+					get_viewport().set_input_as_handled()
 
 func _unhandled_input(event: InputEvent) -> void:
 	var z_min = _get_zoom_min()
@@ -1618,8 +1638,9 @@ func _create_mobile_attack_button() -> void:
 	# Pivot at center so scale animations expand outward
 	_mobile_atk_btn.pivot_offset = Vector2(btn_size / 2.0, btn_size / 2.0)
 
-	_mobile_atk_btn.button_down.connect(_on_mobile_attack_pressed)
-	_mobile_atk_btn.button_up.connect(_on_mobile_attack_released)
+	# NOTE: button_down/button_up signals are NOT connected here.  Touch
+	# detection is handled manually in _input() via InputEventScreenTouch so
+	# that multitouch works (Godot's Button only responds to the first finger).
 	_mobile_atk_canvas.add_child(_mobile_atk_btn)
 
 func _on_mobile_attack_pressed() -> void:

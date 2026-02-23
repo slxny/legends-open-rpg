@@ -218,7 +218,7 @@ func _pregenerate_async() -> void:
 		"ability_whoosh", "power_strike", "whirlwind", "player_hurt",
 		"charge_loop", "charge_ready", "charge_release", "tree_chop",
 		"tree_fall", "rat_squeal_1", "rat_squeal_2", "rat_squeal_3",
-		"debuff_apply"]
+		"debuff_apply", "player_death", "respawn_countdown", "respawn_complete"]
 	var batch: int = 0
 	for sfx_name in sfx_names:
 		if _sfx_cache.has(sfx_name):
@@ -744,6 +744,74 @@ func _gen_rat_squeal_3() -> AudioStreamWAV:
 		samples[i] *= 0.6 + 0.4 * sin(t * 55.0 * TAU)
 	_apply_envelope(samples, 0.005, 0.04, 0.11)
 	_soft_clip(samples, 1.1)
+	return _to_stream(samples)
+
+func _gen_player_death() -> AudioStreamWAV:
+	# Dramatic death sound — heavy descending thud with dark reverb tail
+	# Deep, final, weighty — like a body hitting the ground with a dark echo
+	var samples = _make_samples(0.8)
+	# Heavy body-fall impact — deep bass thud
+	_pitch_sweep_sine(samples, 100.0, 35.0, 0.6)
+	_pitch_sweep_sine(samples, 200.0, 70.0, 0.3)
+	# Dark mid-range groan — gives it a dramatic "fallen" quality
+	_pitch_sweep_sine(samples, 300.0, 120.0, 0.15)
+	# Crack transient at the start (armor/bones hitting ground)
+	var crack = _make_samples(0.04)
+	_add_pitched_noise(crack, 1600.0, 1000.0, 0.35)
+	_apply_envelope(crack, 0.001, 0.006, 0.033)
+	_mix_into(samples, crack)
+	# Dark reverb tail — low rumbling decay
+	var tail = _make_samples(0.5)
+	_add_sine(tail, 55.0, 0.12)
+	_add_sine(tail, 82.0, 0.06)
+	_add_pitched_noise(tail, 200.0, 150.0, 0.04)
+	_apply_decay(tail, 0.6)
+	_mix_into(samples, tail, int(0.15 * SAMPLE_RATE))
+	# Descending minor chord — eerie finality (E3, G3, Bb3 — diminished)
+	_add_sine_segment(samples, 164.81, 0.06, 0.05, 0.5)
+	_add_sine_segment(samples, 196.0, 0.04, 0.05, 0.45)
+	_add_sine_segment(samples, 233.08, 0.03, 0.05, 0.4)
+	_apply_envelope(samples, 0.003, 0.1, 0.7)
+	_soft_clip(samples, 1.8)
+	return _to_stream(samples)
+
+func _gen_respawn_countdown() -> AudioStreamWAV:
+	# Short countdown tick — clean, urgent ping for 3-2-1 countdown
+	# Like a clock tick with a tonal ring — clear and sharp
+	var samples = _make_samples(0.2)
+	# Bright tick note (G5)
+	_add_sine_segment(samples, 784.0, 0.4, 0.0, 0.12)
+	# Harmonic shimmer
+	_add_sine_segment(samples, 1568.0, 0.12, 0.0, 0.08)
+	_add_sine_segment(samples, 2352.0, 0.05, 0.0, 0.06)
+	# Click transient
+	var click = _make_samples(0.015)
+	_add_pitched_noise(click, 3000.0, 2000.0, 0.2)
+	_apply_envelope(click, 0.001, 0.003, 0.011)
+	_mix_into(samples, click)
+	_apply_envelope(samples, 0.002, 0.03, 0.17)
+	_soft_clip(samples, 1.2)
+	return _to_stream(samples)
+
+func _gen_respawn_complete() -> AudioStreamWAV:
+	# Regeneration complete — bright ascending arpeggio with magical shimmer
+	# Triumphant, hopeful, energizing — life returns
+	var samples = _make_samples(0.9)
+	# Ascending power chord: C4 -> E4 -> G4 -> C5 with warm sustain
+	_add_sine_segment(samples, 261.6, 0.30, 0.0, 0.30)
+	_add_sine_segment(samples, 329.6, 0.30, 0.08, 0.30)
+	_add_sine_segment(samples, 392.0, 0.35, 0.16, 0.30)
+	_add_sine_segment(samples, 523.3, 0.40, 0.24, 0.45)
+	# Octave shimmer on final note for brilliance
+	_add_sine_segment(samples, 1046.0, 0.12, 0.24, 0.40)
+	_add_sine_segment(samples, 784.0, 0.10, 0.24, 0.40)
+	# Magical sparkle — high frequency noise bursts
+	_add_pitched_noise(samples, 5000.0, 2000.0, 0.03, 0.24)
+	_add_pitched_noise(samples, 7000.0, 1500.0, 0.02, 0.30)
+	# Warm bass foundation
+	_add_sine_segment(samples, 130.8, 0.15, 0.0, 0.6)
+	_apply_decay(samples, 1.0)
+	_soft_clip(samples, 1.5)
 	return _to_stream(samples)
 
 # ============================================================

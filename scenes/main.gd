@@ -95,6 +95,9 @@ func _on_hero_chosen(hero_class: String) -> void:
 	# Connect level-up to dramatic message
 	_player.stats.leveled_up.connect(_on_player_leveled_up)
 	_player.stats.died.connect(_on_player_died)
+	# Connect countdown for center screen display
+	RespawnManager.countdown_tick.connect(_on_respawn_countdown)
+	RespawnManager.player_respawned.connect(_on_player_respawned)
 
 	# Register game-wide triggers
 	_register_triggers()
@@ -110,9 +113,16 @@ func _on_player_leveled_up(new_level: int) -> void:
 	GameManager.game_message.emit("LEVEL UP! You are now Level %d (%s)" % [new_level, tier], Color(1.0, 0.9, 0.2))
 
 func _on_player_died() -> void:
-	GameManager.game_message.emit("You have fallen! Respawning...", Color(1.0, 0.2, 0.2))
-	# Route through RespawnManager for multiplayer-readiness
+	# Instant death — show fallen message, route to RespawnManager immediately
+	GameManager.game_message.emit("YOU HAVE FALLEN!", Color(1.0, 0.15, 0.15))
 	RespawnManager.request_respawn(0)
+
+func _on_respawn_countdown(_player_id: int, seconds_left: int) -> void:
+	# Show countdown number as dramatic center message
+	GameManager.game_message.emit("Respawning... %d" % seconds_left, Color(1.0, 0.7, 0.2))
+
+func _on_player_respawned(_player_id: int) -> void:
+	GameManager.game_message.emit("Respawned!", Color(0.5, 1.0, 0.5))
 
 func _register_triggers() -> void:
 	# XP/level sync trigger — keeps DC in sync with player stats every tick

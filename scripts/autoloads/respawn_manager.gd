@@ -1,32 +1,38 @@
 extends Node
 
 ## Centralized respawn manager for player death handling.
-## Respawn at safe location with full HP after death timer.
+## Instant death → 3-2-1 countdown with sounds → regeneration with animation.
 
+signal player_died(player_id: int)
 signal player_respawned(player_id: int)
+signal countdown_tick(player_id: int, seconds_left: int)
 
-const RESPAWN_DELAY := 3.0  # Seconds before respawn
+const COUNTDOWN_SECONDS := 3  # 3-2-1 countdown
 
-var _respawn_timers: Dictionary = {}  # player_id -> timer
-
-func _ready() -> void:
-	set_process(false)  # Only process when there are active respawn timers
+var _respawning: Dictionary = {}  # player_id -> true (guard against double-requests)
 
 func request_respawn(player_id: int = 0) -> void:
-	if _respawn_timers.has(player_id):
+	if _respawning.has(player_id):
 		return  # Already respawning
-	DeathCounterSystem.set_value("respawn_timer_p%d" % player_id, int(RESPAWN_DELAY))
-	_respawn_timers[player_id] = RESPAWN_DELAY
-	set_process(true)
+	_respawning[player_id] = true
+	DeathCounterSystem.set_value("respawn_timer_p%d" % player_id, COUNTDOWN_SECONDS)
 
-func _process(delta: float) -> void:
-	for pid in _respawn_timers.keys():
-		_respawn_timers[pid] -= delta
-		if _respawn_timers[pid] <= 0:
-			_execute_respawn(pid)
-			_respawn_timers.erase(pid)
-	if _respawn_timers.is_empty():
-		set_process(false)
+	# Phase 1: Instant death — play death sound, trigger death animation on player
+	player_died.emit(player_id)
+	AudioManager.play_sfx("player_death")
+
+	# Brief pause to let the death sound/animation land before countdown starts
+	await get_tree().create_timer(0.6).timeout
+
+	# Phase 2: Countdown 3-2-1 with tick sounds
+	for i in range(COUNTDOWN_SECONDS, 0, -1):
+		DeathCounterSystem.set_value("respawn_timer_p%d" % player_id, i)
+		countdown_tick.emit(player_id, i)
+		AudioManager.play_sfx("respawn_countdown")
+		await get_tree().create_timer(1.0).timeout
+
+	# Phase 3: Execute respawn with regeneration animation
+	_execute_respawn(player_id)
 
 func _execute_respawn(player_id: int) -> void:
 	DeathCounterSystem.set_value("respawn_timer_p%d" % player_id, 0)
@@ -43,6 +49,8 @@ func _execute_respawn(player_id: int) -> void:
 				stats.current_hp = stats.get_total_max_hp()
 				stats.current_mana = stats.get_total_max_mana()
 				stats._emit_all()
+			# Play regeneration sound and emit respawned signal
+			AudioManager.play_sfx("respawn_complete")
 			player_respawned.emit(player_id)
-			GameManager.game_message.emit("Respawned!", Color(0.5, 1.0, 0.5))
 			break
+	_respawning.erase(player_id)

@@ -12,6 +12,8 @@ signal attacked(target: Node2D)
 
 var hero_class: String = ""
 var player_id: int = 0
+var _is_dead: bool = false  # True while dead and awaiting respawn — blocks all input/movement
+var _death_tween: Tween = null  # Active death/respawn animation tween
 var _enemies_in_range: Array[Node2D] = []
 var _trees_in_range: Array[Node2D] = []
 var _target_tree: Node2D = null  # Tree targeted by click-to-harvest
@@ -247,6 +249,10 @@ func _ready() -> void:
 		_click_circle.radius = CLICK_RADIUS_MOBILE
 		_create_mobile_attack_button()
 
+	# Connect death/respawn signals for animations
+	RespawnManager.player_died.connect(_on_death_animation)
+	RespawnManager.player_respawned.connect(_on_respawn_animation)
+
 ## Public API for external systems (e.g. minimap click) to move the player.
 func move_to(world_pos: Vector2) -> void:
 	_move_target = world_pos
@@ -255,6 +261,12 @@ func move_to(world_pos: Vector2) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	# Dead: no movement, no actions — waiting for respawn
+	if _is_dead:
+		velocity = Vector2.ZERO
+		move_and_slide()
+		return
+
 	# Process status effects
 	_process_status_effects(delta)
 
@@ -537,6 +549,8 @@ func _get_zoom_max() -> Vector2:
 	return ZOOM_MAX_MOBILE if _is_mobile else ZOOM_MAX
 
 func _input(event: InputEvent) -> void:
+	if _is_dead:
+		return
 	# Track ALL screen touches (including those consumed by UI) for mobile
 	# attack direction and movement/diagonal detection.
 	if event is InputEventScreenTouch:
@@ -568,6 +582,8 @@ func _input(event: InputEvent) -> void:
 					get_viewport().set_input_as_handled()
 
 func _unhandled_input(event: InputEvent) -> void:
+	if _is_dead:
+		return
 	var z_min = _get_zoom_min()
 	var z_max = _get_zoom_max()
 
@@ -2424,6 +2440,8 @@ func get_stats_dict() -> Dictionary:
 	return stats.get_stats_dict()
 
 func take_damage(amount: int, is_crit: bool = false) -> void:
+	if _is_dead:
+		return  # Can't take damage while dead
 	stats.take_damage(amount)
 	_spawn_damage_number(amount, is_crit)
 	_do_hit_flash()
@@ -2498,3 +2516,82 @@ func _register_fog_trigger() -> void:
 	fog_trigger.conditions = [func(): return is_instance_valid(self)]
 	fog_trigger.actions = [func(): FogOfWarManager.update_visibility([global_position])]
 	TriggerEngine.register(fog_trigger)
+
+# ── Death & Respawn Animations ─────────────────────────────────────────
+
+func _on_death_animation(_player_id: int) -> void:
+	_is_dead = true
+	velocity = Vector2.ZERO
+	# Cancel any ongoing animations
+	if _death_tween and _death_tween.is_valid():
+		_death_tween.kill()
+	if _idle_breathe_tween and _idle_breathe_tween.is_valid():
+		_idle_breathe_tween.kill()
+	if _idle_fidget_tween and _idle_fidget_tween.is_valid():
+		_idle_fidget_tween.kill()
+	# Death animation: red tint, collapse (shrink + rotate), fade to semi-transparent
+	_death_tween = create_tween()
+	_death_tween.set_parallel(true)
+	# Red tint on death
+	_death_tween.tween_property(sprite, "modulate", Color(0.8, 0.15, 0.15, 0.6), 0.4)
+	# Collapse: shrink vertically (squash) and slight rotation (falling over)
+	_death_tween.tween_property(sprite, "scale", Vector2(1.2, 0.3), 0.4).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_BACK)
+	_death_tween.tween_property(sprite, "rotation", deg_to_rad(75.0), 0.4).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+	# Hide shadow
+	if _shadow:
+		_death_tween.tween_property(_shadow, "modulate:a", 0.0, 0.3)
+
+func _on_respawn_animation(_player_id: int) -> void:
+	# Kill death tween if still running
+	if _death_tween and _death_tween.is_valid():
+		_death_tween.kill()
+	# Reset sprite to invisible for regen build-up
+	sprite.modulate = Color(1.0, 1.0, 1.0, 0.0)
+	sprite.scale = Vector2(0.3, 0.3)
+	sprite.rotation = 0.0
+	if _shadow:
+		_shadow.modulate.a = 0.0
+	# Regeneration animation: glow/scale up from nothing, bright flash, then settle
+	_death_tween = create_tween()
+	_death_tween.set_parallel(true)
+	# Scale up from small to slightly oversized, then settle to normal
+	_death_tween.tween_property(sprite, "scale", Vector2(1.3, 1.3), 0.4).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	# Fade in with bright golden glow
+	_death_tween.tween_property(sprite, "modulate", Color(1.5, 1.3, 0.6, 1.0), 0.3).set_ease(Tween.EASE_OUT)
+	# Restore shadow
+	if _shadow:
+		_death_tween.tween_property(_shadow, "modulate:a", 1.0, 0.4)
+	# Chain: settle back to normal size and color
+	_death_tween.chain()
+	_death_tween.set_parallel(true)
+	_death_tween.tween_property(sprite, "scale", Vector2.ONE, 0.25).set_ease(Tween.EASE_IN_OUT)
+	_death_tween.tween_property(sprite, "modulate", Color.WHITE, 0.25)
+	_death_tween.chain()
+	_death_tween.tween_callback(func():
+		_is_dead = false
+		# Spawn a bright flash ring VFX at player position
+		_spawn_respawn_flash()
+	)
+
+func _spawn_respawn_flash() -> void:
+	# Bright expanding ring of light at the respawn point
+	var flash = Sprite2D.new()
+	flash.texture = _tex_crystal_white if _tex_crystal_white else _tex_slash_arc
+	if not flash.texture:
+		flash.queue_free()
+		return
+	flash.modulate = Color(0.6, 1.0, 0.6, 0.9)
+	flash.scale = Vector2(0.5, 0.5)
+	flash.z_index = 10
+	flash.global_position = global_position
+	var world = _get_world_node()
+	if world:
+		world.add_child(flash)
+	else:
+		add_child(flash)
+	var tween = create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(flash, "scale", Vector2(3.0, 3.0), 0.5).set_ease(Tween.EASE_OUT)
+	tween.tween_property(flash, "modulate:a", 0.0, 0.5).set_ease(Tween.EASE_IN)
+	tween.chain()
+	tween.tween_callback(flash.queue_free)

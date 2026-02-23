@@ -8,6 +8,8 @@ extends CanvasLayer
 
 var _message_queue: Array[Dictionary] = []
 var _showing: bool = false
+var _current_tween: Tween = null
+var _current_timer: SceneTreeTimer = null
 
 func _ready() -> void:
 	message_label.visible = false
@@ -16,19 +18,37 @@ func _ready() -> void:
 
 func _on_game_message(text: String, color: Color = Color.WHITE) -> void:
 	# Only show dramatic messages (level up, boss, settlement, etc.)
-	var dramatic_keywords = ["LEVEL UP", "BOSS", "Purchased", "DEFEATED", "Respawned", "Alignment"]
+	var dramatic_keywords = ["LEVEL UP", "BOSS", "Purchased", "DEFEATED", "Respawned",
+		"Alignment", "FALLEN", "Respawning"]
 	var is_dramatic = false
 	for keyword in dramatic_keywords:
 		if text.find(keyword) >= 0:
 			is_dramatic = true
 			break
 	if is_dramatic:
-		show_center_message(text, color)
+		# Countdown/death messages use short duration and interrupt current message
+		var is_respawn_msg = text.find("Respawning") >= 0 or text.find("FALLEN") >= 0
+		if is_respawn_msg:
+			show_urgent_message(text, color, 0.8)
+		else:
+			show_center_message(text, color)
 
 func show_center_message(text: String, color: Color = Color.WHITE, duration: float = 2.0) -> void:
 	_message_queue.append({"text": text, "color": color, "duration": duration})
 	if not _showing:
 		_process_queue()
+
+func show_urgent_message(text: String, color: Color = Color.WHITE, duration: float = 0.8) -> void:
+	## Immediately replaces current message (used for countdown, death messages).
+	# Kill current display
+	if _current_tween and _current_tween.is_valid():
+		_current_tween.kill()
+	# Clear any queued messages of the same type
+	_message_queue = _message_queue.filter(func(m):
+		return m["text"].find("Respawning") < 0 and m["text"].find("FALLEN") < 0
+	)
+	_showing = true
+	_display_message(text, color, duration)
 
 func _process_queue() -> void:
 	if _message_queue.is_empty():
@@ -54,9 +74,9 @@ func _display_message(text: String, color: Color, duration: float) -> void:
 
 	# Hold then fade
 	await get_tree().create_timer(duration).timeout
-	var tween = create_tween()
-	tween.tween_property(message_label, "modulate:a", 0.0, 0.5)
-	tween.tween_callback(func():
+	_current_tween = create_tween()
+	_current_tween.tween_property(message_label, "modulate:a", 0.0, 0.5)
+	_current_tween.tween_callback(func():
 		message_label.visible = false
 		message_label.modulate.a = 1.0
 		_process_queue()

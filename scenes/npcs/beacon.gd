@@ -16,6 +16,8 @@ signal activated(beacon: Area2D)
 @onready var label: Label = $Label
 
 var _player_inside: bool = false
+var _heal_tick_timer: float = 0.0
+const HEAL_TICK_INTERVAL := 1.0  # Heal every second while standing on a heal beacon
 const ZOOM_REF := 3.0
 
 # Map beacon colors to texture names
@@ -56,16 +58,31 @@ func _ready() -> void:
 	if shape and shape.shape is CircleShape2D:
 		shape.shape.radius = beacon_radius
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if label.visible:
 		var cam = get_viewport().get_camera_2d()
 		if cam:
 			var comp = ZOOM_REF / cam.zoom.x
 			label.scale = Vector2(comp, comp)
 
+	# Continuous healing while player stands on a heal beacon (no sound)
+	if _player_inside and beacon_type == "heal":
+		_heal_tick_timer += delta
+		if _heal_tick_timer >= HEAL_TICK_INTERVAL:
+			_heal_tick_timer -= HEAL_TICK_INTERVAL
+			var players = get_tree().get_nodes_in_group("player")
+			for player in players:
+				if is_instance_valid(player) and player.has_node("StatsComponent"):
+					var stats = player.get_node("StatsComponent")
+					if stats.current_hp < stats.get_total_max_hp() or stats.current_mana < stats.get_total_max_mana():
+						stats.current_hp = stats.get_total_max_hp()
+						stats.current_mana = stats.get_total_max_mana()
+						stats._emit_all()
+
 func _on_body_entered(body: Node2D) -> void:
 	if body.is_in_group("player"):
 		_player_inside = true
+		_heal_tick_timer = 0.0
 		activated.emit(self)
 		# Route through BeaconManager for centralized dispatch
 		if not beacon_type.is_empty():
@@ -74,3 +91,4 @@ func _on_body_entered(body: Node2D) -> void:
 func _on_body_exited(body: Node2D) -> void:
 	if body.is_in_group("player"):
 		_player_inside = false
+		_heal_tick_timer = 0.0

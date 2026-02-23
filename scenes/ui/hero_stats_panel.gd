@@ -13,7 +13,7 @@ var _is_visible: bool = false
 var _is_mobile: bool = false
 
 # ── Colours ──
-const COL_BG        = Color(0.06, 0.06, 0.08, 0.88)
+const COL_BG        = Color(0.06, 0.06, 0.08, 1.0)
 const COL_BORDER    = Color(0.55, 0.45, 0.2, 0.6)
 const COL_TITLE     = Color(1.0, 0.92, 0.65)
 const COL_LABEL     = Color(0.55, 0.52, 0.48)

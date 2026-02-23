@@ -3,7 +3,7 @@
 [ext_resource type="Script" path="res://scenes/ui/pause_menu.gd" id="1_pause"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_pause"]
-bg_color = Color(0.06, 0.06, 0.1, 0.96)
+bg_color = Color(0.06, 0.06, 0.1, 1.0)
 border_color = Color(0.7, 0.55, 0.2, 0.8)
 border_width_left = 2
 border_width_top = 2
@@ -31,4 +31,5 @@ offset_right = 200.0
 offset_bottom = 220.0
 grow_horizontal = 2
 grow_vertical = 2
+self_modulate = Color(1, 1, 1, 0.78)
 theme_override_styles/panel = SubResource("StyleBoxFlat_pause")

@@ -9,9 +9,18 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.42.5"
+const GAME_VERSION := "v0.42.6"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.42.6",
+		"title": "Consistent Panel Transparency & Mobile UX",
+		"date": "2026-02-23",
+		"entries": [
+			"All menu/dialog panels now share the same 78% opacity for readability",
+			"Inventory mobile close button is larger and easier to tap",
+		]
+	},
 	{
 		"version": "v0.42.5",
 		"title": "More Transparent Inventory Panel",

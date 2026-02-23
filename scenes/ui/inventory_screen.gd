@@ -105,8 +105,8 @@ func _detect_mobile() -> void:
 		close_hint.queue_free()
 		var close_btn = Button.new()
 		close_btn.text = "X"
-		close_btn.custom_minimum_size = Vector2(70, 60)
-		close_btn.add_theme_font_size_override("font_size", 36)
+		close_btn.custom_minimum_size = Vector2(100, 80)
+		close_btn.add_theme_font_size_override("font_size", 48)
 		close_btn.pressed.connect(toggle)
 		$Panel/MarginContainer/VBox/TopBar.add_child(close_btn)
 	else:

@@ -68,7 +68,7 @@ func _process(delta: float) -> void:
 			var comp = ZOOM_REF / cam.zoom.x
 			label.scale = Vector2(comp, comp)
 
-	# Heal beacon: restore HP/MP every frame so HP never visibly drops
+	# Heal beacon: grant immunity and restore HP/MP every frame
 	if beacon_type == "heal":
 		var players = get_tree().get_nodes_in_group("player")
 		for player in players:
@@ -76,6 +76,8 @@ func _process(delta: float) -> void:
 				continue
 			var dist_sq = global_position.distance_squared_to(player.global_position)
 			if dist_sq <= _heal_range_sq:
+				# Grant damage immunity while on beacon
+				player.is_on_heal_beacon = true
 				var stats = player.get_node("StatsComponent")
 				var needs_heal = stats.current_hp < stats.get_total_max_hp() or stats.current_mana < stats.get_total_max_mana()
 				if needs_heal:
@@ -88,7 +90,9 @@ func _process(delta: float) -> void:
 						AudioManager.play_sfx("beacon_heal")
 						GameManager.game_message.emit("Fully Restored!", Color(0.3, 1.0, 0.5))
 			else:
-				# Player left — reset so SFX plays on next visit if needed
+				# Player left — remove immunity and reset SFX
+				if player.get("is_on_heal_beacon"):
+					player.is_on_heal_beacon = false
 				_played_heal_sfx = false
 
 func _on_body_entered(body: Node2D) -> void:

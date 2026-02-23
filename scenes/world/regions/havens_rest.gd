@@ -202,14 +202,8 @@ func _random_position_in_ring(min_dist: float, max_dist: float) -> Vector2:
 	return Vector2(_wave_rng.randf_range(-5000, 5000), _wave_rng.randf_range(-3800, 3800))
 
 func _on_heal_beacon(_b: Area2D) -> void:
-	var players = get_tree().get_nodes_in_group("player")
-	if players.size() > 0:
-		var stats = players[0].stats
-		stats.current_hp = stats.get_total_max_hp()
-		stats.current_mana = stats.get_total_max_mana()
-		stats._emit_all()
-		AudioManager.play_sfx("beacon_heal")
-		GameManager.game_message.emit("HP and Mana fully restored!", Color(0.2, 1.0, 0.2))
+	# Healing + immunity is handled by beacon.gd _process() every frame
+	pass
 
 func _on_info_beacon(_b: Area2D) -> void:
 	GameManager.game_message.emit("Haven's Rest - A safe haven for adventurers.", Color(0.5, 0.7, 1.0))

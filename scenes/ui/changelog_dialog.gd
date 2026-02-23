@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.35.0"
+const GAME_VERSION := "v0.35.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.35.1",
+		"title": "Heal Beacon True Immunity",
+		"date": "2026-02-23",
+		"entries": [
+			"Heroes on a heal beacon are now fully immune to all damage (attacks do nothing)",
+			"HP and mana are still restored to full every frame while on beacon",
+			"Immunity flag is set/cleared as the hero enters/leaves beacon range",
+		]
+	},
 	{
 		"version": "v0.35.0",
 		"title": "Landscape HUD Further Compacted",

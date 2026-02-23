@@ -13,6 +13,7 @@ signal attacked(target: Node2D)
 var hero_class: String = ""
 var player_id: int = 0
 var _is_dead: bool = false  # True while dead and awaiting respawn — blocks all input/movement
+var is_on_heal_beacon: bool = false  # True while standing on a heal beacon — blocks all damage
 var _death_tween: Tween = null  # Active death/respawn animation tween
 var _enemies_in_range: Array[Node2D] = []
 var _trees_in_range: Array[Node2D] = []
@@ -2454,6 +2455,8 @@ func get_stats_dict() -> Dictionary:
 func take_damage(amount: int, is_crit: bool = false) -> void:
 	if _is_dead:
 		return  # Can't take damage while dead
+	if is_on_heal_beacon:
+		return  # Immune while standing on heal beacon
 	stats.take_damage(amount)
 	_spawn_damage_number(amount, is_crit)
 	_do_hit_flash()

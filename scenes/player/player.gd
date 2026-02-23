@@ -2653,6 +2653,7 @@ func _do_hit_flash() -> void:
 ## Sprite upgrade at level milestones (5, 10, 15, ... 50)
 func _on_level_up_sprite_upgrade(new_level: int) -> void:
 	_sync_to_death_counters()
+	AudioManager.play_sfx("level_up")
 	# Check if we hit a sprite upgrade tier
 	var tier = 0
 	for threshold in SPRITE_UPGRADE_LEVELS:
@@ -2661,7 +2662,6 @@ func _on_level_up_sprite_upgrade(new_level: int) -> void:
 	if tier > _current_sprite_tier:
 		_current_sprite_tier = tier
 		_apply_sprite_upgrade(tier)
-		AudioManager.play_sfx("level_up")
 
 func _apply_sprite_upgrade(tier: int) -> void:
 	# Try to load tier-specific texture: e.g. blade_knight_t2

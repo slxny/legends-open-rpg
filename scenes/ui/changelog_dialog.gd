@@ -9,9 +9,17 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.54.0"
+const GAME_VERSION := "v0.54.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.54.1",
+		"title": "Level Up SFX On Every Level",
+		"date": "2026-02-23",
+		"entries": [
+			"Level-up rushing SFX now plays on every level up, not just at sprite upgrade milestones",
+		]
+	},
 	{
 		"version": "v0.54.0",
 		"title": "Hero Long-Press Outline Feedback",

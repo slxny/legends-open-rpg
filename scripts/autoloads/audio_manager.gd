@@ -504,27 +504,53 @@ func _gen_item_pickup() -> AudioStreamWAV:
 	return _to_stream(samples)
 
 func _gen_level_up() -> AudioStreamWAV:
-	# Rich triumphant fanfare — warm bass foundation with shimmering arpeggio
-	var samples = _make_samples(1.2)
-	# Warm bass foundation (C3) gives weight and satisfaction
-	_add_sine_segment(samples, 130.8, 0.3, 0.0, 0.9)
-	_add_sine_segment(samples, 65.4, 0.15, 0.0, 0.7)
-	# Ascending arpeggio: C4 -> E4 -> G4 -> C5 with overlapping sustain
-	_add_sine_segment(samples, 261.6, 0.35, 0.0, 0.35)
-	_add_sine_segment(samples, 329.6, 0.35, 0.12, 0.35)
-	_add_sine_segment(samples, 392.0, 0.4, 0.24, 0.35)
-	_add_sine_segment(samples, 523.0, 0.45, 0.36, 0.55)
-	# Octave shimmer on the final note for brilliance
-	_add_sine_segment(samples, 1046.0, 0.15, 0.36, 0.55)
-	_add_sine_segment(samples, 784.0, 0.12, 0.36, 0.55)
-	_add_sine_segment(samples, 1568.0, 0.06, 0.45, 0.4)
-	# Sparkle — high pitched noise burst for that satisfying "ding" feel
-	_add_pitched_noise(samples, 4000.0, 2000.0, 0.04, 0.36)
-	_add_pitched_noise(samples, 6000.0, 1500.0, 0.03, 0.42)
-	# Fifth harmony layer (G4 sustained under the final C5)
-	_add_sine_segment(samples, 392.0, 0.15, 0.36, 0.5)
-	_apply_decay(samples, 1.3)
-	_soft_clip(samples, 1.5)
+	# Heroic power surge — charging swell into triumphant brass burst
+	# Two-phase: rising energy buildup then explosive power chord release
+	# Completely distinct from any crafting/upgrade chime
+	var samples = _make_samples(1.4)
+	# Phase 1: Rising energy swell (0.0 - 0.45s) — tension building
+	# Low rumble that builds in pitch and intensity
+	for i in range(int(0.45 * SAMPLE_RATE)):
+		var t = float(i) / SAMPLE_RATE
+		var progress = t / 0.45
+		# Rising pitch from low hum to bright tension
+		var freq = lerpf(80.0, 350.0, progress * progress)
+		var vol = lerpf(0.1, 0.35, progress)
+		samples[i] += sin(t * freq * TAU) * vol
+		# Second harmonic builds faster
+		samples[i] += sin(t * freq * 2.0 * TAU) * vol * 0.3 * progress
+		# Intensifying pulse — heartbeat getting faster
+		var pulse_rate = lerpf(4.0, 16.0, progress)
+		samples[i] *= 0.7 + 0.3 * sin(t * pulse_rate * TAU)
+	# Bright pre-burst transient — the "snap" before the release
+	var snap = _make_samples(0.03)
+	_add_pitched_noise(snap, 3500.0, 2000.0, 0.3)
+	_add_pitched_noise(snap, 1800.0, 1200.0, 0.2)
+	_apply_envelope(snap, 0.001, 0.005, 0.024)
+	_mix_into(samples, snap, int(0.43 * SAMPLE_RATE))
+	# Phase 2: Triumphant power chord burst (0.45s onward)
+	# Bold Bb major chord — distinct from C/D major used in crafting sounds
+	# Bb3 + D4 + F4 + Bb4 — heroic brass fanfare feel
+	_add_sine_segment(samples, 233.1, 0.35, 0.45, 0.75)  # Bb3 — foundation
+	_add_sine_segment(samples, 293.7, 0.30, 0.45, 0.70)  # D4 — major third
+	_add_sine_segment(samples, 349.2, 0.28, 0.45, 0.65)  # F4 — fifth
+	_add_sine_segment(samples, 466.2, 0.32, 0.45, 0.60)  # Bb4 — octave
+	# Upper harmonics for brass-like brilliance (not bell-like chime)
+	_add_sine_segment(samples, 698.5, 0.12, 0.46, 0.50)  # F5
+	_add_sine_segment(samples, 932.3, 0.08, 0.47, 0.40)  # Bb5
+	# Deep power bass — you FEEL the level up in your chest
+	_add_sine_segment(samples, 116.5, 0.25, 0.45, 0.80)  # Bb2
+	_add_sine_segment(samples, 58.3, 0.12, 0.45, 0.60)   # Bb1
+	# Triumphant ascending sweep (distinct from chime arpeggios)
+	_pitch_sweep_sine(samples, 233.1, 932.3, 0.15, 0.45)
+	# Energy burst — bright noise explosion at the moment of level up
+	_add_pitched_noise(samples, 2500.0, 1800.0, 0.08, 0.45)
+	_add_pitched_noise(samples, 4500.0, 1200.0, 0.04, 0.48)
+	# Shimmering tail — power settling into the hero
+	_add_pitched_noise(samples, 6000.0, 1500.0, 0.02, 0.65)
+	_add_pitched_noise(samples, 8000.0, 1000.0, 0.01, 0.75)
+	_apply_decay(samples, 1.5)
+	_soft_clip(samples, 1.8)
 	return _to_stream(samples)
 
 func _gen_beacon_heal() -> AudioStreamWAV:

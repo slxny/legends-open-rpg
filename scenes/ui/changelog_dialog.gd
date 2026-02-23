@@ -9,9 +9,17 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.37.0"
+const GAME_VERSION := "v0.37.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.37.1",
+		"title": "Fix Beacon Healing & Immunity",
+		"date": "2026-02-23",
+		"entries": [
+			"Fixed heal beacon not healing or granting immunity: beacon_type was not set to 'heal' in the scene, so all healing and immunity code paths were skipped",
+		]
+	},
 	{
 		"version": "v0.37.0",
 		"title": "Inventory UI Redesign",

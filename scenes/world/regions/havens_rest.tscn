@@ -36,6 +36,7 @@ position = Vector2(0, 0)
 beacon_color = Color(0.2, 1, 0.2, 1)
 beacon_label = "Heal"
 beacon_radius = 60.0
+beacon_type = "heal"
 
 [node name="Shopkeeper" parent="." instance=ExtResource("3_shop")]
 position = Vector2(260, -100)

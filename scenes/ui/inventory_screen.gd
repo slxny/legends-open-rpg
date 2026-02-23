@@ -100,15 +100,18 @@ func _detect_mobile() -> void:
 		bag_tab_btn.custom_minimum_size.y = 80
 		detail_label.add_theme_font_size_override("font_size", 34)
 		stats_label.add_theme_font_size_override("font_size", 32)
-		# Replace keyboard hint with close button
-		var close_hint = $Panel/MarginContainer/VBox/TopBar/CloseHint
-		close_hint.queue_free()
-		var close_btn = Button.new()
-		close_btn.text = "X"
-		close_btn.custom_minimum_size = Vector2(140, 100)
-		close_btn.add_theme_font_size_override("font_size", 52)
-		close_btn.pressed.connect(toggle)
-		$Panel/MarginContainer/VBox/TopBar.add_child(close_btn)
+		# Replace keyboard hint with close button (only once)
+		var close_hint = $Panel/MarginContainer/VBox/TopBar.get_node_or_null("CloseHint")
+		if close_hint:
+			close_hint.queue_free()
+		if not $Panel/MarginContainer/VBox/TopBar.get_node_or_null("MobileCloseBtn"):
+			var close_btn = Button.new()
+			close_btn.name = "MobileCloseBtn"
+			close_btn.text = "X"
+			close_btn.custom_minimum_size = Vector2(140, 100)
+			close_btn.add_theme_font_size_override("font_size", 52)
+			close_btn.pressed.connect(toggle)
+			$Panel/MarginContainer/VBox/TopBar.add_child(close_btn)
 	else:
 		# Desktop: compact right-side panel, stops above the 115px bottom HUD
 		panel.anchor_left = 1.0

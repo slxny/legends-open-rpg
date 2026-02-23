@@ -9,9 +9,18 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.45.0"
+const GAME_VERSION := "v0.45.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.45.1",
+		"title": "More Opaque Panels & Fix Duplicate Close Button",
+		"date": "2026-02-23",
+		"entries": [
+			"All dialog panels (shop, armory, inventory, tavern, etc.) are now much more opaque for better readability (78% -> 93%)",
+			"Fixed inventory close button duplicating every time the panel was opened on mobile",
+		]
+	},
 	{
 		"version": "v0.45.0",
 		"title": "Safari & Cross-Browser Fullscreen Fix",

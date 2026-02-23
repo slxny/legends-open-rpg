@@ -218,7 +218,9 @@ func _pregenerate_async() -> void:
 		"ability_whoosh", "power_strike", "whirlwind", "player_hurt",
 		"charge_loop", "charge_ready", "charge_release", "tree_chop",
 		"tree_fall", "rat_squeal_1", "rat_squeal_2", "rat_squeal_3",
-		"debuff_apply", "player_death", "respawn_countdown", "respawn_complete"]
+		"debuff_apply", "player_death", "respawn_countdown", "respawn_complete",
+		"forge_weapon", "forge_armor", "woodwork_bow", "woodwork_shield",
+		"woodwork_totem", "woodwork_watchtower", "shop_buy", "shop_sell"]
 	var batch: int = 0
 	for sfx_name in sfx_names:
 		if _sfx_cache.has(sfx_name):
@@ -372,6 +374,14 @@ func _generate_all_sfx() -> void:
 	_sfx_cache["tree_chop"] = _gen_tree_chop()
 	_sfx_cache["tree_fall"] = _gen_tree_fall()
 	_sfx_cache["beacon_heal"] = _gen_beacon_heal()
+	_sfx_cache["forge_weapon"] = _gen_forge_weapon()
+	_sfx_cache["forge_armor"] = _gen_forge_armor()
+	_sfx_cache["woodwork_bow"] = _gen_woodwork_bow()
+	_sfx_cache["woodwork_shield"] = _gen_woodwork_shield()
+	_sfx_cache["woodwork_totem"] = _gen_woodwork_totem()
+	_sfx_cache["woodwork_watchtower"] = _gen_woodwork_watchtower()
+	_sfx_cache["shop_buy"] = _gen_shop_buy()
+	_sfx_cache["shop_sell"] = _gen_shop_sell()
 
 func _gen_sword_swing() -> AudioStreamWAV:
 	# Warm blade slice — smooth swoosh with subtle metal edge
@@ -812,6 +822,225 @@ func _gen_respawn_complete() -> AudioStreamWAV:
 	_add_sine_segment(samples, 130.8, 0.15, 0.0, 0.6)
 	_apply_decay(samples, 1.0)
 	_soft_clip(samples, 1.5)
+	return _to_stream(samples)
+
+func _gen_forge_weapon() -> AudioStreamWAV:
+	# Blacksmith hammer strike — sharp metallic clang with rising harmonic ring
+	# Satisfying "ting!" of hot metal being shaped, ascending pitch = improvement
+	var samples = _make_samples(0.55)
+	# Hammer impact — sharp transient crack of metal on metal
+	var strike = _make_samples(0.03)
+	_add_pitched_noise(strike, 3500.0, 2000.0, 0.4)
+	_add_pitched_noise(strike, 5000.0, 1500.0, 0.2)
+	_apply_envelope(strike, 0.001, 0.004, 0.025)
+	_mix_into(samples, strike)
+	# Metallic ring — bright sustained tone that sings after the strike
+	_add_sine_segment(samples, 1100.0, 0.3, 0.01, 0.45)
+	_add_sine_segment(samples, 2200.0, 0.15, 0.01, 0.35)
+	_add_sine_segment(samples, 3300.0, 0.07, 0.01, 0.25)
+	# Rising harmonic sweep — the weapon getting stronger
+	_pitch_sweep_sine(samples, 800.0, 1400.0, 0.12, 0.02)
+	# Warm anvil body thud underneath
+	_pitch_sweep_sine(samples, 180.0, 90.0, 0.35)
+	_pitch_sweep_sine(samples, 360.0, 180.0, 0.15)
+	# Quick ascending two-note confirmation: "done!"
+	_add_sine_segment(samples, 660.0, 0.2, 0.30, 0.12)
+	_add_sine_segment(samples, 880.0, 0.25, 0.36, 0.15)
+	_add_sine_segment(samples, 1760.0, 0.08, 0.36, 0.12)
+	_apply_envelope(samples, 0.002, 0.12, 0.43)
+	_soft_clip(samples, 1.6)
+	return _to_stream(samples)
+
+func _gen_forge_armor() -> AudioStreamWAV:
+	# Heavy anvil clang with deep resonant sustain — armor plate being tempered
+	# Weightier than weapon forge, more bass, slower ring = solid protection
+	var samples = _make_samples(0.65)
+	# Heavy hammer blow — deeper and weightier than weapon forge
+	var blow = _make_samples(0.04)
+	_add_pitched_noise(blow, 2200.0, 1600.0, 0.35)
+	_add_pitched_noise(blow, 1200.0, 800.0, 0.25)
+	_apply_envelope(blow, 0.001, 0.006, 0.033)
+	_mix_into(samples, blow)
+	# Deep anvil ring — lower pitch, heavier feeling
+	_add_sine_segment(samples, 700.0, 0.3, 0.01, 0.50)
+	_add_sine_segment(samples, 1400.0, 0.12, 0.01, 0.40)
+	_add_sine_segment(samples, 2100.0, 0.05, 0.01, 0.30)
+	# Deep bass body — the weight of the armor
+	_pitch_sweep_sine(samples, 120.0, 60.0, 0.4)
+	_pitch_sweep_sine(samples, 240.0, 120.0, 0.2)
+	# Plate resonance — shimmering mid layer
+	_add_sine_segment(samples, 500.0, 0.15, 0.02, 0.35)
+	_add_sine_segment(samples, 350.0, 0.10, 0.02, 0.40)
+	# Confirmation chord — solid, grounded (C4 + G4)
+	_add_sine_segment(samples, 261.6, 0.18, 0.35, 0.20)
+	_add_sine_segment(samples, 392.0, 0.15, 0.38, 0.20)
+	_add_sine_segment(samples, 523.3, 0.10, 0.40, 0.18)
+	_apply_envelope(samples, 0.002, 0.15, 0.50)
+	_soft_clip(samples, 1.7)
+	return _to_stream(samples)
+
+func _gen_woodwork_bow() -> AudioStreamWAV:
+	# Taut bowstring snap with woody resonance — string being drawn and released
+	# Sharp twang followed by vibrating string hum, satisfying elastic snap
+	var samples = _make_samples(0.45)
+	# Bowstring twang — sharp pitched snap that vibrates
+	var twang_freq = 330.0  # E4
+	for i in range(samples.size()):
+		var t = float(i) / SAMPLE_RATE
+		# Vibrating string with natural decay and slight pitch drop
+		var freq = twang_freq * (1.0 - t * 0.08)
+		samples[i] += sin(t * freq * TAU) * 0.35
+		# Harmonics of the string
+		samples[i] += sin(t * freq * 2.0 * TAU) * 0.15
+		samples[i] += sin(t * freq * 3.0 * TAU) * 0.06
+		# Fast tremolo simulating string vibration
+		samples[i] *= 0.85 + 0.15 * sin(t * 60.0 * TAU)
+	# Woody body resonance underneath
+	_add_sine_segment(samples, 165.0, 0.2, 0.0, 0.25)
+	_add_sine_segment(samples, 247.0, 0.1, 0.0, 0.20)
+	# Sharp initial snap transient
+	var snap = _make_samples(0.02)
+	_add_pitched_noise(snap, 4000.0, 2500.0, 0.3)
+	_apply_envelope(snap, 0.001, 0.003, 0.016)
+	_mix_into(samples, snap)
+	# Ascending confirmation note
+	_add_sine_segment(samples, 494.0, 0.15, 0.25, 0.15)  # B4
+	_add_sine_segment(samples, 988.0, 0.05, 0.25, 0.12)
+	_apply_envelope(samples, 0.002, 0.10, 0.35)
+	_soft_clip(samples, 1.4)
+	return _to_stream(samples)
+
+func _gen_woodwork_shield() -> AudioStreamWAV:
+	# Solid wooden thud with layered reinforcement — planks being nailed together
+	# Multiple quick knocks building up, ending with a deep satisfying "thunk"
+	var samples = _make_samples(0.50)
+	# Three quick construction taps — rap-rap-rap
+	var tap_times = [0.0, 0.07, 0.14]
+	for tap_t in tap_times:
+		var tap = _make_samples(0.06)
+		_pitch_sweep_sine(tap, 280.0, 140.0, 0.35)
+		_pitch_sweep_sine(tap, 560.0, 280.0, 0.15)
+		_add_pitched_noise(tap, 1800.0, 1000.0, 0.15)
+		_apply_envelope(tap, 0.002, 0.01, 0.05)
+		_mix_into(samples, tap, int(tap_t * SAMPLE_RATE))
+	# Final heavy thunk — the shield is complete, solid and weighty
+	var thunk = _make_samples(0.20)
+	_pitch_sweep_sine(thunk, 160.0, 70.0, 0.5)
+	_pitch_sweep_sine(thunk, 320.0, 140.0, 0.25)
+	_add_sine_segment(thunk, 220.0, 0.15, 0.01, 0.12)
+	_add_pitched_noise(thunk, 1200.0, 700.0, 0.15)
+	_apply_envelope(thunk, 0.003, 0.04, 0.16)
+	_soft_clip(thunk, 1.5)
+	_mix_into(samples, thunk, int(0.22 * SAMPLE_RATE))
+	# Warm confirmation tone
+	_add_sine_segment(samples, 349.0, 0.12, 0.35, 0.12)  # F4
+	_add_sine_segment(samples, 440.0, 0.10, 0.38, 0.10)  # A4
+	_apply_envelope(samples, 0.002, 0.15, 0.35)
+	_soft_clip(samples, 1.4)
+	return _to_stream(samples)
+
+func _gen_woodwork_totem() -> AudioStreamWAV:
+	# Mystical nature chime — ethereal harmonics with earthy resonance
+	# Spiritual, otherworldly — carved totem channeling power
+	var samples = _make_samples(0.70)
+	# Deep earth hum — the totem's grounding presence
+	_add_sine_segment(samples, 110.0, 0.2, 0.0, 0.55)
+	_add_sine_segment(samples, 165.0, 0.1, 0.0, 0.50)
+	# Ethereal ascending chime arpeggio — pentatonic scale for mystical feel
+	# D5, F#5, A5, D6 (D major pentatonic)
+	_add_sine_segment(samples, 587.0, 0.25, 0.05, 0.30)
+	_add_sine_segment(samples, 740.0, 0.25, 0.13, 0.28)
+	_add_sine_segment(samples, 880.0, 0.28, 0.21, 0.26)
+	_add_sine_segment(samples, 1175.0, 0.30, 0.29, 0.30)
+	# Bell-like overtones on each note
+	_add_sine_segment(samples, 1175.0, 0.06, 0.05, 0.25)
+	_add_sine_segment(samples, 1480.0, 0.05, 0.13, 0.22)
+	_add_sine_segment(samples, 1760.0, 0.04, 0.21, 0.20)
+	_add_sine_segment(samples, 2350.0, 0.03, 0.29, 0.18)
+	# Nature shimmer — soft high-pitched sparkle
+	_add_pitched_noise(samples, 6000.0, 1500.0, 0.02, 0.15)
+	_add_pitched_noise(samples, 8000.0, 1000.0, 0.015, 0.25)
+	# Gentle wobble for organic feel
+	for i in range(samples.size()):
+		var t = float(i) / SAMPLE_RATE
+		samples[i] *= 0.92 + 0.08 * sin(t * 6.0 * TAU)
+	_apply_envelope(samples, 0.02, 0.25, 0.43)
+	_normalize(samples, 0.7)
+	return _to_stream(samples)
+
+func _gen_woodwork_watchtower() -> AudioStreamWAV:
+	# Ascending stone-and-wood stacking — building upward, gaining height
+	# Each "layer" is a slightly higher pitched knock, ending with a bright lookout chime
+	var samples = _make_samples(0.60)
+	# Four ascending construction hits — each higher pitched = building taller
+	var hit_data = [
+		{"t": 0.0, "freq": 150.0, "vol": 0.3},
+		{"t": 0.08, "freq": 200.0, "vol": 0.3},
+		{"t": 0.16, "freq": 260.0, "vol": 0.35},
+		{"t": 0.24, "freq": 330.0, "vol": 0.35},
+	]
+	for hd in hit_data:
+		var hit = _make_samples(0.08)
+		_pitch_sweep_sine(hit, hd["freq"] * 1.5, hd["freq"], hd["vol"])
+		_add_pitched_noise(hit, 1500.0, 800.0, 0.12)
+		_apply_envelope(hit, 0.002, 0.015, 0.063)
+		_mix_into(samples, hit, int(float(hd["t"]) * SAMPLE_RATE))
+	# Bright lookout chime at the top — "the watchtower is complete"
+	# High, clear, and far-reaching like a bell at the top of a tower
+	_add_sine_segment(samples, 1047.0, 0.3, 0.34, 0.22)  # C6
+	_add_sine_segment(samples, 1319.0, 0.2, 0.37, 0.18)  # E6
+	_add_sine_segment(samples, 2094.0, 0.08, 0.34, 0.15)  # C7 overtone
+	# Shimmering decay — the view from the top
+	_add_pitched_noise(samples, 5000.0, 1500.0, 0.025, 0.34)
+	# Warm foundation
+	_add_sine_segment(samples, 261.6, 0.12, 0.0, 0.40)
+	_apply_envelope(samples, 0.002, 0.18, 0.40)
+	_soft_clip(samples, 1.4)
+	return _to_stream(samples)
+
+func _gen_shop_buy() -> AudioStreamWAV:
+	# Satisfying coin exchange — coins clinking on counter with register confirmation
+	# Multiple quick metallic clinks followed by a warm "cha-ching" tone
+	var samples = _make_samples(0.40)
+	# Coin clinks — three quick high metallic tinks at slightly different pitches
+	var clink_freqs = [3200.0, 3600.0, 4100.0]
+	var clink_times = [0.0, 0.04, 0.09]
+	for j in range(3):
+		var clink = _make_samples(0.05)
+		_add_sine(clink, clink_freqs[j], 0.2)
+		_add_sine(clink, clink_freqs[j] * 0.5, 0.1)
+		_add_pitched_noise(clink, clink_freqs[j], 800.0, 0.08)
+		_apply_envelope(clink, 0.001, 0.008, 0.04)
+		_mix_into(samples, clink, int(clink_times[j] * SAMPLE_RATE))
+	# Register confirmation — warm descending "cha-ching" two-note
+	_add_sine_segment(samples, 784.0, 0.3, 0.14, 0.10)   # G5
+	_add_sine_segment(samples, 523.0, 0.35, 0.20, 0.16)   # C5
+	_add_sine_segment(samples, 1046.0, 0.10, 0.20, 0.12)  # C6 overtone
+	# Warmth underneath
+	_add_sine_segment(samples, 261.6, 0.12, 0.14, 0.20)
+	_apply_envelope(samples, 0.002, 0.12, 0.28)
+	_soft_clip(samples, 1.3)
+	return _to_stream(samples)
+
+func _gen_shop_sell() -> AudioStreamWAV:
+	# Lighter coin toss — coins received, ascending pitch = profit gained
+	# Brighter and airier than buy, with ascending confirmation
+	var samples = _make_samples(0.35)
+	# Light coin toss sound — single bright metallic clink
+	var toss = _make_samples(0.04)
+	_add_sine(toss, 3800.0, 0.15)
+	_add_sine(toss, 1900.0, 0.08)
+	_add_pitched_noise(toss, 4500.0, 1200.0, 0.06)
+	_apply_envelope(toss, 0.001, 0.006, 0.033)
+	_mix_into(samples, toss)
+	# Ascending two-note "profit" chime — cheerful and quick
+	_add_sine_segment(samples, 659.0, 0.28, 0.05, 0.12)   # E5
+	_add_sine_segment(samples, 880.0, 0.32, 0.11, 0.16)   # A5
+	_add_sine_segment(samples, 1760.0, 0.08, 0.11, 0.12)  # A6 shimmer
+	# Sparkle on top
+	_add_pitched_noise(samples, 5500.0, 1200.0, 0.02, 0.11)
+	_apply_envelope(samples, 0.002, 0.10, 0.24)
+	_soft_clip(samples, 1.2)
 	return _to_stream(samples)
 
 # ============================================================

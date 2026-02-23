@@ -157,6 +157,7 @@ func _do_upgrade(upgrade_type: String) -> void:
 
 	var new_level = GameManager.weapon_upgrade_level if upgrade_type == "weapon" else GameManager.armor_upgrade_level
 	GameManager.game_message.emit("%s upgraded to level %d!" % [upgrade_type.capitalize(), new_level], Color(1, 0.85, 0.5))
+	AudioManager.play_sfx("forge_weapon" if upgrade_type == "weapon" else "forge_armor")
 
 func _apply_armory_bonuses() -> void:
 	if not _player:

@@ -135,6 +135,7 @@ func _buy_item(item_id: String) -> void:
 		# Bag full, refund
 		GameManager.add_gold(price)
 		return
+	AudioManager.play_sfx("shop_buy")
 	_refresh()
 
 func _sell_item(bag_index: int) -> void:
@@ -144,6 +145,7 @@ func _sell_item(bag_index: int) -> void:
 	var sell_price = ItemData.get_sell_price(item.get("id", ""))
 	_player.inventory.remove_item_from_bag(bag_index)
 	GameManager.add_gold(sell_price)
+	AudioManager.play_sfx("shop_sell")
 	_refresh()
 
 func _unhandled_input(event: InputEvent) -> void:

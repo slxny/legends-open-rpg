@@ -210,7 +210,7 @@ func _do_upgrade(key: String) -> void:
 		"%s upgraded to level %d!" % [UPGRADES[key]["title"], new_lvl],
 		UPGRADES[key]["color"]
 	)
-	AudioManager.play_sfx("level_up")
+	AudioManager.play_sfx("woodwork_" + key)
 
 func _apply_woodwork_bonuses() -> void:
 	if not _player:

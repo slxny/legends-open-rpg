@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.46.1"
+const GAME_VERSION := "v0.47.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.47.0",
+		"title": "Enemy Scaling Overhaul",
+		"date": "2026-02-23",
+		"entries": [
+			"Enemies now scale much closer to the hero's level (85% stat growth vs 60% before)",
+			"Respawned enemies stay stronger longer: decay 4% per respawn instead of 10%, floor raised from 60% to 80%",
+			"XP per enemy level increased from +5 to +8, gold from +2 to +3 per level",
+		]
+	},
 	{
 		"version": "v0.46.1",
 		"title": "Fix Reinforced Bow Build SFX",

@@ -324,15 +324,15 @@ func _spawn_enemies_staggered(is_respawn: bool) -> void:
 		var scaled_level = max(base_level, player_level + randi_range(0, 2))
 
 		# Compute effective stats level: dampen growth for levels above natural range
-		# Boosted levels contribute at 60% rate so enemies are tougher but still beatable
+		# Boosted levels contribute at 85% rate so enemies genuinely match the hero
 		var stats_level = scaled_level
 		if scaled_level > type_max:
 			var boost = scaled_level - type_max
-			stats_level = type_max + int(ceil(boost * 0.6))
+			stats_level = type_max + int(ceil(boost * 0.85))
 
 		var weakness_factor = 1.0
 		if is_respawn:
-			weakness_factor = max(0.6, 1.0 - _times_respawned * 0.1)
+			weakness_factor = max(0.8, 1.0 - _times_respawned * 0.04)
 
 		_spawn_queue.append({
 			"offset": Vector2(randf_range(-spread, spread), randf_range(-spread, spread)),
@@ -362,8 +362,8 @@ func _instantiate_enemy(pending: Dictionary) -> void:
 		"move_speed": type_data["move_speed"],
 		"attack_range": type_data["attack_range"],
 		"aggro_range": type_data["aggro_range"],
-		"xp_reward": int((type_data["xp_reward"] + (level - 1) * 5) * weakness_factor),
-		"gold_reward": int((type_data["gold_reward"] + (level - 1) * 2) * weakness_factor),
+		"xp_reward": int((type_data["xp_reward"] + (level - 1) * 8) * weakness_factor),
+		"gold_reward": int((type_data["gold_reward"] + (level - 1) * 3) * weakness_factor),
 		"drop_table": type_data["drop_table"],
 		"weakness_factor": weakness_factor,
 		"is_mini_boss": is_mini_boss,

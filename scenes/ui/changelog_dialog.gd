@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.35.1"
+const GAME_VERSION := "v0.36.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.36.0",
+		"title": "Landscape HUD Ultra-Compact",
+		"date": "2026-02-23",
+		"entries": [
+			"Landscape bottom panel reduced from 90px to 64px (~30% shorter)",
+			"Command buttons shrunk from 24px to 18px height, 'Commands' label hidden in landscape",
+			"HP/MP bars reduced to 12px, XP bar to 6px, minimap to 60x50 for minimal footprint",
+			"Top bar and menu button also shrunk for maximum game view in landscape",
+		]
+	},
 	{
 		"version": "v0.35.1",
 		"title": "Heal Beacon True Immunity",

@@ -217,6 +217,7 @@ func _on_heal_beacon(_b: Area2D) -> void:
 	pass
 
 func _on_info_beacon(_b: Area2D) -> void:
+	AudioManager.play_sfx("enter_info")
 	GameManager.game_message.emit("Haven's Rest - A safe haven for adventurers.", Color(0.5, 0.7, 1.0))
 	GameManager.game_message.emit("Explore outward to find creep camps. Kill monsters to level up!", Color(0.5, 0.7, 1.0))
 

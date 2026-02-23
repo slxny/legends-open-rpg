@@ -387,6 +387,10 @@ func _generate_all_sfx() -> void:
 	_sfx_cache["tree_chop"] = _gen_tree_chop()
 	_sfx_cache["tree_fall"] = _gen_tree_fall()
 	_sfx_cache["beacon_heal"] = _gen_beacon_heal()
+	_sfx_cache["enter_shop"] = _gen_enter_shop()
+	_sfx_cache["enter_tavern"] = _gen_enter_tavern()
+	_sfx_cache["enter_woodworker"] = _gen_enter_woodworker()
+	_sfx_cache["enter_info"] = _gen_enter_info()
 	_sfx_cache["forge_weapon"] = _gen_forge_weapon()
 	_sfx_cache["forge_armor"] = _gen_forge_armor()
 	_sfx_cache["woodwork_bow"] = _gen_woodwork_bow()
@@ -579,6 +583,104 @@ func _gen_beacon_heal() -> AudioStreamWAV:
 	_add_pitched_noise(samples, 6000.0, 800.0, 0.012, 0.3)
 	_apply_envelope(samples, 0.02, 0.35, 0.53)
 	_normalize(samples, 0.55)
+	return _to_stream(samples)
+
+func _gen_enter_shop() -> AudioStreamWAV:
+	# Welcoming shop door chime — two-tone doorbell with warm brass undertone
+	# Like the gentle "ding-dong" when entering a friendly merchant's store
+	var samples = _make_samples(0.55)
+	# Door chime — bright two-tone bell: ding (high) then dong (lower)
+	_add_sine_segment(samples, 1318.0, 0.22, 0.0, 0.18)   # E6 — ding
+	_add_sine_segment(samples, 2636.0, 0.06, 0.0, 0.12)    # E7 overtone
+	_add_sine_segment(samples, 988.0, 0.25, 0.12, 0.25)    # B5 — dong
+	_add_sine_segment(samples, 1976.0, 0.07, 0.12, 0.18)   # B6 overtone
+	# Warm brass undertone — merchant's warmth
+	_add_sine_segment(samples, 330.0, 0.10, 0.0, 0.40)     # E4 warm bed
+	# Tiny coin sparkle — you're in a shop after all
+	var sparkle = _make_samples(0.03)
+	_add_sine(sparkle, 3800.0, 0.12)
+	_add_pitched_noise(sparkle, 4200.0, 800.0, 0.05)
+	_apply_envelope(sparkle, 0.001, 0.005, 0.024)
+	_mix_into(samples, sparkle, int(0.30 * SAMPLE_RATE))
+	_apply_envelope(samples, 0.008, 0.15, 0.39)
+	_normalize(samples, 0.50)
+	return _to_stream(samples)
+
+func _gen_enter_tavern() -> AudioStreamWAV:
+	# Cozy tavern entrance — wooden door thud with warm murmur and hearth crackle
+	# Low warm tones that say "come in from the cold"
+	var samples = _make_samples(0.60)
+	# Wooden door thump — low percussive hit, like pushing open a heavy door
+	var thud = _make_samples(0.08)
+	_add_sine(thud, 120.0, 0.30)
+	_add_sine(thud, 180.0, 0.15)
+	_add_pitched_noise(thud, 600.0, 400.0, 0.12)
+	_apply_envelope(thud, 0.002, 0.015, 0.063)
+	_mix_into(samples, thud)
+	# Warm hearth ambiance — cozy low drone that fades in
+	_add_sine_segment(samples, 165.0, 0.12, 0.06, 0.45)   # E3 — warm bass
+	_add_sine_segment(samples, 247.0, 0.08, 0.08, 0.40)   # B3 — fifth
+	# Gentle murmur hint — very soft noise band like distant chatter
+	_add_pitched_noise(samples, 800.0, 500.0, 0.025, 0.10)
+	_add_pitched_noise(samples, 1200.0, 400.0, 0.015, 0.15)
+	# A welcoming two-note melody — descending minor third (feels like "come in")
+	_add_sine_segment(samples, 392.0, 0.15, 0.10, 0.18)   # G4
+	_add_sine_segment(samples, 330.0, 0.18, 0.22, 0.22)   # E4
+	_add_sine_segment(samples, 660.0, 0.04, 0.22, 0.15)   # E5 overtone
+	_apply_envelope(samples, 0.01, 0.20, 0.39)
+	_normalize(samples, 0.50)
+	return _to_stream(samples)
+
+func _gen_enter_woodworker() -> AudioStreamWAV:
+	# Rustic workshop entrance — wood scrape + gentle tool clink + sawdust air
+	# Earthy, grounded sound that says "workshop"
+	var samples = _make_samples(0.50)
+	# Wood scrape / creak — like brushing against a workbench
+	var creak = _make_samples(0.10)
+	_add_pitched_noise(creak, 400.0, 300.0, 0.18)
+	_add_sine(creak, 180.0, 0.12)
+	_add_sine(creak, 280.0, 0.08)
+	_apply_envelope(creak, 0.005, 0.03, 0.065)
+	_mix_into(samples, creak)
+	# Light metallic tool clink — chisel or saw touching wood
+	var clink = _make_samples(0.04)
+	_add_sine(clink, 2200.0, 0.15)
+	_add_sine(clink, 3300.0, 0.08)
+	_add_pitched_noise(clink, 2800.0, 600.0, 0.06)
+	_apply_envelope(clink, 0.001, 0.008, 0.031)
+	_mix_into(samples, clink, int(0.12 * SAMPLE_RATE))
+	# Earthy warm tone — wood resonance
+	_add_sine_segment(samples, 196.0, 0.15, 0.05, 0.35)   # G3 — woody
+	_add_sine_segment(samples, 294.0, 0.10, 0.08, 0.30)   # D4 — fifth
+	# Second softer clink
+	var clink2 = _make_samples(0.03)
+	_add_sine(clink2, 2600.0, 0.10)
+	_add_pitched_noise(clink2, 3200.0, 500.0, 0.04)
+	_apply_envelope(clink2, 0.001, 0.006, 0.023)
+	_mix_into(samples, clink2, int(0.24 * SAMPLE_RATE))
+	# Sawdust air — very gentle high noise
+	_add_pitched_noise(samples, 5000.0, 2000.0, 0.010, 0.08)
+	_apply_envelope(samples, 0.008, 0.15, 0.34)
+	_normalize(samples, 0.50)
+	return _to_stream(samples)
+
+func _gen_enter_info() -> AudioStreamWAV:
+	# Mystical knowledge chime — ethereal discovery sound
+	# Like touching an ancient rune that whispers wisdom
+	var samples = _make_samples(0.50)
+	# Ethereal shimmer — two detuned tones for chorus effect
+	_add_sine_segment(samples, 523.0, 0.18, 0.0, 0.35)    # C5
+	_add_sine_segment(samples, 526.0, 0.18, 0.0, 0.35)    # C5 + 3Hz detune = gentle beating
+	# Ascending mystery note
+	_add_sine_segment(samples, 659.0, 0.20, 0.08, 0.30)   # E5
+	_add_sine_segment(samples, 662.0, 0.20, 0.08, 0.30)   # E5 + detune
+	# Sparkle on top — knowledge glitter
+	_add_sine_segment(samples, 1046.0, 0.08, 0.15, 0.20)  # C6
+	_add_pitched_noise(samples, 6000.0, 1500.0, 0.015, 0.20)
+	# Soft sub bed for gravitas
+	_add_sine_segment(samples, 262.0, 0.08, 0.0, 0.40)    # C4
+	_apply_envelope(samples, 0.02, 0.15, 0.33)
+	_normalize(samples, 0.45)
 	return _to_stream(samples)
 
 func _gen_dash_swoosh() -> AudioStreamWAV:

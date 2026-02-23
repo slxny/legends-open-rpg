@@ -47,6 +47,7 @@ func open(shop_items: Array[String]) -> void:
 	_current_tab = 0
 	_selected_item = {}
 	_refresh()
+	AudioManager.play_sfx("enter_shop")
 
 func _detect_mobile() -> void:
 	var vp_size = get_viewport().get_visible_rect().size

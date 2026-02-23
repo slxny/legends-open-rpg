@@ -46,6 +46,7 @@ func open() -> void:
 	panel.visible = true
 	_detect_mobile()
 	_refresh()
+	AudioManager.play_sfx("enter_tavern")
 
 func _detect_mobile() -> void:
 	var vp_size = get_viewport().get_visible_rect().size

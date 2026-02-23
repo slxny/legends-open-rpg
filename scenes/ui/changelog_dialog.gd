@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.57.6"
+const GAME_VERSION := "v0.58.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.58.0",
+		"title": "Beacon entry sound effects",
+		"date": "2026-02-23",
+		"entries": [
+			"Shop entrance plays welcoming door chime with coin sparkle",
+			"Tavern entrance plays cozy wooden door thud with warm hearth tones",
+			"Woodworker entrance plays rustic workshop creak with tool clinks",
+			"Info beacon plays ethereal mystical knowledge chime",
+		]
+	},
 	{
 		"version": "v0.57.6",
 		"title": "Desktop hero select screen overhaul",

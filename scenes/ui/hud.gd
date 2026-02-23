@@ -90,13 +90,13 @@ func _apply_mobile_layout() -> void:
 		wood_label.add_theme_font_size_override("font_size", 44)
 		alignment_label.add_theme_font_size_override("font_size", 38)
 
-	# ── PORTRAIT: minimal bar strip + command overlay button ──
+	# ── PORTRAIT: [MAP] [bars] [OPT] layout ──
 	if not is_landscape:
 		# Hide command card (minimap gets reparented into overlay later)
 		command_card.visible = false
 		level_label.visible = false
 
-		# Compact bottom panel: just HP/MP/XP bars + CMD/MAP buttons
+		# Bottom panel with 40px bars
 		var bar_h = 40
 		var panel_h = bar_h * 3 + 14  # 3 bars + spacing = ~134px
 		bottom_panel.offset_top = -panel_h
@@ -106,44 +106,44 @@ func _apply_mobile_layout() -> void:
 		xp_bar.custom_minimum_size.y = bar_h
 		unit_info.add_theme_constant_override("separation", 2)
 
-		# Two stacked buttons: CMD + MAP, sharing the right side of the bar
-		var btn_col = VBoxContainer.new()
-		btn_col.add_theme_constant_override("separation", 2)
-		btn_col.custom_minimum_size = Vector2(90, 0)
-		bottom_hbox.add_child(btn_col)
-
+		# Shared button style
 		var btn_style_normal = StyleBoxFlat.new()
 		btn_style_normal.bg_color = Color(0.12, 0.11, 0.08, 0.95)
 		btn_style_normal.border_color = Color(0.5, 0.4, 0.18, 0.8)
-		btn_style_normal.set_border_width_all(1)
-		btn_style_normal.set_corner_radius_all(4)
+		btn_style_normal.set_border_width_all(2)
+		btn_style_normal.set_corner_radius_all(6)
 		btn_style_normal.set_content_margin_all(0)
 
 		var btn_style_pressed = btn_style_normal.duplicate()
 		btn_style_pressed.bg_color = Color(0.25, 0.2, 0.08, 0.95)
 		btn_style_pressed.border_color = Color(0.9, 0.75, 0.3, 1.0)
 
-		var cmd_btn = Button.new()
-		cmd_btn.text = "CMD"
-		cmd_btn.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		cmd_btn.add_theme_font_size_override("font_size", 18)
-		cmd_btn.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
-		cmd_btn.add_theme_stylebox_override("normal", btn_style_normal)
-		cmd_btn.add_theme_stylebox_override("pressed", btn_style_pressed)
-		cmd_btn.add_theme_stylebox_override("hover", btn_style_normal)
-		cmd_btn.pressed.connect(_toggle_cmd_overlay)
-		btn_col.add_child(cmd_btn)
-
+		# MAP button — square, left of bars
 		var map_btn = Button.new()
 		map_btn.text = "MAP"
+		map_btn.custom_minimum_size = Vector2(panel_h, 0)
 		map_btn.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		map_btn.add_theme_font_size_override("font_size", 18)
+		map_btn.add_theme_font_size_override("font_size", 28)
 		map_btn.add_theme_color_override("font_color", Color(0.5, 0.85, 1.0))
 		map_btn.add_theme_stylebox_override("normal", btn_style_normal.duplicate())
 		map_btn.add_theme_stylebox_override("pressed", btn_style_pressed.duplicate())
 		map_btn.add_theme_stylebox_override("hover", btn_style_normal.duplicate())
 		map_btn.pressed.connect(_toggle_map_overlay)
-		btn_col.add_child(map_btn)
+		bottom_hbox.add_child(map_btn)
+		bottom_hbox.move_child(map_btn, 0)  # Move to leftmost position
+
+		# OPT button — square, right of bars
+		var opt_btn = Button.new()
+		opt_btn.text = "OPT"
+		opt_btn.custom_minimum_size = Vector2(panel_h, 0)
+		opt_btn.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		opt_btn.add_theme_font_size_override("font_size", 28)
+		opt_btn.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
+		opt_btn.add_theme_stylebox_override("normal", btn_style_normal.duplicate())
+		opt_btn.add_theme_stylebox_override("pressed", btn_style_pressed.duplicate())
+		opt_btn.add_theme_stylebox_override("hover", btn_style_normal.duplicate())
+		opt_btn.pressed.connect(_toggle_cmd_overlay)
+		bottom_hbox.add_child(opt_btn)
 
 		# Build overlays (hidden by default)
 		_build_cmd_overlay()

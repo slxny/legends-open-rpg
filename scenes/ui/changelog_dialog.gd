@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.42.0"
+const GAME_VERSION := "v0.42.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.42.1",
+		"title": "Bigger MAP & OPT Buttons in Portrait",
+		"date": "2026-02-23",
+		"entries": [
+			"MAP and OPT are now large square buttons flanking the bars",
+			"MAP on the left, OPT (commands) on the right — much easier to tap",
+			"Bottom bar height unchanged — buttons fill the full panel height",
+		]
+	},
 	{
 		"version": "v0.42.0",
 		"title": "Long-Press Hero for Stats (Mobile)",

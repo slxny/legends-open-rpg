@@ -398,11 +398,18 @@ func _toggle_map_overlay() -> void:
 		AudioManager.play_sfx("ui_tap", -4.0)
 		await get_tree().process_frame
 		var vp_size = get_viewport().get_visible_rect().size
-		var overlay_w = vp_size.x - 32
-		# Make the map overlay tall enough for a good view
-		var map_h = vp_size.x * 0.65  # Roughly proportional to world ratio
+		var is_ls = vp_size.x > vp_size.y
+		var overlay_w: float
+		var map_h: float
+		if is_ls:
+			# Landscape: compact overlay that doesn't dominate the screen
+			map_h = vp_size.y * 0.5
+			overlay_w = min(vp_size.x * 0.45, map_h * 1.3)
+		else:
+			overlay_w = vp_size.x - 32
+			map_h = vp_size.x * 0.65
 		_map_overlay.size = Vector2(overlay_w, map_h)
-		_map_overlay.position = Vector2(16, vp_size.y - bottom_panel.size.y - _map_overlay.size.y - 8)
+		_map_overlay.position = Vector2((vp_size.x - overlay_w) / 2.0, vp_size.y - bottom_panel.size.y - map_h - 8)
 
 func _add_mobile_menu_button() -> void:
 	var vp_size = get_viewport().get_visible_rect().size

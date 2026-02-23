@@ -9,9 +9,18 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.43.3"
+const GAME_VERSION := "v0.43.4"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.43.4",
+		"title": "Fix Map Overlay Size in Landscape",
+		"date": "2026-02-23",
+		"entries": [
+			"Map overlay no longer fills the entire screen in landscape mode",
+			"Landscape map is now a compact centered panel (50% height, 45% width)",
+		]
+	},
 	{
 		"version": "v0.43.3",
 		"title": "Fix Chrome Mobile Fullscreen (Again)",

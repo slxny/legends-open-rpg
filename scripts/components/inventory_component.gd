@@ -5,7 +5,9 @@ signal inventory_changed
 signal equipment_changed
 
 const MAX_BAG_SLOTS = 16
-const MAX_CONSUMABLE_SLOTS = 4
+const MAX_CONSUMABLE_SLOTS = 3
+const MAX_POTION_STACK = 99
+const POTION_IDS: Array[String] = ["potion_small", "potion_medium", "potion_great"]
 
 # Equipment: slot_name -> item dict (or empty dict)
 var equipment: Dictionary = {
@@ -20,15 +22,13 @@ var equipment: Dictionary = {
 # Bag: array of item dicts
 var bag: Array[Dictionary] = []
 
-# Consumable quick-slots
-var consumables: Array[Dictionary] = []
+# Potion stack counts: [small, medium, great]
+var potion_counts: Array[int] = [0, 0, 0]
 
 var stats_component: StatsComponent
 
 func _ready() -> void:
-	# Initialize empty consumable slots
-	for i in range(MAX_CONSUMABLE_SLOTS):
-		consumables.append({})
+	pass
 
 func setup(stats: StatsComponent) -> void:
 	stats_component = stats
@@ -36,14 +36,19 @@ func setup(stats: StatsComponent) -> void:
 func add_item(item: Dictionary) -> bool:
 	if item.is_empty():
 		return false
-	# Consumables go to consumable slots first
+	# Potions go to their dedicated stack
 	if item.get("slot") == ItemData.Slot.CONSUMABLE:
-		for i in range(consumables.size()):
-			if consumables[i].is_empty():
-				consumables[i] = item
-				inventory_changed.emit()
-				return true
-	# Otherwise goes to bag
+		var item_id = item.get("id", "")
+		var potion_index = POTION_IDS.find(item_id)
+		if potion_index >= 0:
+			if potion_counts[potion_index] >= MAX_POTION_STACK:
+				GameManager.game_message.emit("Potion stack full! (99)", Color(1.0, 0.8, 0.3))
+				return false
+			potion_counts[potion_index] += 1
+			inventory_changed.emit()
+			return true
+		# Unknown consumable — fall through to bag
+	# Non-consumable items go to bag
 	if bag.size() < MAX_BAG_SLOTS:
 		bag.append(item)
 		inventory_changed.emit()
@@ -58,13 +63,27 @@ func remove_item_from_bag(index: int) -> Dictionary:
 	inventory_changed.emit()
 	return item
 
-func remove_consumable(index: int) -> Dictionary:
-	if index < 0 or index >= consumables.size():
-		return {}
-	var item = consumables[index]
-	consumables[index] = {}
+func use_consumable(index: int) -> void:
+	if index < 0 or index >= MAX_CONSUMABLE_SLOTS:
+		return
+	if potion_counts[index] <= 0:
+		GameManager.game_message.emit("No potions in slot %d" % (index + 1), Color(1.0, 0.8, 0.3))
+		return
+	if not stats_component:
+		return
+	if stats_component.current_hp >= stats_component.get_total_max_hp():
+		GameManager.game_message.emit("Already at full health!", Color(0.8, 0.8, 0.4))
+		return
+	var potion_id = POTION_IDS[index]
+	var potion_data = ItemData.get_item(potion_id)
+	var heal_pct = potion_data.get("heal_percent", 0.33)
+	var max_hp = stats_component.get_total_max_hp()
+	var heal_amount = int(max_hp * heal_pct)
+	stats_component.heal(heal_amount)
+	potion_counts[index] -= 1
+	AudioManager.play_sfx("potion_heal")
+	GameManager.game_message.emit("Used %s (+%d HP)" % [potion_data.get("name", "Potion"), heal_amount], Color(0.5, 1.0, 0.5))
 	inventory_changed.emit()
-	return item
 
 func equip_from_bag(bag_index: int) -> void:
 	if bag_index < 0 or bag_index >= bag.size():
@@ -101,76 +120,6 @@ func unequip(slot_name: String) -> void:
 	_apply_equipment_stats()
 	equipment_changed.emit()
 	inventory_changed.emit()
-
-func use_consumable(index: int) -> void:
-	if index < 0 or index >= consumables.size():
-		return
-	var item = consumables[index]
-	if item.is_empty():
-		GameManager.game_message.emit("No consumable in slot %d" % (index + 1), Color(1.0, 0.8, 0.3))
-		return
-	if not stats_component:
-		return
-	var effect = item.get("effect", "")
-	var item_name = item.get("name", "Consumable")
-	match effect:
-		"heal":
-			if stats_component.current_hp >= stats_component.get_total_max_hp():
-				GameManager.game_message.emit("Already at full health!", Color(0.8, 0.8, 0.4))
-				return
-			stats_component.heal(item.get("heal_amount", 0))
-			AudioManager.play_sfx("potion_heal")
-			GameManager.game_message.emit("Used %s (+%d HP)" % [item_name, item.get("heal_amount", 0)], Color(0.5, 1.0, 0.5))
-		"restore_mana":
-			if stats_component.current_mana >= stats_component.get_total_max_mana():
-				GameManager.game_message.emit("Already at full mana!", Color(0.8, 0.8, 0.4))
-				return
-			stats_component.restore_mana(item.get("mana_amount", 0))
-			AudioManager.play_sfx("potion_mana")
-			GameManager.game_message.emit("Used %s (+%d Mana)" % [item_name, item.get("mana_amount", 0)], Color(0.4, 0.6, 1.0))
-		"buff_strength":
-			var amount = item.get("buff_amount", 0)
-			var duration = item.get("buff_duration", 30.0)
-			stats_component.apply_timed_buff("elixir_strength", "strength", amount, duration)
-			AudioManager.play_sfx("potion_buff")
-			GameManager.game_message.emit("Used %s (+%d STR for %.0fs)" % [item_name, amount, duration], Color(1.0, 0.8, 0.3))
-		"buff_speed":
-			var amount = item.get("buff_amount", 0)
-			var duration = item.get("buff_duration", 30.0)
-			stats_component.apply_timed_buff("elixir_speed", "move_speed", amount, duration)
-			AudioManager.play_sfx("potion_buff")
-			GameManager.game_message.emit("Used %s (+%d Speed for %.0fs)" % [item_name, amount, duration], Color(0.3, 1.0, 0.9))
-		_:
-			GameManager.game_message.emit("Used %s" % item_name, Color(0.8, 0.8, 0.8))
-	consumables[index] = {}
-	# Auto-replenish: move a consumable from bag into the empty slot
-	_replenish_slot(index)
-	inventory_changed.emit()
-
-## Move the first consumable found in the bag into the given quick-slot.
-func _replenish_slot(slot_index: int) -> void:
-	for i in range(bag.size()):
-		if bag[i].get("slot") == ItemData.Slot.CONSUMABLE:
-			consumables[slot_index] = bag[i]
-			bag.remove_at(i)
-			return
-
-## Move a consumable from the bag into the first empty quick-slot. Returns true on success.
-func move_bag_consumable_to_slot(bag_index: int) -> bool:
-	if bag_index < 0 or bag_index >= bag.size():
-		return false
-	var item = bag[bag_index]
-	if item.get("slot") != ItemData.Slot.CONSUMABLE:
-		return false
-	for i in range(consumables.size()):
-		if consumables[i].is_empty():
-			consumables[i] = item
-			bag.remove_at(bag_index)
-			inventory_changed.emit()
-			return true
-	# All consumable slots full
-	GameManager.game_message.emit("Consumable slots full!", Color(1.0, 0.3, 0.3))
-	return false
 
 func _apply_equipment_stats() -> void:
 	if not stats_component:

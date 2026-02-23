@@ -431,13 +431,10 @@ func _show_detail(item: Dictionary, item_id: String, bag_index: int) -> void:
 	for stat_name in stats:
 		stat_lines.append("+%s %s" % [str(stats[stat_name]), stat_name.replace("_", " ").capitalize()])
 	# Consumable effects
+	if item.has("heal_percent"):
+		stat_lines.append("Heals %d%% of max HP" % int(item["heal_percent"] * 100))
 	if item.has("heal_amount"):
 		stat_lines.append("Heals %d HP" % item["heal_amount"])
-	if item.has("mana_amount"):
-		stat_lines.append("Restores %d Mana" % item["mana_amount"])
-	if item.has("buff_amount") and item.has("effect"):
-		var eff = item["effect"].replace("buff_", "").capitalize()
-		stat_lines.append("+%d %s (%ds)" % [item["buff_amount"], eff, int(item.get("buff_duration", 0))])
 	_detail_stats.text = "  ".join(stat_lines) if stat_lines.size() > 0 else ""
 
 	# Price and action button

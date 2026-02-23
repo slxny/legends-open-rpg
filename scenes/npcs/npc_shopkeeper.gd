@@ -2,7 +2,7 @@ extends StaticBody2D
 
 @export var shop_name: String = "General Store"
 @export var shop_items: Array[String] = [
-	"health_potion_small", "health_potion_medium", "mana_potion_small",
+	"potion_small", "potion_medium", "potion_great",
 	"rusty_sword", "short_bow", "cloth_tunic", "leather_vest",
 	"leather_cap", "worn_boots", "copper_ring",
 ]

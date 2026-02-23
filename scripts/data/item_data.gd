@@ -367,48 +367,24 @@ const ITEMS = {
 		"description": "Beats with the pulse of the earth itself.",
 	},
 
-	# ==================== CONSUMABLES ====================
-	"health_potion_small": {
-		"name": "Small Health Potion", "slot": Slot.CONSUMABLE, "rarity": Rarity.COMMON,
+	# ==================== CONSUMABLES (Potions) ====================
+	"potion_small": {
+		"name": "Small Potion", "slot": Slot.CONSUMABLE, "rarity": Rarity.COMMON,
 		"level_req": 1, "buy_price": 10,
-		"stats": {}, "effect": "heal", "heal_amount": 40,
-		"description": "Restores 40 HP.",
+		"stats": {}, "effect": "heal_percent", "heal_percent": 0.33,
+		"description": "Restores 33% of max HP.",
 	},
-	"health_potion_medium": {
-		"name": "Medium Health Potion", "slot": Slot.CONSUMABLE, "rarity": Rarity.COMMON,
-		"level_req": 3, "buy_price": 25,
-		"stats": {}, "effect": "heal", "heal_amount": 80,
-		"description": "Restores 80 HP.",
+	"potion_medium": {
+		"name": "Medium Potion", "slot": Slot.CONSUMABLE, "rarity": Rarity.UNCOMMON,
+		"level_req": 1, "buy_price": 30,
+		"stats": {}, "effect": "heal_percent", "heal_percent": 0.50,
+		"description": "Restores 50% of max HP.",
 	},
-	"health_potion_large": {
-		"name": "Large Health Potion", "slot": Slot.CONSUMABLE, "rarity": Rarity.UNCOMMON,
-		"level_req": 5, "buy_price": 50,
-		"stats": {}, "effect": "heal", "heal_amount": 150,
-		"description": "Restores 150 HP.",
-	},
-	"mana_potion_small": {
-		"name": "Small Mana Potion", "slot": Slot.CONSUMABLE, "rarity": Rarity.COMMON,
-		"level_req": 1, "buy_price": 10,
-		"stats": {}, "effect": "restore_mana", "mana_amount": 30,
-		"description": "Restores 30 Mana.",
-	},
-	"mana_potion_medium": {
-		"name": "Medium Mana Potion", "slot": Slot.CONSUMABLE, "rarity": Rarity.COMMON,
-		"level_req": 3, "buy_price": 25,
-		"stats": {}, "effect": "restore_mana", "mana_amount": 60,
-		"description": "Restores 60 Mana.",
-	},
-	"elixir_of_might": {
-		"name": "Elixir of Might", "slot": Slot.CONSUMABLE, "rarity": Rarity.UNCOMMON,
-		"level_req": 3, "buy_price": 35,
-		"stats": {}, "effect": "buff_strength", "buff_amount": 5, "buff_duration": 30.0,
-		"description": "+5 Strength for 30 seconds.",
-	},
-	"elixir_of_speed": {
-		"name": "Elixir of Speed", "slot": Slot.CONSUMABLE, "rarity": Rarity.UNCOMMON,
-		"level_req": 3, "buy_price": 35,
-		"stats": {}, "effect": "buff_speed", "buff_amount": 30, "buff_duration": 30.0,
-		"description": "+30 Move Speed for 30 seconds.",
+	"potion_great": {
+		"name": "Great Potion", "slot": Slot.CONSUMABLE, "rarity": Rarity.RARE,
+		"level_req": 1, "buy_price": 75,
+		"stats": {}, "effect": "heal_percent", "heal_percent": 1.0,
+		"description": "Restores 100% of max HP.",
 	},
 }
 
@@ -481,52 +457,52 @@ static func _roll_affixes(item: Dictionary) -> void:
 const DROP_TABLES = {
 	"rat": {
 		"drop_chance": 0.10,
-		"items": ["health_potion_small", "bone_amulet"],
+		"items": ["potion_small", "bone_amulet"],
 		"weights": [80, 20],
 	},
 	"goblin": {
 		"drop_chance": 0.28,
-		"items": ["rusty_sword", "cloth_tunic", "leather_cap", "copper_ring", "bone_amulet", "bone_dagger", "health_potion_small"],
+		"items": ["rusty_sword", "cloth_tunic", "leather_cap", "copper_ring", "bone_amulet", "bone_dagger", "potion_small"],
 		"weights": [12, 12, 12, 10, 8, 12, 34],
 	},
 	"wolf": {
 		"drop_chance": 0.25,
-		"items": ["leather_vest", "worn_boots", "swift_boots", "wolf_fang_necklace", "health_potion_small"],
+		"items": ["leather_vest", "worn_boots", "swift_boots", "wolf_fang_necklace", "potion_small"],
 		"weights": [22, 25, 12, 16, 25],
 	},
 	"bandit": {
 		"drop_chance": 0.32,
-		"items": ["iron_sword", "hunters_longbow", "chainmail", "swift_boots", "silver_ring", "serrated_knife", "health_potion_medium"],
+		"items": ["iron_sword", "hunters_longbow", "chainmail", "swift_boots", "silver_ring", "serrated_knife", "potion_medium"],
 		"weights": [12, 12, 12, 10, 10, 12, 32],
 	},
 	"skeleton": {
 		"drop_chance": 0.30,
-		"items": ["iron_helm", "battle_axe", "studded_armor", "bone_dagger", "bone_amulet", "health_potion_medium"],
+		"items": ["iron_helm", "battle_axe", "studded_armor", "bone_dagger", "bone_amulet", "potion_medium"],
 		"weights": [15, 15, 15, 12, 13, 30],
 	},
 	"spider": {
 		"drop_chance": 0.28,
-		"items": ["shadow_dagger", "venom_bow", "swift_boots", "emerald_ring", "hood_of_shadows", "health_potion_medium"],
+		"items": ["shadow_dagger", "venom_bow", "swift_boots", "emerald_ring", "hood_of_shadows", "potion_medium"],
 		"weights": [14, 14, 12, 14, 14, 32],
 	},
 	"troll": {
 		"drop_chance": 0.35,
-		"items": ["warlords_mace", "plate_armor", "war_helm", "iron_greaves", "ruby_ring", "health_potion_large"],
+		"items": ["warlords_mace", "plate_armor", "war_helm", "iron_greaves", "ruby_ring", "potion_great"],
 		"weights": [14, 14, 14, 12, 14, 32],
 	},
 	"dark_mage": {
 		"drop_chance": 0.35,
-		"items": ["arcane_staff", "sapphire_amulet", "jade_pendant", "shadow_cloak", "oak_staff", "mana_potion_medium"],
+		"items": ["arcane_staff", "sapphire_amulet", "jade_pendant", "shadow_cloak", "oak_staff", "potion_great"],
 		"weights": [16, 16, 12, 14, 14, 28],
 	},
 	"ogre": {
 		"drop_chance": 0.45,
-		"items": ["flamebrand", "stormbringer", "crown_of_thorns", "ring_of_power", "amulet_of_fury", "windwalkers", "health_potion_large"],
+		"items": ["flamebrand", "stormbringer", "crown_of_thorns", "ring_of_power", "amulet_of_fury", "windwalkers", "potion_great"],
 		"weights": [12, 12, 12, 12, 12, 12, 28],
 	},
 	"ogre_boss": {
 		"drop_chance": 0.70,
-		"items": ["doomhammer", "dragon_scale", "shadowstep_boots", "band_of_ancients", "heart_of_the_world", "health_potion_large"],
+		"items": ["doomhammer", "dragon_scale", "shadowstep_boots", "band_of_ancients", "heart_of_the_world", "potion_great"],
 		"weights": [15, 15, 14, 14, 14, 28],
 	},
 	# ---- Mini-boss drop tables (guaranteed drops, boss-exclusive loot) ----

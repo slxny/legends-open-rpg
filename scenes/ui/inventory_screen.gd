@@ -243,16 +243,10 @@ func _refresh_bag() -> void:
 
 		var idx = i
 		var bound_item = item
-		if item.get("slot") == ItemData.Slot.CONSUMABLE:
-			btn.pressed.connect(func():
-				AudioManager.play_sfx("ui_tap", -4.0)
-				_player.inventory.move_bag_consumable_to_slot(idx); _refresh()
-			)
-		else:
-			btn.pressed.connect(func():
-				AudioManager.play_sfx("ui_tap", -4.0)
-				_player.inventory.equip_from_bag(idx); _refresh()
-			)
+		btn.pressed.connect(func():
+			AudioManager.play_sfx("ui_tap", -4.0)
+			_player.inventory.equip_from_bag(idx); _refresh()
+		)
 		btn.mouse_entered.connect(func():
 			AudioManager.play_sfx("ui_hover", -8.0)
 			_selected_item = bound_item

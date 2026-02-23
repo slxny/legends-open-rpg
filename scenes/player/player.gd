@@ -775,13 +775,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		_tap_resolve_timer = TAP_RESOLVE_TIME  # Reset window on each new tap
 		_tap_resolved = false
 
-	# Consumable slots
+	# Potion slots
 	if event is InputEventKey and event.pressed:
 		match event.keycode:
 			KEY_1: inventory.use_consumable(0)
 			KEY_2: inventory.use_consumable(1)
 			KEY_3: inventory.use_consumable(2)
-			KEY_4: inventory.use_consumable(3)
 
 func _try_manual_attack() -> void:
 	if _is_attack_animating or _attack_cooldown > 0.0:

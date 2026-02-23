@@ -9,9 +9,17 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.57.0"
+const GAME_VERSION := "v0.57.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.57.1",
+		"title": "Warmer Hero Respawn Sound",
+		"date": "2026-02-23",
+		"entries": [
+			"Respawn complete SFX overhauled: extended to 2.2s (was 0.9s) with deep sub-bass swell, detuned choir unison pairs for natural warmth, harmonics that bloom in progressively, and staggered sparkle cascades",
+		]
+	},
 	{
 		"version": "v0.57.0",
 		"title": "Mobile UI Overhaul — Bigger Buttons & Better Feedback",

@@ -863,24 +863,38 @@ func _gen_respawn_countdown() -> AudioStreamWAV:
 	return _to_stream(samples)
 
 func _gen_respawn_complete() -> AudioStreamWAV:
-	# Regeneration complete — bright ascending arpeggio with magical shimmer
-	# Triumphant, hopeful, energizing — life returns
-	var samples = _make_samples(0.9)
-	# Ascending power chord: C4 -> E4 -> G4 -> C5 with warm sustain
-	_add_sine_segment(samples, 261.6, 0.30, 0.0, 0.30)
-	_add_sine_segment(samples, 329.6, 0.30, 0.08, 0.30)
-	_add_sine_segment(samples, 392.0, 0.35, 0.16, 0.30)
-	_add_sine_segment(samples, 523.3, 0.40, 0.24, 0.45)
-	# Octave shimmer on final note for brilliance
-	_add_sine_segment(samples, 1046.0, 0.12, 0.24, 0.40)
-	_add_sine_segment(samples, 784.0, 0.10, 0.24, 0.40)
-	# Magical sparkle — high frequency noise bursts
-	_add_pitched_noise(samples, 5000.0, 2000.0, 0.03, 0.24)
-	_add_pitched_noise(samples, 7000.0, 1500.0, 0.02, 0.30)
-	# Warm bass foundation
-	_add_sine_segment(samples, 130.8, 0.15, 0.0, 0.6)
-	_apply_decay(samples, 1.0)
-	_soft_clip(samples, 1.5)
+	# Hero resurrection — warm soulful choir swell, 2.2 seconds
+	# Deep bass anchors, detuned unison pairs create natural beating warmth,
+	# harmonics bloom in over time, sparkle shimmer crowns the top
+	var dur = 2.2
+	var samples = _make_samples(dur)
+	# === Deep sub-bass swell — body and weight ===
+	_add_sine_segment(samples, 65.4,  0.22, 0.0, dur)        # C2 sub-bass
+	_add_sine_segment(samples, 130.8, 0.30, 0.0, dur)        # C3 bass body
+	_add_sine_segment(samples, 196.0, 0.18, 0.0, dur)        # G3 warmth
+	# === Core choir — detuned unison pairs for natural chorus beating ===
+	_add_sine_segment(samples, 261.6, 0.36, 0.05, dur - 0.05)  # C4 root
+	_add_sine_segment(samples, 263.2, 0.18, 0.05, dur - 0.05)  # C4 +10¢ → warm beat ~1.6 Hz
+	_add_sine_segment(samples, 329.6, 0.28, 0.12, dur - 0.12)  # E4 major third
+	_add_sine_segment(samples, 331.1, 0.14, 0.12, dur - 0.12)  # E4 slight detune
+	_add_sine_segment(samples, 392.0, 0.30, 0.20, dur - 0.20)  # G4 fifth
+	_add_sine_segment(samples, 393.8, 0.12, 0.20, dur - 0.20)  # G4 slight detune
+	# === Upper harmonics bloom in progressively ===
+	_add_sine_segment(samples, 523.3, 0.24, 0.30, dur - 0.30)  # C5 octave
+	_add_sine_segment(samples, 659.3, 0.16, 0.45, dur - 0.45)  # E5 radiance
+	_add_sine_segment(samples, 784.0, 0.11, 0.60, dur - 0.60)  # G5 shimmer
+	_add_sine_segment(samples, 1046.5, 0.07, 0.75, dur - 0.75) # C6 air & brilliance
+	# === Rising pitch sweep — life force returning from deep to bright ===
+	_pitch_sweep_sine(samples, 98.0, 523.0, 0.14, 0.0)
+	# === Magical sparkle cascades — staggered high shimmer ===
+	_add_pitched_noise(samples, 4500.0, 1800.0, 0.028, 0.35)
+	_add_pitched_noise(samples, 6500.0, 2000.0, 0.020, 0.65)
+	_add_pitched_noise(samples, 9000.0, 1500.0, 0.013, 0.90)
+	# Warm saturation — fills out midrange, kills harshness
+	_soft_clip(samples, 1.25)
+	# Long slow decay — let it breathe and ring out
+	_apply_decay(samples, dur * 0.85)
+	_normalize(samples, 0.88)
 	return _to_stream(samples)
 
 func _gen_forge_weapon() -> AudioStreamWAV:

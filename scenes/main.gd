@@ -25,12 +25,18 @@ func _ready() -> void:
 	hero_select.hero_chosen.connect(_on_hero_chosen)
 
 func _input(event: InputEvent) -> void:
-	# On web, request fullscreen on the first user tap/click to hide the address bar
+	# On web, request fullscreen on the first user tap/click to hide the address bar.
+	# Uses JavaScriptBridge for broader mobile browser support (Android Chrome, etc.).
+	# Note: iOS Safari does not support the Fullscreen API at all — users must
+	# "Add to Home Screen" to get a fullscreen PWA experience on iOS.
 	if not _web_fullscreen_requested and OS.has_feature("web"):
 		if (event is InputEventMouseButton and event.pressed) or \
 		   (event is InputEventScreenTouch and event.pressed):
 			_web_fullscreen_requested = true
-			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+			if JavaScriptBridge.eval("'requestFullscreen' in document.documentElement", true):
+				JavaScriptBridge.eval("document.documentElement.requestFullscreen().catch(function(){})", true)
+			else:
+				DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
 
 func _on_hero_chosen(hero_class: String) -> void:
 	if _game_started:

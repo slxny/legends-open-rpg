@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.42.6"
+const GAME_VERSION := "v0.43.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.43.0",
+		"title": "Mobile Fullscreen & PWA Support",
+		"date": "2026-02-23",
+		"entries": [
+			"Fullscreen now works more reliably on Android mobile browsers",
+			"Enabled PWA so the game can be installed via 'Add to Home Screen'",
+			"iOS users can add to home screen for a fullscreen experience",
+		]
+	},
 	{
 		"version": "v0.42.6",
 		"title": "Consistent Panel Transparency & Mobile UX",

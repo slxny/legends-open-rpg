@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.54.1"
+const GAME_VERSION := "v0.55.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.55.0",
+		"title": "Hero Sprite Tier Upgrades",
+		"date": "2026-02-23",
+		"entries": [
+			"Both Blade Knight and Shadow Ranger now get visual sprite upgrades every 5 levels (t1–t10)",
+			"Blade Knight evolves from steel blue armor to radiant gold with growing crest, shoulder/shield emblems, and longer sword glow",
+			"Shadow Ranger evolves from forest green to spectral violet with glowing eyes, bowstring aura, hood trim, and luminous arrow tips",
+		]
+	},
 	{
 		"version": "v0.54.1",
 		"title": "Level Up SFX On Every Level",

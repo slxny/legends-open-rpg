@@ -67,6 +67,8 @@ func _all_sprite_names() -> Array[String]:
 	# Heroes (all frames)
 	for hero in ["blade_knight", "shadow_ranger"]:
 		names.append(hero)
+		for tier in range(1, 11):
+			names.append("%s_t%d" % [hero, tier])
 		for dir_key in ["down", "up", "side"]:
 			names.append("%s_dir_%s" % [hero, dir_key])
 		for dir_key in ["down", "up", "side"]:
@@ -101,6 +103,10 @@ func _try_load_external(sprite_name: String) -> bool:
 func _init_asset_dirs() -> void:
 	# Heroes (includes attack animation frames — 5 swing types x 3 frames each)
 	var hero_names = ["blade_knight", "shadow_ranger"]
+	# Tier upgrade sprites (t1–t10)
+	for hero in ["blade_knight", "shadow_ranger"]:
+		for tier in range(1, 11):
+			hero_names.append("%s_t%d" % [hero, tier])
 	for swing in ["a", "b", "c", "d", "e"]:
 		for frame in [1, 2, 3]:
 			hero_names.append("blade_knight_atk%s%d" % [swing, frame])
@@ -162,6 +168,10 @@ func _generate_all() -> void:
 		for frame in [1, 2, 3]:
 			_gen_or_load("blade_knight_atk%s%d" % [swing, frame])
 	_gen_or_load("shadow_ranger")
+	# Hero tier upgrade sprites (t1–t10)
+	for hero in ["blade_knight", "shadow_ranger"]:
+		for tier in range(1, 11):
+			_gen_or_load("%s_t%d" % [hero, tier])
 	# Pickaxe chop frames for tree chopping (3 frames per hero)
 	for hero in ["blade_knight", "shadow_ranger"]:
 		for frame in [1, 2, 3]:
@@ -334,6 +344,92 @@ func _gen_blade_knight() -> void:
 	_fill_rect(img, 2, 20, 2, 10, c["shield_rim"])
 
 	textures["blade_knight"] = ImageTexture.create_from_image(img)
+
+# ---- Blade Knight tier upgrades (t1–t10 at levels 5,10,...,50) ----
+# Color progression: steel blue → royal blue → gold-trimmed → radiant gold
+func _bk_tier_colors(tier: int) -> Dictionary:
+	var t = clampf(float(tier) / 10.0, 0.0, 1.0)
+	# Armor darkens then shifts to gold at high tiers
+	var gold_t = clampf((float(tier) - 5.0) / 5.0, 0.0, 1.0)  # 0 at t5, 1 at t10
+	return {
+		"armor_dark": Color(0.15, 0.25, 0.55).lerp(Color(0.45, 0.35, 0.1), gold_t),
+		"armor_mid": Color(0.25, 0.4, 0.75).lerp(Color(0.75, 0.6, 0.15), gold_t),
+		"armor_light": Color(0.4, 0.55, 0.9).lerp(Color(0.95, 0.85, 0.3), gold_t),
+		"helm": Color(0.3, 0.35, 0.5).lerp(Color(0.6, 0.5, 0.2), gold_t),
+		"visor": Color(0.1, 0.8, 0.9).lerp(Color(1.0, 0.95, 0.5), t),
+		"skin": Color(0.85, 0.7, 0.55),
+		"sword": Color(0.75, 0.8, 0.85).lerp(Color(1.0, 0.95, 0.7), t),
+		"sword_glow": Color(0.5, 0.7, 1.0).lerp(Color(1.0, 0.9, 0.3), t),
+		"sword_trail": Color(0.6, 0.8, 1.0, 0.5),
+		"shield": Color(0.2, 0.3, 0.6).lerp(Color(0.5, 0.4, 0.1), gold_t),
+		"shield_rim": Color(0.6, 0.65, 0.8).lerp(Color(0.95, 0.85, 0.4), gold_t),
+		"boot": Color(0.2, 0.2, 0.35).lerp(Color(0.35, 0.3, 0.15), gold_t),
+		"shadow": Color(0, 0, 0, 0.3),
+		# Tier emblem color (used for crest & shoulder accents)
+		"emblem": Color(0.4 + t * 0.6, 0.3 + t * 0.6, 0.1 + t * 0.2),
+	}
+
+func _gen_blade_knight_tiered(tier: int) -> void:
+	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = _bk_tier_colors(tier)
+	# Shadow
+	_fill_rect(img, 8, 44, 16, 4, c["shadow"])
+	# Boots
+	_fill_rect(img, 10, 40, 5, 6, c["boot"])
+	_fill_rect(img, 17, 40, 5, 6, c["boot"])
+	# Legs (armor)
+	_fill_rect(img, 11, 32, 4, 9, c["armor_dark"])
+	_fill_rect(img, 17, 32, 4, 9, c["armor_dark"])
+	# Torso
+	_fill_rect(img, 9, 18, 14, 15, c["armor_mid"])
+	_fill_rect(img, 10, 19, 12, 13, c["armor_light"])
+	# Belt
+	_fill_rect(img, 9, 30, 14, 3, c["armor_dark"])
+	# Shoulder pads
+	_fill_rect(img, 5, 18, 6, 5, c["armor_mid"])
+	_fill_rect(img, 21, 18, 6, 5, c["armor_mid"])
+	# Tier emblem on shoulders (appears at t3+)
+	if tier >= 3:
+		_fill_rect(img, 6, 19, 4, 3, c["emblem"])
+		_fill_rect(img, 22, 19, 4, 3, c["emblem"])
+	# Head/Helm
+	_fill_rect(img, 11, 6, 10, 13, c["helm"])
+	_fill_rect(img, 12, 7, 8, 11, c["armor_mid"])
+	# Visor
+	_fill_rect(img, 13, 11, 6, 3, c["visor"])
+	# Helm crest (grows with tier)
+	_fill_rect(img, 14, 4, 4, 4, c["armor_light"])
+	if tier >= 5:
+		_fill_rect(img, 15, 2, 2, 3, c["emblem"])  # Taller crest
+	if tier >= 8:
+		_fill_rect(img, 15, 1, 2, 2, c["visor"])  # Glowing crest tip
+	# Sword (right hand)
+	_fill_rect(img, 26, 8, 3, 22, c["sword"])
+	_fill_rect(img, 27, 6, 2, 4, c["sword_glow"])
+	if tier >= 6:
+		_fill_rect(img, 27, 4, 2, 3, c["sword_glow"])  # Longer blade glow
+	_fill_rect(img, 25, 28, 5, 3, c["armor_dark"])  # Hilt
+	# Shield (left hand)
+	_fill_rect(img, 2, 20, 7, 10, c["shield"])
+	_fill_rect(img, 2, 20, 7, 2, c["shield_rim"])
+	_fill_rect(img, 2, 28, 7, 2, c["shield_rim"])
+	_fill_rect(img, 2, 20, 2, 10, c["shield_rim"])
+	# Shield emblem (appears at t4+)
+	if tier >= 4:
+		_fill_rect(img, 4, 23, 3, 3, c["emblem"])
+	textures["blade_knight_t%d" % tier] = ImageTexture.create_from_image(img)
+
+func _gen_blade_knight_t1() -> void: _gen_blade_knight_tiered(1)
+func _gen_blade_knight_t2() -> void: _gen_blade_knight_tiered(2)
+func _gen_blade_knight_t3() -> void: _gen_blade_knight_tiered(3)
+func _gen_blade_knight_t4() -> void: _gen_blade_knight_tiered(4)
+func _gen_blade_knight_t5() -> void: _gen_blade_knight_tiered(5)
+func _gen_blade_knight_t6() -> void: _gen_blade_knight_tiered(6)
+func _gen_blade_knight_t7() -> void: _gen_blade_knight_tiered(7)
+func _gen_blade_knight_t8() -> void: _gen_blade_knight_tiered(8)
+func _gen_blade_knight_t9() -> void: _gen_blade_knight_tiered(9)
+func _gen_blade_knight_t10() -> void: _gen_blade_knight_tiered(10)
 
 # Shared color palette for blade knight frames
 func _bk_colors() -> Dictionary:
@@ -782,6 +878,98 @@ func _gen_shadow_ranger() -> void:
 	_fill_rect(img, 25, 12, 2, 3, c["bow_wood"])  # Arrow tips
 
 	textures["shadow_ranger"] = ImageTexture.create_from_image(img)
+
+# ---- Shadow Ranger tier upgrades (t1–t10 at levels 5,10,...,50) ----
+# Color progression: forest green → midnight teal → spectral violet
+func _sr_tier_colors(tier: int) -> Dictionary:
+	var t = clampf(float(tier) / 10.0, 0.0, 1.0)
+	var spec_t = clampf((float(tier) - 5.0) / 5.0, 0.0, 1.0)  # 0 at t5, 1 at t10
+	return {
+		"cloak_dark": Color(0.12, 0.3, 0.15).lerp(Color(0.2, 0.1, 0.35), spec_t),
+		"cloak_mid": Color(0.2, 0.45, 0.25).lerp(Color(0.35, 0.2, 0.55), spec_t),
+		"cloak_light": Color(0.3, 0.6, 0.35).lerp(Color(0.5, 0.35, 0.7), spec_t),
+		"hood": Color(0.15, 0.35, 0.18).lerp(Color(0.25, 0.12, 0.4), spec_t),
+		"skin": Color(0.8, 0.65, 0.5),
+		"eyes": Color(0.9, 0.95, 0.4).lerp(Color(1.0, 0.4, 0.9), t),
+		"bow_wood": Color(0.5, 0.35, 0.2).lerp(Color(0.3, 0.25, 0.5), spec_t),
+		"bow_string": Color(0.7, 0.7, 0.65).lerp(Color(0.8, 0.6, 1.0), t),
+		"quiver": Color(0.4, 0.25, 0.15).lerp(Color(0.3, 0.15, 0.4), spec_t),
+		"boot": Color(0.25, 0.2, 0.12).lerp(Color(0.2, 0.15, 0.3), spec_t),
+		"shadow": Color(0, 0, 0, 0.3),
+		"emblem": Color(0.3 + t * 0.5, 0.9 - t * 0.3, 0.3 + t * 0.6),
+	}
+
+func _gen_shadow_ranger_tiered(tier: int) -> void:
+	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = _sr_tier_colors(tier)
+	# Shadow
+	_fill_rect(img, 8, 44, 16, 4, c["shadow"])
+	# Boots
+	_fill_rect(img, 10, 40, 5, 6, c["boot"])
+	_fill_rect(img, 17, 40, 5, 6, c["boot"])
+	# Legs
+	_fill_rect(img, 11, 33, 4, 8, c["cloak_dark"])
+	_fill_rect(img, 17, 33, 4, 8, c["cloak_dark"])
+	# Torso/Cloak
+	_fill_rect(img, 8, 16, 16, 18, c["cloak_mid"])
+	_fill_rect(img, 9, 17, 14, 16, c["cloak_light"])
+	# Cloak edges (flowing)
+	_fill_rect(img, 6, 22, 3, 16, c["cloak_dark"])
+	_fill_rect(img, 23, 22, 3, 16, c["cloak_dark"])
+	# Cloak edge glow (appears at t5+)
+	if tier >= 5:
+		_fill_rect(img, 6, 34, 3, 3, c["emblem"])
+		_fill_rect(img, 23, 34, 3, 3, c["emblem"])
+	# Belt
+	_fill_rect(img, 8, 30, 16, 2, c["quiver"])
+	# Belt emblem (appears at t3+)
+	if tier >= 3:
+		_fill_rect(img, 14, 30, 4, 2, c["emblem"])
+	# Hood
+	_fill_rect(img, 10, 6, 12, 11, c["hood"])
+	_fill_rect(img, 11, 7, 10, 9, c["cloak_dark"])
+	# Hood trim (appears at t4+)
+	if tier >= 4:
+		_fill_rect(img, 10, 6, 12, 1, c["emblem"])
+	# Face (partially hidden)
+	_fill_rect(img, 13, 10, 6, 5, c["skin"])
+	# Eyes (glowing — brighter at higher tiers)
+	_fill_rect(img, 14, 11, 2, 2, c["eyes"])
+	_fill_rect(img, 18, 11, 2, 2, c["eyes"])
+	# Eye glow aura (t7+)
+	if tier >= 7:
+		var glow = Color(c["eyes"].r, c["eyes"].g, c["eyes"].b, 0.35)
+		_fill_rect(img, 13, 10, 2, 2, glow)
+		_fill_rect(img, 20, 10, 2, 2, glow)
+	# Bow (left side)
+	_fill_rect(img, 2, 10, 2, 28, c["bow_wood"])
+	_fill_rect(img, 1, 8, 2, 3, c["bow_wood"])
+	_fill_rect(img, 1, 37, 2, 3, c["bow_wood"])
+	# Bowstring
+	_fill_rect(img, 4, 10, 1, 28, c["bow_string"])
+	# Bowstring glow (t6+)
+	if tier >= 6:
+		var sglow = Color(c["bow_string"].r, c["bow_string"].g, c["bow_string"].b, 0.4)
+		_fill_rect(img, 5, 18, 1, 12, sglow)
+	# Quiver on back
+	_fill_rect(img, 24, 14, 4, 14, c["quiver"])
+	_fill_rect(img, 25, 12, 2, 3, c["bow_wood"])  # Arrow tips
+	# Glowing arrow tips (t8+)
+	if tier >= 8:
+		_fill_rect(img, 25, 11, 2, 2, c["eyes"])
+	textures["shadow_ranger_t%d" % tier] = ImageTexture.create_from_image(img)
+
+func _gen_shadow_ranger_t1() -> void: _gen_shadow_ranger_tiered(1)
+func _gen_shadow_ranger_t2() -> void: _gen_shadow_ranger_tiered(2)
+func _gen_shadow_ranger_t3() -> void: _gen_shadow_ranger_tiered(3)
+func _gen_shadow_ranger_t4() -> void: _gen_shadow_ranger_tiered(4)
+func _gen_shadow_ranger_t5() -> void: _gen_shadow_ranger_tiered(5)
+func _gen_shadow_ranger_t6() -> void: _gen_shadow_ranger_tiered(6)
+func _gen_shadow_ranger_t7() -> void: _gen_shadow_ranger_tiered(7)
+func _gen_shadow_ranger_t8() -> void: _gen_shadow_ranger_tiered(8)
+func _gen_shadow_ranger_t9() -> void: _gen_shadow_ranger_tiered(9)
+func _gen_shadow_ranger_t10() -> void: _gen_shadow_ranger_tiered(10)
 
 # ============================================================
 # DIRECTIONAL IDLE SPRITES

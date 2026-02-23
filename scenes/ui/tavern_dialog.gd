@@ -169,6 +169,9 @@ func _on_visit() -> void:
 		is_debuff
 	)
 
+	# Play wench visit SFX — different sound for buff vs debuff
+	AudioManager.play_sfx("wench_debuff" if is_debuff else "wench_buff")
+
 	# Show result message
 	var result_color = chosen.get("color", Color.WHITE)
 	if is_debuff:

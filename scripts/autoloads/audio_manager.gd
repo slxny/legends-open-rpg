@@ -220,7 +220,8 @@ func _pregenerate_async() -> void:
 		"tree_fall", "rat_squeal_1", "rat_squeal_2", "rat_squeal_3",
 		"debuff_apply", "player_death", "respawn_countdown", "respawn_complete",
 		"forge_weapon", "forge_armor", "woodwork_bow", "woodwork_shield",
-		"woodwork_totem", "woodwork_watchtower", "shop_buy", "shop_sell",
+		"woodwork_totem", "woodwork_watchtower", "wench_buff", "wench_debuff",
+		"shop_buy", "shop_sell",
 		"equip_weapon", "equip_armor", "equip_helm", "equip_boots",
 		"equip_ring", "equip_amulet", "potion_heal", "potion_mana", "potion_buff",
 		"death_rat", "death_goblin", "death_wolf", "death_bandit", "death_skeleton",
@@ -386,6 +387,8 @@ func _generate_all_sfx() -> void:
 	_sfx_cache["woodwork_shield"] = _gen_woodwork_shield()
 	_sfx_cache["woodwork_totem"] = _gen_woodwork_totem()
 	_sfx_cache["woodwork_watchtower"] = _gen_woodwork_watchtower()
+	_sfx_cache["wench_buff"] = _gen_wench_buff()
+	_sfx_cache["wench_debuff"] = _gen_wench_debuff()
 	_sfx_cache["shop_buy"] = _gen_shop_buy()
 	_sfx_cache["shop_sell"] = _gen_shop_sell()
 	_sfx_cache["equip_weapon"] = _gen_equip_weapon()
@@ -967,31 +970,36 @@ func _gen_woodwork_bow() -> AudioStreamWAV:
 	return _to_stream(samples)
 
 func _gen_woodwork_shield() -> AudioStreamWAV:
-	# Solid wooden thud with layered reinforcement — planks being nailed together
-	# Multiple quick knocks building up, ending with a deep satisfying "thunk"
-	var samples = _make_samples(0.50)
-	# Three quick construction taps — rap-rap-rap
-	var tap_times = [0.0, 0.07, 0.14]
-	for tap_t in tap_times:
+	# Solid wooden construction — ascending knocks building up to a sturdy finish
+	# Each tap rises in pitch for a positive "building up" feel
+	var samples = _make_samples(0.55)
+	# Three ascending construction taps — each higher = progress
+	var tap_data = [
+		{"t": 0.0, "freq": 200.0, "vol": 0.25},
+		{"t": 0.07, "freq": 280.0, "vol": 0.30},
+		{"t": 0.14, "freq": 370.0, "vol": 0.35},
+	]
+	for td in tap_data:
 		var tap = _make_samples(0.06)
-		_pitch_sweep_sine(tap, 280.0, 140.0, 0.35)
-		_pitch_sweep_sine(tap, 560.0, 280.0, 0.15)
+		_pitch_sweep_sine(tap, td["freq"], td["freq"] * 1.3, td["vol"])
+		_pitch_sweep_sine(tap, td["freq"] * 2.0, td["freq"] * 2.5, td["vol"] * 0.4)
 		_add_pitched_noise(tap, 1800.0, 1000.0, 0.15)
 		_apply_envelope(tap, 0.002, 0.01, 0.05)
-		_mix_into(samples, tap, int(tap_t * SAMPLE_RATE))
-	# Final heavy thunk — the shield is complete, solid and weighty
+		_mix_into(samples, tap, int(float(td["t"]) * SAMPLE_RATE))
+	# Satisfying solid thunk — shield locked together
 	var thunk = _make_samples(0.20)
-	_pitch_sweep_sine(thunk, 160.0, 70.0, 0.5)
-	_pitch_sweep_sine(thunk, 320.0, 140.0, 0.25)
-	_add_sine_segment(thunk, 220.0, 0.15, 0.01, 0.12)
-	_add_pitched_noise(thunk, 1200.0, 700.0, 0.15)
+	_pitch_sweep_sine(thunk, 180.0, 240.0, 0.4)
+	_pitch_sweep_sine(thunk, 360.0, 480.0, 0.2)
+	_add_sine_segment(thunk, 260.0, 0.2, 0.01, 0.12)
+	_add_pitched_noise(thunk, 1400.0, 900.0, 0.15)
 	_apply_envelope(thunk, 0.003, 0.04, 0.16)
 	_soft_clip(thunk, 1.5)
 	_mix_into(samples, thunk, int(0.22 * SAMPLE_RATE))
-	# Warm confirmation tone
-	_add_sine_segment(samples, 349.0, 0.12, 0.35, 0.12)  # F4
-	_add_sine_segment(samples, 440.0, 0.10, 0.38, 0.10)  # A4
-	_apply_envelope(samples, 0.002, 0.15, 0.35)
+	# Bright ascending confirmation — C5 → E5 → G5 (major triad = triumphant)
+	_add_sine_segment(samples, 523.0, 0.15, 0.34, 0.10)  # C5
+	_add_sine_segment(samples, 659.0, 0.18, 0.37, 0.12)  # E5
+	_add_sine_segment(samples, 784.0, 0.20, 0.40, 0.12)  # G5
+	_apply_envelope(samples, 0.002, 0.15, 0.40)
 	_soft_clip(samples, 1.4)
 	return _to_stream(samples)
 
@@ -1052,6 +1060,59 @@ func _gen_woodwork_watchtower() -> AudioStreamWAV:
 	_add_sine_segment(samples, 261.6, 0.12, 0.0, 0.40)
 	_apply_envelope(samples, 0.002, 0.18, 0.40)
 	_soft_clip(samples, 1.4)
+	return _to_stream(samples)
+
+func _gen_wench_buff() -> AudioStreamWAV:
+	# Warm, sensual chime — a pleasant night with a happy ending
+	# Ascending breathy tones with a cozy shimmer, like a lullaby kiss
+	var samples = _make_samples(0.50)
+	# Soft breathy warmth underneath
+	_add_sine_segment(samples, 220.0, 0.15, 0.0, 0.35)
+	_add_sine_segment(samples, 330.0, 0.08, 0.0, 0.30)
+	# Gentle ascending chime: A4 → C#5 → E5 (A major = warm and happy)
+	_add_sine_segment(samples, 440.0, 0.25, 0.04, 0.18)
+	_add_sine_segment(samples, 554.0, 0.28, 0.12, 0.18)
+	_add_sine_segment(samples, 659.0, 0.30, 0.20, 0.22)
+	# Bell-like overtones for sparkle
+	_add_sine_segment(samples, 880.0, 0.08, 0.04, 0.14)
+	_add_sine_segment(samples, 1108.0, 0.06, 0.12, 0.12)
+	_add_sine_segment(samples, 1318.0, 0.05, 0.20, 0.10)
+	# Soft satisfied sigh — gentle noise shimmer
+	_add_pitched_noise(samples, 3000.0, 1200.0, 0.02, 0.15)
+	# Gentle wobble for intimate feel
+	for i in range(samples.size()):
+		var t = float(i) / SAMPLE_RATE
+		samples[i] *= 0.93 + 0.07 * sin(t * 5.0 * TAU)
+	_apply_envelope(samples, 0.02, 0.18, 0.30)
+	_normalize(samples, 0.6)
+	return _to_stream(samples)
+
+func _gen_wench_debuff() -> AudioStreamWAV:
+	# Comedic "uh oh" — descending slide into a squelchy wobble
+	# Playful trombone-style "wah wah" that says "you caught something"
+	var samples = _make_samples(0.45)
+	# Initial pleased tone — starts happy
+	_add_sine_segment(samples, 523.0, 0.25, 0.0, 0.08)  # C5
+	_add_sine_segment(samples, 1046.0, 0.08, 0.0, 0.06)
+	# Comic descending slide — "waaah" trombone drop
+	_pitch_sweep_sine(samples, 523.0, 200.0, 0.3, 0.06)
+	_pitch_sweep_sine(samples, 1046.0, 400.0, 0.1, 0.06)
+	# Sad trombone "wah wah" — two descending notes
+	_add_sine_segment(samples, 294.0, 0.30, 0.18, 0.12)  # D4
+	_add_sine_segment(samples, 588.0, 0.08, 0.18, 0.08)
+	_add_sine_segment(samples, 262.0, 0.35, 0.26, 0.16)  # C4
+	_add_sine_segment(samples, 524.0, 0.10, 0.26, 0.12)
+	# Wobbly vibrato on the final note for comedic effect
+	for i in range(int(0.18 * SAMPLE_RATE), samples.size()):
+		var t = float(i) / SAMPLE_RATE
+		samples[i] *= 0.85 + 0.15 * sin(t * 12.0 * TAU)
+	# Squelchy noise for grossness
+	var squelch = _make_samples(0.05)
+	_add_pitched_noise(squelch, 1500.0, 600.0, 0.12)
+	_apply_envelope(squelch, 0.003, 0.01, 0.04)
+	_mix_into(samples, squelch, int(0.17 * SAMPLE_RATE))
+	_apply_envelope(samples, 0.01, 0.12, 0.32)
+	_normalize(samples, 0.6)
 	return _to_stream(samples)
 
 func _gen_shop_buy() -> AudioStreamWAV:

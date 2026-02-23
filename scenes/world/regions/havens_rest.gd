@@ -487,38 +487,16 @@ func _add_building_label(parent: Node2D, pos: Vector2, text: String) -> void:
 	parent.add_child(label)
 
 func _add_town_tree(parent: Node2D, pos: Vector2) -> void:
-	var spr = Sprite2D.new()
-	spr.position = pos
-	spr.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	# Mix of small and large trees
+	# Town trees are harvestable too — mix of small and medium
+	var tree = HarvestableTree.new()
 	if randf() > 0.4:
-		spr.texture = SpriteGenerator.get_texture("tree_small")
-		spr.offset = Vector2(0, -14)
+		tree.setup(HarvestableTree.TreeSize.SMALL)
 	else:
-		spr.texture = SpriteGenerator.get_texture("tree_jungle")
-		spr.offset = Vector2(0, -24)
+		tree.setup(HarvestableTree.TreeSize.MEDIUM)
+	tree.position = pos
 	var s = randf_range(0.7, 1.1)
-	spr.scale = Vector2(s, s)
-	var v = randf_range(-0.04, 0.04)
-	spr.modulate = Color(1.0 + v, 1.0 + v * 0.5, 1.0 + v)
-	spr.z_index = 0
-	parent.add_child(spr)
-	# Wind sway — gentle rotation + scale X oscillation, randomized per tree
-	var base_sx = spr.scale.x
-	var base_sy = spr.scale.y
-	var sway_deg = randf_range(1.5, 3.5)
-	var sway_rad = deg_to_rad(sway_deg)
-	var phase_dur = randf_range(1.8, 3.2)
-	var wind_tween = spr.create_tween().set_loops()
-	# Lean right
-	wind_tween.tween_property(spr, "rotation", sway_rad, phase_dur).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	wind_tween.parallel().tween_property(spr, "scale", Vector2(base_sx * 1.03, base_sy * 0.98), phase_dur).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	# Lean left
-	wind_tween.tween_property(spr, "rotation", -sway_rad * 0.7, phase_dur * 0.9).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	wind_tween.parallel().tween_property(spr, "scale", Vector2(base_sx * 0.97, base_sy * 1.02), phase_dur * 0.9).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	# Settle back through center
-	wind_tween.tween_property(spr, "rotation", sway_rad * 0.3, phase_dur * 0.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	wind_tween.parallel().tween_property(spr, "scale", Vector2(base_sx, base_sy), phase_dur * 0.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tree.scale = Vector2(s, s)
+	parent.add_child(tree)
 
 func _add_wall_torch(parent: Node2D, pos: Vector2) -> void:
 	var spr = Sprite2D.new()
@@ -909,22 +887,16 @@ func _spawn_harvestable_tree(parent: Node2D, pos: Vector2, size_enum: int) -> vo
 # ============================================================
 
 func _add_tree(parent: Node2D, pos: Vector2) -> void:
-	var tree_sprite = Sprite2D.new()
-	tree_sprite.position = pos
-	tree_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	# All trees are harvestable — map old deco types to harvest sizes
+	var tree = HarvestableTree.new()
 	if randf() > 0.35:
-		tree_sprite.texture = SpriteGenerator.get_texture("tree_jungle")
-		tree_sprite.offset = Vector2(0, -24)
+		tree.setup(HarvestableTree.TreeSize.MEDIUM)
 	else:
-		tree_sprite.texture = SpriteGenerator.get_texture("tree_small")
-		tree_sprite.offset = Vector2(0, -14)
+		tree.setup(HarvestableTree.TreeSize.SMALL)
+	tree.position = pos
 	var s = randf_range(0.8, 1.4)
-	tree_sprite.scale = Vector2(s, s)
-	# Slight color variation for depth
-	var v = randf_range(-0.05, 0.05)
-	tree_sprite.modulate = Color(1.0 + v, 1.0 + v * 0.5, 1.0 + v)
-	tree_sprite.z_index = 0
-	parent.add_child(tree_sprite)
+	tree.scale = Vector2(s, s)
+	parent.add_child(tree)
 
 func _add_rock(parent: Node2D, pos: Vector2) -> void:
 	var rock_sprite = Sprite2D.new()

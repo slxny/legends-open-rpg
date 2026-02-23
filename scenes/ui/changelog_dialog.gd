@@ -9,9 +9,17 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.42.4"
+const GAME_VERSION := "v0.42.5"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.42.5",
+		"title": "More Transparent Inventory Panel",
+		"date": "2026-02-23",
+		"entries": [
+			"Inventory panel is now more see-through (opacity 92% → 78%)",
+		]
+	},
 	{
 		"version": "v0.42.4",
 		"title": "Fix Mob Group Pathfinding & Attack",

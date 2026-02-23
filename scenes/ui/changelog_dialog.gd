@@ -9,9 +9,18 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.40.1"
+const GAME_VERSION := "v0.40.2"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.40.2",
+		"title": "Fix ATK Button Hidden in Landscape",
+		"date": "2026-02-23",
+		"entries": [
+			"ATK button canvas layer raised to 11 so it renders above the HUD (layer 10)",
+			"Fixes button being invisible in landscape where HUD bottom panel covered it",
+		]
+	},
 	{
 		"version": "v0.40.1",
 		"title": "Thicker Mobile HP/MP/XP Bars",

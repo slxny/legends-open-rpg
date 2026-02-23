@@ -1631,7 +1631,7 @@ func _stop_charge_sfx() -> void:
 
 func _create_mobile_attack_button() -> void:
 	_mobile_atk_canvas = CanvasLayer.new()
-	_mobile_atk_canvas.layer = 10  # Above HUD
+	_mobile_atk_canvas.layer = 11  # Above HUD (which is layer 10)
 	add_child(_mobile_atk_canvas)
 
 	var vp_size = get_viewport().get_visible_rect().size

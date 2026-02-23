@@ -9,9 +9,22 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.32.0"
+const GAME_VERSION := "v0.33.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.33.0",
+		"title": "Shop UI Redesign",
+		"date": "2026-02-23",
+		"entries": [
+			"Completely redesigned shop with sleek tabbed Buy/Sell layout",
+			"Tap any item to see full stats, description, rarity, and level requirement",
+			"Buy and Sell buttons now inside the item detail panel for easy access",
+			"Shop now shows feedback messages for purchases, sales, and errors",
+			"ESC/Q closes item detail first, then closes the shop",
+			"Much better mobile layout with larger tap targets and readable text",
+		]
+	},
 	{
 		"version": "v0.32.0",
 		"title": "Loading Performance Optimization",

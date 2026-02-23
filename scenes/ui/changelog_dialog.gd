@@ -9,9 +9,18 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.34.0"
+const GAME_VERSION := "v0.34.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.34.1",
+		"title": "Heal Beacon Immunity",
+		"date": "2026-02-23",
+		"entries": [
+			"Heal beacon now restores HP/MP every frame so hero never loses health while standing on it",
+			"Heal SFX and message only play when the beacon actually heals damage (silent at full HP)",
+		]
+	},
 	{
 		"version": "v0.34.0",
 		"title": "Landscape Layout Optimization",

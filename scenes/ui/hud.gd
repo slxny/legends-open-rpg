@@ -304,9 +304,9 @@ func _update_overlay_potions() -> void:
 		return
 	var grid = _cmd_overlay.get_child(0).get_child(1) as GridContainer  # vbox -> grid
 	var inv = _player.inventory
-	# Potion buttons are children 3, 4, 5 of the grid
+	# Potion buttons are children 1, 2, 3 of the grid (after Log button)
 	for i in range(3):
-		var btn = grid.get_child(3 + i) as Button
+		var btn = grid.get_child(1 + i) as Button
 		var item = inv.consumables[i] if i < inv.consumables.size() else {}
 		if item.is_empty():
 			btn.text = "%d\n---" % (i + 1)

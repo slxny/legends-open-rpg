@@ -9,9 +9,17 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.58.0"
+const GAME_VERSION := "v0.58.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.58.1",
+		"title": "Fix mobile command overlay potion indices",
+		"date": "2026-02-23",
+		"entries": [
+			"Fixed mobile command overlay potion buttons pointing at wrong grid children after ability removal",
+		]
+	},
 	{
 		"version": "v0.58.0",
 		"title": "Beacon entry sound effects",

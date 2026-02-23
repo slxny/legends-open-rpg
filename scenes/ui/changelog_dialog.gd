@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.29.0"
+const GAME_VERSION := "v0.30.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.30.0",
+		"title": "Rat Swarm AI Fix",
+		"date": "2026-02-23",
+		"entries": [
+			"Fixed rats glitching out and freezing when multiple are in combat",
+			"Rats no longer get stuck oscillating between chase and attack states",
+			"Swarms of enemies now properly surround and attack the player",
+			"Capped enemy separation force so packs don't push each other into gridlock",
+		]
+	},
 	{
 		"version": "v0.29.0",
 		"title": "Touch Attack Fixes & Pause Menu Close Button",

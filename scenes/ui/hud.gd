@@ -94,15 +94,11 @@ func _apply_mobile_layout() -> void:
 		level_label.visible = false
 
 		# Compact bottom panel: just HP/MP/XP bars + CMD button
-		var bar_h = 44
-		var xp_h = 24
-		var panel_h = bar_h * 2 + xp_h + 14  # ~126px
+		# Bar heights stay at the scene default (20px each) for consistency
+		var bar_h = 20
+		var panel_h = bar_h * 3 + 14  # 3 equal bars + spacing = ~74px
 		bottom_panel.offset_top = -panel_h
 		bottom_hbox.add_theme_constant_override("separation", 4)
-
-		hp_bar.custom_minimum_size.y = bar_h
-		mana_bar.custom_minimum_size.y = bar_h
-		xp_bar.custom_minimum_size.y = xp_h
 		unit_info.add_theme_constant_override("separation", 2)
 
 		# Add a CMD button inside the bottom bar to open the commands overlay
@@ -119,17 +115,15 @@ func _apply_mobile_layout() -> void:
 		_build_cmd_overlay()
 		return
 
-	# ── LANDSCAPE: ultra-compact strip (unchanged) ──
-	bottom_panel.offset_top = -36
+	# ── LANDSCAPE: compact strip, same bar heights as desktop ──
+	var bar_h_ls = 20
+	var panel_h_ls = bar_h_ls * 3 + 10  # 3 equal bars + spacing = ~70px
+	bottom_panel.offset_top = -panel_h_ls
 	bottom_hbox.add_theme_constant_override("separation", 2)
 
 	minimap.visible = false
-
 	level_label.visible = false
-	hp_bar.custom_minimum_size.y = 8
-	mana_bar.custom_minimum_size.y = 8
-	xp_bar.custom_minimum_size.y = 3
-	unit_info.add_theme_constant_override("separation", 0)
+	unit_info.add_theme_constant_override("separation", 1)
 
 	command_card.custom_minimum_size.x = 160
 	command_label.visible = false
@@ -803,7 +797,7 @@ func _show_next_hint() -> void:
 	var is_landscape_hint = vp_size_hint.x > vp_size_hint.y
 	var bottom_offset = -125.0
 	if _is_mobile:
-		bottom_offset = -46.0 if is_landscape_hint else -140.0
+		bottom_offset = -80.0 if is_landscape_hint else -90.0
 	_hint_panel.position = Vector2((screen_w - panel_w) / 2.0, bottom_offset - _hint_panel.size.y - 10)
 
 	# Fade in

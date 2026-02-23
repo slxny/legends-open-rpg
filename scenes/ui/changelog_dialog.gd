@@ -9,18 +9,17 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.39.4"
+const GAME_VERSION := "v0.39.5"
 
 const CHANGELOG: Array[Dictionary] = [
 	{
-		"version": "v0.39.4",
-		"title": "Fix ATK Button & Thicker HP/MP/XP Bars",
+		"version": "v0.39.5",
+		"title": "Smooth Bars & Uniform Thickness",
 		"date": "2026-02-23",
 		"entries": [
-			"Mobile detection simplified to DisplayServer.is_touchscreen_available() only",
-			"Viewport size checks removed — canvas_items stretch makes them unreliable",
-			"ATK button now appears correctly in portrait mode",
-			"HP/MP bars increased from 28px to 44px, XP bar from 16px to 24px for readability",
+			"Removed segmented drawing from HP/MP/XP bars — now smooth continuous fill",
+			"All three bars (HP, MP, XP) are the same 20px height on every format",
+			"No more per-platform bar size overrides — desktop, landscape, and portrait all match",
 		]
 	},
 	{

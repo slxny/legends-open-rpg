@@ -89,7 +89,7 @@ show_label = true
 
 [node name="XPBar" type="Control" parent="BottomPanel/HBox/UnitInfo"]
 layout_mode = 2
-custom_minimum_size = Vector2(0, 14)
+custom_minimum_size = Vector2(0, 20)
 script = ExtResource("3_scbar")
 bar_mode = 2
 show_label = true

@@ -18,7 +18,11 @@ signal activated(beacon: Area2D)
 var _player_inside: bool = false
 var _heal_range_sq: float = 0.0  # Squared beacon radius for distance healing check
 var _played_heal_sfx: bool = false  # Track whether SFX already played this visit
+var _cached_player: Node2D = null
+var _label_check_timer: float = 0.0
 const ZOOM_REF := 3.0
+const LABEL_VISIBLE_DISTANCE_SQ: float = 14400.0  # 120^2 — same range as NPC labels
+const LABEL_CHECK_INTERVAL: float = 0.3
 
 # Map beacon colors to texture names
 const BEACON_TEXTURE_MAP = {
@@ -46,12 +50,13 @@ func _ready() -> void:
 
 	if not beacon_label.is_empty():
 		label.text = beacon_label
-		var vp_size = get_viewport().get_visible_rect().size
 		if DisplayServer.is_touchscreen_available():
 			label.add_theme_font_size_override("font_size", 18)
 		label.pivot_offset = label.size / 2.0
+		label.visible = false  # Start hidden; shown by proximity check
 	else:
 		label.visible = false
+	_label_check_timer = randf_range(0.0, LABEL_CHECK_INTERVAL)
 
 	# Set collision shape — make unique so instances don't share the sub-resource
 	var shape = $CollisionShape2D
@@ -62,6 +67,24 @@ func _ready() -> void:
 	_heal_range_sq = (beacon_radius + 20.0) * (beacon_radius + 20.0)
 
 func _process(delta: float) -> void:
+	if beacon_label.is_empty():
+		return
+	_label_check_timer -= delta
+	if _label_check_timer > 0.0:
+		if label.visible:
+			var cam = get_viewport().get_camera_2d()
+			if cam:
+				label.scale = Vector2(ZOOM_REF / cam.zoom.x, ZOOM_REF / cam.zoom.x)
+		return
+	_label_check_timer = LABEL_CHECK_INTERVAL
+	if not _cached_player or not is_instance_valid(_cached_player):
+		var players = get_tree().get_nodes_in_group("player")
+		if players.size() > 0:
+			_cached_player = players[0]
+		else:
+			return
+	var dist_sq = global_position.distance_squared_to(_cached_player.global_position)
+	label.visible = dist_sq < LABEL_VISIBLE_DISTANCE_SQ
 	if label.visible:
 		var cam = get_viewport().get_camera_2d()
 		if cam:

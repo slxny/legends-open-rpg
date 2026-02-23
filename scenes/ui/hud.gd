@@ -1001,7 +1001,7 @@ func _show_next_hint() -> void:
 		_hint_tween.kill()
 	_hint_tween = create_tween()
 	_hint_tween.tween_property(_hint_panel, "modulate:a", 1.0, 0.4)
-	_hint_tween.tween_interval(6.0)
+	_hint_tween.tween_interval(12.0)
 	_hint_tween.tween_property(_hint_panel, "modulate:a", 0.0, 0.6)
 	_hint_tween.tween_callback(_on_hint_finished)
 

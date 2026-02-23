@@ -9,9 +9,18 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.52.0"
+const GAME_VERSION := "v0.53.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.53.0",
+		"title": "Proximity Beacon Labels & Longer Tooltips",
+		"date": "2026-02-23",
+		"entries": [
+			"Info and Heal beacon labels now only appear when the hero is nearby (same range as NPC labels)",
+			"Tutorial hint tooltips now display for 12 seconds instead of 6 for easier reading",
+		]
+	},
 	{
 		"version": "v0.52.0",
 		"title": "Shop Q-Key & Consistent Mobile Close Buttons",

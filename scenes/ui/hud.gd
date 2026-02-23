@@ -37,6 +37,7 @@ extends CanvasLayer
 
 var _player: Node2D = null
 var _is_mobile: bool = false
+var _is_portrait: bool = false
 
 # Ability tooltip panel
 var _tooltip_panel: PanelContainer = null
@@ -52,6 +53,10 @@ var _hint_queue: Array[Dictionary] = []
 var _hint_timer: Timer = null
 var _hint_showing: bool = false
 
+# Command overlay (mobile portrait)
+var _cmd_overlay: PanelContainer = null
+var _cmd_overlay_visible: bool = false
+
 func _ready() -> void:
 	_detect_mobile()
 	if _is_mobile:
@@ -63,6 +68,7 @@ func _ready() -> void:
 func _detect_mobile() -> void:
 	var vp_size = get_viewport().get_visible_rect().size
 	_is_mobile = vp_size.x < 700 or (vp_size.x < vp_size.y)
+	_is_portrait = _is_mobile and vp_size.y >= vp_size.x
 
 func _apply_mobile_layout() -> void:
 	var vp_size = get_viewport().get_visible_rect().size
@@ -80,57 +86,224 @@ func _apply_mobile_layout() -> void:
 		wood_label.add_theme_font_size_override("font_size", 44)
 		alignment_label.add_theme_font_size_override("font_size", 38)
 
-	# ── Bottom panel: ultra-compact strip in landscape, taller for portrait ──
-	if is_landscape:
-		bottom_panel.offset_top = -36
-		bottom_hbox.add_theme_constant_override("separation", 2)
-	else:
-		bottom_panel.offset_top = -380
-		bottom_hbox.add_theme_constant_override("separation", 10)
-
-	# ── Minimap: hidden in landscape to reclaim space ──
-	if is_landscape:
+	# ── PORTRAIT: minimal bar strip + command overlay button ──
+	if not is_landscape:
+		# Hide command card and minimap entirely
+		command_card.visible = false
 		minimap.visible = false
-	else:
-		minimap.custom_minimum_size = Vector2(150, 150)
-
-	# ── Unit info: ultra-thin bars in landscape ──
-	if is_landscape:
 		level_label.visible = false
-		hp_bar.custom_minimum_size.y = 8
-		mana_bar.custom_minimum_size.y = 8
-		xp_bar.custom_minimum_size.y = 3
-		unit_info.add_theme_constant_override("separation", 0)
-	else:
-		level_label.add_theme_font_size_override("font_size", 38)
-		hp_bar.custom_minimum_size.y = 48
-		mana_bar.custom_minimum_size.y = 48
-		xp_bar.custom_minimum_size.y = 34
-		unit_info.add_theme_constant_override("separation", 6)
 
-	# ── Command card: 3x2 grid in landscape (hide Save/Load/Log) ──
-	if is_landscape:
-		command_card.custom_minimum_size.x = 160
-		command_label.visible = false
-		log_btn.visible = false
-		save_btn.visible = false
-		load_btn.visible = false
-		command_grid.add_theme_constant_override("h_separation", 1)
-		command_grid.add_theme_constant_override("v_separation", 1)
-		for child in command_grid.get_children():
-			if child is Button and child.visible:
-				child.custom_minimum_size = Vector2(52, 14)
-				child.add_theme_font_size_override("font_size", 8)
-	else:
-		command_card.custom_minimum_size.x = 380
-		command_label.add_theme_font_size_override("font_size", 28)
-		command_grid.add_theme_constant_override("h_separation", 4)
-		command_grid.add_theme_constant_override("v_separation", 4)
-		for child in command_grid.get_children():
-			if child is Button:
-				child.custom_minimum_size = Vector2(118, 84)
-				child.add_theme_font_size_override("font_size", 24)
-				child.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		# Ultra-thin bottom panel: just HP/MP/XP bars + CMD button
+		var bar_h = 28
+		var xp_h = 16
+		var panel_h = bar_h * 2 + xp_h + 10  # ~100px
+		bottom_panel.offset_top = -panel_h
+		bottom_hbox.add_theme_constant_override("separation", 4)
+
+		hp_bar.custom_minimum_size.y = bar_h
+		mana_bar.custom_minimum_size.y = bar_h
+		xp_bar.custom_minimum_size.y = xp_h
+		unit_info.add_theme_constant_override("separation", 2)
+
+		# Add a CMD button inside the bottom bar to open the commands overlay
+		var cmd_btn = Button.new()
+		cmd_btn.text = "CMD"
+		cmd_btn.custom_minimum_size = Vector2(90, 0)
+		cmd_btn.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		cmd_btn.add_theme_font_size_override("font_size", 30)
+		cmd_btn.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
+		cmd_btn.pressed.connect(_toggle_cmd_overlay)
+		bottom_hbox.add_child(cmd_btn)
+
+		# Build the command overlay (hidden by default)
+		_build_cmd_overlay()
+		return
+
+	# ── LANDSCAPE: ultra-compact strip (unchanged) ──
+	bottom_panel.offset_top = -36
+	bottom_hbox.add_theme_constant_override("separation", 2)
+
+	minimap.visible = false
+
+	level_label.visible = false
+	hp_bar.custom_minimum_size.y = 8
+	mana_bar.custom_minimum_size.y = 8
+	xp_bar.custom_minimum_size.y = 3
+	unit_info.add_theme_constant_override("separation", 0)
+
+	command_card.custom_minimum_size.x = 160
+	command_label.visible = false
+	log_btn.visible = false
+	save_btn.visible = false
+	load_btn.visible = false
+	command_grid.add_theme_constant_override("h_separation", 1)
+	command_grid.add_theme_constant_override("v_separation", 1)
+	for child in command_grid.get_children():
+		if child is Button and child.visible:
+			child.custom_minimum_size = Vector2(52, 14)
+			child.add_theme_font_size_override("font_size", 8)
+
+func _build_cmd_overlay() -> void:
+	_cmd_overlay = PanelContainer.new()
+	_cmd_overlay.visible = false
+	_cmd_overlay.z_index = 90
+
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.06, 0.06, 0.1, 0.96)
+	style.border_color = Color(0.4, 0.35, 0.2, 0.8)
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(10)
+	style.set_content_margin_all(16)
+	_cmd_overlay.add_theme_stylebox_override("panel", style)
+
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 8)
+	_cmd_overlay.add_child(vbox)
+
+	# Title row with close button
+	var title_row = HBoxContainer.new()
+	title_row.add_theme_constant_override("separation", 8)
+	vbox.add_child(title_row)
+	var title = Label.new()
+	title.text = "Commands"
+	title.add_theme_font_size_override("font_size", 36)
+	title.add_theme_color_override("font_color", Color(0.9, 0.85, 0.7))
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title_row.add_child(title)
+	var close_btn = Button.new()
+	close_btn.text = "X"
+	close_btn.custom_minimum_size = Vector2(70, 60)
+	close_btn.add_theme_font_size_override("font_size", 34)
+	close_btn.pressed.connect(_toggle_cmd_overlay)
+	title_row.add_child(close_btn)
+
+	# 3x3 grid of command buttons
+	var grid = GridContainer.new()
+	grid.columns = 3
+	grid.add_theme_constant_override("h_separation", 6)
+	grid.add_theme_constant_override("v_separation", 6)
+	vbox.add_child(grid)
+
+	var btn_size = Vector2(0, 90)
+	var fs = 26
+
+	# Row 1: Ability 1, Ability 2, Log
+	var a1 = Button.new()
+	a1.text = ability_1_btn.text
+	a1.custom_minimum_size = btn_size
+	a1.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	a1.add_theme_font_size_override("font_size", fs)
+	a1.pressed.connect(func():
+		if _player and is_instance_valid(_player):
+			_player._use_ability("ability_1")
+		_toggle_cmd_overlay()
+	)
+	grid.add_child(a1)
+
+	var a2 = Button.new()
+	a2.text = ability_2_btn.text
+	a2.custom_minimum_size = btn_size
+	a2.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	a2.add_theme_font_size_override("font_size", fs)
+	a2.pressed.connect(func():
+		if _player and is_instance_valid(_player):
+			_player._use_ability("ability_2")
+		_toggle_cmd_overlay()
+	)
+	grid.add_child(a2)
+
+	var log_b = Button.new()
+	log_b.text = "F1\nLog"
+	log_b.custom_minimum_size = btn_size
+	log_b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	log_b.add_theme_font_size_override("font_size", fs)
+	log_b.pressed.connect(func():
+		_on_changelog_pressed()
+		_toggle_cmd_overlay()
+	)
+	grid.add_child(log_b)
+
+	# Row 2: Potions 1-3
+	for i in range(3):
+		var p = Button.new()
+		p.text = "%d\n---" % (i + 1)
+		p.custom_minimum_size = btn_size
+		p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		p.add_theme_font_size_override("font_size", fs)
+		var idx = i
+		p.pressed.connect(func():
+			if _player and is_instance_valid(_player):
+				_player.inventory.use_consumable(idx)
+			_toggle_cmd_overlay()
+		)
+		grid.add_child(p)
+
+	# Row 3: Items, Save, Load
+	var inv_b = Button.new()
+	inv_b.text = "I\nItems"
+	inv_b.custom_minimum_size = btn_size
+	inv_b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	inv_b.add_theme_font_size_override("font_size", fs)
+	inv_b.pressed.connect(func():
+		_on_inventory_pressed()
+		_toggle_cmd_overlay()
+	)
+	grid.add_child(inv_b)
+
+	var save_b = Button.new()
+	save_b.text = "Save\nGame"
+	save_b.custom_minimum_size = btn_size
+	save_b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	save_b.add_theme_font_size_override("font_size", fs)
+	save_b.pressed.connect(func():
+		_on_save_pressed()
+		_toggle_cmd_overlay()
+	)
+	grid.add_child(save_b)
+
+	var load_b = Button.new()
+	load_b.text = "Load\nGame"
+	load_b.custom_minimum_size = btn_size
+	load_b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	load_b.add_theme_font_size_override("font_size", fs)
+	load_b.pressed.connect(func():
+		_on_load_pressed()
+		_toggle_cmd_overlay()
+	)
+	grid.add_child(load_b)
+
+	# Position the overlay above the bottom panel
+	add_child(_cmd_overlay)
+
+func _toggle_cmd_overlay() -> void:
+	_cmd_overlay_visible = !_cmd_overlay_visible
+	_cmd_overlay.visible = _cmd_overlay_visible
+	if _cmd_overlay_visible:
+		AudioManager.play_sfx("ui_tap", -4.0)
+		# Update potion labels in overlay
+		_update_overlay_potions()
+		# Position: centered, above bottom bar
+		await get_tree().process_frame
+		var vp_size = get_viewport().get_visible_rect().size
+		var overlay_w = vp_size.x - 32
+		_cmd_overlay.size = Vector2(overlay_w, 0)
+		_cmd_overlay.position = Vector2(16, vp_size.y - bottom_panel.size.y - _cmd_overlay.size.y - 8)
+
+func _update_overlay_potions() -> void:
+	if not _cmd_overlay or not _player or not is_instance_valid(_player):
+		return
+	var grid = _cmd_overlay.get_child(0).get_child(1) as GridContainer  # vbox -> grid
+	var inv = _player.inventory
+	# Potion buttons are children 3, 4, 5 of the grid
+	for i in range(3):
+		var btn = grid.get_child(3 + i) as Button
+		var item = inv.consumables[i] if i < inv.consumables.size() else {}
+		if item.is_empty():
+			btn.text = "%d\n---" % (i + 1)
+			btn.modulate = Color(0.5, 0.5, 0.5)
+		else:
+			btn.text = "%d\n%s" % [i + 1, item.get("name", "Potion")]
+			btn.modulate = Color.WHITE
 
 func _add_mobile_menu_button() -> void:
 	var vp_size = get_viewport().get_visible_rect().size
@@ -630,7 +803,7 @@ func _show_next_hint() -> void:
 	var is_landscape_hint = vp_size_hint.x > vp_size_hint.y
 	var bottom_offset = -125.0
 	if _is_mobile:
-		bottom_offset = -46.0 if is_landscape_hint else -340.0
+		bottom_offset = -46.0 if is_landscape_hint else -100.0
 	_hint_panel.position = Vector2((screen_w - panel_w) / 2.0, bottom_offset - _hint_panel.size.y - 10)
 
 	# Fade in

@@ -9,9 +9,23 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.38.1"
+const GAME_VERSION := "v0.39.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.39.0",
+		"title": "Minimal Mobile HUD — Maximum Map Visibility",
+		"date": "2026-02-23",
+		"entries": [
+			"Bottom HUD in mobile portrait slashed from 380px to ~82px — reclaims ~300px of screen for the map",
+			"Command card, minimap, and hero name/level all hidden from the bottom bar in portrait",
+			"Bottom bar now shows only HP, MP, XP bars plus a single CMD button",
+			"CMD button opens a floating overlay with all 9 command buttons (abilities, potions, items, save/load, log)",
+			"Overlay auto-closes after tapping any command for quick one-tap access",
+			"ATK button repositioned to sit just above the new thinner bottom bar",
+			"Inventory and shop buttons enlarged with visual hover/press states and tap/hover SFX",
+		]
+	},
 	{
 		"version": "v0.38.1",
 		"title": "Mobile Button Improvements for Inventory & Shop",

@@ -49,6 +49,13 @@ var _paralyze_timer: float = 0.0
 var _slow_factor: float = 1.0  # 1.0 = normal, < 1.0 = slowed
 var _slow_timer: float = 0.0
 var _effect_vfx: Sprite2D = null  # Visual indicator for active status effect
+# Heal beacon immunity visual feedback
+var _was_on_heal_beacon: bool = false  # Previous frame state for detecting transitions
+var _immunity_vfx: Sprite2D = null  # Green pulsing aura under hero
+var _immunity_vfx_tween: Tween = null  # Looping pulse tween for immunity aura
+var _immunity_sprite_tween: Tween = null  # Green tint pulse on hero sprite
+var _immunity_label: Label = null  # Floating "IMMUNE" text
+var _tex_beacon_green: Texture2D = null  # Cached green beacon texture
 
 # Idle animations — breathing and random fidgets when standing still
 var _idle_breathe_tween: Tween = null
@@ -214,6 +221,7 @@ func _ready() -> void:
 	_tex_crystal_white = SpriteGenerator.get_texture("crystal_white")
 	_tex_selection_red = SpriteGenerator.get_texture("selection_red")
 	_tex_beacon_blue = SpriteGenerator.get_texture("beacon_blue")
+	_tex_beacon_green = SpriteGenerator.get_texture("beacon_green")
 	# Pre-allocate damage label settings (avoids LabelSettings.new() per hit)
 	_player_dmg_normal = LabelSettings.new()
 	_player_dmg_normal.font_size = 14
@@ -283,6 +291,13 @@ func _physics_process(delta: float) -> void:
 
 	# Process status effects
 	_process_status_effects(delta)
+
+	# Heal beacon immunity visual feedback — detect transitions
+	if is_on_heal_beacon and not _was_on_heal_beacon:
+		_start_immunity_vfx()
+	elif not is_on_heal_beacon and _was_on_heal_beacon:
+		_stop_immunity_vfx()
+	_was_on_heal_beacon = is_on_heal_beacon
 
 	# Paralyzed: can't move or attack
 	if _is_paralyzed:
@@ -915,6 +930,66 @@ func _clear_effect_vfx() -> void:
 	if _effect_vfx and is_instance_valid(_effect_vfx):
 		_effect_vfx.queue_free()
 		_effect_vfx = null
+
+# --- Heal Beacon Immunity Visual Feedback ---
+
+func _start_immunity_vfx() -> void:
+	_stop_immunity_vfx()  # Clean up any leftover state
+
+	# 1) Green pulsing aura under hero (larger, slower pulse than status effects)
+	_immunity_vfx = Sprite2D.new()
+	_immunity_vfx.texture = _tex_beacon_green if _tex_beacon_green else _tex_beacon_blue
+	_immunity_vfx.modulate = Color(0.3, 1.0, 0.5, 0.55)
+	_immunity_vfx.scale = Vector2(1.3, 1.3)
+	_immunity_vfx.z_index = -1
+	add_child(_immunity_vfx)
+	# Looping pulse: fade + scale breathe
+	_immunity_vfx_tween = _immunity_vfx.create_tween().set_loops()
+	_immunity_vfx_tween.tween_property(_immunity_vfx, "modulate:a", 0.2, 0.7).set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_SINE)
+	_immunity_vfx_tween.parallel().tween_property(_immunity_vfx, "scale", Vector2(1.5, 1.5), 0.7).set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_SINE)
+	_immunity_vfx_tween.tween_property(_immunity_vfx, "modulate:a", 0.55, 0.7).set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_SINE)
+	_immunity_vfx_tween.parallel().tween_property(_immunity_vfx, "scale", Vector2(1.3, 1.3), 0.7).set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_SINE)
+
+	# 2) Green tint on hero sprite — gentle pulse between white-green and bright green
+	_immunity_sprite_tween = create_tween().set_loops()
+	_immunity_sprite_tween.tween_property(sprite, "modulate", Color(0.7, 1.3, 0.75), 0.6).set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_SINE)
+	_immunity_sprite_tween.tween_property(sprite, "modulate", Color(0.85, 1.15, 0.85), 0.6).set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_SINE)
+
+	# 3) Floating "IMMUNE" label that bobs gently
+	_immunity_label = Label.new()
+	_immunity_label.text = "IMMUNE"
+	_immunity_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_immunity_label.position = Vector2(-28, -48)
+	var settings = LabelSettings.new()
+	var is_mobile = DisplayServer.is_touchscreen_available()
+	settings.font_size = 22 if is_mobile else 11
+	settings.font_color = Color(0.3, 1.0, 0.5)
+	settings.outline_size = 4 if is_mobile else 2
+	settings.outline_color = Color(0.0, 0.2, 0.05)
+	_immunity_label.label_settings = settings
+	add_child(_immunity_label)
+	# Gentle bob animation
+	var label_tween = _immunity_label.create_tween().set_loops()
+	label_tween.tween_property(_immunity_label, "position:y", -53.0, 0.8).set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_SINE)
+	label_tween.tween_property(_immunity_label, "position:y", -48.0, 0.8).set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_SINE)
+
+func _stop_immunity_vfx() -> void:
+	# Kill aura
+	if _immunity_vfx_tween and _immunity_vfx_tween.is_valid():
+		_immunity_vfx_tween.kill()
+		_immunity_vfx_tween = null
+	if _immunity_vfx and is_instance_valid(_immunity_vfx):
+		_immunity_vfx.queue_free()
+		_immunity_vfx = null
+	# Restore sprite modulate
+	if _immunity_sprite_tween and _immunity_sprite_tween.is_valid():
+		_immunity_sprite_tween.kill()
+		_immunity_sprite_tween = null
+	sprite.modulate = Color.WHITE
+	# Kill label
+	if _immunity_label and is_instance_valid(_immunity_label):
+		_immunity_label.queue_free()
+		_immunity_label = null
 
 # --- Special Attack System ---
 
@@ -2591,6 +2666,8 @@ func _on_death_animation(_player_id: int) -> void:
 		_idle_breathe_tween.kill()
 	if _idle_fidget_tween and _idle_fidget_tween.is_valid():
 		_idle_fidget_tween.kill()
+	_stop_immunity_vfx()
+	_was_on_heal_beacon = false
 	# Death animation: red tint, collapse (shrink + rotate), fade to semi-transparent
 	_death_tween = create_tween()
 	_death_tween.set_parallel(true)

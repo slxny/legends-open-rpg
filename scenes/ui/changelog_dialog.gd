@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.43.4"
+const GAME_VERSION := "v0.44.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.44.0",
+		"title": "Hero Immunity Visual Feedback",
+		"date": "2026-02-23",
+		"entries": [
+			"Hero now glows green with a pulsing aura when standing on a heal beacon",
+			"Floating 'IMMUNE' label bobs above the hero while immunity is active",
+			"Hero sprite pulses with a green tint to clearly show protected status",
+			"All immunity visuals cleanly fade when stepping off the beacon",
+		]
+	},
 	{
 		"version": "v0.43.4",
 		"title": "Fix Map Overlay Size in Landscape",

@@ -9,9 +9,21 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.49.0"
+const GAME_VERSION := "v0.50.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.50.0",
+		"title": "Troll Combat Overhaul — Slow Heavy Attacks",
+		"date": "2026-02-23",
+		"entries": [
+			"Trolls now attack with a slow, powerful overhead club slam (2.8s cooldown vs 1.2s default)",
+			"New troll swing animation: long wind-up, menacing pause, heavy slam with impact shake, slow recovery",
+			"Troll base attack damage increased (18 base vs formula default) — fewer hits but each one hurts",
+			"Attack cooldown is now per-enemy-type (trolls 2.8s, others remain 1.2s)",
+			"Troll attack range slightly increased (45 vs 40) to match their long arms",
+		]
+	},
 	{
 		"version": "v0.49.0",
 		"title": "Fix Save/Load — All Stats & Resources Now Saved",

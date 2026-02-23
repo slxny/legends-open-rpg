@@ -208,6 +208,7 @@ func initialize(config: Dictionary) -> void:
 	stats.attack_range = config.get("attack_range", 35.0)
 	stats.move_speed = config.get("move_speed", 80.0)
 	stats.primary_stat = "strength"
+	attack_cooldown = config.get("attack_cooldown", 1.2)
 
 	# Scale patrol radius with move speed — faster enemies roam much further
 	_patrol_radius = 300.0 + stats.move_speed * 3.0
@@ -830,6 +831,8 @@ func _do_attack_lunge() -> void:
 			_anim_rat_bite(dir, base_pos)
 		"goblin":
 			_anim_goblin_swing(dir, base_pos)
+		"troll":
+			_anim_troll_slam(dir, base_pos)
 		_:
 			_anim_generic_lunge(dir, base_pos)
 
@@ -875,6 +878,32 @@ func _anim_goblin_swing(dir: Vector2, base_pos: Vector2) -> void:
 	tween.tween_property(sprite, "position", base_pos, 0.07)
 	tween.parallel().tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.07)
 	tween.parallel().tween_property(sprite, "rotation", 0.0, 0.07)
+
+func _anim_troll_slam(dir: Vector2, base_pos: Vector2) -> void:
+	# Slow, heavy overhead club slam — wind up high, pause, then crush down
+	var tween = create_tween()
+	var base_mod = _base_modulate if _base_modulate else Color.WHITE
+	# Phase 1: Slow wind-up — rear back, grow tall (raising club overhead)
+	tween.tween_property(sprite, "position", base_pos - dir * 6.0 + Vector2(0, -6), 0.25)
+	tween.parallel().tween_property(sprite, "scale", _base_scale * Vector2(0.8, 1.3), 0.25)
+	# Phase 2: Brief menacing pause at the top of the swing
+	tween.tween_interval(0.12)
+	# Phase 3: Fast heavy slam forward — squash wide on impact
+	tween.tween_callback(func(): sprite.modulate = Color(1.4, 1.0, 0.8) * base_mod)
+	tween.tween_property(sprite, "position", base_pos + dir * 16.0 + Vector2(0, 4), 0.1)
+	tween.parallel().tween_property(sprite, "scale", _base_scale * Vector2(1.35, 0.7), 0.1)
+	tween.parallel().tween_property(sprite, "rotation", dir.angle() * 0.2, 0.1)
+	# Phase 4: Ground impact — hold the crush pose, shake
+	tween.tween_property(sprite, "position", base_pos + dir * 14.0 + Vector2(randf_range(-2, 2), 4), 0.06)
+	tween.tween_property(sprite, "position", base_pos + dir * 16.0 + Vector2(randf_range(-2, 2), 4), 0.06)
+	# Phase 5: Slow heavy recovery — troll is lumbering, takes time to pull club back
+	tween.tween_property(sprite, "modulate", base_mod, 0.15)
+	tween.parallel().tween_property(sprite, "position", base_pos + dir * 6.0, 0.2)
+	tween.parallel().tween_property(sprite, "scale", _base_scale * Vector2(1.1, 0.95), 0.2)
+	tween.parallel().tween_property(sprite, "rotation", 0.0, 0.2)
+	# Phase 6: Settle back to idle
+	tween.tween_property(sprite, "position", base_pos, 0.2)
+	tween.parallel().tween_property(sprite, "scale", _base_scale, 0.2)
 
 func _anim_generic_lunge(dir: Vector2, base_pos: Vector2) -> void:
 	# Standard lunge with squash-stretch for weight

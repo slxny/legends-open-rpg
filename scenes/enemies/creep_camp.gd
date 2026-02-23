@@ -78,8 +78,10 @@ const CAMP_TYPES = {
 		"level_range": [5, 7],
 		"sprite_type": "troll",
 		"move_speed": 60.0,
-		"attack_range": 40.0,
+		"attack_range": 45.0,
 		"aggro_range": 120.0,
+		"attack_damage": 18,
+		"attack_cooldown": 2.8,
 		"xp_reward": 35,
 		"gold_reward": 12,
 		"drop_table": "troll",
@@ -368,6 +370,8 @@ func _instantiate_enemy(pending: Dictionary) -> void:
 		"weakness_factor": weakness_factor,
 		"is_mini_boss": is_mini_boss,
 	}
+	if type_data.has("attack_cooldown"):
+		config["attack_cooldown"] = type_data["attack_cooldown"]
 	if type_data.has("attack_damage"):
 		var base_atk = type_data["attack_damage"]
 		var type_max = type_data["level_range"][1]

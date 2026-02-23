@@ -79,10 +79,10 @@ func _draw() -> void:
 			# Empty segment — very dark
 			draw_rect(seg_rect, Color(0.06, 0.06, 0.08))
 
-	# Label overlay
+	# Label overlay — font auto-scales to bar height
 	if show_label and not label_text.is_empty():
 		var font = ThemeDB.fallback_font
-		var font_size = 32 if _is_mobile else 13
+		var font_size = clampi(int(bar_size.y * 0.6), 9, 32)
 		var text_width = font.get_string_size(label_text, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size).x
 		var x_pos = (bar_size.x - text_width) / 2.0
 		var y_pos = bar_size.y / 2.0 + font_size / 2.0 - 1

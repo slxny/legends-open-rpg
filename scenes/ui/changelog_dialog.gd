@@ -9,9 +9,21 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.33.1"
+const GAME_VERSION := "v0.34.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.34.0",
+		"title": "Landscape Layout Optimization",
+		"date": "2026-02-23",
+		"entries": [
+			"Bottom HUD panel height reduced ~30% for much more game view in landscape",
+			"HP/MP/XP bars, command buttons, and minimap all compacted for landscape",
+			"Mobile landscape layout significantly tighter (bottom panel 220px → 130px)",
+			"Bar label font now auto-scales to bar height instead of fixed mobile/desktop sizes",
+			"Browser auto-enters fullscreen on first tap to hide the address bar",
+		]
+	},
 	{
 		"version": "v0.33.1",
 		"title": "Heal Beacon Full Area Fix",

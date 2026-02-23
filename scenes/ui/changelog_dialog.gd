@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.36.1"
+const GAME_VERSION := "v0.36.2"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.36.2",
+		"title": "Beacon Immunity Timing Fix",
+		"date": "2026-02-23",
+		"entries": [
+			"Fixed heal beacon immunity not working: moved heal/immunity logic to _physics_process so it runs in the same phase as enemy attacks (was in _process, which runs after enemies already attacked each frame)",
+			"Heal beacon now grants immunity instantly on collision entry — no more one-frame vulnerability window",
+			"Heal beacon now triggers healing immediately when hero steps on from outside",
+			"Immunity flag is now also properly cleared on collision exit for reliable cleanup",
+		]
+	},
 	{
 		"version": "v0.36.1",
 		"title": "Full Beacon Immunity",

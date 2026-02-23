@@ -68,41 +68,54 @@ func _process(delta: float) -> void:
 			var comp = ZOOM_REF / cam.zoom.x
 			label.scale = Vector2(comp, comp)
 
-	# Heal beacon: grant immunity and restore HP/MP every frame
-	if beacon_type == "heal":
-		var players = get_tree().get_nodes_in_group("player")
-		for player in players:
-			if not is_instance_valid(player) or not player.has_node("StatsComponent"):
-				continue
-			var dist_sq = global_position.distance_squared_to(player.global_position)
-			if dist_sq <= _heal_range_sq:
-				# Grant damage immunity while on beacon
-				player.is_on_heal_beacon = true
-				var stats = player.get_node("StatsComponent")
-				var needs_heal = stats.current_hp < stats.get_total_max_hp() or stats.current_mana < stats.get_total_max_mana()
-				if needs_heal:
-					stats.current_hp = stats.get_total_max_hp()
-					stats.current_mana = stats.get_total_max_mana()
-					stats._emit_all()
-					# SFX + message only on first actual heal per visit
-					if not _played_heal_sfx:
-						_played_heal_sfx = true
-						AudioManager.play_sfx("beacon_heal")
-						GameManager.game_message.emit("Fully Restored!", Color(0.3, 1.0, 0.5))
-			else:
-				# Player left — remove immunity and reset SFX
-				if player.get("is_on_heal_beacon"):
-					player.is_on_heal_beacon = false
-				_played_heal_sfx = false
+func _physics_process(_delta: float) -> void:
+	# Heal beacon: grant immunity and restore HP/MP every physics frame.
+	# Must run in _physics_process (not _process) because enemy attacks also
+	# run in _physics_process — using _process left a timing gap where enemies
+	# could damage the player before the immunity flag was set each frame.
+	if beacon_type != "heal":
+		return
+	var players = get_tree().get_nodes_in_group("player")
+	for player in players:
+		if not is_instance_valid(player) or not player.has_node("StatsComponent"):
+			continue
+		var dist_sq = global_position.distance_squared_to(player.global_position)
+		if dist_sq <= _heal_range_sq:
+			player.is_on_heal_beacon = true
+			_do_heal(player)
+		else:
+			if player.get("is_on_heal_beacon"):
+				player.is_on_heal_beacon = false
+			_played_heal_sfx = false
+
+func _do_heal(player: Node2D) -> void:
+	var stats = player.get_node("StatsComponent")
+	var needs_heal = stats.current_hp < stats.get_total_max_hp() or stats.current_mana < stats.get_total_max_mana()
+	if needs_heal:
+		stats.current_hp = stats.get_total_max_hp()
+		stats.current_mana = stats.get_total_max_mana()
+		stats._emit_all()
+		if not _played_heal_sfx:
+			_played_heal_sfx = true
+			AudioManager.play_sfx("beacon_heal")
+			GameManager.game_message.emit("Fully Restored!", Color(0.3, 1.0, 0.5))
 
 func _on_body_entered(body: Node2D) -> void:
 	if body.is_in_group("player"):
 		_player_inside = true
 		activated.emit(self)
-		# Route through BeaconManager for non-heal types (heal is distance-based)
 		if not beacon_type.is_empty() and beacon_type != "heal":
 			BeaconManager.activate(beacon_type, beacon_data, body)
+		elif beacon_type == "heal":
+			# Set immunity immediately on collision — don't wait for next
+			# _physics_process tick, so the very first frame is protected.
+			body.is_on_heal_beacon = true
+			if body.has_node("StatsComponent"):
+				_do_heal(body)
 
 func _on_body_exited(body: Node2D) -> void:
 	if body.is_in_group("player"):
 		_player_inside = false
+		if beacon_type == "heal":
+			body.is_on_heal_beacon = false
+			_played_heal_sfx = false

@@ -9,9 +9,17 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.51.0"
+const GAME_VERSION := "v0.51.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.51.1",
+		"title": "Cap Rat Spawn Level to Hero Level",
+		"date": "2026-02-23",
+		"entries": [
+			"Rats no longer spawn at a higher level than the hero",
+		]
+	},
 	{
 		"version": "v0.51.0",
 		"title": "Fix Enemies Getting Stuck & Hero Pathfinding",

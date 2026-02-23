@@ -325,6 +325,10 @@ func _spawn_enemies_staggered(is_respawn: bool) -> void:
 		# Scale enemy level to at least match the player's level (+0 to 2 bonus)
 		var scaled_level = max(base_level, player_level + randi_range(0, 2))
 
+		# Rats should never exceed the hero's level
+		if camp_type == "rat":
+			scaled_level = mini(scaled_level, player_level)
+
 		# Compute effective stats level: dampen growth for levels above natural range
 		# Boosted levels contribute at 85% rate so enemies genuinely match the hero
 		var stats_level = scaled_level

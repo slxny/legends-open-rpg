@@ -4,7 +4,7 @@ signal attacked(target: Node2D)
 
 @onready var stats: StatsComponent = $StatsComponent
 @onready var inventory: InventoryComponent = $InventoryComponent
-@onready var ability_mgr: AbilityManager = $AbilityManager
+
 @onready var sprite: Sprite2D = $Sprite
 @onready var attack_area: Area2D = $AttackArea
 @onready var camera: Camera2D = $Camera2D
@@ -165,7 +165,6 @@ func _ready() -> void:
 	hero_class = GameManager.current_hero_class
 	stats.initialize_from_hero(hero_class)
 	inventory.setup(stats)
-	ability_mgr.setup(stats, hero_class)
 
 	var tex = SpriteGenerator.get_texture(hero_class)
 	if tex:
@@ -776,13 +775,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		_tap_resolve_timer = TAP_RESOLVE_TIME  # Reset window on each new tap
 		_tap_resolved = false
 
-	# Abilities (Q and E)
-	if event.is_action_pressed("ability_1"):
-		_use_ability("ability_1")
-	elif event.is_action_pressed("ability_2"):
-		_use_ability("ability_2")
 	# Consumable slots
-	elif event is InputEventKey and event.pressed:
+	if event is InputEventKey and event.pressed:
 		match event.keycode:
 			KEY_1: inventory.use_consumable(0)
 			KEY_2: inventory.use_consumable(1)
@@ -1980,100 +1974,6 @@ func _get_aim_direction() -> Vector2:
 			return touch_dir
 	return _facing
 
-func _use_ability(ability_key: String) -> void:
-	var ability_data = ability_mgr.use_ability(ability_key, self)
-	if ability_data.is_empty():
-		return
-
-	# Capture aim direction NOW (before the delay), so held keys at cast time matter
-	var aim_dir = _get_aim_direction()
-
-	# Face the aim direction
-	_set_facing(aim_dir)
-
-	# SC:BW trigger delay feel
-	await get_tree().create_timer(0.3).timeout
-	AudioManager.play_sfx("ability_whoosh")
-	if ability_data.has("damage_multiplier") and ability_data.has("radius"):
-		_execute_aoe_ability(ability_data, aim_dir)
-	elif ability_data.has("projectile_count"):
-		_execute_projectile_ability(ability_data, aim_dir)
-	elif ability_data.has("armor_bonus"):
-		ability_mgr.apply_buff("armor", ability_data["armor_bonus"], ability_data["duration"])
-		_spawn_buff_vfx(Color(0.4, 0.6, 1.0, 0.4), ability_data["duration"])
-		GameManager.game_message.emit("Shield Wall! +%d Armor" % int(ability_data["armor_bonus"]), Color(0.4, 0.7, 1.0))
-	elif ability_data.has("dodge_bonus"):
-		ability_mgr.apply_buff("dodge", ability_data["dodge_bonus"], ability_data["duration"])
-		_spawn_buff_vfx(Color(0.2, 1.0, 0.4, 0.3), ability_data["duration"])
-		GameManager.game_message.emit("Evasion! +%d%% Dodge" % int(ability_data["dodge_bonus"] * 100), Color(0.3, 1.0, 0.5))
-
-func _execute_aoe_ability(ability_data: Dictionary, aim_dir: Vector2) -> void:
-	var radius = ability_data.get("radius", 80.0)
-	var arc = deg_to_rad(ability_data.get("arc_degrees", 120.0))
-
-	_spawn_slash_vfx(aim_dir, radius, 1.5)
-
-	_enemies_in_range = _enemies_in_range.filter(func(e): return is_instance_valid(e) and not e.get("_is_dead"))
-	for enemy in _enemies_in_range:
-		if not is_instance_valid(enemy) or not enemy.has_method("take_damage"):
-			continue
-		var to_enemy = enemy.global_position - global_position
-		if to_enemy.length() > radius:
-			continue
-		var angle_diff = abs(aim_dir.angle_to(to_enemy.normalized()))
-		if angle_diff > arc / 2.0:
-			continue
-		var result = CombatManager.calculate_damage(stats.get_stats_dict(), enemy.get_stats_dict(), ability_data["damage_multiplier"])
-		enemy.take_damage(result["damage"], result["is_crit"])
-	_do_screen_shake(4.0)
-
-func _execute_projectile_ability(ability_data: Dictionary, aim_dir: Vector2) -> void:
-	var base_dir = aim_dir
-	var count = ability_data.get("projectile_count", 3)
-	var spread = deg_to_rad(ability_data.get("spread_degrees", 30.0))
-	var speed = ability_data.get("projectile_speed", 400.0)
-	var proj_range = ability_data.get("projectile_range", 300.0)
-	var dmg_mult = ability_data.get("damage_multiplier", 0.8)
-
-	for i in range(count):
-		var angle_offset = lerp(-spread / 2.0, spread / 2.0, float(i) / max(1, count - 1))
-		var dir = base_dir.rotated(angle_offset)
-		_spawn_projectile(dir, speed, proj_range, dmg_mult)
-
-func _spawn_projectile(direction: Vector2, speed: float, max_range: float, dmg_mult: float) -> void:
-	var projectile = Area2D.new()
-	projectile.position = global_position
-	projectile.collision_layer = 0
-	projectile.collision_mask = 2
-
-	var shape_node = CollisionShape2D.new()
-	var circle = CircleShape2D.new()
-	circle.radius = 5.0
-	shape_node.shape = circle
-	projectile.add_child(shape_node)
-
-	var visual = Sprite2D.new()
-	visual.texture = SpriteGenerator.get_texture("arrow_projectile")
-	visual.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	projectile.add_child(visual)
-
-	projectile.rotation = direction.angle()
-	_get_world_node().add_child(projectile)
-
-	var tween = create_tween()
-	var end_pos = global_position + direction * max_range
-	var travel_time = max_range / speed
-	tween.tween_property(projectile, "position", end_pos, travel_time)
-	tween.tween_callback(projectile.queue_free)
-
-	projectile.body_entered.connect(func(body: Node2D):
-		if body.is_in_group("enemies") and body.has_method("take_damage"):
-			var result = CombatManager.calculate_damage(stats.get_stats_dict(), body.get_stats_dict(), dmg_mult)
-			body.take_damage(result["damage"], result["is_crit"])
-			_spawn_impact_vfx(body.global_position)
-			projectile.queue_free()
-	)
-
 
 func _perform_attack(target: Node2D, attack_dir: Vector2 = Vector2.RIGHT) -> void:
 	_is_attack_animating = true
@@ -2541,17 +2441,6 @@ func _spawn_wood_chips(pos: Vector2, dir: Vector2) -> void:
 		t.set_parallel(false)
 		t.tween_callback(_recycle_vfx.bind(chip))
 
-func _spawn_buff_vfx(color: Color, duration: float) -> void:
-	var vfx = Sprite2D.new()
-	vfx.texture = _tex_beacon_blue
-	vfx.modulate = color
-	vfx.z_index = -1
-	add_child(vfx)
-
-	var tween = create_tween()
-	tween.tween_property(vfx, "modulate:a", 0.15, duration * 0.8)
-	tween.tween_property(vfx, "modulate:a", 0.0, duration * 0.2)
-	tween.tween_callback(vfx.queue_free)
 
 func _spawn_move_indicator(pos: Vector2) -> void:
 	var indicator = _get_pooled_vfx()

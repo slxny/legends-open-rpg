@@ -112,19 +112,6 @@ columns = 3
 theme_override_constants/h_separation = 1
 theme_override_constants/v_separation = 1
 
-[node name="Ability1" type="Button" parent="BottomPanel/HBox/CommandCard/Grid"]
-layout_mode = 2
-custom_minimum_size = Vector2(68, 32)
-text = "Q
-Ability1"
-theme_override_font_sizes/font_size = 10
-
-[node name="Ability2" type="Button" parent="BottomPanel/HBox/CommandCard/Grid"]
-layout_mode = 2
-custom_minimum_size = Vector2(68, 32)
-text = "E
-Ability2"
-theme_override_font_sizes/font_size = 10
 
 [node name="Slot3" type="Button" parent="BottomPanel/HBox/CommandCard/Grid"]
 layout_mode = 2

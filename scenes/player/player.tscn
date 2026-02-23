@@ -60,9 +60,6 @@ script = ExtResource("2_stats")
 [node name="InventoryComponent" type="Node" parent="."]
 script = ExtResource("3_inv")
 
-[node name="AbilityManager" type="Node" parent="."]
-script = ExtResource("4_ability")
-
 [connection signal="body_entered" from="AttackArea" to="." method="_on_attack_area_body_entered"]
 [connection signal="body_exited" from="AttackArea" to="." method="_on_attack_area_body_exited"]
 [connection signal="area_entered" from="PickupArea" to="." method="_on_pickup_area_area_entered"]

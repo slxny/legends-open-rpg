@@ -28,25 +28,6 @@ const HEROES = {
 			"armor": 0.5,
 			"attack_damage": 2,
 		},
-		"abilities": {
-			"ability_1": {
-				"name": "Cleave",
-				"description": "A wide melee swing that damages all enemies in front.",
-				"cooldown": 4.0,
-				"mana_cost": 15,
-				"damage_multiplier": 1.8,
-				"radius": 80.0,
-				"arc_degrees": 120.0,
-			},
-			"ability_2": {
-				"name": "Shield Wall",
-				"description": "Raise your shield, gaining bonus armor for 5 seconds.",
-				"cooldown": 12.0,
-				"mana_cost": 20,
-				"armor_bonus": 10,
-				"duration": 5.0,
-			},
-		},
 		"color": Color(0.2, 0.4, 0.9),  # Blue-ish knight
 	},
 	"shadow_ranger": {
@@ -73,27 +54,6 @@ const HEROES = {
 			"intelligence": 1,
 			"armor": 0.3,
 			"attack_damage": 2,
-		},
-		"abilities": {
-			"ability_1": {
-				"name": "Multi-Shot",
-				"description": "Fire 3 arrows in a spread, each dealing damage.",
-				"cooldown": 5.0,
-				"mana_cost": 20,
-				"damage_multiplier": 0.8,
-				"projectile_count": 3,
-				"spread_degrees": 30.0,
-				"projectile_speed": 400.0,
-				"projectile_range": 300.0,
-			},
-			"ability_2": {
-				"name": "Evasion",
-				"description": "Enter a state of heightened reflexes, gaining dodge chance for 4 seconds.",
-				"cooldown": 14.0,
-				"mana_cost": 25,
-				"dodge_bonus": 0.4,
-				"duration": 4.0,
-			},
 		},
 		"color": Color(0.2, 0.7, 0.3),  # Green ranger
 	},

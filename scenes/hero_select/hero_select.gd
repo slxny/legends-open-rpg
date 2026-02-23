@@ -281,18 +281,6 @@ func _create_desktop_hero_card(hero_key: String, data: Dictionary) -> PanelConta
 	stats_label.add_theme_color_override("font_color", Color(0.9, 0.85, 0.5))
 	card_vbox.add_child(stats_label)
 
-	# Abilities
-	var abilities = data.get("abilities", {})
-	for ab_key in abilities:
-		var ab = abilities[ab_key]
-		var hotkey = "Q" if ab_key == "ability_1" else "E"
-		var ab_label = Label.new()
-		ab_label.text = "[%s] %s - %s" % [hotkey, ab.get("name", ""), ab.get("description", "")]
-		ab_label.autowrap_mode = TextServer.AUTOWRAP_WORD
-		ab_label.add_theme_font_size_override("font_size", ability_font_size)
-		ab_label.add_theme_color_override("font_color", Color(0.5, 0.75, 1.0))
-		card_vbox.add_child(ab_label)
-
 	# Spacer
 	var spacer = Control.new()
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL

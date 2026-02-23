@@ -25,8 +25,7 @@ extends CanvasLayer
 @onready var command_card: VBoxContainer = $BottomPanel/HBox/CommandCard
 @onready var command_label: Label = $BottomPanel/HBox/CommandCard/Label
 @onready var command_grid: GridContainer = $BottomPanel/HBox/CommandCard/Grid
-@onready var ability_1_btn: Button = $BottomPanel/HBox/CommandCard/Grid/Ability1
-@onready var ability_2_btn: Button = $BottomPanel/HBox/CommandCard/Grid/Ability2
+
 @onready var log_btn: Button = $BottomPanel/HBox/CommandCard/Grid/Slot3
 @onready var potion_1_btn: Button = $BottomPanel/HBox/CommandCard/Grid/Slot4
 @onready var potion_2_btn: Button = $BottomPanel/HBox/CommandCard/Grid/Slot5
@@ -39,12 +38,6 @@ var _player: Node2D = null
 var _is_mobile: bool = false
 var _is_portrait: bool = false
 
-# Ability tooltip panel
-var _tooltip_panel: PanelContainer = null
-var _tooltip_label: RichTextLabel = null
-var _tooltip_timer: Timer = null
-var _tooltip_data: Dictionary = {}  # key -> formatted tooltip string
-var _hovered_btn: Button = null
 
 # Tutorial hint system
 var _hint_panel: PanelContainer = null
@@ -67,7 +60,6 @@ func _ready() -> void:
 	if _is_mobile:
 		_apply_mobile_layout()
 		_add_mobile_menu_button()
-	_create_tooltip_panel()
 	_create_hint_panel()
 
 func _detect_mobile() -> void:
@@ -224,31 +216,7 @@ func _build_cmd_overlay() -> void:
 	var btn_size = Vector2(0, 90)
 	var fs = 26
 
-	# Row 1: Ability 1, Ability 2, Log
-	var a1 = Button.new()
-	a1.text = ability_1_btn.text
-	a1.custom_minimum_size = btn_size
-	a1.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	a1.add_theme_font_size_override("font_size", fs)
-	a1.pressed.connect(func():
-		if _player and is_instance_valid(_player):
-			_player._use_ability("ability_1")
-		_toggle_cmd_overlay()
-	)
-	grid.add_child(a1)
-
-	var a2 = Button.new()
-	a2.text = ability_2_btn.text
-	a2.custom_minimum_size = btn_size
-	a2.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	a2.add_theme_font_size_override("font_size", fs)
-	a2.pressed.connect(func():
-		if _player and is_instance_valid(_player):
-			_player._use_ability("ability_2")
-		_toggle_cmd_overlay()
-	)
-	grid.add_child(a2)
-
+	# Row 1: Log (first slot)
 	var log_b = Button.new()
 	log_b.text = "F1\nLog"
 	log_b.custom_minimum_size = btn_size
@@ -447,41 +415,11 @@ func setup(player: Node2D) -> void:
 	stats.mana_changed.connect(_on_mana_changed)
 	stats.xp_changed.connect(_on_xp_changed)
 	stats.leveled_up.connect(_on_leveled_up)
-	ability_mgr.ability_cooldown_updated.connect(_on_ability_cooldown)
 	GameManager.gold_changed.connect(_on_gold_changed)
 	GameManager.wood_changed.connect(_on_wood_changed)
 	AlignmentManager.alignment_changed.connect(_on_alignment_changed)
 
-	# Ability names & tooltips
 	var hero_data = HeroData.get_hero(player.hero_class)
-	if hero_data.has("abilities"):
-		var ab = hero_data["abilities"]
-		if ab.has("ability_1"):
-			ability_1_btn.text = "Q\n" + ab["ability_1"]["name"]
-			_tooltip_data["ability_1"] = _build_ability_tooltip(ab["ability_1"], "Q")
-		if ab.has("ability_2"):
-			ability_2_btn.text = "E\n" + ab["ability_2"]["name"]
-			_tooltip_data["ability_2"] = _build_ability_tooltip(ab["ability_2"], "E")
-
-	# Connect ability buttons to actually cast on press (needed for mobile tap)
-	ability_1_btn.pressed.connect(func():
-		if _player and is_instance_valid(_player):
-			_player._use_ability("ability_1")
-	)
-	ability_2_btn.pressed.connect(func():
-		if _player and is_instance_valid(_player):
-			_player._use_ability("ability_2")
-	)
-
-	# Tooltips: desktop hover, mobile long-press
-	if _is_mobile:
-		_setup_mobile_ability_tooltip(ability_1_btn, "ability_1")
-		_setup_mobile_ability_tooltip(ability_2_btn, "ability_2")
-	else:
-		ability_1_btn.mouse_entered.connect(_on_ability_hover.bind(ability_1_btn, "ability_1"))
-		ability_1_btn.mouse_exited.connect(_on_ability_unhover)
-		ability_2_btn.mouse_entered.connect(_on_ability_hover.bind(ability_2_btn, "ability_2"))
-		ability_2_btn.mouse_exited.connect(_on_ability_unhover)
 
 	# Connect command card buttons
 	log_btn.text = "F1\nLog"
@@ -585,12 +523,6 @@ func _update_alignment_display() -> void:
 	alignment_label.text = "%s (%+d)" % [faction, val]
 	alignment_label.add_theme_color_override("font_color", color)
 
-func _on_ability_cooldown(index: int, remaining: float, _total: float) -> void:
-	var btn = ability_1_btn if index == 0 else ability_2_btn
-	if remaining > 0:
-		btn.disabled = true
-	else:
-		btn.disabled = false
 
 func _update_potion_labels() -> void:
 	if not _player or not is_instance_valid(_player):
@@ -629,141 +561,6 @@ func _on_load_pressed() -> void:
 	if _player and is_instance_valid(_player):
 		SaveLoadManager.apply_to_player(_player)
 
-# ── Ability Tooltip System ──────────────────────────────────────────────
-
-func _create_tooltip_panel() -> void:
-	_tooltip_panel = PanelContainer.new()
-	_tooltip_panel.visible = false
-	_tooltip_panel.z_index = 100
-	_tooltip_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-
-	var style = StyleBoxFlat.new()
-	style.bg_color = Color(0.08, 0.08, 0.12, 0.96)
-	style.border_color = Color(0.45, 0.4, 0.2, 1.0)
-	style.set_border_width_all(2)
-	style.set_corner_radius_all(4)
-	style.set_content_margin_all(10)
-	_tooltip_panel.add_theme_stylebox_override("panel", style)
-
-	_tooltip_label = RichTextLabel.new()
-	_tooltip_label.bbcode_enabled = true
-	_tooltip_label.fit_content = true
-	_tooltip_label.scroll_active = false
-	_tooltip_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_tooltip_label.add_theme_color_override("default_color", Color(0.9, 0.88, 0.8))
-	if _is_mobile:
-		_tooltip_label.custom_minimum_size = Vector2(420, 0)
-		_tooltip_label.add_theme_font_size_override("normal_font_size", 26)
-		_tooltip_label.add_theme_font_size_override("bold_font_size", 28)
-	else:
-		_tooltip_label.custom_minimum_size = Vector2(240, 0)
-		_tooltip_label.add_theme_font_size_override("normal_font_size", 13)
-		_tooltip_label.add_theme_font_size_override("bold_font_size", 14)
-	_tooltip_panel.add_child(_tooltip_label)
-
-	# Timer for delayed show
-	_tooltip_timer = Timer.new()
-	_tooltip_timer.one_shot = true
-	_tooltip_timer.wait_time = 0.3
-	_tooltip_timer.timeout.connect(_show_tooltip)
-	add_child(_tooltip_timer)
-	add_child(_tooltip_panel)
-
-func _build_ability_tooltip(ability: Dictionary, hotkey: String) -> String:
-	var name_str = ability.get("name", "Unknown")
-	var desc = ability.get("description", "")
-	var mana = ability.get("mana_cost", 0)
-	var cd = ability.get("cooldown", 0.0)
-
-	var text = "[b][color=#f0d866]%s[/color][/b]  [color=#aaaaaa][%s][/color]\n" % [name_str, hotkey]
-	text += "[color=#bbbbbb]%s[/color]\n\n" % desc
-
-	# Stats line
-	var stats_parts: Array[String] = []
-	if mana > 0:
-		stats_parts.append("[color=#6699ff]%d Mana[/color]" % mana)
-	if cd > 0:
-		stats_parts.append("[color=#ccaa55]%.0fs Cooldown[/color]" % cd)
-	if stats_parts.size() > 0:
-		text += "  ".join(stats_parts) + "\n"
-
-	# Extra details
-	if ability.has("damage_multiplier"):
-		text += "[color=#ff8866]%.0f%% damage[/color]" % (ability["damage_multiplier"] * 100)
-		if ability.has("radius"):
-			text += "  [color=#aaaaaa]in %.0fpx radius[/color]" % ability["radius"]
-		if ability.has("projectile_count"):
-			text += "  [color=#aaaaaa]%d projectiles[/color]" % ability["projectile_count"]
-		text += "\n"
-	if ability.has("armor_bonus"):
-		text += "[color=#66ccff]+%d Armor[/color]  for [color=#cccccc]%.0fs[/color]\n" % [ability["armor_bonus"], ability.get("duration", 0)]
-	if ability.has("dodge_bonus"):
-		text += "[color=#66ff99]+%.0f%% Dodge[/color]  for [color=#cccccc]%.0fs[/color]\n" % [ability["dodge_bonus"] * 100, ability.get("duration", 0)]
-
-	return text.strip_edges()
-
-func _on_ability_hover(btn: Button, ability_key: String) -> void:
-	if not _tooltip_data.has(ability_key):
-		return
-	_hovered_btn = btn
-	_tooltip_label.text = _tooltip_data[ability_key]
-	_tooltip_timer.start()
-
-func _on_ability_unhover() -> void:
-	_hovered_btn = null
-	_tooltip_timer.stop()
-	_tooltip_panel.visible = false
-
-func _setup_mobile_ability_tooltip(btn: Button, ability_key: String) -> void:
-	var hold_timer = Timer.new()
-	hold_timer.one_shot = true
-	hold_timer.wait_time = 0.6
-	add_child(hold_timer)
-	hold_timer.timeout.connect(func():
-		if not _tooltip_data.has(ability_key):
-			return
-		_tooltip_label.text = _tooltip_data[ability_key]
-		_tooltip_panel.visible = true
-		# Position above button (same logic as desktop _show_tooltip)
-		await get_tree().process_frame
-		var btn_rect = btn.get_global_rect()
-		var tip_size = _tooltip_panel.size
-		var x_pos = btn_rect.position.x + btn_rect.size.x / 2.0 - tip_size.x / 2.0
-		var y_pos = btn_rect.position.y - tip_size.y - 8.0
-		x_pos = clampf(x_pos, 4, get_viewport().get_visible_rect().size.x - tip_size.x - 4)
-		if y_pos < 4:
-			y_pos = btn_rect.position.y + btn_rect.size.y + 8.0
-		_tooltip_panel.position = Vector2(x_pos, y_pos)
-	)
-	btn.button_down.connect(func(): hold_timer.start())
-	btn.button_up.connect(func():
-		hold_timer.stop()
-		if _tooltip_panel.visible:
-			# Auto-hide tooltip after 2s
-			var hide_tw = create_tween()
-			hide_tw.tween_interval(2.0)
-			hide_tw.tween_callback(func(): _tooltip_panel.visible = false)
-	)
-
-func _show_tooltip() -> void:
-	if _hovered_btn == null:
-		return
-	_tooltip_panel.visible = true
-	# Position above the hovered button
-	await get_tree().process_frame
-	# Re-check after await — user may have unhovered during the frame
-	if _hovered_btn == null:
-		_tooltip_panel.visible = false
-		return
-	var btn_rect = _hovered_btn.get_global_rect()
-	var tip_size = _tooltip_panel.size
-	var x_pos = btn_rect.position.x + btn_rect.size.x / 2.0 - tip_size.x / 2.0
-	var y_pos = btn_rect.position.y - tip_size.y - 8.0
-	# Clamp to screen
-	x_pos = clampf(x_pos, 4, get_viewport().get_visible_rect().size.x - tip_size.x - 4)
-	if y_pos < 4:
-		y_pos = btn_rect.position.y + btn_rect.size.y + 8.0
-	_tooltip_panel.position = Vector2(x_pos, y_pos)
 
 # ── Tutorial Hint System ────────────────────────────────────────────────
 
@@ -851,19 +648,6 @@ func _dismiss_hint() -> void:
 		_hint_timer.start()
 
 func _start_tutorial_hints(hero_data: Dictionary) -> void:
-	var ab1_name = "Ability 1"
-	var ab2_name = "Ability 2"
-	var ab1_desc = ""
-	var ab2_desc = ""
-	if hero_data.has("abilities"):
-		var ab = hero_data["abilities"]
-		if ab.has("ability_1"):
-			ab1_name = ab["ability_1"]["name"]
-			ab1_desc = ab["ability_1"].get("description", "")
-		if ab.has("ability_2"):
-			ab2_name = ab["ability_2"]["name"]
-			ab2_desc = ab["ability_2"].get("description", "")
-
 	var is_ranged = _player and _player.hero_class == "shadow_ranger"
 	var hero_name = "Blade Knight" if not is_ranged else "Shadow Ranger"
 	var ATK = "[color=#ff9966][b]ATK button[/b][/color]" if _is_mobile else "[color=#ff9966][b]SPACE[/b][/color]"
@@ -871,27 +655,7 @@ func _start_tutorial_hints(hero_data: Dictionary) -> void:
 
 	_hint_queue = []
 
-	# --- 1. Abilities (hero-specific, platform-aware) ---
-	if _is_mobile:
-		_hint_queue.append({
-			"delay": 4.0,
-			"text": "[color=#f0d866]TIP:[/color]  Tap the [color=#66ccff][b]left ability[/b][/color] for [color=#f0d866]%s[/color] — %s" % [ab1_name, ab1_desc],
-		})
-		_hint_queue.append({
-			"delay": 15.0,
-			"text": "[color=#f0d866]TIP:[/color]  Tap the [color=#66ccff][b]right ability[/b][/color] for [color=#f0d866]%s[/color] — %s" % [ab2_name, ab2_desc],
-		})
-	else:
-		_hint_queue.append({
-			"delay": 4.0,
-			"text": "[color=#f0d866]TIP:[/color]  Press [color=#66ccff][b]Q[/b][/color] for [color=#f0d866]%s[/color] — %s" % [ab1_name, ab1_desc],
-		})
-		_hint_queue.append({
-			"delay": 15.0,
-			"text": "[color=#f0d866]TIP:[/color]  Press [color=#66ccff][b]E[/b][/color] for [color=#f0d866]%s[/color] — %s" % [ab2_name, ab2_desc],
-		})
-
-	# --- 2. Special attacks (hero-specific, platform-aware) ---
+	# --- 1. Special attacks (hero-specific, platform-aware) ---
 	if is_ranged:
 		_hint_queue.append_array([
 			{
@@ -943,10 +707,6 @@ func _start_tutorial_hints(hero_data: Dictionary) -> void:
 		})
 		_hint_queue.append({
 			"delay": 20.0,
-			"text": "[color=#f0d866]TIP:[/color]  [color=#aaddff][b]Hold an ability button[/b][/color] to see its details — mana cost, cooldown, and damage",
-		})
-		_hint_queue.append({
-			"delay": 20.0,
 			"text": "[color=#f0d866]TIP:[/color]  Tap [color=#88ddff][b]Items[/b][/color] to open your inventory  |  Tap [color=#66ff88][b]potion slots[/b][/color] to use consumables in battle",
 		})
 	else:
@@ -956,7 +716,7 @@ func _start_tutorial_hints(hero_data: Dictionary) -> void:
 		})
 		_hint_queue.append({
 			"delay": 20.0,
-			"text": "[color=#f0d866]TIP:[/color]  [color=#88ddff][b]I[/b][/color] for inventory  |  [color=#66ff88][b]1, 2, 3[/b][/color] to use potions  |  Hover [color=#66ccff][b]Q[/b][/color]/[color=#66ccff][b]E[/b][/color] for ability details",
+			"text": "[color=#f0d866]TIP:[/color]  [color=#88ddff][b]I[/b][/color] for inventory  |  [color=#66ff88][b]1, 2, 3[/b][/color] to use potions",
 		})
 
 	# --- 4. Healing & beacons ---

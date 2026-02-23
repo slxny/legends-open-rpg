@@ -9,9 +9,25 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.57.2"
+const GAME_VERSION := "v0.57.3"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.57.3",
+		"title": "Remove Q/E Abilities",
+		"date": "2026-02-23",
+		"entries": [
+			"Removed Q and E ability system entirely from desktop and mobile",
+			"Removed Ability1/Ability2 buttons from HUD command card (both scene and script)",
+			"Removed ability tooltip system — panel, timer, hover/long-press handlers, builder function",
+			"Removed ability buttons from mobile command overlay",
+			"Removed Q/E input actions from project input map",
+			"Removed AbilityManager node from player scene and all ability execution logic from player script",
+			"Removed ability definitions from hero data (Cleave, Shield Wall, Multi-Shot, Evasion)",
+			"Removed ability display from hero select screen",
+			"Removed Q/E tutorial hints from all platforms; removed 'Hold ability button' mobile tip",
+		]
+	},
 	{
 		"version": "v0.57.2",
 		"title": "Fix intermittent mobile browser hang on load",

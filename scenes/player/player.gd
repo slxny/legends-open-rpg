@@ -457,6 +457,16 @@ func _physics_process(delta: float) -> void:
 					_is_charging = true
 					_start_charge_vfx()
 					AudioManager.play_sfx("charge_ready")
+				# While holding attack, let player aim: arrow keys (desktop) or drag (mobile)
+				if _charge_time >= CHARGE_GRACE:
+					var aim_input = Vector2(
+						Input.get_axis("move_left", "move_right"),
+						Input.get_axis("move_up", "move_down")
+					)
+					if aim_input.length() > 0.25:
+						_set_facing(aim_input.normalized())
+					elif _is_mobile and _mobile_charge_aim_dir.length() > 0.1:
+						_set_facing(_mobile_charge_aim_dir)
 				if not _is_charging and _charge_time < CHARGE_GRACE:
 					_try_manual_attack()
 		else:
@@ -647,7 +657,7 @@ func _input(event: InputEvent) -> void:
 					_on_mobile_attack_released()
 					get_viewport().set_input_as_handled()
 		elif event is InputEventScreenDrag:
-			if event.index == _mobile_atk_touch_index and _is_charging:
+			if event.index == _mobile_atk_touch_index and _mobile_attack_held:
 				var drag_offset = event.position - _mobile_atk_start_pos
 				if drag_offset.length() > CHARGE_AIM_DRAG_THRESHOLD:
 					_mobile_charge_aim_dir = drag_offset.normalized()

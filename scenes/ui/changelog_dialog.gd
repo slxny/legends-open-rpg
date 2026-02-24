@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.64.2"
+const GAME_VERSION := "v0.64.3"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.64.3",
+		"title": "Fix charge attack aiming",
+		"date": "2026-02-24",
+		"entries": [
+			"Character now faces aim direction throughout the entire charge hold",
+			"Mobile: drag-to-aim works immediately when holding ATK, not just after charge is full",
+			"Desktop: arrow keys update facing continuously while charging",
+		]
+	},
 	{
 		"version": "v0.64.2",
 		"title": "Fill empty map areas with enemy camps",

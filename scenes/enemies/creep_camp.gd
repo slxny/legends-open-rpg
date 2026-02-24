@@ -13,10 +13,13 @@ const CAMP_TYPES = {
 		"move_speed": 100.0,
 		"attack_range": 28.0,
 		"aggro_range": 120.0,
-		"attack_damage": 6,
-		"xp_reward": 4,
+		"attack_damage": 4,
+		"xp_reward": 2,
 		"gold_reward": 1,
 		"drop_table": "rat",
+		"xp_scale": 4,    # Half normal (8) — rats grow slower
+		"gold_scale": 1,   # Half normal (3)
+		"atk_scale": 1,    # Half normal (3)
 	},
 	"goblin": {
 		"name": "Goblin",
@@ -489,8 +492,8 @@ func _instantiate_enemy(pending: Dictionary) -> void:
 		"move_speed": type_data["move_speed"],
 		"attack_range": type_data["attack_range"],
 		"aggro_range": type_data["aggro_range"],
-		"xp_reward": int((type_data["xp_reward"] + (level - 1) * 8) * weakness_factor),
-		"gold_reward": int((type_data["gold_reward"] + (level - 1) * 3) * weakness_factor),
+		"xp_reward": int((type_data["xp_reward"] + (level - 1) * type_data.get("xp_scale", 8)) * weakness_factor),
+		"gold_reward": int((type_data["gold_reward"] + (level - 1) * type_data.get("gold_scale", 3)) * weakness_factor),
 		"drop_table": type_data["drop_table"],
 		"weakness_factor": weakness_factor,
 		"is_mini_boss": is_mini_boss,
@@ -502,7 +505,7 @@ func _instantiate_enemy(pending: Dictionary) -> void:
 		var type_max = type_data["level_range"][1]
 		if stats_level > type_max:
 			# Scale explicit attack damage for boosted levels
-			config["attack_damage"] = base_atk + (stats_level - type_max) * 3
+			config["attack_damage"] = base_atk + (stats_level - type_max) * type_data.get("atk_scale", 3)
 		else:
 			config["attack_damage"] = base_atk
 

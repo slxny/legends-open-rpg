@@ -223,9 +223,13 @@ func initialize(config: Dictionary) -> void:
 	var alert_range = aggro_range * ALERT_RANGE_MULTIPLIER
 	_alert_range_sq = alert_range * alert_range
 
-	# Randomly assign an effect to some units (~25% of enemies have an effect proc)
-	const EFFECT_TYPES = ["knockback", "paralyze", "slow"]
-	if randf() < 0.25:
+	# Rats always have bleeding at 2% per hit
+	if sprite_type == "rat":
+		_effect_type = "bleeding"
+		_effect_chance = 0.02
+	# Other enemies: randomly assign an effect (~25% of enemies have an effect proc)
+	elif randf() < 0.25:
+		const EFFECT_TYPES = ["knockback", "paralyze", "slow"]
 		_effect_type = EFFECT_TYPES[randi() % EFFECT_TYPES.size()]
 		match _effect_type:
 			"knockback":
@@ -592,6 +596,9 @@ func _apply_effect_to_target(t: Node2D) -> void:
 		"slow":
 			if t.has_method("apply_effect"):
 				t.apply_effect("slow", 3.0)
+		"bleeding":
+			if t.has_method("apply_effect"):
+				t.apply_effect("bleeding", 5.0, 2.0)  # 5s duration, 2 dmg per tick
 
 func take_damage(amount: int, is_crit: bool = false) -> void:
 	if _is_dead:

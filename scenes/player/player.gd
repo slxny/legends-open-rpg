@@ -49,6 +49,11 @@ var _is_paralyzed: bool = false
 var _paralyze_timer: float = 0.0
 var _slow_factor: float = 1.0  # 1.0 = normal, < 1.0 = slowed
 var _slow_timer: float = 0.0
+var _is_bleeding: bool = false
+var _bleed_timer: float = 0.0
+var _bleed_tick_timer: float = 0.0
+var _bleed_damage: float = 2.0
+const BLEED_TICK_INTERVAL: float = 1.0
 var _effect_vfx: Sprite2D = null  # Visual indicator for active status effect
 # Heal beacon immunity visual feedback
 var _was_on_heal_beacon: bool = false  # Previous frame state for detecting transitions
@@ -884,6 +889,19 @@ func _process_status_effects(delta: float) -> void:
 		if _slow_timer <= 0:
 			_slow_factor = 1.0
 			_clear_effect_vfx()
+	if _is_bleeding:
+		_bleed_timer -= delta
+		_bleed_tick_timer -= delta
+		if _bleed_tick_timer <= 0:
+			_bleed_tick_timer = BLEED_TICK_INTERVAL
+			var stats_comp = $StatsComponent
+			stats_comp.take_damage(int(_bleed_damage))
+			_spawn_damage_number(int(_bleed_damage), false)
+			_spawn_bleed_particles()
+			AudioManager.play_sfx("bleed_tick", -12.0)
+		if _bleed_timer <= 0:
+			_is_bleeding = false
+			_clear_effect_vfx()
 
 func apply_effect(effect_type: String, duration: float, value: float = 0.0) -> void:
 	if is_on_heal_beacon:
@@ -901,6 +919,12 @@ func apply_effect(effect_type: String, duration: float, value: float = 0.0) -> v
 			_slow_factor = 0.4
 			_slow_timer = duration
 			_spawn_effect_vfx(Color(0.2, 0.5, 1.0, 0.5), duration, "SLOWED!")
+		"bleeding":
+			_is_bleeding = true
+			_bleed_timer = duration
+			_bleed_tick_timer = 0.0  # Tick immediately
+			_bleed_damage = value if value > 0 else 2.0
+			_spawn_effect_vfx(Color(0.8, 0.1, 0.1, 0.6), duration, "BLEEDING!")
 
 func apply_knockback_effect(dir: Vector2, force: float) -> void:
 	if is_on_heal_beacon:
@@ -944,6 +968,27 @@ func _spawn_effect_label(text: String, color: Color) -> void:
 	tween.tween_property(label, "position:y", label.position.y - 25, 0.8)
 	tween.parallel().tween_property(label, "modulate:a", 0.0, 0.8)
 	tween.tween_callback(label.queue_free)
+
+func _spawn_bleed_particles() -> void:
+	var particles = CPUParticles2D.new()
+	particles.emitting = true
+	particles.one_shot = true
+	particles.amount = 6
+	particles.lifetime = 0.6
+	particles.explosiveness = 0.8
+	particles.direction = Vector2(0, 1)  # Drip downward
+	particles.spread = 30.0
+	particles.gravity = Vector2(0, 80)
+	particles.initial_velocity_min = 15.0
+	particles.initial_velocity_max = 35.0
+	particles.scale_amount_min = 1.5
+	particles.scale_amount_max = 3.0
+	particles.color = Color(0.7, 0.05, 0.05, 0.9)
+	add_child(particles)
+	# Auto-free after particles finish
+	var cleanup = create_tween()
+	cleanup.tween_interval(1.0)
+	cleanup.tween_callback(particles.queue_free)
 
 func _clear_effect_vfx() -> void:
 	if _effect_vfx_tween and _effect_vfx_tween.is_valid():

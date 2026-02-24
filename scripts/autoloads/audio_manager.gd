@@ -439,6 +439,7 @@ func _generate_all_sfx() -> void:
 	_sfx_cache["dungeon_exit"] = _gen_dungeon_exit()
 	_sfx_cache["save_game"] = _gen_save_game()
 	_sfx_cache["load_game"] = _gen_load_game()
+	_sfx_cache["bleed_tick"] = _gen_bleed_tick()
 
 func _gen_sword_swing() -> AudioStreamWAV:
 	# Warm blade slice — smooth swoosh with subtle metal edge
@@ -2109,6 +2110,20 @@ func _gen_dungeon_exit() -> AudioStreamWAV:
 	_add_sine_segment(samples, 262.0, 0.1, 0.10, 0.30)    # C4
 	_apply_envelope(samples, 0.002, 0.16, 0.36)
 	_soft_clip(samples, 1.1)
+	return _to_stream(samples)
+
+func _gen_bleed_tick() -> AudioStreamWAV:
+	# Short wet squelch for each bleed damage tick
+	var samples = _make_samples(0.15)
+	# Low thud pulse
+	_add_sine_segment(samples, 80.0, 0.35, 0.0, 0.04)
+	_add_sine_segment(samples, 60.0, 0.25, 0.02, 0.06)
+	# Wet noise burst
+	_add_pitched_noise(samples, 600.0, 400.0, 0.18, 0.01)
+	# Slight squelch overtone
+	_add_sine_segment(samples, 320.0, 0.08, 0.01, 0.05)
+	_apply_envelope(samples, 0.002, 0.04, 0.10)
+	_soft_clip(samples, 1.2)
 	return _to_stream(samples)
 
 # ============================================================

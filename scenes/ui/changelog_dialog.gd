@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.63.0"
+const GAME_VERSION := "v0.63.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.63.1",
+		"title": "Rat nerf + Bleeding debuff",
+		"date": "2026-02-24",
+		"entries": [
+			"Rats nerfed: 50% reduced XP, attack damage, and attribute growth scaling",
+			"Rats now have a 2% chance per hit to cause Bleeding (damage over time for 5 seconds)",
+			"Bleeding effect shows red pulsing aura, BLEEDING! label, and blood drip particles",
+			"New bleed tick SFX plays each second while bleeding",
+		]
+	},
 	{
 		"version": "v0.63.0",
 		"title": "Underground Crypt dungeon",

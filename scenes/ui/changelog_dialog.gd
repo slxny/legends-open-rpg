@@ -9,9 +9,23 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.63.3"
+const GAME_VERSION := "v0.64.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.64.0",
+		"title": "Dungeon minimap, larger crypt, enemy bounds",
+		"date": "2026-02-24",
+		"entries": [
+			"Minimap now switches to dungeon layout when entering the Crypt",
+			"Dungeon minimap shows enemy dots, exit beacon (green), and player position",
+			"Click-to-move on minimap works within the dungeon",
+			"Minimap restores to Haven's Rest layout on dungeon exit",
+			"Dungeon Crypt doubled in size from 1000x1000 to 2000x2000",
+			"Added 4 more enemy camps (12 total) spread across the larger dungeon",
+			"Enemies now stay within dungeon walls instead of wandering into the void",
+		]
+	},
 	{
 		"version": "v0.63.3",
 		"title": "Larger ATK button on mobile",

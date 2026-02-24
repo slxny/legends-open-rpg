@@ -54,6 +54,7 @@ var _patrol_target: Vector2 = Vector2.ZERO
 var _patrol_radius: float = 150.0
 var _patrol_wait_timer: float = 0.0
 var _patrol_speed_factor: float = 0.65  # Patrol at 65% of move speed — more active roaming
+var movement_bounds: Rect2 = Rect2()  # If has_area(), clamp position after movement
 
 # Random alert aggro — periodic chance to notice the player at extended range
 var _alert_check_timer: float = 0.0
@@ -346,6 +347,10 @@ func _physics_process(delta: float) -> void:
 			_process_attack(delta)
 		State.RETURN:
 			_process_return(delta)
+
+	# Clamp position to movement bounds (dungeon walls etc.)
+	if movement_bounds.has_area():
+		global_position = global_position.clamp(movement_bounds.position, movement_bounds.end)
 
 	# Zoom-compensate in-world labels so text stays readable at all zoom levels
 	if name_label.visible or hp_bar.visible:

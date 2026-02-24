@@ -1,9 +1,9 @@
 extends Node2D
 
 # ============================================================
-# DUNGEON CRYPT — Small underground dungeon (1000x1000)
+# DUNGEON CRYPT — Underground dungeon (2000x2000)
 # Requires Level 10+ to enter. Dark stone corridors with
-# 8 new enemy types: snakes, bats, slimes, mimics, undead.
+# 12 enemy camps: snakes, bats, slimes, mimics, undead.
 # ============================================================
 
 const CreepCampScene = preload("res://scenes/enemies/creep_camp.tscn")
@@ -17,6 +17,28 @@ func _ready() -> void:
 	_generate_decorations()
 	_spawn_camps()
 
+func setup_dungeon_minimap() -> void:
+	## Call this when the player enters the dungeon to switch the minimap.
+	var minimaps = get_tree().get_nodes_in_group("minimap")
+	if minimaps.size() > 0:
+		var minimap = minimaps[0]
+		if minimap.has_method("set_region"):
+			# Dungeon is 2000x2000 local, at zoom 3.0 = 6000x6000 world units
+			var dungeon_camps: Array = []
+			for child in get_children():
+				if child.has_method("_spawn_enemies_staggered"):
+					dungeon_camps.append(child.global_position)
+			var exit_pos = exit_beacon.position if exit_beacon else Vector2(0, -900)
+			minimap.set_region(
+				Vector2(6000, 6000),
+				dungeon_camps,
+				[],
+				Rect2(),
+				false,
+				[global_position + exit_pos],
+				global_position
+			)
+
 func _generate_terrain() -> void:
 	# Dark stone ground — tiled across the dungeon
 	var ground = Sprite2D.new()
@@ -24,8 +46,8 @@ func _generate_terrain() -> void:
 	ground.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	ground.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
 	ground.region_enabled = true
-	ground.region_rect = Rect2(-500, -500, 1000, 1000)
-	ground.position = Vector2(-500, -500)
+	ground.region_rect = Rect2(-1000, -1000, 2000, 2000)
+	ground.position = Vector2(-1000, -1000)
 	ground.centered = false
 	ground.z_index = -10
 	ground.modulate = Color(0.4, 0.35, 0.45)  # Dark tint for underground
@@ -35,8 +57,8 @@ func _generate_terrain() -> void:
 	# Creep patches for atmosphere
 	var rng = RandomNumberGenerator.new()
 	rng.seed = 1234
-	for _i in range(8):
-		var pos = Vector2(rng.randf_range(-400, 400), rng.randf_range(-400, 400))
+	for _i in range(14):
+		var pos = Vector2(rng.randf_range(-800, 800), rng.randf_range(-800, 800))
 		var creep = Sprite2D.new()
 		creep.texture = SpriteGenerator.get_texture("ground_creep")
 		creep.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -52,14 +74,18 @@ func _generate_decorations() -> void:
 	var rng = RandomNumberGenerator.new()
 	rng.seed = 5678
 
-	# Scattered crates and barrels (dungeon-tinted)
+	# Scattered crates and barrels (dungeon-tinted) — more to fill larger space
 	var deco_positions = [
-		Vector2(-350, -300), Vector2(300, -250), Vector2(-200, 350),
-		Vector2(400, 200), Vector2(-100, -400), Vector2(350, 380),
-		Vector2(-400, 100), Vector2(200, -350),
+		Vector2(-700, -600), Vector2(600, -500), Vector2(-400, 700),
+		Vector2(800, 400), Vector2(-200, -800), Vector2(700, 760),
+		Vector2(-800, 200), Vector2(400, -700),
+		Vector2(-500, 500), Vector2(300, 600), Vector2(-650, -200),
+		Vector2(500, -300), Vector2(-300, 850), Vector2(850, -650),
 	]
 	var deco_types = ["crate_stack", "barrel", "barrel", "crate_stack",
-		"barrel", "crate_stack", "barrel", "crate_stack"]
+		"barrel", "crate_stack", "barrel", "crate_stack",
+		"barrel", "crate_stack", "barrel", "crate_stack",
+		"barrel", "crate_stack"]
 	for i in range(deco_positions.size()):
 		var spr = Sprite2D.new()
 		spr.texture = SpriteGenerator.get_texture(deco_types[i])
@@ -71,8 +97,9 @@ func _generate_decorations() -> void:
 
 	# Rock formations along walls
 	var rock_positions = [
-		Vector2(-450, -200), Vector2(-450, 200), Vector2(450, -150),
-		Vector2(450, 300), Vector2(-200, -450), Vector2(200, 450),
+		Vector2(-900, -400), Vector2(-900, 400), Vector2(900, -300),
+		Vector2(900, 600), Vector2(-400, -900), Vector2(400, 900),
+		Vector2(-900, 0), Vector2(900, 0), Vector2(0, -900), Vector2(0, 900),
 	]
 	for pos in rock_positions:
 		var spr = Sprite2D.new()
@@ -84,17 +111,27 @@ func _generate_decorations() -> void:
 		deco.add_child(spr)
 
 func _spawn_camps() -> void:
-	# 8 camps with increasing difficulty from edges toward center
+	# 12 camps spread across the 2000x2000 dungeon with increasing difficulty
 	var camps = [
-		{"type": "dungeon_bat", "pos": Vector2(-300, -300), "count": 8},
-		{"type": "cave_snake", "pos": Vector2(300, -250), "count": 5},
-		{"type": "dungeon_bat", "pos": Vector2(-250, 280), "count": 6},
-		{"type": "flan", "pos": Vector2(280, 300), "count": 4},
-		{"type": "vampire_bat", "pos": Vector2(-150, -100), "count": 4},
-		{"type": "ghoul", "pos": Vector2(150, -150), "count": 3},
-		{"type": "mimic", "pos": Vector2(-100, 200), "count": 2},
-		{"type": "crypt_knight", "pos": Vector2(50, 50), "count": 3},
+		# Outer ring — easier enemies
+		{"type": "dungeon_bat", "pos": Vector2(-600, -600), "count": 8},
+		{"type": "cave_snake", "pos": Vector2(600, -500), "count": 5},
+		{"type": "dungeon_bat", "pos": Vector2(-500, 560), "count": 6},
+		{"type": "flan", "pos": Vector2(560, 600), "count": 4},
+		# Mid ring — medium enemies
+		{"type": "vampire_bat", "pos": Vector2(-300, -200), "count": 4},
+		{"type": "ghoul", "pos": Vector2(300, -300), "count": 3},
+		{"type": "cave_snake", "pos": Vector2(-700, 0), "count": 6},
+		{"type": "flan", "pos": Vector2(700, 0), "count": 5},
+		# Inner ring — hardest enemies
+		{"type": "mimic", "pos": Vector2(-200, 400), "count": 2},
+		{"type": "crypt_knight", "pos": Vector2(100, 100), "count": 3},
+		{"type": "ghoul", "pos": Vector2(-400, 800), "count": 4},
+		{"type": "crypt_knight", "pos": Vector2(400, -750), "count": 2},
 	]
+
+	# Compute world bounds for enemy clamping (20px margin from walls)
+	var bounds = Rect2(-980, -980, 1960, 1960)
 
 	for camp_def in camps:
 		var camp = CreepCampScene.instantiate()
@@ -102,6 +139,7 @@ func _spawn_camps() -> void:
 		camp.enemy_count = camp_def["count"]
 		camp.respawn_time = 60.0
 		camp.position = camp_def["pos"]
+		camp.enemy_bounds = bounds
 		add_child(camp)
 
 		# Creep ground at camp

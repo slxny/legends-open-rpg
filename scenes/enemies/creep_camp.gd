@@ -3,6 +3,7 @@ extends Node2D
 @export var camp_type: String = "goblin"
 @export var enemy_count: int = 4
 @export var respawn_time: float = 30.0  # Fast respawn for dense outer areas
+@export var enemy_bounds: Rect2 = Rect2()  # If set, constrain spawned enemies to these world bounds
 
 # Creep camp definitions
 const CAMP_TYPES = {
@@ -511,6 +512,13 @@ func _instantiate_enemy(pending: Dictionary) -> void:
 
 	add_child(enemy)
 	enemy.initialize(config)
+	if enemy_bounds.has_area():
+		# Convert local bounds to world bounds relative to camp's parent
+		var parent_pos = global_position - position  # Parent (dungeon) global pos
+		enemy.movement_bounds = Rect2(
+			enemy_bounds.position + parent_pos,
+			enemy_bounds.size
+		)
 	if is_mini_boss:
 		# Mini-bosses get 3x HP, 1.5x damage, larger sprite
 		enemy.stats.max_hp = int(enemy.stats.max_hp * 3.0)

@@ -112,6 +112,10 @@ func _handle_dungeon_exit(data: Dictionary, player: Node2D) -> void:
 		_teleport_cooldown_ms = Time.get_ticks_msec()
 		AudioManager.play_sfx("dungeon_exit")
 		GameManager.game_message.emit("Returned to Haven's Rest", Color(0.3, 1.0, 0.5))
+		# Restore minimap to Haven's Rest
+		var minimaps = player.get_tree().get_nodes_in_group("minimap")
+		if minimaps.size() > 0 and minimaps[0].has_method("reset_to_default"):
+			minimaps[0].reset_to_default()
 
 func _handle_dungeon_enter(data: Dictionary, player: Node2D) -> void:
 	var min_level = data.get("min_level", 1)
@@ -126,6 +130,17 @@ func _handle_dungeon_enter(data: Dictionary, player: Node2D) -> void:
 		_teleport_cooldown_ms = Time.get_ticks_msec()
 		AudioManager.play_sfx("dungeon_enter")
 		GameManager.game_message.emit("Descending into the Crypt...", Color(0.6, 0.4, 0.8))
+		# Switch minimap to dungeon view
+		var dungeons = player.get_tree().get_nodes_in_group("dungeon_crypt")
+		if dungeons.is_empty():
+			# Fallback: find by node name
+			var world_nodes = player.get_tree().get_nodes_in_group("world")
+			if world_nodes.size() > 0:
+				var dungeon = world_nodes[0].get_node_or_null("DungeonCrypt")
+				if dungeon and dungeon.has_method("setup_dungeon_minimap"):
+					dungeon.setup_dungeon_minimap()
+		else:
+			dungeons[0].setup_dungeon_minimap()
 
 func _get_players() -> Array:
 	return Engine.get_main_loop().root.get_tree().get_nodes_in_group("player") if Engine.get_main_loop() else []

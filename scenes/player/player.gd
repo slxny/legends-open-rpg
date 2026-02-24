@@ -1686,15 +1686,22 @@ func _execute_piercing_shot(attack_dir: Vector2) -> void:
 	_anim_return_to_idle(tween, base_pos)
 
 func _execute_arrow_rain(attack_dir: Vector2) -> void:
-	# Triple-tap: Rain of arrows in a target area. 1.0x damage, AoE.
+	# Triple-tap: Rain of arrows centered on the hero. 1.0x damage, AoE.
 	_is_attack_animating = true
 	_attack_cooldown = 0.9 / stats.attack_speed
 	var dir = attack_dir
 	var base_pos = sprite.position
 	var dmg_mult := 1.0
-	var rain_center = global_position + dir * 120.0
-	var rain_radius := 70.0
-	var arrow_count := 6
+	var rain_center = global_position  # Centered on hero
+	var rain_radius := 150.0  # Generous AoE radius
+	var arrow_count := 12
+
+	# Snapshot enemies in range BEFORE animation (they might move)
+	var rain_targets: Array[Node2D] = []
+	for enemy in get_tree().get_nodes_in_group("enemies"):
+		if is_instance_valid(enemy) and not enemy.get("_is_dead") and enemy.has_method("take_damage"):
+			if enemy.global_position.distance_to(rain_center) <= rain_radius:
+				rain_targets.append(enemy)
 
 	# Dramatic bow raise animation
 	var tween = create_tween()
@@ -1708,48 +1715,55 @@ func _execute_arrow_rain(attack_dir: Vector2) -> void:
 		AudioManager.play_sfx("whirlwind")
 		_spawn_effect_label("ARROW RAIN!", Color(0.6, 0.8, 1.0))
 
-		# Spawn arrows raining down with staggered timing
+		# Spawn arrows raining down with staggered timing (visual only)
 		var world = _get_world_node()
 		for i in range(arrow_count):
-			var delay = i * 0.06
+			var delay = i * 0.04
 			get_tree().create_timer(delay).timeout.connect(func():
 				# Random position within radius
-				var offset = Vector2(randf_range(-rain_radius, rain_radius), randf_range(-rain_radius, rain_radius))
-				if offset.length() > rain_radius:
-					offset = offset.normalized() * rain_radius
+				var angle_r = randf() * TAU
+				var dist_r = randf() * rain_radius
+				var offset = Vector2(cos(angle_r), sin(angle_r)) * dist_r
 				var land_pos = rain_center + offset
-				var start_pos = land_pos + Vector2(randf_range(-20, 20), -80)
+				var start_pos_arrow = land_pos + Vector2(randf_range(-20, 20), -90)
 
 				# Arrow visual
 				var arrow = _get_pooled_vfx()
 				arrow.texture = SpriteGenerator.get_texture("arrow_projectile")
-				arrow.global_position = start_pos
-				arrow.rotation = (land_pos - start_pos).angle()
+				arrow.global_position = start_pos_arrow
+				arrow.rotation = (land_pos - start_pos_arrow).angle()
 				arrow.modulate = Color(0.8, 0.9, 1.0, 0.9)
 				world.add_child(arrow)
 
 				var atween = arrow.create_tween()
-				atween.tween_property(arrow, "global_position", land_pos, 0.12)
+				atween.tween_property(arrow, "global_position", land_pos, 0.1)
 				atween.tween_callback(func():
-					# Impact VFX
 					_spawn_impact_vfx(land_pos, false)
-					# Damage enemies near this arrow
-					for enemy in get_tree().get_nodes_in_group("enemies"):
-						if is_instance_valid(enemy) and not enemy.get("_is_dead") and enemy.has_method("take_damage"):
-							if enemy.global_position.distance_to(land_pos) <= 25.0:
-								var result = CombatManager.calculate_damage(stats.get_stats_dict(), enemy.get_stats_dict(), dmg_mult)
-								enemy.take_damage(result["damage"], result["is_crit"])
-								var kb_dir = (enemy.global_position - land_pos).normalized()
-								enemy.apply_knockback(kb_dir, 25.0)
 				)
 				atween.tween_property(arrow, "modulate:a", 0.0, 0.15)
 				atween.tween_callback(_recycle_vfx.bind(arrow))
 			)
-		# Screen shake after the volley
+
+		# Guaranteed AoE damage to all enemies in radius after a short delay
+		get_tree().create_timer(0.15).timeout.connect(func():
+			var did_hit := false
+			for hit_target in rain_targets:
+				if is_instance_valid(hit_target) and not hit_target.get("_is_dead"):
+					var result = CombatManager.calculate_damage(stats.get_stats_dict(), hit_target.get_stats_dict(), dmg_mult)
+					hit_target.take_damage(result["damage"], result["is_crit"])
+					var kb_dir = (hit_target.global_position - rain_center).normalized()
+					hit_target.apply_knockback(kb_dir, 35.0)
+					did_hit = true
+			if did_hit:
+				_do_screen_shake(6.0)
+				_do_hit_freeze(false)
+			else:
+				_do_screen_shake(3.0)
+		)
 		_do_screen_shake(5.0)
 	)
 	tween.tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.08)
-	tween.tween_interval(0.4)  # Wait for arrows to land
+	tween.tween_interval(0.5)  # Wait for arrows to land
 	_anim_return_to_idle(tween, base_pos)
 
 func _execute_sniper_shot(attack_dir: Vector2) -> void:

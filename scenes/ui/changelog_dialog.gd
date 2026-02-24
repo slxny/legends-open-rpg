@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.65.4"
+const GAME_VERSION := "v0.65.5"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.65.5",
+		"title": "Arrow Rain now reliably hits all nearby enemies",
+		"date": "2026-02-24",
+		"entries": [
+			"Arrow Rain (triple-tap) now centered on the hero instead of offset in attack direction",
+			"AoE radius increased from 70 to 150 — covers a much larger area",
+			"Arrow count doubled from 6 to 12 for denser visual coverage",
+			"Guaranteed AoE damage sweep hits all enemies in radius (no more gaps from random arrow placement)",
+		]
+	},
 	{
 		"version": "v0.65.4",
 		"title": "Mobile virtual joystick",

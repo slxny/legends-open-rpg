@@ -150,6 +150,9 @@ var _mobile_attack_held: bool = false   # True while mobile attack button is hel
 var _mobile_atk_canvas: CanvasLayer = null
 var _mobile_atk_btn: Button = null
 var _mobile_atk_touch_index: int = -1  # Touch index currently pressing the ATK button
+var _mobile_atk_start_pos: Vector2 = Vector2.ZERO  # Where the ATK touch began (for drag-to-aim)
+var _mobile_charge_aim_dir: Vector2 = Vector2.ZERO  # Drag-aim direction while charging (zero = not aiming)
+const CHARGE_AIM_DRAG_THRESHOLD: float = 30.0  # Minimum drag distance to change aim direction
 # Two-finger pinch-to-zoom tracking
 var _touch_points: Dictionary = {}      # touch index -> screen position (unhandled only)
 var _pinch_prev_distance: float = 0.0   # Previous distance between two fingers
@@ -463,6 +466,7 @@ func _physics_process(delta: float) -> void:
 				if not _is_attack_animating:
 					var is_ranged = hero_class == "shadow_ranger"
 					_try_special_attack(SpecialAttack.SNIPER_SHOT if is_ranged else SpecialAttack.CHARGED_SLASH)
+				_mobile_charge_aim_dir = Vector2.ZERO
 			_charge_time = 0.0
 
 	# Safety: force-clear stuck charge if touch release was lost (browser/OS swallowed it)
@@ -470,6 +474,7 @@ func _physics_process(delta: float) -> void:
 		_is_charging = false
 		_stop_charge_vfx()
 		_charge_time = 0.0
+		_mobile_charge_aim_dir = Vector2.ZERO
 
 	# Procedural screen shake tick
 	if _shake_time_left > 0.0:
@@ -632,6 +637,8 @@ func _input(event: InputEvent) -> void:
 			if event.pressed:
 				if atk_rect.has_point(event.position) and _mobile_atk_touch_index == -1:
 					_mobile_atk_touch_index = event.index
+					_mobile_atk_start_pos = event.position
+					_mobile_charge_aim_dir = Vector2.ZERO
 					_on_mobile_attack_pressed()
 					get_viewport().set_input_as_handled()
 			else:
@@ -639,6 +646,12 @@ func _input(event: InputEvent) -> void:
 					_mobile_atk_touch_index = -1
 					_on_mobile_attack_released()
 					get_viewport().set_input_as_handled()
+		elif event is InputEventScreenDrag:
+			if event.index == _mobile_atk_touch_index and _is_charging:
+				var drag_offset = event.position - _mobile_atk_start_pos
+				if drag_offset.length() > CHARGE_AIM_DRAG_THRESHOLD:
+					_mobile_charge_aim_dir = drag_offset.normalized()
+					_set_facing(_mobile_charge_aim_dir)
 
 	# Long-press on hero to open stats panel (mobile only)
 	if _is_mobile:
@@ -2009,7 +2022,7 @@ func _set_facing(dir: Vector2) -> void:
 		sprite.texture = _idle_texture
 
 func _get_aim_direction() -> Vector2:
-	# Prefer held arrow/WASD keys, then mobile touch direction, then last facing
+	# Prefer held arrow/WASD keys, then mobile charge drag aim, then mobile touch direction, then last facing
 	var input_raw = Vector2(
 		Input.get_axis("move_left", "move_right"),
 		Input.get_axis("move_up", "move_down")
@@ -2017,6 +2030,9 @@ func _get_aim_direction() -> Vector2:
 	if input_raw.length() > 0.25:
 		return input_raw.normalized()
 	if _is_mobile:
+		# Charge drag-to-aim: if player dragged on ATK button while charging, use that direction
+		if _mobile_charge_aim_dir.length() > 0.1:
+			return _mobile_charge_aim_dir
 		var touch_dir = _get_mobile_touch_dir()
 		if touch_dir.length() > 0.1:
 			return touch_dir

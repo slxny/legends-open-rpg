@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.64.0"
+const GAME_VERSION := "v0.64.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.64.1",
+		"title": "Mobile charge attack drag-to-aim",
+		"date": "2026-02-24",
+		"entries": [
+			"Hold ATK to charge, then drag finger to aim the charged slash/sniper shot direction",
+			"Hero faces the drag direction in real-time while charging for visual feedback",
+			"Works just like holding arrow keys on desktop to aim before releasing",
+		]
+	},
 	{
 		"version": "v0.64.0",
 		"title": "Dungeon minimap, larger crypt, enemy bounds",

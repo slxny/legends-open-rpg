@@ -8,8 +8,14 @@ extends Node
 signal beacon_activated(beacon_type: String, data: Dictionary, player: Node2D)
 
 var _last_heal_sfx_ms: int = 0
+var _teleport_cooldown_ms: int = 0  # Prevents beacon re-trigger after teleport
 
 func activate(beacon_type: String, data: Dictionary, player: Node2D = null) -> void:
+	# Block beacon activation during teleport cooldown (prevents enter→exit loops)
+	if beacon_type in ["dungeon_enter", "dungeon_exit", "teleport"]:
+		var now = Time.get_ticks_msec()
+		if now - _teleport_cooldown_ms < 1000:
+			return
 	if player == null:
 		var players = _get_players()
 		if players.size() > 0:
@@ -63,6 +69,7 @@ func _handle_teleport(data: Dictionary, player: Node2D) -> void:
 	var dest = data.get("destination", Vector2.ZERO)
 	if dest != Vector2.ZERO and player:
 		player.global_position = dest
+		_teleport_cooldown_ms = Time.get_ticks_msec()
 		GameManager.game_message.emit("Teleported!", Color(0.5, 0.7, 1.0))
 
 func _handle_boss_spawn(data: Dictionary, _player: Node2D) -> void:
@@ -102,6 +109,7 @@ func _handle_dungeon_exit(data: Dictionary, player: Node2D) -> void:
 	var dest = data.get("destination", Vector2.ZERO)
 	if dest != Vector2.ZERO and player:
 		player.global_position = dest
+		_teleport_cooldown_ms = Time.get_ticks_msec()
 		AudioManager.play_sfx("dungeon_exit")
 		GameManager.game_message.emit("Returned to Haven's Rest", Color(0.3, 1.0, 0.5))
 
@@ -115,6 +123,7 @@ func _handle_dungeon_enter(data: Dictionary, player: Node2D) -> void:
 	var dest = data.get("destination", Vector2.ZERO)
 	if dest != Vector2.ZERO and player:
 		player.global_position = dest
+		_teleport_cooldown_ms = Time.get_ticks_msec()
 		AudioManager.play_sfx("dungeon_enter")
 		GameManager.game_message.emit("Descending into the Crypt...", Color(0.6, 0.4, 0.8))
 

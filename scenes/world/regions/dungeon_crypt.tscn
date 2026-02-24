@@ -27,7 +27,7 @@ theme_override_font_sizes/font_size = 16
 theme_override_colors/font_color = Color(0.7, 0.5, 0.8, 1)
 
 [node name="ExitBeacon" parent="." instance=ExtResource("2_beacon")]
-position = Vector2(0, 0)
+position = Vector2(0, -420)
 beacon_color = Color(0.2, 1, 0.2, 1)
 beacon_label = "Exit Dungeon"
 beacon_radius = 40.0

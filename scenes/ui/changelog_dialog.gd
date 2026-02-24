@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.63.1"
+const GAME_VERSION := "v0.63.2"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.63.2",
+		"title": "Fix dungeon enter/exit teleport loop",
+		"date": "2026-02-24",
+		"entries": [
+			"Fixed entering dungeon immediately triggering exit beacon (teleport loop)",
+			"Moved exit beacon away from dungeon spawn point",
+			"Added 1s teleport cooldown to prevent beacon re-trigger after any teleport",
+		]
+	},
 	{
 		"version": "v0.63.1",
 		"title": "Rat nerf + Bleeding debuff",

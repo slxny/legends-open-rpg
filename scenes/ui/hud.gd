@@ -124,10 +124,11 @@ func _apply_mobile_layout() -> void:
 		btn_style_pressed.bg_color = Color(0.25, 0.2, 0.08, 0.95)
 		btn_style_pressed.border_color = Color(0.9, 0.75, 0.3, 1.0)
 
-		# MAP button — square, left of bars
+		# MAP button — wide, left of bars
+		var btn_w = panel_h * 2  # 2x width for comfortable touch targets
 		var map_btn = Button.new()
 		map_btn.text = "MAP"
-		map_btn.custom_minimum_size = Vector2(panel_h, 0)
+		map_btn.custom_minimum_size = Vector2(btn_w, 0)
 		map_btn.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		map_btn.add_theme_font_size_override("font_size", 28)
 		map_btn.add_theme_color_override("font_color", Color(0.5, 0.85, 1.0))
@@ -138,10 +139,10 @@ func _apply_mobile_layout() -> void:
 		bottom_hbox.add_child(map_btn)
 		bottom_hbox.move_child(map_btn, 0)  # Move to leftmost position
 
-		# OPT button — square, right of bars
+		# OPT button — wide, right of bars
 		var opt_btn = Button.new()
 		opt_btn.text = "OPT"
-		opt_btn.custom_minimum_size = Vector2(panel_h, 0)
+		opt_btn.custom_minimum_size = Vector2(btn_w, 0)
 		opt_btn.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		opt_btn.add_theme_font_size_override("font_size", 28)
 		opt_btn.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))

@@ -9,9 +9,18 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.61.2"
+const GAME_VERSION := "v0.61.3"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.61.3",
+		"title": "Wider MAP & OPT buttons on mobile portrait",
+		"date": "2026-02-23",
+		"entries": [
+			"MAP and OPT buttons are now 2x wider for easier touch targeting",
+			"Buttons no longer get cut off on smaller screens",
+		]
+	},
 	{
 		"version": "v0.61.2",
 		"title": "Menu button on all platforms",

@@ -433,31 +433,21 @@ func _on_version_log_pressed() -> void:
 	_changelog_dialog.open()
 
 func _start_title_fade_in() -> void:
-	# Collect all vbox children after title_section for staggered reveal
 	# vbox order: [0] title_section, [1] TitleLabel, [2] SubtitleLabel,
 	#             [3] HeroContainer, [4] byline_bar, [5] version_bar
 	var child_count = vbox.get_child_count()
 
-	# Hide everything initially
+	# Hide everything initially (opacity only — never touch position on VBox children)
 	for i in range(child_count):
 		vbox.get_child(i).modulate.a = 0.0
 
-	# Also hide individual title section children for per-element animation
+	# Hide individual title section children for per-element animation
 	_game_title_label.modulate.a = 0.0
 	_game_sub_label.modulate.a = 0.0
 	_deco_top_line.modulate.a = 0.0
 	_deco_bot_line.modulate.a = 0.0
-	# Make title_section visible so children can fade independently
+	# Make title_section container visible so children can fade independently
 	_title_section.modulate.a = 1.0
-
-	# Collect the "below title" children (Choose Your Hero, subtitle, cards, byline, version)
-	var below_nodes: Array[Control] = []
-	for i in range(1, child_count):
-		below_nodes.append(vbox.get_child(i) as Control)
-
-	# Offset below-title content downward for slide-up effect
-	for i in range(below_nodes.size()):
-		below_nodes[i].position.y += 30.0
 
 	var tween = create_tween()
 	tween.set_parallel(true)
@@ -480,13 +470,11 @@ func _start_title_fade_in() -> void:
 	tween.tween_property(_deco_bot_line, "modulate:a", 1.0, 0.6) \
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC).set_delay(0.7)
 
-	# Phase 4 (1.0s+): Below-title content fades in and slides up, staggered
-	for i in range(below_nodes.size()):
-		var delay = 1.0 + i * 0.2
-		var node = below_nodes[i]
+	# Phase 4 (1.0s+): Below-title content fades in with stagger
+	for i in range(1, child_count):
+		var delay = 1.0 + (i - 1) * 0.2
+		var node = vbox.get_child(i)
 		tween.tween_property(node, "modulate:a", 1.0, 0.7) \
-			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC).set_delay(delay)
-		tween.tween_property(node, "position:y", node.position.y - 30.0, 0.7) \
 			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC).set_delay(delay)
 
 func _on_hero_selected(hero_key: String) -> void:

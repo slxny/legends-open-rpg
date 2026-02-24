@@ -112,6 +112,23 @@ body {
 	animation: shimmer 2.5s linear infinite;
 }
 
+/* Indeterminate loading pulse — shown before real progress starts */
+.progress-indeterminate {
+	position: absolute;
+	top: 0;
+	left: 0;
+	height: 100%;
+	width: 30%;
+	border-radius: 3px;
+	background: linear-gradient(90deg, transparent, #f0cc4a, transparent);
+	opacity: 0.7;
+	animation: indeterminate-sweep 1.6s ease-in-out infinite;
+}
+
+.progress-indeterminate.hidden {
+	display: none;
+}
+
 /* ── Loading text ── */
 .load-pct {
 	color: rgba(170, 153, 102, 0.5);
@@ -148,6 +165,14 @@ body {
 @keyframes shimmer {
 	0% { background-position: 300% 0; }
 	100% { background-position: -300% 0; }
+}
+
+@keyframes indeterminate-sweep {
+	0% { left: -30%; opacity: 0; }
+	15% { opacity: 0.7; }
+	50% { opacity: 0.9; }
+	85% { opacity: 0.7; }
+	100% { left: 100%; opacity: 0; }
 }
 
 /* ── In-app browser takeover ── */
@@ -222,7 +247,7 @@ body {
 			<div class="load-title">OPEN LEGENDS RPG</div>
 			<div class="load-subtitle">FORGE YOUR LEGEND</div>
 			<div class="load-deco">&mdash; &middot; &mdash;</div>
-			<div class="progress-track"><div class="progress-fill" id="custom-progress"></div></div>
+			<div class="progress-track"><div class="progress-fill" id="custom-progress"></div><div class="progress-indeterminate" id="progress-indeterminate"></div></div>
 			<div class="load-pct" id="load-pct">LOADING</div>
 
 			<div id="status-notice"></div>
@@ -297,9 +322,11 @@ const engine = new Engine(GODOT_CONFIG);
 	const statusNotice = document.getElementById('status-notice');
 	const customProgress = document.getElementById('custom-progress');
 	const loadPct = document.getElementById('load-pct');
+	const progressIndeterminate = document.getElementById('progress-indeterminate');
 
 	let initializing = true;
 	let statusMode = '';
+	let gotRealProgress = false;
 
 	function setStatusMode(mode) {
 		if (statusMode === mode || !initializing) {
@@ -380,6 +407,10 @@ const engine = new Engine(GODOT_CONFIG);
 		engine.startGame({
 			'onProgress': function (current, total) {
 				if (current > 0 && total > 0) {
+					if (!gotRealProgress) {
+						gotRealProgress = true;
+						progressIndeterminate.classList.add('hidden');
+					}
 					statusProgress.value = current;
 					statusProgress.max = total;
 					// Drive custom progress bar

@@ -59,7 +59,8 @@ func _ready() -> void:
 	_detect_mobile()
 	if _is_mobile:
 		_apply_mobile_layout()
-		_add_mobile_menu_button()
+	else:
+		_add_desktop_menu_button()
 	_create_hint_panel()
 
 func _detect_mobile() -> void:
@@ -173,6 +174,12 @@ func _apply_mobile_layout() -> void:
 	log_btn.visible = false
 	save_btn.visible = false
 	load_btn.visible = false
+	# Add Menu button to landscape command grid
+	var ls_menu_btn = Button.new()
+	ls_menu_btn.text = "Menu"
+	_style_btn(ls_menu_btn, Color(0.9, 0.75, 0.3))
+	ls_menu_btn.pressed.connect(_open_pause_menu)
+	command_grid.add_child(ls_menu_btn)
 	command_grid.add_theme_constant_override("h_separation", 1)
 	command_grid.add_theme_constant_override("v_separation", 1)
 	for child in command_grid.get_children():
@@ -291,6 +298,19 @@ func _build_cmd_overlay() -> void:
 	)
 	grid.add_child(load_b)
 
+	# Menu button — opens pause menu
+	var menu_b = Button.new()
+	menu_b.text = "Menu"
+	menu_b.custom_minimum_size = btn_size
+	menu_b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	menu_b.add_theme_font_size_override("font_size", fs)
+	_style_btn(menu_b, Color(0.9, 0.75, 0.3))
+	menu_b.pressed.connect(func():
+		_toggle_cmd_overlay()
+		_open_pause_menu()
+	)
+	grid.add_child(menu_b)
+
 	# Position the overlay above the bottom panel
 	add_child(_cmd_overlay)
 
@@ -400,27 +420,20 @@ func _toggle_map_overlay() -> void:
 		_map_overlay.size = Vector2(overlay_w, map_h)
 		_map_overlay.position = Vector2((vp_size.x - overlay_w) / 2.0, vp_size.y - bottom_panel.size.y - map_h - 8)
 
-func _add_mobile_menu_button() -> void:
-	var vp_size = get_viewport().get_visible_rect().size
-	var is_landscape = vp_size.x > vp_size.y
+func _open_pause_menu() -> void:
+	var menus = get_tree().get_nodes_in_group("pause_menu")
+	if menus.size() > 0:
+		menus[0].toggle()
+
+func _add_desktop_menu_button() -> void:
+	# Add a Menu button to the command card grid (after Load)
 	var menu_btn = Button.new()
-	menu_btn.text = "Menu"
-	if is_landscape:
-		menu_btn.custom_minimum_size = Vector2(40, 14)
-		menu_btn.add_theme_font_size_override("font_size", 9)
-	else:
-		menu_btn.custom_minimum_size = Vector2(140, 60)
-		menu_btn.add_theme_font_size_override("font_size", 34)
-	menu_btn.modulate = Color(1, 1, 1, 0.7)
+	menu_btn.text = "Esc\nMenu"
+	menu_btn.custom_minimum_size = Vector2(68, 32)
+	menu_btn.add_theme_font_size_override("font_size", 10)
 	_style_btn(menu_btn, Color(0.9, 0.75, 0.3))
-	menu_btn.pressed.connect(func():
-		var menus = get_tree().get_nodes_in_group("pause_menu")
-		if menus.size() > 0:
-			menus[0].toggle()
-	)
-	# Insert at position 0 in top bar (before the spacer)
-	top_bar.add_child(menu_btn)
-	top_bar.move_child(menu_btn, 0)
+	menu_btn.pressed.connect(_open_pause_menu)
+	command_grid.add_child(menu_btn)
 
 func setup(player: Node2D) -> void:
 	_player = player

@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.61.1"
+const GAME_VERSION := "v0.61.2"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.61.2",
+		"title": "Menu button on all platforms",
+		"date": "2026-02-23",
+		"entries": [
+			"Desktop: Menu button added to command card grid (also Esc key)",
+			"Mobile portrait: Menu button added to OPT command overlay",
+			"Mobile landscape: Menu button added to compact command grid",
+			"Removed unreliable floating top-bar menu button on mobile",
+		]
+	},
 	{
 		"version": "v0.61.1",
 		"title": "Fix miniboss minimap diamond not appearing",

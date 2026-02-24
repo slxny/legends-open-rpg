@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.64.3"
+const GAME_VERSION := "v0.64.4"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.64.4",
+		"title": "Power Strike rework — AoE lunge slam",
+		"date": "2026-02-24",
+		"entries": [
+			"Power Strike now lunges the hero 80 units forward with a big bouncy slam",
+			"Hits up to 5 enemies in a directional cone with 1.5x splash damage",
+			"Triple slash VFX fan, stronger knockback (120), and bigger screen shake",
+			"Satisfying spring-bounce recovery animation after impact",
+		]
+	},
 	{
 		"version": "v0.64.3",
 		"title": "Fix charge attack aiming",

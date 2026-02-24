@@ -1111,66 +1111,107 @@ func _try_special_attack(special: SpecialAttack) -> void:
 			_execute_shadow_step(attack_dir)
 
 func _execute_power_strike(attack_dir: Vector2) -> void:
-	# Double-tap: Heavy single-target hit, 1.4x damage, dramatic wind-up
+	# Double-tap: AoE directional slam — lunge forward, hit up to 5 enemies
+	# in a cone, 1.5x damage with splash. Satisfying bouncy animation.
 	_is_attack_animating = true
-	_attack_cooldown = 0.7 / stats.attack_speed  # Slightly longer cooldown
+	_attack_cooldown = 0.8 / stats.attack_speed
 	var dir = attack_dir
-	var perp = Vector2(-dir.y, dir.x)
 	var base_pos = sprite.position
+	var dmg_mult := 1.5
+	var lunge_dist := 80.0  # How far the player actually moves forward
+	var splash_range := 120.0  # Cone length for finding targets
+	var splash_half_angle := 0.7  # ~40° half-cone (dot product threshold ~0.76)
 
-	var hit_target = _find_best_target(dir)
-	var dmg_mult := 1.4
+	# Snapshot targets in a cone in front of the player (up to 5)
+	var start_pos = global_position
+	var cone_targets: Array[Node2D] = []
+	for enemy in get_tree().get_nodes_in_group("enemies"):
+		if not is_instance_valid(enemy) or enemy.get("_is_dead") or not enemy.has_method("take_damage"):
+			continue
+		var to_enemy = enemy.global_position - start_pos
+		var dist = to_enemy.length()
+		if dist > splash_range + lunge_dist or dist < 1.0:
+			continue
+		var dot = dir.dot(to_enemy.normalized())
+		if dot > cos(splash_half_angle):
+			cone_targets.append(enemy)
+	# Sort by distance, cap at 5
+	cone_targets.sort_custom(func(a, b): return a.global_position.distance_squared_to(start_pos) < b.global_position.distance_squared_to(start_pos))
+	if cone_targets.size() > 5:
+		cone_targets.resize(5)
 
 	# Pick overhead chop frames for the heavy feel
 	var frames = _combo_swings[2] if _combo_swings.size() > 2 else []
 
 	var tween = create_tween()
-	# Anticipation squash before wind-up
+
+	# === WIND-UP: Dramatic coil back ===
 	if frames.size() >= 3:
 		tween.tween_callback(func(): sprite.texture = frames[0])
-	tween.tween_property(sprite, "scale", Vector2(1.3, 0.7), 0.05).set_ease(Tween.EASE_OUT)
-	# Bouncy wind-up: pull back with vertical spring
-	tween.tween_property(sprite, "position", base_pos - dir * 10.0 + Vector2(0, -8), 0.12).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
-	tween.tween_property(sprite, "scale", Vector2(0.85, 1.3), 0.06).set_ease(Tween.EASE_OUT)
-	# Bounce at peak of wind-up
-	tween.tween_property(sprite, "position", base_pos - dir * 7.0 + Vector2(0, -10), 0.05).set_ease(Tween.EASE_IN_OUT)
-	tween.tween_property(sprite, "scale", Vector2(1.2, 0.75), 0.04).set_ease(Tween.EASE_IN)
-	# Flash gold during wind-up
-	tween.tween_callback(func(): sprite.modulate = Color(1.2, 1.1, 0.7))
+	# Squash down — gathering power
+	tween.tween_property(sprite, "scale", Vector2(1.4, 0.6), 0.06).set_ease(Tween.EASE_OUT)
+	tween.tween_property(sprite, "position", base_pos - dir * 12.0 + Vector2(0, 4), 0.08).set_ease(Tween.EASE_OUT)
+	# Spring up — anticipation bounce
+	tween.tween_property(sprite, "scale", Vector2(0.7, 1.4), 0.06).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	tween.tween_property(sprite, "position", base_pos - dir * 8.0 + Vector2(0, -12), 0.05).set_ease(Tween.EASE_OUT)
+	# Gold flash — charge up
+	tween.tween_callback(func(): sprite.modulate = Color(1.5, 1.2, 0.5))
 	if frames.size() >= 3:
 		tween.tween_callback(func(): sprite.texture = frames[1])
-	# SLAM forward with overshoot
-	tween.tween_property(sprite, "position", base_pos + dir * 22.0, 0.05).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_BACK)
-	tween.tween_property(sprite, "scale", Vector2(0.75, 1.35), 0.03).set_ease(Tween.EASE_OUT)
+	# Second coil bounce
+	tween.tween_property(sprite, "scale", Vector2(1.25, 0.7), 0.04).set_ease(Tween.EASE_IN)
+	tween.tween_property(sprite, "position", base_pos - dir * 6.0 + Vector2(0, -6), 0.03)
+
+	# === LUNGE: Slam forward — move the actual player, not just sprite ===
+	tween.tween_callback(func():
+		# Actually move the player body forward
+		global_position += dir * lunge_dist
+	)
 	if frames.size() >= 3:
 		tween.tween_callback(func(): sprite.texture = frames[2])
-	# Impact bounce-back
-	tween.tween_property(sprite, "position", base_pos + dir * 16.0, 0.04).set_ease(Tween.EASE_OUT)
-	tween.tween_property(sprite, "scale", Vector2(1.3, 0.75), 0.03).set_ease(Tween.EASE_OUT)
+	# Sprite overshoots ahead then snaps back — impact feel
+	tween.tween_property(sprite, "position", base_pos + dir * 30.0, 0.04).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_BACK)
+	tween.tween_property(sprite, "scale", Vector2(0.65, 1.5), 0.03).set_ease(Tween.EASE_OUT)
+
+	# === IMPACT: Hit all cone targets, big VFX ===
 	tween.tween_callback(func():
 		sprite.modulate = Color.WHITE
-		if hit_target and is_instance_valid(hit_target):
-			var result = CombatManager.calculate_damage(stats.get_stats_dict(), hit_target.get_stats_dict(), dmg_mult)
-			hit_target.take_damage(result["damage"], result["is_crit"])
-			hit_target.apply_knockback(dir, 90.0)
-			_spawn_slash_vfx(dir, 50.0, 1.8)
-			_spawn_slash_vfx(dir.rotated(0.2), 45.0, 1.4)
-			_spawn_impact_vfx(hit_target.global_position, true)
-			_do_screen_shake(7.0)
+		var hit_count := 0
+		for enemy in cone_targets:
+			if is_instance_valid(enemy) and not enemy.get("_is_dead"):
+				var result = CombatManager.calculate_damage(stats.get_stats_dict(), enemy.get_stats_dict(), dmg_mult)
+				enemy.take_damage(result["damage"], result["is_crit"])
+				var kb_dir = (enemy.global_position - global_position).normalized()
+				enemy.apply_knockback(kb_dir, 120.0)
+				_spawn_impact_vfx(enemy.global_position, result["is_crit"])
+				hit_count += 1
+		# Big directional slash VFX fan
+		_spawn_slash_vfx(dir, 70.0, 2.4)
+		_spawn_slash_vfx(dir.rotated(0.35), 55.0, 1.8)
+		_spawn_slash_vfx(dir.rotated(-0.35), 55.0, 1.8)
+		if hit_count > 0:
+			_do_screen_shake(10.0)
 			_do_hit_freeze(true)
 		else:
-			_spawn_slash_vfx(dir, 50.0, 1.8)
-			_do_screen_shake(3.0)
+			_do_screen_shake(5.0)
 		AudioManager.play_sfx("power_strike")
 		_spawn_effect_label("POWER STRIKE!", Color(1.0, 0.85, 0.2))
 	)
-	# Bouncy recovery oscillations
-	tween.tween_property(sprite, "position", base_pos + dir * 20.0, 0.04).set_ease(Tween.EASE_OUT)
-	tween.tween_property(sprite, "scale", Vector2(0.9, 1.15), 0.04).set_ease(Tween.EASE_OUT)
-	tween.tween_property(sprite, "position", base_pos + dir * 14.0, 0.05).set_ease(Tween.EASE_IN_OUT)
-	tween.tween_property(sprite, "scale", Vector2(1.12, 0.9), 0.04).set_ease(Tween.EASE_IN_OUT)
+
+	# === BOUNCY RECOVERY: Satisfying spring oscillations ===
+	# Slam recoil — sprite bounces back
+	tween.tween_property(sprite, "position", base_pos + dir * 10.0, 0.04).set_ease(Tween.EASE_OUT)
+	tween.tween_property(sprite, "scale", Vector2(1.4, 0.65), 0.04).set_ease(Tween.EASE_OUT)
+	# Bounce up
+	tween.tween_property(sprite, "position", base_pos + dir * 18.0 + Vector2(0, -6), 0.05).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	tween.tween_property(sprite, "scale", Vector2(0.85, 1.2), 0.04).set_ease(Tween.EASE_OUT)
+	# Settle bounce
+	tween.tween_property(sprite, "position", base_pos + dir * 6.0, 0.04).set_ease(Tween.EASE_IN_OUT)
+	tween.tween_property(sprite, "scale", Vector2(1.15, 0.88), 0.04).set_ease(Tween.EASE_IN_OUT)
+	# Final settle
 	tween.tween_property(sprite, "scale", Vector2(0.95, 1.06), 0.04).set_ease(Tween.EASE_IN_OUT)
-	tween.tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.05).set_ease(Tween.EASE_IN_OUT)
+	tween.tween_property(sprite, "scale", Vector2(1.02, 0.98), 0.03).set_ease(Tween.EASE_IN_OUT)
+	tween.tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.04).set_ease(Tween.EASE_IN_OUT)
 	tween.tween_interval(0.03)
 	_anim_return_to_idle(tween, base_pos)
 

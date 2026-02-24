@@ -540,9 +540,15 @@ func _process_attack(delta: float) -> void:
 		# Only deal damage if still close enough to actually hit
 		var hit_range_sq = stats.attack_range * stats.attack_range * 2.25  # 1.5x range
 		if dist_sq <= hit_range_sq and target.has_method("take_damage"):
-			var result = CombatManager.calculate_damage(get_stats_dict(), target.get_stats_dict())
+			# Roll for special attack (15% chance, type-specific)
+			var is_special = randf() < 0.15
+			var dmg_mult = 1.0
+			if is_special:
+				dmg_mult = _get_special_attack_mult()
+				_attack_timer = attack_cooldown * 1.3  # Slightly longer recovery after special
+			var result = CombatManager.calculate_damage(get_stats_dict(), target.get_stats_dict(), dmg_mult)
 			target.take_damage(result["damage"], result["is_crit"])
-			_do_attack_lunge()
+			_do_attack_lunge(is_special)
 			if sprite_type == "rat" and randf() < 0.3:
 				_try_rat_squeal()
 			# Rare effect proc
@@ -875,7 +881,29 @@ func _do_hit_flash() -> void:
 	tween.tween_property(sprite, "scale", Vector2(sx * 0.85, sy * 1.2), 0.06)
 	tween.tween_property(sprite, "scale", _base_scale, 0.08)
 
-func _do_attack_lunge() -> void:
+func _get_special_attack_mult() -> float:
+	# Damage multiplier for special attacks — varies by enemy type
+	match sprite_type:
+		"rat": return 1.15        # Frenzy bite
+		"goblin": return 1.2      # Backstab
+		"wolf": return 1.25       # Savage lunge
+		"skeleton": return 1.2    # Overhead cleave
+		"spider": return 1.3      # Venom strike
+		"bandit": return 1.25     # Cross slash
+		"troll": return 1.4       # Mega punch
+		"dark_mage": return 1.3   # Dark blast
+		"ogre": return 1.35       # Ground pound
+		"tree_god_elk": return 1.3 # Antler toss
+		"cave_snake": return 1.25 # Constrict
+		"dungeon_bat": return 1.2 # Dive bomb
+		"vampire_bat": return 1.3 # Drain bite
+		"flan": return 1.25       # Body slam
+		"mimic": return 1.4       # Devour
+		"ghoul": return 1.3       # Rend
+		"crypt_knight": return 1.35 # Shield bash
+		_: return 1.2
+
+func _do_attack_lunge(is_special: bool = false) -> void:
 	if not is_instance_valid(target):
 		return
 	var dir = (target.global_position - global_position).normalized()
@@ -895,125 +923,735 @@ func _do_attack_lunge() -> void:
 		return
 	match sprite_type:
 		"rat":
-			_anim_rat_bite(dir, base_pos)
+			if is_special: _anim_rat_frenzy(dir, base_pos) else: _anim_rat_bite(dir, base_pos)
 		"goblin":
-			_anim_goblin_swing(dir, base_pos)
+			if is_special: _anim_goblin_backstab(dir, base_pos) else: _anim_goblin_swing(dir, base_pos)
+		"wolf":
+			if is_special: _anim_wolf_savage_lunge(dir, base_pos) else: _anim_wolf_bite(dir, base_pos)
+		"skeleton":
+			if is_special: _anim_skeleton_cleave(dir, base_pos) else: _anim_skeleton_slash(dir, base_pos)
+		"spider":
+			if is_special: _anim_spider_venom(dir, base_pos) else: _anim_spider_fang(dir, base_pos)
+		"bandit":
+			if is_special: _anim_bandit_cross_slash(dir, base_pos) else: _anim_bandit_slash(dir, base_pos)
 		"troll":
-			_anim_troll_slam(dir, base_pos)
+			if is_special: _anim_troll_mega_punch(dir, base_pos) else: _anim_troll_slam(dir, base_pos)
+		"dark_mage":
+			if is_special: _anim_mage_dark_blast(dir, base_pos) else: _anim_mage_bolt(dir, base_pos)
+		"ogre":
+			if is_special: _anim_ogre_ground_pound(dir, base_pos) else: _anim_ogre_fist(dir, base_pos)
 		"tree_god_elk":
-			_anim_elk_charge(dir, base_pos)
+			if is_special: _anim_elk_toss(dir, base_pos) else: _anim_elk_charge(dir, base_pos)
+		"cave_snake":
+			if is_special: _anim_snake_constrict(dir, base_pos) else: _anim_snake_strike(dir, base_pos)
+		"dungeon_bat":
+			if is_special: _anim_bat_divebomb(dir, base_pos) else: _anim_bat_swoop(dir, base_pos)
+		"vampire_bat":
+			if is_special: _anim_vbat_drain(dir, base_pos) else: _anim_bat_swoop(dir, base_pos)
+		"flan":
+			if is_special: _anim_flan_bodyslam(dir, base_pos) else: _anim_flan_bounce(dir, base_pos)
+		"mimic":
+			if is_special: _anim_mimic_devour(dir, base_pos) else: _anim_mimic_chomp(dir, base_pos)
+		"ghoul":
+			if is_special: _anim_ghoul_rend(dir, base_pos) else: _anim_ghoul_claw(dir, base_pos)
+		"crypt_knight":
+			if is_special: _anim_cknight_bash(dir, base_pos) else: _anim_cknight_swing(dir, base_pos)
 		_:
 			_anim_generic_lunge(dir, base_pos)
 
+# ============================================================
+# NORMAL ATTACK ANIMATIONS
+# ============================================================
+
 func _anim_rat_bite(dir: Vector2, base_pos: Vector2) -> void:
-	# Quick coil-and-snap bite — rats are fast and twitchy
 	var tween = create_tween()
-	# Coil back and flatten
 	tween.tween_property(sprite, "position", base_pos - dir * 3.0, 0.04)
 	tween.parallel().tween_property(sprite, "scale", Vector2(1.25, 0.7), 0.04)
-	# Snap forward — fast lunging bite
 	tween.tween_property(sprite, "position", base_pos + dir * 10.0, 0.04)
 	tween.parallel().tween_property(sprite, "scale", Vector2(0.7, 1.3), 0.04)
-	# Tint red on contact
 	tween.tween_callback(func(): sprite.modulate = Color(1.3, 0.8, 0.8))
-	# Quick chomp — tiny oscillation at the bite point
 	tween.tween_property(sprite, "position", base_pos + dir * 8.0, 0.03)
 	tween.tween_property(sprite, "position", base_pos + dir * 10.0, 0.03)
-	# Recoil back
 	tween.tween_property(sprite, "position", base_pos - dir * 2.0, 0.06)
 	tween.parallel().tween_property(sprite, "scale", Vector2(1.1, 0.9), 0.06)
 	tween.parallel().tween_property(sprite, "modulate", Color.WHITE, 0.06)
-	# Settle
 	tween.tween_property(sprite, "position", base_pos, 0.05)
 	tween.parallel().tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.05)
 
 func _anim_goblin_swing(dir: Vector2, base_pos: Vector2) -> void:
-	# Club overhead swing — wind up then slam down
-	var perp = Vector2(-dir.y, dir.x)
 	var tween = create_tween()
-	# Wind-up: pull back and stretch tall (raising club)
 	tween.tween_property(sprite, "position", base_pos - dir * 4.0 + Vector2(0, -3), 0.08)
 	tween.parallel().tween_property(sprite, "scale", Vector2(0.85, 1.2), 0.08)
-	# Slam forward — fast and heavy
 	tween.tween_callback(func(): sprite.modulate = Color(1.2, 1.1, 0.9))
 	tween.tween_property(sprite, "position", base_pos + dir * 12.0 + Vector2(0, 2), 0.05)
 	tween.parallel().tween_property(sprite, "scale", Vector2(1.25, 0.8), 0.05)
-	# Slight rotation on impact for follow-through
 	tween.parallel().tween_property(sprite, "rotation", dir.angle() * 0.15, 0.05)
-	# Impact bounce
 	tween.tween_property(sprite, "position", base_pos + dir * 8.0, 0.04)
 	tween.parallel().tween_property(sprite, "modulate", Color.WHITE, 0.04)
-	# Return to idle
 	tween.tween_property(sprite, "position", base_pos, 0.07)
 	tween.parallel().tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.07)
 	tween.parallel().tween_property(sprite, "rotation", 0.0, 0.07)
 
+func _anim_wolf_bite(dir: Vector2, base_pos: Vector2) -> void:
+	# Wolf lunges with jaws open, snaps shut — fast predator bite
+	var tween = create_tween()
+	# Crouch low — coiling muscles
+	tween.tween_property(sprite, "position", base_pos - dir * 4.0 + Vector2(0, 3), 0.06)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.3, 0.7), 0.06)
+	# Pounce forward — jaws open (stretch long and thin)
+	tween.tween_property(sprite, "position", base_pos + dir * 14.0 + Vector2(0, -2), 0.05)
+	tween.parallel().tween_property(sprite, "scale", Vector2(0.75, 1.25), 0.05)
+	# Jaws snap shut — quick squash on contact
+	tween.tween_callback(func(): sprite.modulate = Color(1.3, 0.9, 0.8))
+	tween.tween_property(sprite, "scale", Vector2(1.15, 0.85), 0.03)
+	# Head shake — wolf shakes prey side to side
+	var perp = Vector2(-dir.y, dir.x)
+	tween.tween_property(sprite, "position", base_pos + dir * 12.0 + perp * 3.0, 0.04)
+	tween.tween_property(sprite, "position", base_pos + dir * 12.0 - perp * 3.0, 0.04)
+	# Release and hop back
+	tween.tween_property(sprite, "position", base_pos - dir * 2.0, 0.06)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.05, 0.95), 0.06)
+	tween.parallel().tween_property(sprite, "modulate", Color.WHITE, 0.06)
+	tween.tween_property(sprite, "position", base_pos, 0.05)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.05)
+
+func _anim_skeleton_slash(dir: Vector2, base_pos: Vector2) -> void:
+	# Rattling sword swing — jerky, mechanical, bones clatter
+	var tween = create_tween()
+	# Raise sword — stiff pull-up
+	tween.tween_property(sprite, "position", base_pos - dir * 3.0 + Vector2(0, -4), 0.07)
+	tween.parallel().tween_property(sprite, "scale", Vector2(0.9, 1.15), 0.07)
+	# Slash across — diagonal sweep with rotation
+	tween.tween_callback(func(): sprite.modulate = Color(1.2, 1.2, 1.0))
+	tween.tween_property(sprite, "position", base_pos + dir * 10.0, 0.05)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.15, 0.9), 0.05)
+	tween.parallel().tween_property(sprite, "rotation", dir.angle() * 0.2, 0.05)
+	# Clatter on follow-through — tiny jitter
+	tween.tween_property(sprite, "position", base_pos + dir * 9.0 + Vector2(randf_range(-1, 1), randf_range(-1, 1)), 0.03)
+	tween.tween_property(sprite, "position", base_pos + dir * 10.0, 0.03)
+	# Return stiffly
+	tween.tween_property(sprite, "position", base_pos, 0.08)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.08)
+	tween.parallel().tween_property(sprite, "rotation", 0.0, 0.08)
+	tween.parallel().tween_property(sprite, "modulate", Color.WHITE, 0.08)
+
+func _anim_spider_fang(dir: Vector2, base_pos: Vector2) -> void:
+	# Quick scuttle forward, fangs stab down, skitter back
+	var tween = create_tween()
+	# Scuttle forward — low and wide
+	tween.tween_property(sprite, "position", base_pos + dir * 6.0, 0.04)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.2, 0.85), 0.04)
+	# Fangs strike down — vertical stab motion
+	tween.tween_property(sprite, "position", base_pos + dir * 10.0 + Vector2(0, 3), 0.03)
+	tween.parallel().tween_property(sprite, "scale", Vector2(0.85, 1.2), 0.03)
+	tween.tween_callback(func(): sprite.modulate = Color(0.9, 1.2, 0.8))
+	# Pull fangs out with tiny hop
+	tween.tween_property(sprite, "position", base_pos + dir * 8.0 + Vector2(0, -2), 0.04)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.1, 0.95), 0.04)
+	# Skitter backwards
+	tween.tween_property(sprite, "position", base_pos - dir * 3.0, 0.05)
+	tween.parallel().tween_property(sprite, "modulate", Color.WHITE, 0.05)
+	tween.tween_property(sprite, "position", base_pos, 0.04)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.04)
+
+func _anim_bandit_slash(dir: Vector2, base_pos: Vector2) -> void:
+	# Quick sword slash — step in, cut diagonally, step back
+	var perp = Vector2(-dir.y, dir.x)
+	var tween = create_tween()
+	# Step forward into stance
+	tween.tween_property(sprite, "position", base_pos + dir * 4.0 + perp * 2.0, 0.05)
+	tween.parallel().tween_property(sprite, "scale", Vector2(0.9, 1.1), 0.05)
+	# Slash diagonally across — rotation for sword arc
+	tween.tween_callback(func(): sprite.modulate = Color(1.2, 1.0, 0.9))
+	tween.tween_property(sprite, "position", base_pos + dir * 11.0 - perp * 2.0, 0.04)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.15, 0.9), 0.04)
+	tween.parallel().tween_property(sprite, "rotation", -dir.angle() * 0.2, 0.04)
+	# Quick recovery — bandits are nimble
+	tween.tween_property(sprite, "position", base_pos + dir * 4.0, 0.04)
+	tween.parallel().tween_property(sprite, "modulate", Color.WHITE, 0.04)
+	tween.tween_property(sprite, "position", base_pos, 0.06)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.06)
+	tween.parallel().tween_property(sprite, "rotation", 0.0, 0.06)
+
 func _anim_troll_slam(dir: Vector2, base_pos: Vector2) -> void:
-	# Slow, heavy overhead club slam — wind up high, pause, then crush down
 	var tween = create_tween()
 	var base_mod = _base_modulate if _base_modulate else Color.WHITE
-	# Phase 1: Slow wind-up — rear back, grow tall (raising club overhead)
 	tween.tween_property(sprite, "position", base_pos - dir * 6.0 + Vector2(0, -6), 0.25)
 	tween.parallel().tween_property(sprite, "scale", _base_scale * Vector2(0.8, 1.3), 0.25)
-	# Phase 2: Brief menacing pause at the top of the swing
 	tween.tween_interval(0.12)
-	# Phase 3: Fast heavy slam forward — squash wide on impact
 	tween.tween_callback(func(): sprite.modulate = Color(1.4, 1.0, 0.8) * base_mod)
 	tween.tween_property(sprite, "position", base_pos + dir * 16.0 + Vector2(0, 4), 0.1)
 	tween.parallel().tween_property(sprite, "scale", _base_scale * Vector2(1.35, 0.7), 0.1)
 	tween.parallel().tween_property(sprite, "rotation", dir.angle() * 0.2, 0.1)
-	# Phase 4: Ground impact — hold the crush pose, shake
 	tween.tween_property(sprite, "position", base_pos + dir * 14.0 + Vector2(randf_range(-2, 2), 4), 0.06)
 	tween.tween_property(sprite, "position", base_pos + dir * 16.0 + Vector2(randf_range(-2, 2), 4), 0.06)
-	# Phase 5: Slow heavy recovery — troll is lumbering, takes time to pull club back
 	tween.tween_property(sprite, "modulate", base_mod, 0.15)
 	tween.parallel().tween_property(sprite, "position", base_pos + dir * 6.0, 0.2)
 	tween.parallel().tween_property(sprite, "scale", _base_scale * Vector2(1.1, 0.95), 0.2)
 	tween.parallel().tween_property(sprite, "rotation", 0.0, 0.2)
-	# Phase 6: Settle back to idle
 	tween.tween_property(sprite, "position", base_pos, 0.2)
 	tween.parallel().tween_property(sprite, "scale", _base_scale, 0.2)
 
-func _anim_elk_charge(dir: Vector2, base_pos: Vector2) -> void:
-	# Majestic antler charge — rear up, stamp, gore forward, antler toss, lumber back
+func _anim_mage_bolt(dir: Vector2, base_pos: Vector2) -> void:
+	# Staff thrust — lean back gathering energy, thrust forward with purple flash
 	var tween = create_tween()
 	var base_mod = _base_modulate if _base_modulate else Color.WHITE
-	# Phase 1: Rear up — antlers raised, stretch tall, green glow
+	# Gather energy — lean back, purple glow
+	tween.tween_property(sprite, "position", base_pos - dir * 3.0, 0.1)
+	tween.parallel().tween_property(sprite, "scale", Vector2(0.9, 1.1), 0.1)
+	tween.parallel().tween_property(sprite, "modulate", Color(0.9, 0.6, 1.3) * base_mod, 0.1)
+	# Thrust staff forward — bolt release
+	tween.tween_property(sprite, "position", base_pos + dir * 8.0, 0.05)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.1, 0.95), 0.05)
+	tween.parallel().tween_property(sprite, "modulate", Color(1.2, 0.8, 1.4) * base_mod, 0.05)
+	# Recoil — magic pushback
+	tween.tween_property(sprite, "position", base_pos - dir * 2.0, 0.06)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.05, 0.97), 0.06)
+	tween.tween_property(sprite, "position", base_pos, 0.08)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.08)
+	tween.parallel().tween_property(sprite, "modulate", base_mod, 0.08)
+
+func _anim_ogre_fist(dir: Vector2, base_pos: Vector2) -> void:
+	# Massive fist slam — wind up overhead, smash down
+	var tween = create_tween()
+	var base_mod = _base_modulate if _base_modulate else Color.WHITE
+	# Rear up — raise fist high
+	tween.tween_property(sprite, "position", base_pos - dir * 4.0 + Vector2(0, -8), 0.15)
+	tween.parallel().tween_property(sprite, "scale", _base_scale * Vector2(0.85, 1.25), 0.15)
+	# Smash down — heavy squash
+	tween.tween_callback(func(): sprite.modulate = Color(1.3, 1.0, 0.8) * base_mod)
+	tween.tween_property(sprite, "position", base_pos + dir * 14.0 + Vector2(0, 4), 0.08)
+	tween.parallel().tween_property(sprite, "scale", _base_scale * Vector2(1.3, 0.75), 0.08)
+	# Impact shake
+	tween.tween_property(sprite, "position", base_pos + dir * 12.0 + Vector2(randf_range(-2, 2), 4), 0.04)
+	tween.tween_property(sprite, "position", base_pos + dir * 14.0 + Vector2(randf_range(-2, 2), 3), 0.04)
+	# Lumber back
+	tween.tween_property(sprite, "modulate", base_mod, 0.1)
+	tween.parallel().tween_property(sprite, "position", base_pos + dir * 4.0, 0.15)
+	tween.parallel().tween_property(sprite, "scale", _base_scale * Vector2(1.05, 0.97), 0.15)
+	tween.parallel().tween_property(sprite, "rotation", 0.0, 0.15)
+	tween.tween_property(sprite, "position", base_pos, 0.12)
+	tween.parallel().tween_property(sprite, "scale", _base_scale, 0.12)
+
+func _anim_elk_charge(dir: Vector2, base_pos: Vector2) -> void:
+	var tween = create_tween()
+	var base_mod = _base_modulate if _base_modulate else Color.WHITE
 	tween.tween_property(sprite, "position", base_pos + Vector2(0, -8), 0.2)
 	tween.parallel().tween_property(sprite, "scale", _base_scale * Vector2(0.85, 1.3), 0.2)
 	tween.parallel().tween_property(sprite, "modulate", Color(0.8, 1.2, 0.7) * base_mod, 0.2)
-	# Phase 2: Stamp pause — brief menacing hold
 	tween.tween_interval(0.1)
-	# Phase 3: Explosive forward gore charge — flatten wide, green-brown flash
 	tween.tween_callback(func(): sprite.modulate = Color(1.1, 1.3, 0.8) * base_mod)
 	tween.tween_property(sprite, "position", base_pos + dir * 18.0 + Vector2(0, 3), 0.1)
 	tween.parallel().tween_property(sprite, "scale", _base_scale * Vector2(1.3, 0.75), 0.1)
 	tween.parallel().tween_property(sprite, "rotation", dir.angle() * 0.15, 0.1)
-	# Phase 4: Antler toss flick — upward snap with rotation
 	tween.tween_property(sprite, "position", base_pos + dir * 14.0 + Vector2(0, -5), 0.08)
 	tween.parallel().tween_property(sprite, "scale", _base_scale * Vector2(0.9, 1.15), 0.08)
 	tween.parallel().tween_property(sprite, "rotation", -0.15, 0.08)
-	# Phase 5: Lumber back to idle
 	tween.tween_property(sprite, "modulate", base_mod, 0.15)
 	tween.parallel().tween_property(sprite, "position", base_pos + dir * 5.0, 0.2)
 	tween.parallel().tween_property(sprite, "scale", _base_scale * Vector2(1.05, 0.95), 0.2)
 	tween.parallel().tween_property(sprite, "rotation", 0.0, 0.2)
-	# Phase 6: Settle
 	tween.tween_property(sprite, "position", base_pos, 0.15)
 	tween.parallel().tween_property(sprite, "scale", _base_scale, 0.15)
 
-func _anim_generic_lunge(dir: Vector2, base_pos: Vector2) -> void:
-	# Standard lunge with squash-stretch for weight
+func _anim_snake_strike(dir: Vector2, base_pos: Vector2) -> void:
+	# Coil and lightning-fast strike — serpentine motion
+	var perp = Vector2(-dir.y, dir.x)
 	var tween = create_tween()
-	# Brief anticipation
-	tween.tween_property(sprite, "position", base_pos - dir * 2.0, 0.04)
+	# S-curve coil back
+	tween.tween_property(sprite, "position", base_pos - dir * 5.0 + perp * 2.0, 0.05)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.3, 0.7), 0.05)
+	# Lightning strike forward
+	tween.tween_property(sprite, "position", base_pos + dir * 12.0, 0.03)
+	tween.parallel().tween_property(sprite, "scale", Vector2(0.6, 1.4), 0.03)
+	tween.tween_callback(func(): sprite.modulate = Color(1.2, 1.1, 0.8))
+	# Quick retract
+	tween.tween_property(sprite, "position", base_pos + dir * 4.0 - perp * 2.0, 0.04)
 	tween.parallel().tween_property(sprite, "scale", Vector2(1.1, 0.9), 0.04)
-	# Lunge
-	tween.tween_property(sprite, "position", base_pos + dir * 8.0, 0.06)
-	tween.parallel().tween_property(sprite, "scale", Vector2(0.9, 1.1), 0.06)
-	# Return
+	tween.tween_property(sprite, "position", base_pos, 0.06)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.06)
+	tween.parallel().tween_property(sprite, "modulate", Color.WHITE, 0.06)
+
+func _anim_bat_swoop(dir: Vector2, base_pos: Vector2) -> void:
+	# Dive-swoop — arc down from above, claw at target, fly back up
+	var tween = create_tween()
+	# Rise up — wings spread
+	tween.tween_property(sprite, "position", base_pos + Vector2(0, -8), 0.05)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.2, 0.85), 0.05)
+	# Dive down toward target
+	tween.tween_property(sprite, "position", base_pos + dir * 10.0 + Vector2(0, 4), 0.04)
+	tween.parallel().tween_property(sprite, "scale", Vector2(0.8, 1.2), 0.04)
+	tween.tween_callback(func(): sprite.modulate = Color(1.2, 0.9, 0.9))
+	# Pull up from dive
+	tween.tween_property(sprite, "position", base_pos + dir * 6.0 + Vector2(0, -4), 0.05)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.1, 0.95), 0.05)
+	tween.parallel().tween_property(sprite, "modulate", Color.WHITE, 0.05)
+	# Settle back
+	tween.tween_property(sprite, "position", base_pos, 0.06)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.06)
+
+func _anim_flan_bounce(dir: Vector2, base_pos: Vector2) -> void:
+	# Gelatinous bounce — compress, spring up, slam down on target
+	var tween = create_tween()
+	# Compress flat — storing energy
+	tween.tween_property(sprite, "scale", Vector2(1.4, 0.6), 0.1)
+	tween.tween_property(sprite, "position", base_pos + Vector2(0, 3), 0.05)
+	# Spring up and forward
+	tween.tween_property(sprite, "position", base_pos + dir * 8.0 + Vector2(0, -6), 0.06)
+	tween.parallel().tween_property(sprite, "scale", Vector2(0.7, 1.4), 0.06)
+	# Splat down on target
+	tween.tween_callback(func(): sprite.modulate = Color(1.1, 1.2, 0.8))
+	tween.tween_property(sprite, "position", base_pos + dir * 10.0 + Vector2(0, 2), 0.04)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.3, 0.7), 0.04)
+	# Jelly wobble recovery
+	tween.tween_property(sprite, "scale", Vector2(0.9, 1.15), 0.06)
+	tween.parallel().tween_property(sprite, "modulate", Color.WHITE, 0.06)
+	tween.tween_property(sprite, "scale", Vector2(1.05, 0.95), 0.05)
 	tween.tween_property(sprite, "position", base_pos, 0.08)
 	tween.parallel().tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.08)
+
+func _anim_mimic_chomp(dir: Vector2, base_pos: Vector2) -> void:
+	# Chest lid opens wide, snaps shut — terrifying surprise attack
+	var tween = create_tween()
+	# Lid opens — stretch tall (mouth opening)
+	tween.tween_property(sprite, "scale", Vector2(0.8, 1.3), 0.08)
+	tween.parallel().tween_property(sprite, "position", base_pos + Vector2(0, -3), 0.08)
+	# Lunge forward with jaws wide
+	tween.tween_property(sprite, "position", base_pos + dir * 12.0, 0.05)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.0, 1.1), 0.05)
+	tween.tween_callback(func(): sprite.modulate = Color(1.3, 0.8, 0.8))
+	# CHOMP shut — fast squash
+	tween.tween_property(sprite, "scale", Vector2(1.3, 0.7), 0.03)
+	# Jaw clatter
+	tween.tween_property(sprite, "scale", Vector2(0.9, 1.1), 0.04)
+	tween.tween_property(sprite, "scale", Vector2(1.15, 0.85), 0.04)
+	# Settle back
+	tween.tween_property(sprite, "position", base_pos, 0.08)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.08)
+	tween.parallel().tween_property(sprite, "modulate", Color.WHITE, 0.08)
+
+func _anim_ghoul_claw(dir: Vector2, base_pos: Vector2) -> void:
+	# Shambling claw swipe — lurching forward, raking claws
+	var perp = Vector2(-dir.y, dir.x)
+	var tween = create_tween()
+	var base_mod = _base_modulate if _base_modulate else Color.WHITE
+	# Lurch forward
+	tween.tween_property(sprite, "position", base_pos + dir * 5.0, 0.08)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.1, 0.95), 0.08)
+	# Claw swipe across — diagonal motion
+	tween.tween_callback(func(): sprite.modulate = Color(0.8, 1.1, 0.7) * base_mod)
+	tween.tween_property(sprite, "position", base_pos + dir * 10.0 + perp * 4.0, 0.04)
+	tween.parallel().tween_property(sprite, "rotation", 0.15, 0.04)
+	# Second rake in opposite direction
+	tween.tween_property(sprite, "position", base_pos + dir * 10.0 - perp * 4.0, 0.05)
+	tween.parallel().tween_property(sprite, "rotation", -0.15, 0.05)
+	# Stumble back
+	tween.tween_property(sprite, "position", base_pos + dir * 3.0, 0.06)
+	tween.parallel().tween_property(sprite, "modulate", base_mod, 0.06)
+	tween.tween_property(sprite, "position", base_pos, 0.07)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.07)
+	tween.parallel().tween_property(sprite, "rotation", 0.0, 0.07)
+
+func _anim_cknight_swing(dir: Vector2, base_pos: Vector2) -> void:
+	# Armored sword swing — deliberate, powerful, heavy follow-through
+	var tween = create_tween()
+	var base_mod = _base_modulate if _base_modulate else Color.WHITE
+	# Raise weapon — steady wind-up
+	tween.tween_property(sprite, "position", base_pos - dir * 3.0 + Vector2(0, -5), 0.1)
+	tween.parallel().tween_property(sprite, "scale", Vector2(0.85, 1.2), 0.1)
+	# Heavy downward slash
+	tween.tween_callback(func(): sprite.modulate = Color(1.2, 1.1, 1.0) * base_mod)
+	tween.tween_property(sprite, "position", base_pos + dir * 12.0 + Vector2(0, 3), 0.06)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.2, 0.85), 0.06)
+	tween.parallel().tween_property(sprite, "rotation", dir.angle() * 0.15, 0.06)
+	# Impact hold — heavy weapon plants
+	tween.tween_interval(0.04)
+	# Methodical recovery
+	tween.tween_property(sprite, "position", base_pos + dir * 4.0, 0.08)
+	tween.parallel().tween_property(sprite, "modulate", base_mod, 0.08)
+	tween.tween_property(sprite, "position", base_pos, 0.1)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.1)
+	tween.parallel().tween_property(sprite, "rotation", 0.0, 0.1)
+
+func _anim_generic_lunge(dir: Vector2, base_pos: Vector2) -> void:
+	var tween = create_tween()
+	tween.tween_property(sprite, "position", base_pos - dir * 2.0, 0.04)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.1, 0.9), 0.04)
+	tween.tween_property(sprite, "position", base_pos + dir * 8.0, 0.06)
+	tween.parallel().tween_property(sprite, "scale", Vector2(0.9, 1.1), 0.06)
+	tween.tween_property(sprite, "position", base_pos, 0.08)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.08)
+
+# ============================================================
+# SPECIAL ATTACK ANIMATIONS (15% chance, bonus damage)
+# ============================================================
+
+func _anim_rat_frenzy(dir: Vector2, base_pos: Vector2) -> void:
+	# Frenzy bite — rapid triple chomp
+	var tween = create_tween()
+	tween.tween_callback(func(): sprite.modulate = Color(1.4, 0.7, 0.7))
+	for i in range(3):
+		tween.tween_property(sprite, "position", base_pos + dir * 11.0, 0.03)
+		tween.parallel().tween_property(sprite, "scale", Vector2(0.7, 1.3), 0.03)
+		tween.tween_property(sprite, "position", base_pos + dir * 6.0, 0.03)
+		tween.parallel().tween_property(sprite, "scale", Vector2(1.2, 0.8), 0.03)
+	tween.tween_property(sprite, "position", base_pos, 0.06)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.06)
+	tween.parallel().tween_property(sprite, "modulate", Color.WHITE, 0.06)
+
+func _anim_goblin_backstab(dir: Vector2, base_pos: Vector2) -> void:
+	# Sneaky backstab — dodge to side, stab from flank
+	var perp = Vector2(-dir.y, dir.x)
+	var side = perp if randf() > 0.5 else -perp
+	var tween = create_tween()
+	# Sidestep
+	tween.tween_property(sprite, "position", base_pos + side * 8.0 - dir * 2.0, 0.06)
+	tween.parallel().tween_property(sprite, "scale", Vector2(0.8, 1.1), 0.06)
+	tween.tween_callback(func(): sprite.modulate = Color(1.3, 1.0, 0.6))
+	# Stab from flank
+	tween.tween_property(sprite, "position", base_pos + dir * 12.0, 0.04)
+	tween.parallel().tween_property(sprite, "scale", Vector2(0.75, 1.25), 0.04)
+	# Twist
+	tween.tween_property(sprite, "rotation", 0.3, 0.03)
+	tween.tween_property(sprite, "rotation", 0.0, 0.04)
+	# Hop back
+	tween.tween_property(sprite, "position", base_pos, 0.07)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.07)
+	tween.parallel().tween_property(sprite, "modulate", Color.WHITE, 0.07)
+
+func _anim_wolf_savage_lunge(dir: Vector2, base_pos: Vector2) -> void:
+	# Savage lunge — bigger leap, more violent head shake
+	var perp = Vector2(-dir.y, dir.x)
+	var tween = create_tween()
+	tween.tween_callback(func(): sprite.modulate = Color(1.4, 0.8, 0.7))
+	# Deep crouch
+	tween.tween_property(sprite, "position", base_pos - dir * 6.0 + Vector2(0, 4), 0.08)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.4, 0.6), 0.08)
+	# Massive pounce
+	tween.tween_property(sprite, "position", base_pos + dir * 18.0 + Vector2(0, -4), 0.05)
+	tween.parallel().tween_property(sprite, "scale", Vector2(0.6, 1.4), 0.05)
+	# Violent shake — 4 rapid side-to-side
+	for i in range(4):
+		var s = perp * 4.0 if i % 2 == 0 else -perp * 4.0
+		tween.tween_property(sprite, "position", base_pos + dir * 16.0 + s, 0.025)
+	# Release with snarl
+	tween.tween_property(sprite, "position", base_pos - dir * 3.0, 0.07)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.1, 0.9), 0.07)
+	tween.parallel().tween_property(sprite, "modulate", Color.WHITE, 0.07)
+	tween.tween_property(sprite, "position", base_pos, 0.05)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.05)
+
+func _anim_skeleton_cleave(dir: Vector2, base_pos: Vector2) -> void:
+	# Overhead two-handed cleave — dramatic raise, pause, slam
+	var tween = create_tween()
+	tween.tween_callback(func(): sprite.modulate = Color(1.3, 1.2, 0.8))
+	# Raise high
+	tween.tween_property(sprite, "position", base_pos - dir * 4.0 + Vector2(0, -8), 0.12)
+	tween.parallel().tween_property(sprite, "scale", Vector2(0.8, 1.35), 0.12)
+	# Menacing pause
+	tween.tween_interval(0.06)
+	# Crushing downward cleave
+	tween.tween_property(sprite, "position", base_pos + dir * 13.0 + Vector2(0, 4), 0.05)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.3, 0.7), 0.05)
+	tween.parallel().tween_property(sprite, "rotation", dir.angle() * 0.25, 0.05)
+	# Bone rattle impact
+	tween.tween_property(sprite, "position", base_pos + dir * 12.0 + Vector2(randf_range(-2, 2), randf_range(-1, 1)), 0.03)
+	tween.tween_property(sprite, "position", base_pos + dir * 13.0 + Vector2(randf_range(-2, 2), randf_range(-1, 1)), 0.03)
+	# Recover
+	tween.tween_property(sprite, "position", base_pos, 0.1)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.1)
+	tween.parallel().tween_property(sprite, "rotation", 0.0, 0.1)
+	tween.parallel().tween_property(sprite, "modulate", Color.WHITE, 0.1)
+
+func _anim_spider_venom(dir: Vector2, base_pos: Vector2) -> void:
+	# Venom strike — rear up, stab with glowing green fangs
+	var tween = create_tween()
+	# Rear up threateningly
+	tween.tween_property(sprite, "position", base_pos + Vector2(0, -5), 0.08)
+	tween.parallel().tween_property(sprite, "scale", Vector2(0.8, 1.3), 0.08)
+	tween.parallel().tween_property(sprite, "modulate", Color(0.7, 1.4, 0.5), 0.08)
+	# Rapid venom stab
+	tween.tween_property(sprite, "position", base_pos + dir * 12.0 + Vector2(0, 4), 0.04)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.2, 0.8), 0.04)
+	# Hold — injecting venom
+	tween.tween_interval(0.06)
+	# Retract with green trail
+	tween.tween_property(sprite, "position", base_pos - dir * 4.0, 0.06)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.1, 0.95), 0.06)
+	tween.tween_property(sprite, "position", base_pos, 0.06)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.06)
+	tween.parallel().tween_property(sprite, "modulate", Color.WHITE, 0.06)
+
+func _anim_bandit_cross_slash(dir: Vector2, base_pos: Vector2) -> void:
+	# Cross slash — two rapid diagonal cuts forming an X
+	var perp = Vector2(-dir.y, dir.x)
+	var tween = create_tween()
+	tween.tween_callback(func(): sprite.modulate = Color(1.3, 1.0, 0.7))
+	# First diagonal slash
+	tween.tween_property(sprite, "position", base_pos + dir * 10.0 + perp * 4.0, 0.04)
+	tween.parallel().tween_property(sprite, "rotation", 0.3, 0.04)
+	# Second diagonal — opposite direction
+	tween.tween_property(sprite, "position", base_pos + dir * 10.0 - perp * 4.0, 0.04)
+	tween.parallel().tween_property(sprite, "rotation", -0.3, 0.04)
+	# Center hit
+	tween.tween_property(sprite, "position", base_pos + dir * 12.0, 0.03)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.2, 0.85), 0.03)
+	# Quick escape back
+	tween.tween_property(sprite, "position", base_pos - dir * 3.0, 0.05)
+	tween.parallel().tween_property(sprite, "scale", Vector2(0.95, 1.05), 0.05)
+	tween.tween_property(sprite, "position", base_pos, 0.06)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.06)
+	tween.parallel().tween_property(sprite, "rotation", 0.0, 0.06)
+	tween.parallel().tween_property(sprite, "modulate", Color.WHITE, 0.06)
+
+func _anim_troll_mega_punch(dir: Vector2, base_pos: Vector2) -> void:
+	# MEGA PUNCH — troll drops club, winds up massive fist, devastating haymaker
+	var tween = create_tween()
+	var base_mod = _base_modulate if _base_modulate else Color.WHITE
+	# Roar and rear way back — charging fist
+	tween.tween_callback(func(): sprite.modulate = Color(1.5, 0.8, 0.6) * base_mod)
+	tween.tween_property(sprite, "position", base_pos - dir * 10.0 + Vector2(0, -4), 0.3)
+	tween.parallel().tween_property(sprite, "scale", _base_scale * Vector2(0.75, 1.35), 0.3)
+	# Menacing pause — fist cocked back
+	tween.tween_interval(0.15)
+	# MASSIVE forward haymaker — explosive
+	tween.tween_property(sprite, "position", base_pos + dir * 22.0 + Vector2(0, 5), 0.08).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_IN)
+	tween.parallel().tween_property(sprite, "scale", _base_scale * Vector2(1.5, 0.6), 0.08)
+	tween.parallel().tween_property(sprite, "rotation", dir.angle() * 0.25, 0.08)
+	# Devastating impact — heavy shake
+	for i in range(4):
+		var jitter = Vector2(randf_range(-3, 3), randf_range(-2, 2))
+		tween.tween_property(sprite, "position", base_pos + dir * 20.0 + jitter + Vector2(0, 5), 0.03)
+	# Very slow recovery — exhausted
+	tween.tween_property(sprite, "modulate", base_mod, 0.2)
+	tween.parallel().tween_property(sprite, "position", base_pos + dir * 8.0, 0.25)
+	tween.parallel().tween_property(sprite, "scale", _base_scale * Vector2(1.1, 0.95), 0.25)
+	tween.parallel().tween_property(sprite, "rotation", 0.0, 0.25)
+	tween.tween_property(sprite, "position", base_pos, 0.2)
+	tween.parallel().tween_property(sprite, "scale", _base_scale, 0.2)
+
+func _anim_mage_dark_blast(dir: Vector2, base_pos: Vector2) -> void:
+	# Dark blast — gather dark energy, release explosive burst
+	var tween = create_tween()
+	var base_mod = _base_modulate if _base_modulate else Color.WHITE
+	# Gather — pull inward, dark purple glow intensifies
+	tween.tween_property(sprite, "position", base_pos + Vector2(0, -3), 0.12)
+	tween.parallel().tween_property(sprite, "scale", Vector2(0.8, 1.2), 0.12)
+	tween.parallel().tween_property(sprite, "modulate", Color(0.6, 0.3, 1.0) * base_mod, 0.12)
+	# Pulse — energy overload
+	tween.tween_property(sprite, "scale", Vector2(1.3, 1.3), 0.06)
+	tween.parallel().tween_property(sprite, "modulate", Color(1.0, 0.5, 1.5) * base_mod, 0.06)
+	# Release — blast forward
+	tween.tween_property(sprite, "position", base_pos + dir * 10.0, 0.04)
+	tween.parallel().tween_property(sprite, "scale", Vector2(0.85, 1.15), 0.04)
+	# Recoil from blast
+	tween.tween_property(sprite, "position", base_pos - dir * 5.0, 0.06)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.1, 0.9), 0.06)
+	# Recover
+	tween.tween_property(sprite, "position", base_pos, 0.1)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.1)
+	tween.parallel().tween_property(sprite, "modulate", base_mod, 0.1)
+
+func _anim_ogre_ground_pound(dir: Vector2, base_pos: Vector2) -> void:
+	# Ground pound — both fists overhead, massive slam, earth shakes
+	var tween = create_tween()
+	var base_mod = _base_modulate if _base_modulate else Color.WHITE
+	tween.tween_callback(func(): sprite.modulate = Color(1.4, 0.9, 0.7) * base_mod)
+	# Rise up high — both fists raised
+	tween.tween_property(sprite, "position", base_pos + Vector2(0, -12), 0.2)
+	tween.parallel().tween_property(sprite, "scale", _base_scale * Vector2(0.75, 1.4), 0.2)
+	# Hang at apex
+	tween.tween_interval(0.1)
+	# SLAM down — massive impact
+	tween.tween_property(sprite, "position", base_pos + dir * 8.0 + Vector2(0, 6), 0.06).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_IN)
+	tween.parallel().tween_property(sprite, "scale", _base_scale * Vector2(1.5, 0.6), 0.06)
+	# Ground shake — heavy tremor
+	for i in range(5):
+		var jitter = Vector2(randf_range(-3, 3), randf_range(-1, 2))
+		tween.tween_property(sprite, "position", base_pos + dir * 7.0 + jitter + Vector2(0, 6), 0.025)
+	# Slow heavy recovery
+	tween.tween_property(sprite, "modulate", base_mod, 0.15)
+	tween.parallel().tween_property(sprite, "position", base_pos + dir * 3.0, 0.2)
+	tween.parallel().tween_property(sprite, "scale", _base_scale * Vector2(1.05, 0.97), 0.2)
+	tween.tween_property(sprite, "position", base_pos, 0.15)
+	tween.parallel().tween_property(sprite, "scale", _base_scale, 0.15)
+
+func _anim_elk_toss(dir: Vector2, base_pos: Vector2) -> void:
+	# Antler toss — charges in, flicks head up violently to throw target
+	var tween = create_tween()
+	var base_mod = _base_modulate if _base_modulate else Color.WHITE
+	tween.tween_callback(func(): sprite.modulate = Color(0.7, 1.4, 0.5) * base_mod)
+	# Lower head — aiming antlers
+	tween.tween_property(sprite, "position", base_pos - dir * 4.0 + Vector2(0, 4), 0.15)
+	tween.parallel().tween_property(sprite, "scale", _base_scale * Vector2(1.2, 0.8), 0.15)
+	# Explosive charge
+	tween.tween_property(sprite, "position", base_pos + dir * 16.0, 0.08)
+	tween.parallel().tween_property(sprite, "scale", _base_scale * Vector2(0.9, 1.0), 0.08)
+	# Violent upward toss — flick head skyward
+	tween.tween_property(sprite, "position", base_pos + dir * 12.0 + Vector2(0, -10), 0.06)
+	tween.parallel().tween_property(sprite, "scale", _base_scale * Vector2(0.8, 1.35), 0.06)
+	tween.parallel().tween_property(sprite, "rotation", -0.3, 0.06)
+	# Settle back with majesty
+	tween.tween_property(sprite, "modulate", base_mod, 0.15)
+	tween.parallel().tween_property(sprite, "position", base_pos + dir * 4.0, 0.2)
+	tween.parallel().tween_property(sprite, "scale", _base_scale, 0.2)
+	tween.parallel().tween_property(sprite, "rotation", 0.0, 0.2)
+	tween.tween_property(sprite, "position", base_pos, 0.12)
+
+func _anim_snake_constrict(dir: Vector2, base_pos: Vector2) -> void:
+	# Constrict — wraps around target, squeezes, releases
+	var perp = Vector2(-dir.y, dir.x)
+	var tween = create_tween()
+	tween.tween_callback(func(): sprite.modulate = Color(1.3, 1.1, 0.7))
+	# Lunge to target
+	tween.tween_property(sprite, "position", base_pos + dir * 10.0, 0.04)
+	tween.parallel().tween_property(sprite, "scale", Vector2(0.6, 1.4), 0.04)
+	# Wrap — circle around (3 positions)
+	tween.tween_property(sprite, "position", base_pos + dir * 8.0 + perp * 5.0, 0.05)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.3, 0.7), 0.05)
+	tween.tween_property(sprite, "position", base_pos + dir * 10.0 - perp * 5.0, 0.05)
+	tween.tween_property(sprite, "position", base_pos + dir * 9.0, 0.04)
+	tween.parallel().tween_property(sprite, "scale", Vector2(0.9, 1.1), 0.04)
+	# Squeeze pulse
+	tween.tween_property(sprite, "scale", Vector2(1.2, 0.8), 0.04)
+	tween.tween_property(sprite, "scale", Vector2(0.85, 1.15), 0.04)
+	# Release and slither back
+	tween.tween_property(sprite, "position", base_pos, 0.08)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.08)
+	tween.parallel().tween_property(sprite, "modulate", Color.WHITE, 0.08)
+
+func _anim_bat_divebomb(dir: Vector2, base_pos: Vector2) -> void:
+	# Dive bomb — fly high, plummet down at speed
+	var tween = create_tween()
+	tween.tween_callback(func(): sprite.modulate = Color(1.3, 0.7, 0.7))
+	# Fly up high
+	tween.tween_property(sprite, "position", base_pos + Vector2(0, -14), 0.08)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.3, 0.7), 0.08)
+	# Brief hover
+	tween.tween_interval(0.04)
+	# Dive bomb — fast straight down at target
+	tween.tween_property(sprite, "position", base_pos + dir * 14.0 + Vector2(0, 5), 0.04).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_IN)
+	tween.parallel().tween_property(sprite, "scale", Vector2(0.7, 1.4), 0.04)
+	# Bounce off impact
+	tween.tween_property(sprite, "position", base_pos + dir * 8.0 + Vector2(0, -6), 0.05)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.15, 0.9), 0.05)
+	# Flutter back
+	tween.tween_property(sprite, "position", base_pos, 0.07)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.07)
+	tween.parallel().tween_property(sprite, "modulate", Color.WHITE, 0.07)
+
+func _anim_vbat_drain(dir: Vector2, base_pos: Vector2) -> void:
+	# Drain bite — latch on, pulse red as draining, release
+	var tween = create_tween()
+	# Swoop in
+	tween.tween_property(sprite, "position", base_pos + dir * 10.0, 0.05)
+	tween.parallel().tween_property(sprite, "scale", Vector2(0.8, 1.2), 0.05)
+	# Latch — pressed against target
+	tween.tween_property(sprite, "position", base_pos + dir * 12.0, 0.03)
+	# Drain pulses — red glow intensifies
+	tween.tween_property(sprite, "modulate", Color(1.5, 0.5, 0.5), 0.08)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.1, 1.1), 0.08)
+	tween.tween_property(sprite, "modulate", Color(1.8, 0.3, 0.3), 0.08)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.2, 1.2), 0.08)
+	# Release — satisfied, hop back
+	tween.tween_property(sprite, "position", base_pos - dir * 3.0 + Vector2(0, -4), 0.06)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.05, 0.95), 0.06)
+	tween.tween_property(sprite, "position", base_pos, 0.06)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.06)
+	tween.parallel().tween_property(sprite, "modulate", Color.WHITE, 0.06)
+
+func _anim_flan_bodyslam(dir: Vector2, base_pos: Vector2) -> void:
+	# Body slam — compress way down, launch high, slam full weight
+	var tween = create_tween()
+	tween.tween_callback(func(): sprite.modulate = Color(1.3, 1.2, 0.6))
+	# Deep compression
+	tween.tween_property(sprite, "scale", Vector2(1.6, 0.4), 0.15)
+	tween.tween_property(sprite, "position", base_pos + Vector2(0, 4), 0.05)
+	# Launch high
+	tween.tween_property(sprite, "position", base_pos + dir * 6.0 + Vector2(0, -12), 0.06)
+	tween.parallel().tween_property(sprite, "scale", Vector2(0.6, 1.5), 0.06)
+	# SLAM full weight
+	tween.tween_property(sprite, "position", base_pos + dir * 10.0 + Vector2(0, 4), 0.04).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_IN)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.6, 0.5), 0.04)
+	# Jelly splat wobble
+	tween.tween_property(sprite, "scale", Vector2(0.7, 1.4), 0.06)
+	tween.tween_property(sprite, "scale", Vector2(1.3, 0.75), 0.05)
+	tween.tween_property(sprite, "scale", Vector2(0.95, 1.1), 0.05)
+	# Settle
+	tween.tween_property(sprite, "position", base_pos, 0.1)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.1)
+	tween.parallel().tween_property(sprite, "modulate", Color.WHITE, 0.1)
+
+func _anim_mimic_devour(dir: Vector2, base_pos: Vector2) -> void:
+	# Devour — lid opens WIDE, lunges to swallow, chomps multiple times
+	var tween = create_tween()
+	tween.tween_callback(func(): sprite.modulate = Color(1.4, 0.7, 0.6))
+	# Lid flies open — massive stretch
+	tween.tween_property(sprite, "scale", Vector2(0.7, 1.5), 0.1)
+	tween.parallel().tween_property(sprite, "position", base_pos + Vector2(0, -5), 0.1)
+	# Engulf lunge
+	tween.tween_property(sprite, "position", base_pos + dir * 14.0, 0.05)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.1, 1.1), 0.05)
+	# Rapid chomps — 3 bites
+	for i in range(3):
+		tween.tween_property(sprite, "scale", Vector2(1.3, 0.7), 0.03)
+		tween.tween_property(sprite, "scale", Vector2(0.8, 1.2), 0.03)
+	# Spit out — disgusted
+	tween.tween_property(sprite, "position", base_pos + dir * 6.0, 0.05)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.15, 0.9), 0.05)
+	tween.tween_property(sprite, "position", base_pos, 0.08)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.08)
+	tween.parallel().tween_property(sprite, "modulate", Color.WHITE, 0.08)
+
+func _anim_ghoul_rend(dir: Vector2, base_pos: Vector2) -> void:
+	# Rend — frenzied double claw rake with lurching forward
+	var perp = Vector2(-dir.y, dir.x)
+	var tween = create_tween()
+	var base_mod = _base_modulate if _base_modulate else Color.WHITE
+	tween.tween_callback(func(): sprite.modulate = Color(0.7, 1.3, 0.5) * base_mod)
+	# Lurch forward aggressively
+	tween.tween_property(sprite, "position", base_pos + dir * 8.0, 0.06)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.15, 0.9), 0.06)
+	# First rake — right claw
+	tween.tween_property(sprite, "position", base_pos + dir * 12.0 + perp * 5.0, 0.04)
+	tween.parallel().tween_property(sprite, "rotation", 0.2, 0.04)
+	# Second rake — left claw
+	tween.tween_property(sprite, "position", base_pos + dir * 12.0 - perp * 5.0, 0.04)
+	tween.parallel().tween_property(sprite, "rotation", -0.2, 0.04)
+	# Third rake — center downward
+	tween.tween_property(sprite, "position", base_pos + dir * 14.0 + Vector2(0, 3), 0.04)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.2, 0.85), 0.04)
+	tween.parallel().tween_property(sprite, "rotation", 0.0, 0.04)
+	# Stumble back — spent
+	tween.tween_property(sprite, "position", base_pos + dir * 4.0, 0.06)
+	tween.parallel().tween_property(sprite, "modulate", base_mod, 0.06)
+	tween.tween_property(sprite, "position", base_pos, 0.08)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.08)
+
+func _anim_cknight_bash(dir: Vector2, base_pos: Vector2) -> void:
+	# Shield bash — brace behind shield, charge forward, slam with shield edge
+	var tween = create_tween()
+	var base_mod = _base_modulate if _base_modulate else Color.WHITE
+	tween.tween_callback(func(): sprite.modulate = Color(1.2, 1.2, 1.0) * base_mod)
+	# Brace — hide behind shield (compress wide)
+	tween.tween_property(sprite, "position", base_pos - dir * 4.0, 0.1)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.3, 0.85), 0.1)
+	# Brief brace hold
+	tween.tween_interval(0.05)
+	# Charge forward — explosive
+	tween.tween_property(sprite, "position", base_pos + dir * 16.0, 0.06).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_IN)
+	tween.parallel().tween_property(sprite, "scale", Vector2(0.85, 1.15), 0.06)
+	# Shield impact — heavy squash
+	tween.tween_property(sprite, "scale", Vector2(1.35, 0.75), 0.03)
+	# Impact jitter
+	tween.tween_property(sprite, "position", base_pos + dir * 14.0 + Vector2(randf_range(-2, 2), 0), 0.03)
+	tween.tween_property(sprite, "position", base_pos + dir * 16.0 + Vector2(randf_range(-2, 2), 0), 0.03)
+	# Deliberate step back
+	tween.tween_property(sprite, "modulate", base_mod, 0.1)
+	tween.parallel().tween_property(sprite, "position", base_pos + dir * 4.0, 0.12)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.05, 0.97), 0.12)
+	tween.tween_property(sprite, "position", base_pos, 0.1)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.1)
 
 # ---- Mini-boss attack animations ----
 

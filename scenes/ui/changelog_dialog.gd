@@ -9,9 +9,22 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.64.5"
+const GAME_VERSION := "v0.65.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.65.0",
+		"title": "Unique attack animations for all enemy types",
+		"date": "2026-02-24",
+		"entries": [
+			"Every enemy type now has a unique attack animation matching their character",
+			"Wolf bite with head shake, spider fang stab, bandit sword slash, skeleton sword swing",
+			"Dark mage staff bolt, ogre fist slam, cave snake strike, bat swoop, flan bounce, mimic chomp",
+			"Ghoul claw swipe, crypt knight armored swing, and all dungeon enemies",
+			"15% chance for special attacks with 1.2-1.4x bonus damage and dramatic animations",
+			"Troll mega punch, wolf savage lunge, spider venom strike, mimic devour, and more",
+		]
+	},
 	{
 		"version": "v0.64.5",
 		"title": "Tap-to-aim during charge attack",

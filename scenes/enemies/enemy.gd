@@ -923,39 +923,56 @@ func _do_attack_lunge(is_special: bool = false) -> void:
 		return
 	match sprite_type:
 		"rat":
-			if is_special: _anim_rat_frenzy(dir, base_pos) else: _anim_rat_bite(dir, base_pos)
+			if is_special: _anim_rat_frenzy(dir, base_pos)
+			else: _anim_rat_bite(dir, base_pos)
 		"goblin":
-			if is_special: _anim_goblin_backstab(dir, base_pos) else: _anim_goblin_swing(dir, base_pos)
+			if is_special: _anim_goblin_backstab(dir, base_pos)
+			else: _anim_goblin_swing(dir, base_pos)
 		"wolf":
-			if is_special: _anim_wolf_savage_lunge(dir, base_pos) else: _anim_wolf_bite(dir, base_pos)
+			if is_special: _anim_wolf_savage_lunge(dir, base_pos)
+			else: _anim_wolf_bite(dir, base_pos)
 		"skeleton":
-			if is_special: _anim_skeleton_cleave(dir, base_pos) else: _anim_skeleton_slash(dir, base_pos)
+			if is_special: _anim_skeleton_cleave(dir, base_pos)
+			else: _anim_skeleton_slash(dir, base_pos)
 		"spider":
-			if is_special: _anim_spider_venom(dir, base_pos) else: _anim_spider_fang(dir, base_pos)
+			if is_special: _anim_spider_venom(dir, base_pos)
+			else: _anim_spider_fang(dir, base_pos)
 		"bandit":
-			if is_special: _anim_bandit_cross_slash(dir, base_pos) else: _anim_bandit_slash(dir, base_pos)
+			if is_special: _anim_bandit_cross_slash(dir, base_pos)
+			else: _anim_bandit_slash(dir, base_pos)
 		"troll":
-			if is_special: _anim_troll_mega_punch(dir, base_pos) else: _anim_troll_slam(dir, base_pos)
+			if is_special: _anim_troll_mega_punch(dir, base_pos)
+			else: _anim_troll_slam(dir, base_pos)
 		"dark_mage":
-			if is_special: _anim_mage_dark_blast(dir, base_pos) else: _anim_mage_bolt(dir, base_pos)
+			if is_special: _anim_mage_dark_blast(dir, base_pos)
+			else: _anim_mage_bolt(dir, base_pos)
 		"ogre":
-			if is_special: _anim_ogre_ground_pound(dir, base_pos) else: _anim_ogre_fist(dir, base_pos)
+			if is_special: _anim_ogre_ground_pound(dir, base_pos)
+			else: _anim_ogre_fist(dir, base_pos)
 		"tree_god_elk":
-			if is_special: _anim_elk_toss(dir, base_pos) else: _anim_elk_charge(dir, base_pos)
+			if is_special: _anim_elk_toss(dir, base_pos)
+			else: _anim_elk_charge(dir, base_pos)
 		"cave_snake":
-			if is_special: _anim_snake_constrict(dir, base_pos) else: _anim_snake_strike(dir, base_pos)
+			if is_special: _anim_snake_constrict(dir, base_pos)
+			else: _anim_snake_strike(dir, base_pos)
 		"dungeon_bat":
-			if is_special: _anim_bat_divebomb(dir, base_pos) else: _anim_bat_swoop(dir, base_pos)
+			if is_special: _anim_bat_divebomb(dir, base_pos)
+			else: _anim_bat_swoop(dir, base_pos)
 		"vampire_bat":
-			if is_special: _anim_vbat_drain(dir, base_pos) else: _anim_bat_swoop(dir, base_pos)
+			if is_special: _anim_vbat_drain(dir, base_pos)
+			else: _anim_bat_swoop(dir, base_pos)
 		"flan":
-			if is_special: _anim_flan_bodyslam(dir, base_pos) else: _anim_flan_bounce(dir, base_pos)
+			if is_special: _anim_flan_bodyslam(dir, base_pos)
+			else: _anim_flan_bounce(dir, base_pos)
 		"mimic":
-			if is_special: _anim_mimic_devour(dir, base_pos) else: _anim_mimic_chomp(dir, base_pos)
+			if is_special: _anim_mimic_devour(dir, base_pos)
+			else: _anim_mimic_chomp(dir, base_pos)
 		"ghoul":
-			if is_special: _anim_ghoul_rend(dir, base_pos) else: _anim_ghoul_claw(dir, base_pos)
+			if is_special: _anim_ghoul_rend(dir, base_pos)
+			else: _anim_ghoul_claw(dir, base_pos)
 		"crypt_knight":
-			if is_special: _anim_cknight_bash(dir, base_pos) else: _anim_cknight_swing(dir, base_pos)
+			if is_special: _anim_cknight_bash(dir, base_pos)
+			else: _anim_cknight_swing(dir, base_pos)
 		_:
 			_anim_generic_lunge(dir, base_pos)
 

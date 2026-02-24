@@ -9,17 +9,18 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.60.1"
+const GAME_VERSION := "v0.60.2"
 
 const CHANGELOG: Array[Dictionary] = [
 	{
-		"version": "v0.60.1",
-		"title": "Fix top bar cut off by rounded corners on mobile",
+		"version": "v0.60.2",
+		"title": "Fix mobile top bar cutoff & add kills to stats panel",
 		"date": "2026-02-23",
 		"entries": [
-			"Top bar now respects display safe area on all sides (left, top, right)",
-			"Menu button and Kills label no longer hidden behind rounded screen corners",
-			"Works in both portrait and landscape orientations",
+			"Top bar uses generous percentage-based padding for rounded screen corners",
+			"Portrait: 6% horizontal + 4% top padding, Landscape: 5% horizontal padding",
+			"Menu button and Kills label no longer hidden behind rounded corners or notch",
+			"Hero stats panel now shows Total Kills and Next Milestone target",
 		]
 	},
 	{

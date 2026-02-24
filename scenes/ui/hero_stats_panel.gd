@@ -146,6 +146,18 @@ func _refresh_stats() -> void:
 	lines.append(_stat_line("Speed", "%.0f" % s.get_total_move_speed()))
 	lines.append(_stat_line("Dodge", "%d%%" % int(s.temp_dodge * 100)))
 	lines.append(_stat_line("XP Bonus", "+%d%%" % int(s.woodwork_xp_mult * 100)))
+	lines.append("")
+
+	# Kill stats
+	lines.append(_stat_line("Total Kills", str(GameManager.total_kills), COL_TITLE))
+	# Show next milestone
+	var next_milestone := 0
+	for m in GameManager.KILL_MILESTONES:
+		if m["kills"] not in GameManager._claimed_milestones:
+			next_milestone = m["kills"]
+			break
+	if next_milestone > 0:
+		lines.append(_stat_line("Next Milestone", "%d kills" % next_milestone))
 
 	stats_label.bbcode_enabled = true
 	stats_label.text = "\n".join(lines)

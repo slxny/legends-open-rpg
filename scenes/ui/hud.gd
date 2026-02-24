@@ -71,25 +71,26 @@ func _apply_mobile_layout() -> void:
 	var vp_size = get_viewport().get_visible_rect().size
 	var is_landscape = vp_size.x > vp_size.y
 
-	# ── Top bar: scale font sizes for readability & keep off safe area ──
-	var safe_area = DisplayServer.get_display_safe_area()
-	var screen_size = DisplayServer.screen_get_size()
-	var safe_left = max(16, safe_area.position.x)
-	var safe_top = max(4, safe_area.position.y)
-	var safe_right = max(16, screen_size.x - safe_area.end.x)
+	# ── Top bar: scale font sizes for readability & keep off rounded corners ──
+	# DisplayServer safe area is unreliable on web — use generous fixed insets
+	# that cover modern phone rounded corners and notch areas.
 	if is_landscape:
-		top_bar.offset_left = safe_left
-		top_bar.offset_top = safe_top
-		top_bar.offset_bottom = safe_top + 18
-		top_bar.offset_right = -safe_right
+		var pad_x = int(vp_size.x * 0.05)  # 5% horizontal padding
+		var pad_y = 6
+		top_bar.offset_left = pad_x
+		top_bar.offset_top = pad_y
+		top_bar.offset_bottom = pad_y + 18
+		top_bar.offset_right = -pad_x
 		gold_label.add_theme_font_size_override("font_size", 10)
 		wood_label.add_theme_font_size_override("font_size", 10)
 		kills_label.add_theme_font_size_override("font_size", 9)
 	else:
-		top_bar.offset_left = safe_left
-		top_bar.offset_top = safe_top
-		top_bar.offset_bottom = safe_top + 72
-		top_bar.offset_right = -safe_right
+		var pad_x = int(vp_size.x * 0.06)  # 6% horizontal padding in portrait
+		var pad_y = int(vp_size.y * 0.04)  # 4% top padding for rounded corners + status bar
+		top_bar.offset_left = pad_x
+		top_bar.offset_top = pad_y
+		top_bar.offset_bottom = pad_y + 72
+		top_bar.offset_right = -pad_x
 		gold_label.add_theme_font_size_override("font_size", 44)
 		wood_label.add_theme_font_size_override("font_size", 44)
 		kills_label.add_theme_font_size_override("font_size", 38)

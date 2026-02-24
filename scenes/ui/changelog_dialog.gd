@@ -9,9 +9,17 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.62.0"
+const GAME_VERSION := "v0.62.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.62.1",
+		"title": "Cha-ching sell sound effect",
+		"date": "2026-02-24",
+		"entries": [
+			"New satisfying cha-ching SFX when selling items — coin cascade into register bell",
+		]
+	},
 	{
 		"version": "v0.62.0",
 		"title": "Double-tap quick-sell in shop",

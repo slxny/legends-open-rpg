@@ -1262,24 +1262,29 @@ func _gen_shop_buy() -> AudioStreamWAV:
 	return _to_stream(samples)
 
 func _gen_shop_sell() -> AudioStreamWAV:
-	# Lighter coin toss — coins received, ascending pitch = profit gained
-	# Brighter and airier than buy, with ascending confirmation
-	var samples = _make_samples(0.35)
-	# Light coin toss sound — single bright metallic clink
-	var toss = _make_samples(0.04)
-	_add_sine(toss, 3800.0, 0.15)
-	_add_sine(toss, 1900.0, 0.08)
-	_add_pitched_noise(toss, 4500.0, 1200.0, 0.06)
-	_apply_envelope(toss, 0.001, 0.006, 0.033)
-	_mix_into(samples, toss)
-	# Ascending two-note "profit" chime — cheerful and quick
-	_add_sine_segment(samples, 659.0, 0.28, 0.05, 0.12)   # E5
-	_add_sine_segment(samples, 880.0, 0.32, 0.11, 0.16)   # A5
-	_add_sine_segment(samples, 1760.0, 0.08, 0.11, 0.12)  # A6 shimmer
-	# Sparkle on top
-	_add_pitched_noise(samples, 5500.0, 1200.0, 0.02, 0.11)
-	_apply_envelope(samples, 0.002, 0.10, 0.24)
-	_soft_clip(samples, 1.2)
+	# Cha-ching! Satisfying cash register sound — coins tumbling then a bright register bell
+	var samples = _make_samples(0.50)
+	# Rapid coin cascade — 5 ascending metallic clinks like coins pouring in
+	var clink_freqs = [2800.0, 3200.0, 3600.0, 4000.0, 4500.0]
+	var clink_times = [0.0, 0.03, 0.06, 0.09, 0.12]
+	for j in range(5):
+		var clink = _make_samples(0.05)
+		_add_sine(clink, clink_freqs[j], 0.18)
+		_add_sine(clink, clink_freqs[j] * 0.5, 0.09)
+		_add_pitched_noise(clink, clink_freqs[j], 900.0, 0.07)
+		_apply_envelope(clink, 0.001, 0.008, 0.04)
+		_mix_into(samples, clink, int(clink_times[j] * SAMPLE_RATE))
+	# Register bell — bright ascending "cha-ching" two-note
+	_add_sine_segment(samples, 784.0, 0.25, 0.16, 0.08)    # G5 — "cha"
+	_add_sine_segment(samples, 1047.0, 0.35, 0.22, 0.18)   # C6 — "ching!"
+	_add_sine_segment(samples, 2093.0, 0.12, 0.22, 0.14)   # C7 overtone shimmer
+	# Bright sparkle trail
+	_add_sine_segment(samples, 1568.0, 0.08, 0.28, 0.12)   # G6 sparkle
+	_add_pitched_noise(samples, 6000.0, 1500.0, 0.03, 0.22)
+	# Warm low body
+	_add_sine_segment(samples, 523.0, 0.15, 0.16, 0.25)    # C5 warmth
+	_apply_envelope(samples, 0.002, 0.14, 0.34)
+	_soft_clip(samples, 1.3)
 	return _to_stream(samples)
 
 func _gen_ui_tap() -> AudioStreamWAV:

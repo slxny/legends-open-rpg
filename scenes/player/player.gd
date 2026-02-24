@@ -498,8 +498,8 @@ func _physics_process(delta: float) -> void:
 			var decay = _shake_time_left / SHAKE_DURATION
 			camera.offset = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * _shake_intensity * decay
 
-	# Update facing direction from movement
-	if velocity.length_squared() > 25.0 and not _is_attack_animating:
+	# Update facing direction from movement (skip during charge — aim takes priority)
+	if velocity.length_squared() > 25.0 and not _is_attack_animating and not _is_charging:
 		_set_facing(velocity.normalized())
 
 func _update_walk_anim(delta: float) -> void:

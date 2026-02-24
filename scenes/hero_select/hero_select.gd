@@ -14,7 +14,11 @@ var _hero_selected := false
 var _cards: Dictionary = {}
 var _changelog_dialog: CanvasLayer = null
 var _is_mobile: bool = false
-var _fade_overlay: ColorRect = null
+var _title_section: VBoxContainer = null
+var _game_title_label: Label = null
+var _game_sub_label: Label = null
+var _deco_top_line: HBoxContainer = null
+var _deco_bot_line: HBoxContainer = null
 
 func _ready() -> void:
 	_detect_mobile()
@@ -341,51 +345,51 @@ func _create_desktop_hero_card(hero_key: String, data: Dictionary) -> PanelConta
 
 func _build_game_title() -> void:
 	# Insert game title section ABOVE "Choose Your Hero"
-	var title_section = VBoxContainer.new()
-	title_section.add_theme_constant_override("separation", 4 if _is_mobile else 2)
-	title_section.alignment = BoxContainer.ALIGNMENT_CENTER
+	_title_section = VBoxContainer.new()
+	_title_section.add_theme_constant_override("separation", 4 if _is_mobile else 2)
+	_title_section.alignment = BoxContainer.ALIGNMENT_CENTER
 
 	# Top decorative line
-	var top_line = HBoxContainer.new()
-	top_line.alignment = BoxContainer.ALIGNMENT_CENTER
+	_deco_top_line = HBoxContainer.new()
+	_deco_top_line.alignment = BoxContainer.ALIGNMENT_CENTER
 	var deco_top = Label.new()
 	deco_top.text = "~ ~ ~"
 	deco_top.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	deco_top.add_theme_font_size_override("font_size", 28 if _is_mobile else 20)
 	deco_top.add_theme_color_override("font_color", Color(0.7, 0.55, 0.2, 0.6))
-	top_line.add_child(deco_top)
-	title_section.add_child(top_line)
+	_deco_top_line.add_child(deco_top)
+	_title_section.add_child(_deco_top_line)
 
 	# Main game title
-	var game_title = Label.new()
-	game_title.text = "OPEN LEGENDS RPG"
-	game_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	game_title.add_theme_font_size_override("font_size", 72 if _is_mobile else 64)
-	game_title.add_theme_color_override("font_color", Color(0.95, 0.8, 0.3))
-	title_section.add_child(game_title)
+	_game_title_label = Label.new()
+	_game_title_label.text = "OPEN LEGENDS RPG"
+	_game_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_game_title_label.add_theme_font_size_override("font_size", 72 if _is_mobile else 64)
+	_game_title_label.add_theme_color_override("font_color", Color(0.95, 0.8, 0.3))
+	_title_section.add_child(_game_title_label)
 
 	# Subtitle accent
-	var game_sub = Label.new()
-	game_sub.text = "FORGE YOUR LEGEND"
-	game_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	game_sub.add_theme_font_size_override("font_size", 28 if _is_mobile else 22)
-	game_sub.add_theme_color_override("font_color", Color(0.6, 0.5, 0.3, 0.7))
-	title_section.add_child(game_sub)
+	_game_sub_label = Label.new()
+	_game_sub_label.text = "FORGE YOUR LEGEND"
+	_game_sub_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_game_sub_label.add_theme_font_size_override("font_size", 28 if _is_mobile else 22)
+	_game_sub_label.add_theme_color_override("font_color", Color(0.6, 0.5, 0.3, 0.7))
+	_title_section.add_child(_game_sub_label)
 
 	# Bottom decorative line
-	var bot_line = HBoxContainer.new()
-	bot_line.alignment = BoxContainer.ALIGNMENT_CENTER
+	_deco_bot_line = HBoxContainer.new()
+	_deco_bot_line.alignment = BoxContainer.ALIGNMENT_CENTER
 	var deco_bot = Label.new()
 	deco_bot.text = "~ ~ ~"
 	deco_bot.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	deco_bot.add_theme_font_size_override("font_size", 28 if _is_mobile else 20)
 	deco_bot.add_theme_color_override("font_color", Color(0.7, 0.55, 0.2, 0.6))
-	bot_line.add_child(deco_bot)
-	title_section.add_child(bot_line)
+	_deco_bot_line.add_child(deco_bot)
+	_title_section.add_child(_deco_bot_line)
 
 	# Insert at position 0 in vbox (before TitleLabel)
-	vbox.add_child(title_section)
-	vbox.move_child(title_section, 0)
+	vbox.add_child(_title_section)
+	vbox.move_child(_title_section, 0)
 
 func _build_byline() -> void:
 	var byline_bar = HBoxContainer.new()
@@ -429,23 +433,61 @@ func _on_version_log_pressed() -> void:
 	_changelog_dialog.open()
 
 func _start_title_fade_in() -> void:
-	# Hide all content initially
-	scroll.modulate.a = 0.0
+	# Collect all vbox children after title_section for staggered reveal
+	# vbox order: [0] title_section, [1] TitleLabel, [2] SubtitleLabel,
+	#             [3] HeroContainer, [4] byline_bar, [5] version_bar
+	var child_count = vbox.get_child_count()
 
-	# Dark overlay matching boot_splash bg_color for seamless transition
-	_fade_overlay = ColorRect.new()
-	_fade_overlay.color = Color(0.05, 0.04, 0.03, 1.0)
-	_fade_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_fade_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_fade_overlay)
+	# Hide everything initially
+	for i in range(child_count):
+		vbox.get_child(i).modulate.a = 0.0
 
-	# Phase 1: fade overlay out over 1.2s (reveals dark background)
+	# Also hide individual title section children for per-element animation
+	_game_title_label.modulate.a = 0.0
+	_game_sub_label.modulate.a = 0.0
+	_deco_top_line.modulate.a = 0.0
+	_deco_bot_line.modulate.a = 0.0
+	# Make title_section visible so children can fade independently
+	_title_section.modulate.a = 1.0
+
+	# Collect the "below title" children (Choose Your Hero, subtitle, cards, byline, version)
+	var below_nodes: Array[Control] = []
+	for i in range(1, child_count):
+		below_nodes.append(vbox.get_child(i) as Control)
+
+	# Offset below-title content downward for slide-up effect
+	for i in range(below_nodes.size()):
+		below_nodes[i].position.y += 30.0
+
 	var tween = create_tween()
-	tween.tween_interval(0.3)  # brief hold on dark
-	tween.tween_property(_fade_overlay, "color:a", 0.0, 1.2).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
-	# Phase 2: fade content in over 0.8s
-	tween.tween_property(scroll, "modulate:a", 1.0, 0.8).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
-	tween.tween_callback(_fade_overlay.queue_free)
+	tween.set_parallel(true)
+
+	# Phase 1 (0.0s): Game title fades in with slight scale punch
+	tween.tween_property(_game_title_label, "modulate:a", 1.0, 1.0) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	_game_title_label.scale = Vector2(1.08, 1.08)
+	_game_title_label.pivot_offset = _game_title_label.size / 2.0
+	tween.tween_property(_game_title_label, "scale", Vector2.ONE, 1.2) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+
+	# Phase 2 (0.4s): Subtitle fades in
+	tween.tween_property(_game_sub_label, "modulate:a", 1.0, 0.8) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC).set_delay(0.4)
+
+	# Phase 3 (0.7s): Decorative lines fade in
+	tween.tween_property(_deco_top_line, "modulate:a", 1.0, 0.6) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC).set_delay(0.7)
+	tween.tween_property(_deco_bot_line, "modulate:a", 1.0, 0.6) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC).set_delay(0.7)
+
+	# Phase 4 (1.0s+): Below-title content fades in and slides up, staggered
+	for i in range(below_nodes.size()):
+		var delay = 1.0 + i * 0.2
+		var node = below_nodes[i]
+		tween.tween_property(node, "modulate:a", 1.0, 0.7) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC).set_delay(delay)
+		tween.tween_property(node, "position:y", node.position.y - 30.0, 0.7) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC).set_delay(delay)
 
 func _on_hero_selected(hero_key: String) -> void:
 	if _hero_selected:

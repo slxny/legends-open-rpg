@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, viewport-fit=cover">
+		<meta name="apple-mobile-web-app-capable" content="yes">
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+		<meta name="mobile-web-app-capable" content="yes">
+		<title>$GODOT_PROJECT_NAME</title>
+		<style>
+html, body, #canvas {
+	margin: 0;
+	padding: 0;
+	border: 0;
+}
+
+body {
+	color: white;
+	background-color: #0d0a07;
+	overflow: hidden;
+	touch-action: none;
+	font-family: 'Georgia', 'Times New Roman', serif;
+}
+
+#canvas {
+	display: block;
+}
+
+#canvas:focus {
+	outline: none;
+}
+
+/* ── Loading overlay ── */
+#status {
+	position: fixed;
+	inset: 0;
+	background: #0d0a07;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	visibility: hidden;
+	transition: opacity 0.6s ease;
+	z-index: 100;
+}
+
+#status.fade-out {
+	opacity: 0;
+	pointer-events: none;
+}
+
+/* Hide default Godot splash & progress */
+#status-splash {
+	display: none !important;
+}
+
+#status-progress {
+	display: none !important;
+}
+
+/* ── Game title ── */
+.load-title {
+	color: #f0cc4a;
+	font-size: clamp(28px, 7vw, 60px);
+	font-weight: bold;
+	letter-spacing: 4px;
+	text-align: center;
+	text-shadow: 0 0 20px rgba(240, 204, 74, 0.3);
+	animation: title-glow 3s ease-in-out infinite;
+	margin: 0;
+	padding: 0 16px;
+	line-height: 1.2;
+}
+
+.load-subtitle {
+	color: #aa9966;
+	font-size: clamp(12px, 3vw, 20px);
+	letter-spacing: 8px;
+	font-family: sans-serif;
+	margin-top: 8px;
+	text-align: center;
+}
+
+/* ── Decorative line ── */
+.load-deco {
+	color: rgba(184, 148, 42, 0.35);
+	font-size: clamp(14px, 2.5vw, 20px);
+	margin: 20px 0 0 0;
+	letter-spacing: 10px;
+	text-align: center;
+}
+
+/* ── Progress bar ── */
+.progress-track {
+	width: min(60%, 360px);
+	height: 5px;
+	background: rgba(255, 255, 255, 0.06);
+	border-radius: 3px;
+	margin-top: 28px;
+	overflow: hidden;
+	position: relative;
+}
+
+.progress-fill {
+	height: 100%;
+	width: 0%;
+	background: linear-gradient(90deg, #8a6e1a, #f0cc4a, #dab530, #f0cc4a, #8a6e1a);
+	background-size: 300% 100%;
+	border-radius: 3px;
+	transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+	box-shadow: 0 0 10px rgba(240, 204, 74, 0.4), 0 0 3px rgba(240, 204, 74, 0.6);
+	animation: shimmer 2.5s linear infinite;
+}
+
+/* ── Loading text ── */
+.load-pct {
+	color: rgba(170, 153, 102, 0.5);
+	font-size: clamp(10px, 1.8vw, 13px);
+	font-family: sans-serif;
+	margin-top: 12px;
+	letter-spacing: 3px;
+	text-align: center;
+}
+
+/* ── Error notice ── */
+#status-notice {
+	display: none;
+	background-color: #5b3943;
+	border-radius: 0.5rem;
+	border: 1px solid #9b3943;
+	color: #e0e0e0;
+	font-family: 'Noto Sans', 'Droid Sans', Arial, sans-serif;
+	line-height: 1.3;
+	margin: 24px 2rem 0;
+	overflow: hidden;
+	padding: 1rem;
+	text-align: center;
+	z-index: 1;
+	max-width: 500px;
+}
+
+/* ── Animations ── */
+@keyframes title-glow {
+	0%, 100% { text-shadow: 0 0 20px rgba(240, 204, 74, 0.25); }
+	50% { text-shadow: 0 0 40px rgba(240, 204, 74, 0.55), 0 0 80px rgba(184, 148, 42, 0.15); }
+}
+
+@keyframes shimmer {
+	0% { background-position: 300% 0; }
+	100% { background-position: -300% 0; }
+}
+
+/* ── In-app browser takeover ── */
+#inapp-block {
+	position: fixed;
+	inset: 0;
+	background: #0d0a07;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	font-family: sans-serif;
+	padding: 24px;
+	text-align: center;
+	z-index: 99999;
+}
+
+#inapp-block .ib-title {
+	color: #f0cc4a;
+	font-size: 28px;
+	font-weight: bold;
+	margin-bottom: 12px;
+}
+
+#inapp-block .ib-sub {
+	color: #aa9966;
+	font-size: 16px;
+	margin-bottom: 32px;
+}
+
+#inapp-block .ib-msg {
+	color: #ccc;
+	font-size: 15px;
+	line-height: 1.6;
+	margin-bottom: 28px;
+}
+
+#inapp-block .ib-btn {
+	display: inline-block;
+	padding: 16px 36px;
+	background: #b8942a;
+	color: #0d0a07;
+	font-size: 18px;
+	font-weight: bold;
+	border-radius: 10px;
+	text-decoration: none;
+	cursor: pointer;
+	border: none;
+}
+
+#inapp-block .ib-hint {
+	color: #887755;
+	font-size: 13px;
+	margin-top: 24px;
+}
+		</style>
+		$GODOT_HEAD_INCLUDE
+	</head>
+	<body>
+		<canvas id="canvas">
+			Your browser does not support the canvas tag.
+		</canvas>
+
+		<noscript>
+			Your browser does not support JavaScript.
+		</noscript>
+
+		<div id="status">
+			<img id="status-splash" class="$GODOT_SPLASH_CLASSES" src="$GODOT_SPLASH" alt="">
+			<progress id="status-progress"></progress>
+
+			<div class="load-title">OPEN LEGENDS RPG</div>
+			<div class="load-subtitle">FORGE YOUR LEGEND</div>
+			<div class="load-deco">&mdash; &middot; &mdash;</div>
+			<div class="progress-track"><div class="progress-fill" id="custom-progress"></div></div>
+			<div class="load-pct" id="load-pct">LOADING</div>
+
+			<div id="status-notice"></div>
+		</div>
+
+		<script>
+// ── In-app browser detection ──
+(function() {
+	var ua = navigator.userAgent || '';
+	var inApp = /FBAN|FBAV|FB_IAB|Instagram|Snapchat|TikTok|Twitter|LinkedIn|Pinterest|Line\/|MicroMessenger|KAKAOTALK/i.test(ua);
+	if (inApp) {
+		document.addEventListener('DOMContentLoaded', function() {
+			// Hide everything else
+			var canvas = document.getElementById('canvas');
+			if (canvas) canvas.style.display = 'none';
+			var status = document.getElementById('status');
+			if (status) status.style.display = 'none';
+
+			var d = document.createElement('div');
+			d.id = 'inapp-block';
+			d.innerHTML = '<div class="ib-title">OPEN LEGENDS RPG</div>'
+				+ '<div class="ib-sub">FORGE YOUR LEGEND</div>'
+				+ '<div class="ib-msg">This game needs a full browser to run.<br>In-app browsers (Facebook, Instagram, etc.) are not supported.</div>'
+				+ '<button class="ib-btn" id="ob">Open in Browser</button>'
+				+ '<div class="ib-hint">Tap the button above, or tap \u22ee / \u2026 and choose "Open in Browser"</div>';
+			document.body.appendChild(d);
+
+			var url = window.location.href;
+			document.getElementById('ob').addEventListener('click', function(e) {
+				e.preventDefault();
+				var w = window.open(url, '_system');
+				if (!w) {
+					window.location.href = 'intent://' + url.replace(/^https?:\/\//, '') + '#Intent;scheme=https;end';
+				}
+			});
+		});
+		return;
+	}
+
+	// ── AudioContext pre-unlock ──
+	var _ac = null;
+	function _unlock() {
+		if (_ac) return;
+		try {
+			_ac = new (window.AudioContext || window.webkitAudioContext)();
+			var b = _ac.createBuffer(1, 1, 22050);
+			var s = _ac.createBufferSource();
+			s.buffer = b;
+			s.connect(_ac.destination);
+			s.start(0);
+			if (_ac.state === 'suspended') _ac.resume();
+		} catch(e) {}
+		document.removeEventListener('touchstart', _unlock, true);
+		document.removeEventListener('touchend', _unlock, true);
+		document.removeEventListener('click', _unlock, true);
+	}
+	document.addEventListener('touchstart', _unlock, true);
+	document.addEventListener('touchend', _unlock, true);
+	document.addEventListener('click', _unlock, true);
+})();
+		</script>
+
+		<script src="$GODOT_URL"></script>
+		<script>
+const GODOT_CONFIG = $GODOT_CONFIG;
+const GODOT_THREADS_ENABLED = $GODOT_THREADS_ENABLED;
+const engine = new Engine(GODOT_CONFIG);
+
+(function () {
+	const statusOverlay = document.getElementById('status');
+	const statusProgress = document.getElementById('status-progress');
+	const statusNotice = document.getElementById('status-notice');
+	const customProgress = document.getElementById('custom-progress');
+	const loadPct = document.getElementById('load-pct');
+
+	let initializing = true;
+	let statusMode = '';
+
+	function setStatusMode(mode) {
+		if (statusMode === mode || !initializing) {
+			return;
+		}
+		if (mode === 'hidden') {
+			// Smooth fade-out
+			statusOverlay.classList.add('fade-out');
+			setTimeout(function() {
+				statusOverlay.remove();
+			}, 700);
+			initializing = false;
+			return;
+		}
+		statusOverlay.style.visibility = 'visible';
+		statusProgress.style.display = mode === 'progress' ? 'block' : 'none';
+		statusNotice.style.display = mode === 'notice' ? 'block' : 'none';
+		statusMode = mode;
+	}
+
+	function setStatusNotice(text) {
+		while (statusNotice.lastChild) {
+			statusNotice.removeChild(statusNotice.lastChild);
+		}
+		const lines = text.split('\n');
+		lines.forEach((line) => {
+			statusNotice.appendChild(document.createTextNode(line));
+			statusNotice.appendChild(document.createElement('br'));
+		});
+	}
+
+	function displayFailureNotice(err) {
+		console.error(err);
+		if (err instanceof Error) {
+			setStatusNotice(err.message);
+		} else if (typeof err === 'string') {
+			setStatusNotice(err);
+		} else {
+			setStatusNotice('An unknown error occurred.');
+		}
+		setStatusMode('notice');
+		initializing = false;
+	}
+
+	const missing = Engine.getMissingFeatures({
+		threads: GODOT_THREADS_ENABLED,
+	});
+
+	if (missing.length !== 0) {
+		if (GODOT_CONFIG['serviceWorker'] && GODOT_CONFIG['ensureCrossOriginIsolationHeaders'] && 'serviceWorker' in navigator) {
+			let serviceWorkerRegistrationPromise;
+			try {
+				serviceWorkerRegistrationPromise = navigator.serviceWorker.getRegistration();
+			} catch (err) {
+				serviceWorkerRegistrationPromise = Promise.reject(new Error('Service worker registration failed.'));
+			}
+			Promise.race([
+				serviceWorkerRegistrationPromise.then((registration) => {
+					if (registration != null) {
+						return Promise.reject(new Error('Service worker already exists.'));
+					}
+					return registration;
+				}).then(() => engine.installServiceWorker()),
+				new Promise((resolve) => {
+					setTimeout(() => resolve(), 2000);
+				}),
+			]).then(() => {
+				window.location.reload();
+			}).catch((err) => {
+				console.error('Error while registering service worker:', err);
+			});
+		} else {
+			const missingMsg = 'Error\nThe following features required to run Godot projects on the Web are missing:\n';
+			displayFailureNotice(missingMsg + missing.join('\n'));
+		}
+	} else {
+		setStatusMode('progress');
+		engine.startGame({
+			'onProgress': function (current, total) {
+				if (current > 0 && total > 0) {
+					statusProgress.value = current;
+					statusProgress.max = total;
+					// Drive custom progress bar
+					var pct = Math.round((current / total) * 100);
+					customProgress.style.width = pct + '%';
+					loadPct.textContent = pct + '%';
+				} else {
+					statusProgress.removeAttribute('value');
+					statusProgress.removeAttribute('max');
+					loadPct.textContent = 'LOADING';
+				}
+			},
+		}).then(() => {
+			setStatusMode('hidden');
+		}, displayFailureNotice);
+	}
+}());
+		</script>
+	</body>
+</html>

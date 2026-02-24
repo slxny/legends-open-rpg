@@ -9,9 +9,22 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.65.7"
+const GAME_VERSION := "v0.65.8"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.65.8",
+		"title": "Custom branded loading screen and cinematic title intro",
+		"date": "2026-02-24",
+		"entries": [
+			"Loading screen now shows 'OPEN LEGENDS RPG' title in gold with glowing text animation",
+			"Modern slim progress bar with gold shimmer effect replaces the default Godot loading bar",
+			"Loading percentage displayed below the bar",
+			"Loading screen fades out smoothly when the game is ready",
+			"Hero select intro: title fades in with scale punch, subtitle follows, then cards slide up",
+			"Each element animates in sequence for a cinematic reveal",
+		]
+	},
 	{
 		"version": "v0.65.7",
 		"title": "Fix loading in Facebook Messenger and in-app browsers",

@@ -1813,6 +1813,10 @@ func _reposition_atk_button() -> void:
 	_mobile_atk_btn.add_theme_font_size_override("font_size", 36 if is_landscape else 52)
 	_mobile_atk_btn.pivot_offset = Vector2(btn_size / 2.0, btn_size / 2.0)
 
+func set_atk_button_visible(vis: bool) -> void:
+	if _mobile_atk_btn and is_instance_valid(_mobile_atk_btn):
+		_mobile_atk_btn.visible = vis
+
 func _on_mobile_attack_pressed() -> void:
 	_flash_atk_button()
 	# Count as a tap (same as spacebar press) for special attack detection

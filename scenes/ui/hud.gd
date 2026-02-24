@@ -334,6 +334,7 @@ func _toggle_cmd_overlay() -> void:
 
 	_cmd_overlay_visible = !_cmd_overlay_visible
 	_cmd_overlay.visible = _cmd_overlay_visible
+	_update_atk_button_visibility()
 	if _cmd_overlay_visible:
 		AudioManager.play_sfx("ui_tap", -4.0)
 		# Update potion labels in overlay
@@ -344,6 +345,10 @@ func _toggle_cmd_overlay() -> void:
 		var overlay_w = vp_size.x - 32
 		_cmd_overlay.size = Vector2(overlay_w, 0)
 		_cmd_overlay.position = Vector2(16, vp_size.y - bottom_panel.size.y - _cmd_overlay.size.y - 8)
+
+func _update_atk_button_visibility() -> void:
+	if _player and is_instance_valid(_player) and _player.has_method("set_atk_button_visible"):
+		_player.set_atk_button_visible(not _cmd_overlay_visible and not _map_overlay_visible)
 
 func _update_overlay_potions() -> void:
 	if not _cmd_overlay or not _player or not is_instance_valid(_player):
@@ -408,6 +413,7 @@ func _toggle_map_overlay() -> void:
 
 	_map_overlay_visible = !_map_overlay_visible
 	_map_overlay.visible = _map_overlay_visible
+	_update_atk_button_visibility()
 	if _map_overlay_visible:
 		AudioManager.play_sfx("ui_tap", -4.0)
 		# Reparent minimap into the expanded overlay

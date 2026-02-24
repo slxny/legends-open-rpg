@@ -9,9 +9,18 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.62.2"
+const GAME_VERSION := "v0.62.3"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.62.3",
+		"title": "Fix ATK button overlapping OPT menu on mobile",
+		"date": "2026-02-24",
+		"entries": [
+			"ATK button now hides when OPT or MAP overlay is open on mobile",
+			"ATK button reappears when overlay is closed",
+		]
+	},
 	{
 		"version": "v0.62.2",
 		"title": "Improved shop & save/load SFX",

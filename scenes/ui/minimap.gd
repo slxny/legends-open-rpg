@@ -10,6 +10,7 @@ var _player: Node2D = null
 var _redraw_timer: float = 0.0
 const REDRAW_INTERVAL: float = 0.25  # Redraw 4 times per second, not 60
 var _cached_enemies: Array = []  # Cached enemy positions for minimap dots
+var _cached_bosses: Array = []  # Cached miniboss positions for pulsing diamond indicators
 var _cached_explored_rects: Array = []  # Pre-built fog overlay rects
 var _fog_dirty: bool = true  # Rebuild fog cache on next draw
 var _last_draw_size: Vector2 = Vector2.ZERO  # Invalidate fog cache on resize
@@ -36,10 +37,14 @@ func _process(delta: float) -> void:
 	if _redraw_timer <= 0.0:
 		_redraw_timer = REDRAW_INTERVAL
 		_cached_enemies.clear()
+		_cached_bosses.clear()
 		var enemies = get_tree().get_nodes_in_group("enemies")
 		for enemy in enemies:
 			if is_instance_valid(enemy) and FogOfWarManager.is_visible(enemy.global_position):
-				_cached_enemies.append(enemy.global_position)
+				if enemy.is_mini_boss:
+					_cached_bosses.append(enemy.global_position)
+				else:
+					_cached_enemies.append(enemy.global_position)
 		queue_redraw()
 
 func _draw() -> void:
@@ -88,6 +93,17 @@ func _draw() -> void:
 	# Enemy dots (from cached world positions, converted at draw time)
 	for epos in _cached_enemies:
 		draw_circle(_world_to_minimap(epos, ms), 1.5 * dot_scale, Color(1.0, 0.3, 0.3, 0.8))
+
+	# Miniboss diamonds (pulsing orange-red, larger than enemy dots)
+	for bpos in _cached_bosses:
+		var mpos = _world_to_minimap(bpos, ms)
+		var pulse = 0.7 + 0.3 * sin(Time.get_ticks_msec() / 150.0)
+		var d = 4.0 * dot_scale * pulse
+		var points = PackedVector2Array([
+			mpos + Vector2(0, -d), mpos + Vector2(d, 0),
+			mpos + Vector2(0, d), mpos + Vector2(-d, 0)
+		])
+		draw_colored_polygon(points, Color(1.0, 0.4, 0.1, pulse))
 
 	# Shop marker (yellow) — only if explored
 	var shop_world_pos = Vector2(260, -100)

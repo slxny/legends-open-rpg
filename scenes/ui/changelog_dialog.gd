@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.60.3"
+const GAME_VERSION := "v0.60.4"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.60.4",
+		"title": "Miniboss minimap indicator",
+		"date": "2026-02-23",
+		"entries": [
+			"Active minibosses now show as pulsing orange diamond on the minimap",
+			"Diamond pulses to draw attention when '!! MINI-BOSS INCOMING !!' announces",
+			"Indicator disappears when the miniboss is defeated",
+		]
+	},
 	{
 		"version": "v0.60.3",
 		"title": "Button visual feedback across all UI",

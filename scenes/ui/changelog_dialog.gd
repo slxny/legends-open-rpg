@@ -9,9 +9,21 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.65.3"
+const GAME_VERSION := "v0.65.4"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.65.4",
+		"title": "Mobile virtual joystick",
+		"date": "2026-02-24",
+		"entries": [
+			"Added floating virtual joystick on the left side of the screen for mobile movement",
+			"Touch the left 40% of the screen to summon the joystick, drag to move in any direction",
+			"Joystick adapts size for portrait and landscape orientations",
+			"Tap-to-move still works outside the joystick area",
+			"Joystick styled to match the SC:BW aesthetic (dark base, gold ring and knob)",
+		]
+	},
 	{
 		"version": "v0.65.3",
 		"title": "Click/tap to aim dash attacks and specials",

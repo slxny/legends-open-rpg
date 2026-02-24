@@ -158,6 +158,19 @@ const CHARGE_AIM_DRAG_THRESHOLD: float = 30.0  # Minimum drag distance to change
 var _tap_aim_dir: Vector2 = Vector2.ZERO  # Direction from player toward last click/tap world position
 var _tap_aim_timer: float = 0.0  # Remaining validity; expires so stale taps don't affect later attacks
 const TAP_AIM_WINDOW: float = 0.6  # Seconds a tap-aim stays valid
+# Virtual joystick (mobile — left side of screen)
+var _joystick_canvas: CanvasLayer = null
+var _joystick_base: Sprite2D = null     # Semi-transparent base circle (appears at touch-down)
+var _joystick_knob: Sprite2D = null     # Gold knob circle (tracks finger)
+var _joystick_touch_index: int = -1     # Which finger is driving the joystick
+var _joystick_input: Vector2 = Vector2.ZERO  # Normalized direction output
+var _joystick_center: Vector2 = Vector2.ZERO # Screen-space center (set on touch-down)
+var _joystick_active: bool = false
+const JOYSTICK_ZONE_FRACTION: float = 0.4   # Left 40% of screen is joystick zone
+const JOYSTICK_DEAD_ZONE: float = 0.15      # Inner dead zone (fraction of radius)
+const JOYSTICK_RADIUS_LANDSCAPE: float = 80.0
+const JOYSTICK_RADIUS_PORTRAIT: float = 110.0
+const JOYSTICK_KNOB_FRACTION: float = 0.45  # Knob radius as fraction of base radius
 # Two-finger pinch-to-zoom tracking
 var _touch_points: Dictionary = {}      # touch index -> screen position (unhandled only)
 var _pinch_prev_distance: float = 0.0   # Previous distance between two fingers
@@ -276,6 +289,7 @@ func _ready() -> void:
 	if _is_mobile:
 		_click_circle.radius = CLICK_RADIUS_MOBILE
 		_create_mobile_attack_button()
+		_create_mobile_joystick()
 
 	# Connect death/respawn signals for animations
 	RespawnManager.player_died.connect(_on_death_animation)
@@ -322,6 +336,9 @@ func _physics_process(delta: float) -> void:
 	var input_dir = Vector2.ZERO
 	input_dir.x = Input.get_axis("move_left", "move_right")
 	input_dir.y = Input.get_axis("move_up", "move_down")
+	# Merge virtual joystick input (mobile)
+	if _joystick_input.length() > 0.01:
+		input_dir += _joystick_input
 	var has_input = input_dir.length_squared() > 0.0
 	if has_input:
 		input_dir = input_dir.normalized()
@@ -425,6 +442,8 @@ func _physics_process(delta: float) -> void:
 				Input.get_axis("move_left", "move_right"),
 				Input.get_axis("move_up", "move_down")
 			)
+			if _joystick_input.length() > 0.1:
+				move_input += _joystick_input
 			# On mobile, consider click-to-move velocity OR any non-ATK finger on screen as movement
 			var is_moving = move_input.length() > 0.25
 			if not is_moving and _is_mobile:
@@ -466,12 +485,14 @@ func _physics_process(delta: float) -> void:
 					_is_charging = true
 					_start_charge_vfx()
 					AudioManager.play_sfx("charge_ready")
-				# While holding attack, let player aim: arrow keys (desktop) or drag (mobile)
+				# While holding attack, let player aim: arrow keys, joystick (mobile), or drag (mobile)
 				if _charge_time >= CHARGE_GRACE:
 					var aim_input = Vector2(
 						Input.get_axis("move_left", "move_right"),
 						Input.get_axis("move_up", "move_down")
 					)
+					if _joystick_input.length() > 0.1:
+						aim_input += _joystick_input
 					if aim_input.length() > 0.25:
 						_set_facing(aim_input.normalized())
 					elif _is_mobile and _mobile_charge_aim_dir.length() > 0.1:
@@ -647,6 +668,45 @@ func _input(event: InputEvent) -> void:
 		if event.index in _screen_touches:
 			_screen_touches[event.index] = event.position
 
+	# Virtual joystick (left side of screen) — claim touch before ATK button
+	if _is_mobile:
+		if event is InputEventScreenTouch:
+			if event.pressed:
+				# Only claim if: no active joystick finger, touch is in left zone, not on ATK
+				if _joystick_touch_index == -1:
+					var vp_size = get_viewport().get_visible_rect().size
+					var in_left_zone = event.position.x < vp_size.x * JOYSTICK_ZONE_FRACTION
+					var on_atk = _mobile_atk_btn and is_instance_valid(_mobile_atk_btn) and _mobile_atk_btn.get_global_rect().has_point(event.position)
+					if in_left_zone and not on_atk:
+						_joystick_touch_index = event.index
+						_joystick_center = event.position
+						_joystick_active = true
+						_show_joystick(event.position)
+						get_viewport().set_input_as_handled()
+						return
+			else:
+				if event.index == _joystick_touch_index:
+					_joystick_touch_index = -1
+					_joystick_input = Vector2.ZERO
+					_joystick_active = false
+					_hide_joystick()
+					get_viewport().set_input_as_handled()
+					return
+		elif event is InputEventScreenDrag:
+			if event.index == _joystick_touch_index:
+				var offset = event.position - _joystick_center
+				var radius = _get_joystick_radius()
+				var clamped = offset if offset.length() <= radius else offset.normalized() * radius
+				var normalized = clamped / radius
+				if normalized.length() < JOYSTICK_DEAD_ZONE:
+					_joystick_input = Vector2.ZERO
+				else:
+					var len_n = normalized.length()
+					_joystick_input = normalized.normalized() * ((len_n - JOYSTICK_DEAD_ZONE) / (1.0 - JOYSTICK_DEAD_ZONE))
+				_update_joystick_knob(clamped)
+				get_viewport().set_input_as_handled()
+				return
+
 	# Manual multitouch handling for the ATK button.  Godot's Button control
 	# only responds to the first screen touch (via mouse emulation).  A second
 	# finger tapping ATK while another finger is already on screen is silently
@@ -764,6 +824,11 @@ func _unhandled_input(event: InputEvent) -> void:
 			return
 
 		if event.button_index == MOUSE_BUTTON_LEFT or event.button_index == MOUSE_BUTTON_RIGHT:
+			# Block tap-to-move in the joystick zone on mobile (joystick owns it)
+			if _is_mobile and _joystick_active:
+				var vp_size = get_viewport().get_visible_rect().size
+				if event.position.x < vp_size.x * JOYSTICK_ZONE_FRACTION:
+					return
 			# Record click direction for attack aiming
 			var _click_world = _get_world_mouse_pos()
 			var _click_aim = (_click_world - global_position)
@@ -855,11 +920,13 @@ func _try_manual_attack() -> void:
 
 	_attack_cooldown = 0.5 / stats.attack_speed
 
-	# Determine attack direction: held keys > recent click/tap aim > mobile touch > velocity > facing
+	# Determine attack direction: held keys/joystick > recent click/tap aim > mobile touch > velocity > facing
 	var input_raw = Vector2(
 		Input.get_axis("move_left", "move_right"),
 		Input.get_axis("move_up", "move_down")
 	)
+	if _joystick_input.length() > 0.1:
+		input_raw += _joystick_input
 	var attack_dir: Vector2
 	if input_raw.length() > 0.25:
 		attack_dir = input_raw.normalized()
@@ -2006,6 +2073,75 @@ func _reposition_atk_button() -> void:
 func set_atk_button_visible(vis: bool) -> void:
 	if _mobile_atk_btn and is_instance_valid(_mobile_atk_btn):
 		_mobile_atk_btn.visible = vis
+	if not vis:
+		# Also reset joystick when hiding controls (e.g. menus)
+		_joystick_input = Vector2.ZERO
+		_joystick_active = false
+		_joystick_touch_index = -1
+		_hide_joystick()
+
+# --- Mobile Virtual Joystick ---
+
+func _create_mobile_joystick() -> void:
+	_joystick_canvas = CanvasLayer.new()
+	_joystick_canvas.layer = 11
+	add_child(_joystick_canvas)
+
+	# Generate base circle texture (dark fill + gold ring)
+	var base_tex = _gen_circle_texture(128, Color(0.15, 0.12, 0.08, 0.45), Color(0.7, 0.55, 0.2, 0.5), 4)
+	_joystick_base = Sprite2D.new()
+	_joystick_base.texture = base_tex
+	_joystick_base.visible = false
+	_joystick_canvas.add_child(_joystick_base)
+
+	# Generate knob circle texture (gold fill + lighter ring)
+	var knob_tex = _gen_circle_texture(64, Color(0.7, 0.55, 0.2, 0.7), Color(0.9, 0.75, 0.3, 0.85), 3)
+	_joystick_knob = Sprite2D.new()
+	_joystick_knob.texture = knob_tex
+	_joystick_knob.visible = false
+	_joystick_canvas.add_child(_joystick_knob)
+
+func _gen_circle_texture(diameter: int, fill_color: Color, ring_color: Color, ring_width: int) -> ImageTexture:
+	var img = Image.create(diameter, diameter, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var center = Vector2(diameter / 2.0, diameter / 2.0)
+	var radius = diameter / 2.0
+	for y in range(diameter):
+		for x in range(diameter):
+			var dist = Vector2(x + 0.5, y + 0.5).distance_to(center)
+			if dist <= radius:
+				if dist >= radius - float(ring_width):
+					img.set_pixel(x, y, ring_color)
+				else:
+					img.set_pixel(x, y, fill_color)
+	return ImageTexture.create_from_image(img)
+
+func _get_joystick_radius() -> float:
+	var vp = get_viewport().get_visible_rect().size
+	return JOYSTICK_RADIUS_PORTRAIT if vp.y > vp.x else JOYSTICK_RADIUS_LANDSCAPE
+
+func _show_joystick(screen_pos: Vector2) -> void:
+	if not _joystick_base or not _joystick_knob:
+		return
+	var radius = _get_joystick_radius()
+	var base_scale = (radius * 2.0) / 128.0  # base texture is 128px
+	_joystick_base.scale = Vector2(base_scale, base_scale)
+	_joystick_base.position = screen_pos
+	_joystick_base.visible = true
+	var knob_scale = (radius * JOYSTICK_KNOB_FRACTION * 2.0) / 64.0  # knob texture is 64px
+	_joystick_knob.scale = Vector2(knob_scale, knob_scale)
+	_joystick_knob.position = screen_pos
+	_joystick_knob.visible = true
+
+func _hide_joystick() -> void:
+	if _joystick_base:
+		_joystick_base.visible = false
+	if _joystick_knob:
+		_joystick_knob.visible = false
+
+func _update_joystick_knob(clamped_offset: Vector2) -> void:
+	if _joystick_knob:
+		_joystick_knob.position = _joystick_center + clamped_offset
 
 func _on_mobile_attack_pressed() -> void:
 	_flash_atk_button()
@@ -2036,13 +2172,15 @@ func _flash_atk_button() -> void:
 	_atk_flash_tween.tween_property(_mobile_atk_btn, "modulate", Color(1.0, 1.0, 1.0, 0.8), 0.2).set_ease(Tween.EASE_OUT)
 
 func _get_non_atk_touches() -> Dictionary:
-	# Return all active screen touches EXCEPT those on the ATK button.
+	# Return all active screen touches EXCEPT those on the ATK button or joystick.
 	# Uses _screen_touches (tracked in _input) so UI-consumed touches are included.
 	if not _mobile_atk_btn or not is_instance_valid(_mobile_atk_btn):
 		return _screen_touches
 	var atk_rect = _mobile_atk_btn.get_global_rect()
 	var result: Dictionary = {}
 	for idx in _screen_touches:
+		if idx == _joystick_touch_index:
+			continue
 		if not atk_rect.has_point(_screen_touches[idx]):
 			result[idx] = _screen_touches[idx]
 	return result
@@ -2182,11 +2320,13 @@ func _set_facing(dir: Vector2) -> void:
 		sprite.texture = _idle_texture
 
 func _get_aim_direction() -> Vector2:
-	# Prefer held arrow/WASD keys, then recent click/tap aim, then mobile charge drag, then mobile touch, then last facing
+	# Prefer held arrow/WASD/joystick, then recent click/tap aim, then mobile charge drag, then mobile touch, then last facing
 	var input_raw = Vector2(
 		Input.get_axis("move_left", "move_right"),
 		Input.get_axis("move_up", "move_down")
 	)
+	if _joystick_input.length() > 0.1:
+		input_raw += _joystick_input
 	if input_raw.length() > 0.25:
 		return input_raw.normalized()
 	if _tap_aim_dir.length() > 0.1 and _tap_aim_timer > 0.0:

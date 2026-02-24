@@ -17,6 +17,10 @@ var _selected_bag_index: int = -1
 var _last_click_index: int = -1
 var _last_click_time: int = 0
 const DOUBLE_CLICK_MS: int = 400
+var _pending_detail_timer: SceneTreeTimer = null
+var _pending_detail_item: Dictionary = {}
+var _pending_detail_id: String = ""
+var _pending_detail_idx: int = -1
 
 # UI references built in code
 var _title_label: Label
@@ -413,12 +417,27 @@ func _create_item_row(item: Dictionary, item_id: String, bag_index: int, fs: int
 		if _current_tab == 1 and _idx >= 0:
 			var now = Time.get_ticks_msec()
 			if _last_click_index == _idx and (now - _last_click_time) <= DOUBLE_CLICK_MS:
+				# Double-click: quick-sell
+				_cancel_pending_detail()
 				_last_click_index = -1
 				_last_click_time = 0
 				_sell_item(_idx)
 				return
+			# First click: defer detail panel to allow double-click window
 			_last_click_index = _idx
 			_last_click_time = now
+			_pending_detail_item = _item
+			_pending_detail_id = _id
+			_pending_detail_idx = _idx
+			_cancel_pending_detail()
+			_pending_detail_timer = get_tree().create_timer(DOUBLE_CLICK_MS / 1000.0)
+			_pending_detail_timer.timeout.connect(func():
+				_pending_detail_timer = null
+				if _pending_detail_idx >= 0:
+					_show_detail(_pending_detail_item, _pending_detail_id, _pending_detail_idx)
+					_pending_detail_idx = -1
+			)
+			return
 		_show_detail(_item, _id, _idx)
 	)
 	btn_overlay.mouse_entered.connect(func():
@@ -486,6 +505,14 @@ func _show_detail(item: Dictionary, item_id: String, bag_index: int) -> void:
 		var idx = bag_index
 		_detail_action_btn.pressed.connect(func(): _sell_item(idx))
 		_detail_action_btn.disabled = false
+
+func _cancel_pending_detail() -> void:
+	if _pending_detail_timer != null:
+		if _pending_detail_timer.timeout.get_connections().size() > 0:
+			for conn in _pending_detail_timer.timeout.get_connections():
+				_pending_detail_timer.timeout.disconnect(conn["callable"])
+		_pending_detail_timer = null
+	_pending_detail_idx = -1
 
 func _hide_detail() -> void:
 	_detail_panel.visible = false

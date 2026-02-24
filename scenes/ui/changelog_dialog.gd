@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.65.2"
+const GAME_VERSION := "v0.65.3"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.65.3",
+		"title": "Click/tap to aim dash attacks and specials",
+		"date": "2026-02-24",
+		"entries": [
+			"Click or tap anywhere to set attack direction for dash strikes, charge attacks, and specials",
+			"Desktop: left/right click sets aim direction (0.6s window) used by next attack",
+			"Mobile: any non-ATK finger tap sets aim direction for the next attack",
+			"Direction priority: held keys > recent click/tap > mobile touch > velocity > facing",
+		]
+	},
 	{
 		"version": "v0.65.2",
 		"title": "Fix charge attack direction getting stuck",

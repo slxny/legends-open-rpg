@@ -154,6 +154,10 @@ var _mobile_atk_touch_index: int = -1  # Touch index currently pressing the ATK 
 var _mobile_atk_start_pos: Vector2 = Vector2.ZERO  # Where the ATK touch began (for drag-to-aim)
 var _mobile_charge_aim_dir: Vector2 = Vector2.ZERO  # Drag-aim direction while charging (zero = not aiming)
 const CHARGE_AIM_DRAG_THRESHOLD: float = 30.0  # Minimum drag distance to change aim direction
+# Click/tap aim: any click or non-ATK touch sets attack direction for a short window
+var _tap_aim_dir: Vector2 = Vector2.ZERO  # Direction from player toward last click/tap world position
+var _tap_aim_timer: float = 0.0  # Remaining validity; expires so stale taps don't affect later attacks
+const TAP_AIM_WINDOW: float = 0.6  # Seconds a tap-aim stays valid
 # Two-finger pinch-to-zoom tracking
 var _touch_points: Dictionary = {}      # touch index -> screen position (unhandled only)
 var _pinch_prev_distance: float = 0.0   # Previous distance between two fingers
@@ -370,6 +374,10 @@ func _physics_process(delta: float) -> void:
 
 	if _attack_cooldown > 0.0:
 		_attack_cooldown -= delta
+	if _tap_aim_timer > 0.0:
+		_tap_aim_timer -= delta
+		if _tap_aim_timer <= 0.0:
+			_tap_aim_dir = Vector2.ZERO
 
 	# Auto-chop: when player reaches a clicked tree, chop it automatically
 	if _target_tree and is_instance_valid(_target_tree) and not _target_tree.get("_is_chopped"):
@@ -666,12 +674,14 @@ func _input(event: InputEvent) -> void:
 					_mobile_charge_aim_dir = drag_offset.normalized()
 					_set_facing(_mobile_charge_aim_dir)
 
-	# While charging on mobile, any non-ATK finger tap sets aim direction
-	if _is_mobile and _mobile_attack_held and _charge_time >= CHARGE_GRACE:
-		if event is InputEventScreenTouch and event.pressed and event.index != _mobile_atk_touch_index:
-			var tap_world = _screen_to_world(event.position)
-			var aim = (tap_world - global_position)
-			if aim.length() > 5.0:
+	# Non-ATK finger tap: record aim direction (used by attacks and charge aiming)
+	if _is_mobile and event is InputEventScreenTouch and event.pressed and event.index != _mobile_atk_touch_index:
+		var tap_world = _screen_to_world(event.position)
+		var aim = (tap_world - global_position)
+		if aim.length() > 5.0:
+			_tap_aim_dir = aim.normalized()
+			_tap_aim_timer = TAP_AIM_WINDOW
+			if _mobile_attack_held and _charge_time >= CHARGE_GRACE:
 				_mobile_charge_aim_dir = aim.normalized()
 				_set_facing(_mobile_charge_aim_dir)
 				get_viewport().set_input_as_handled()
@@ -754,6 +764,12 @@ func _unhandled_input(event: InputEvent) -> void:
 			return
 
 		if event.button_index == MOUSE_BUTTON_LEFT or event.button_index == MOUSE_BUTTON_RIGHT:
+			# Record click direction for attack aiming
+			var _click_world = _get_world_mouse_pos()
+			var _click_aim = (_click_world - global_position)
+			if _click_aim.length() > 5.0:
+				_tap_aim_dir = _click_aim.normalized()
+				_tap_aim_timer = TAP_AIM_WINDOW
 			# Right-click on self = open hero stats panel
 			if event.button_index == MOUSE_BUTTON_RIGHT:
 				var mouse_world = _get_world_mouse_pos()
@@ -839,7 +855,7 @@ func _try_manual_attack() -> void:
 
 	_attack_cooldown = 0.5 / stats.attack_speed
 
-	# Determine attack direction from held movement input, fall back to last facing
+	# Determine attack direction: held keys > recent click/tap aim > mobile touch > velocity > facing
 	var input_raw = Vector2(
 		Input.get_axis("move_left", "move_right"),
 		Input.get_axis("move_up", "move_down")
@@ -847,6 +863,8 @@ func _try_manual_attack() -> void:
 	var attack_dir: Vector2
 	if input_raw.length() > 0.25:
 		attack_dir = input_raw.normalized()
+	elif _tap_aim_dir.length() > 0.1 and _tap_aim_timer > 0.0:
+		attack_dir = _tap_aim_dir
 	elif _is_mobile:
 		# On mobile: derive direction from active screen touches, then velocity, then facing
 		var touch_dir = _get_mobile_touch_dir()
@@ -2164,13 +2182,15 @@ func _set_facing(dir: Vector2) -> void:
 		sprite.texture = _idle_texture
 
 func _get_aim_direction() -> Vector2:
-	# Prefer held arrow/WASD keys, then mobile charge drag aim, then mobile touch direction, then last facing
+	# Prefer held arrow/WASD keys, then recent click/tap aim, then mobile charge drag, then mobile touch, then last facing
 	var input_raw = Vector2(
 		Input.get_axis("move_left", "move_right"),
 		Input.get_axis("move_up", "move_down")
 	)
 	if input_raw.length() > 0.25:
 		return input_raw.normalized()
+	if _tap_aim_dir.length() > 0.1 and _tap_aim_timer > 0.0:
+		return _tap_aim_dir
 	if _is_mobile:
 		# Charge drag-to-aim: if player dragged on ATK button while charging, use that direction
 		if _mobile_charge_aim_dir.length() > 0.1:

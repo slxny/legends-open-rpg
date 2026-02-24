@@ -9,9 +9,21 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.65.0"
+const GAME_VERSION := "v0.65.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.65.1",
+		"title": "8-direction hero sprites and charge aim arrow",
+		"date": "2026-02-24",
+		"entries": [
+			"Heroes now face 8 directions instead of 4 — diagonal movement uses unique sprites",
+			"New down-side and up-side diagonal idle and walk cycle sprites for both heroes",
+			"Angle-based octant detection for smooth 8-way facing transitions",
+			"Charge attack now shows a directional arrow indicator pointing where you'll attack",
+			"Arrow updates in real-time as you aim during charge hold",
+		]
+	},
 	{
 		"version": "v0.65.0",
 		"title": "Unique attack animations for all enemy types",

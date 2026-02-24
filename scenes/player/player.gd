@@ -102,6 +102,7 @@ var _tap_resolved: bool = true    # True once resolved (allows hold-to-attack to
 var _charge_time: float = 0.0    # How long attack key has been held continuously
 var _is_charging: bool = false    # Whether charge VFX is showing
 var _charge_vfx: Sprite2D = null  # Glow VFX while charging
+var _charge_arrow: Sprite2D = null  # Directional arrow during charge
 var _charge_shake_tween: Tween = null  # Sprite shake during charge
 var _charge_sfx_player: AudioStreamPlayer = null  # Looping charge sound
 var _charge_vfx_tween: Tween = null  # Looping glow tween during charge
@@ -180,7 +181,7 @@ func _ready() -> void:
 		_idle_texture = tex
 
 	# Cache directional idle textures
-	for dir_key in ["down", "up", "side"]:
+	for dir_key in ["down", "up", "side", "down_side", "up_side"]:
 		var dtex = SpriteGenerator.get_texture(hero_class + "_dir_" + dir_key)
 		if dtex:
 			_dir_textures[dir_key] = dtex
@@ -189,7 +190,7 @@ func _ready() -> void:
 		_dir_textures["down"] = _idle_texture
 
 	# Cache walk cycle frames (3 frames per direction)
-	for dir_key in ["down", "up", "side"]:
+	for dir_key in ["down", "up", "side", "down_side", "up_side"]:
 		var frames: Array[Texture2D] = []
 		for i in [1, 2, 3]:
 			var wtex = SpriteGenerator.get_texture("%s_walk_%s_%d" % [hero_class, dir_key, i])
@@ -467,6 +468,8 @@ func _physics_process(delta: float) -> void:
 						_set_facing(aim_input.normalized())
 					elif _is_mobile and _mobile_charge_aim_dir.length() > 0.1:
 						_set_facing(_mobile_charge_aim_dir)
+				if _is_charging:
+					_update_charge_arrow()
 				if not _is_charging and _charge_time < CHARGE_GRACE:
 					_try_manual_attack()
 		else:
@@ -1856,6 +1859,10 @@ func _start_charge_vfx() -> void:
 	_charge_shake_tween = create_tween().set_loops()
 	_charge_shake_tween.tween_property(sprite, "offset:x", sprite.offset.x + 1.5, 0.03)
 	_charge_shake_tween.tween_property(sprite, "offset:x", sprite.offset.x - 1.5, 0.03)
+	# Directional arrow indicator
+	_charge_arrow = _create_charge_arrow()
+	add_child(_charge_arrow)
+	_update_charge_arrow()
 	# Looping charge buildup sound
 	_start_charge_sfx()
 
@@ -1871,6 +1878,9 @@ func _stop_charge_vfx() -> void:
 	if _charge_vfx and is_instance_valid(_charge_vfx):
 		_charge_vfx.queue_free()
 		_charge_vfx = null
+	if _charge_arrow and is_instance_valid(_charge_arrow):
+		_charge_arrow.queue_free()
+		_charge_arrow = null
 
 func _start_charge_sfx() -> void:
 	_stop_charge_sfx()
@@ -1885,6 +1895,39 @@ func _stop_charge_sfx() -> void:
 		_charge_sfx_player.stop()
 		_charge_sfx_player.queue_free()
 		_charge_sfx_player = null
+
+func _create_charge_arrow() -> Sprite2D:
+	# Procedurally generate a small arrow sprite (16x8) pointing right
+	var img = Image.create(16, 8, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var arrow_col = Color(1.0, 0.9, 0.3, 0.9)
+	var outline_col = Color(0.3, 0.2, 0.0, 0.8)
+	# Shaft
+	_draw_rect_on_img(img, 0, 2, 10, 4, outline_col)
+	_draw_rect_on_img(img, 1, 3, 8, 2, arrow_col)
+	# Arrowhead
+	_draw_rect_on_img(img, 10, 0, 2, 8, outline_col)
+	_draw_rect_on_img(img, 12, 1, 2, 6, outline_col)
+	_draw_rect_on_img(img, 14, 2, 2, 4, outline_col)
+	_draw_rect_on_img(img, 10, 1, 2, 6, arrow_col)
+	_draw_rect_on_img(img, 12, 2, 2, 4, arrow_col)
+	_draw_rect_on_img(img, 14, 3, 1, 2, arrow_col)
+	var s = Sprite2D.new()
+	s.texture = ImageTexture.create_from_image(img)
+	s.z_index = 2
+	return s
+
+func _draw_rect_on_img(img: Image, x: int, y: int, w: int, h: int, col: Color) -> void:
+	for py in range(y, mini(y + h, img.get_height())):
+		for px in range(x, mini(x + w, img.get_width())):
+			img.set_pixel(px, py, col)
+
+func _update_charge_arrow() -> void:
+	if not _charge_arrow or not is_instance_valid(_charge_arrow):
+		return
+	var dir = _facing.normalized() if _facing.length() > 0.1 else Vector2.RIGHT
+	_charge_arrow.position = dir * 28.0
+	_charge_arrow.rotation = dir.angle()
 
 # --- Mobile Attack Button ---
 
@@ -2074,16 +2117,41 @@ func _get_tree_at_mouse() -> Node2D:
 
 func _set_facing(dir: Vector2) -> void:
 	_facing = dir
-	# Determine direction category with hysteresis to prevent jitter
+	# 8-way direction detection using angle-based octants
 	var new_cat: String
 	var new_flip: bool = false
-	if abs(dir.x) > abs(dir.y) * 0.6:
-		new_cat = "side"
-		new_flip = dir.x < 0
-	elif dir.y < -0.3:
-		new_cat = "up"
-	else:
-		new_cat = "down"
+	var angle = dir.angle()  # radians: 0=right, PI/2=down, -PI/2=up
+	# Normalize to [0, TAU)
+	if angle < 0:
+		angle += TAU
+	# Divide circle into 8 octants (each 45°=PI/4)
+	# Octant boundaries offset by 22.5° so cardinal directions are centered
+	var octant = int(floor((angle + PI / 8.0) / (PI / 4.0))) % 8
+	match octant:
+		0:  # Right
+			new_cat = "side"
+			new_flip = false
+		1:  # Down-right
+			new_cat = "down_side"
+			new_flip = false
+		2:  # Down
+			new_cat = "down"
+		3:  # Down-left
+			new_cat = "down_side"
+			new_flip = true
+		4:  # Left
+			new_cat = "side"
+			new_flip = true
+		5:  # Up-left
+			new_cat = "up_side"
+			new_flip = true
+		6:  # Up
+			new_cat = "up"
+		7:  # Up-right
+			new_cat = "up_side"
+			new_flip = false
+		_:
+			new_cat = "down"
 	# Only update sprite when the category or flip actually changes
 	if new_cat == _facing_cat and new_flip == sprite.flip_h:
 		return
@@ -2733,7 +2801,7 @@ func _apply_sprite_upgrade(tier: int) -> void:
 		_idle_texture = tex
 		_dir_textures["down"] = tex
 	# Also try tier-specific directional sprites
-	for dir_key in ["down", "up", "side"]:
+	for dir_key in ["down", "up", "side", "down_side", "up_side"]:
 		var dtex = SpriteGenerator.get_texture("%s_t%d_dir_%s" % [hero_class, tier, dir_key])
 		if dtex:
 			_dir_textures[dir_key] = dtex

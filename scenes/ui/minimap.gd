@@ -8,7 +8,10 @@ const WORLD_SIZE = Vector2(12000, 9000)  # Haven's Rest total area
 
 var _player: Node2D = null
 var _redraw_timer: float = 0.0
-var click_to_move_enabled: bool = true  # When false, clicks are passed through (for small preview)
+var click_to_move_enabled: bool = true:  # When false, clicks pass through to parent
+	set(v):
+		click_to_move_enabled = v
+		mouse_filter = Control.MOUSE_FILTER_STOP if v else Control.MOUSE_FILTER_PASS
 const REDRAW_INTERVAL: float = 0.25  # Redraw 4 times per second, not 60
 var _cached_enemies: Array = []  # Cached enemy positions for minimap dots
 var _cached_bosses: Array = []  # Cached miniboss positions for pulsing diamond indicators

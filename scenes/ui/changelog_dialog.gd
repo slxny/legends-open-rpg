@@ -9,15 +9,18 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.62.1"
+const GAME_VERSION := "v0.62.2"
 
 const CHANGELOG: Array[Dictionary] = [
 	{
-		"version": "v0.62.1",
-		"title": "Cha-ching sell sound effect",
+		"version": "v0.62.2",
+		"title": "Improved shop & save/load SFX",
 		"date": "2026-02-24",
 		"entries": [
-			"New satisfying cha-ching SFX when selling items — coin cascade into register bell",
+			"Sell SFX: obvious CHA-CHING with drawer slam, coin cascade, and bright register bell",
+			"Buy SFX: descending coins (spending) + soft thud (goods received) — distinct from sell",
+			"New save game SFX: quill scratch on parchment + warm confirmation chime",
+			"New load game SFX: page unfurling + ascending chime (world restored)",
 		]
 	},
 	{

@@ -143,10 +143,12 @@ func _style_btn(btn: Button, accent: Color = Color(0.9, 0.75, 0.3)) -> void:
 
 func _on_save() -> void:
 	SaveLoadManager.save_game()
+	AudioManager.play_sfx("save_game")
 	close()
 
 func _on_load() -> void:
 	SaveLoadManager.load_game()
+	AudioManager.play_sfx("load_game")
 	if _player and is_instance_valid(_player):
 		SaveLoadManager.apply_to_player(_player)
 	close()

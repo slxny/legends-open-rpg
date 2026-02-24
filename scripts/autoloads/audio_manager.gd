@@ -425,6 +425,8 @@ func _generate_all_sfx() -> void:
 	_sfx_cache["death_shadow_wraith"] = _gen_death_shadow_wraith()
 	_sfx_cache["death_dragon_whelp"] = _gen_death_dragon_whelp()
 	_sfx_cache["death_infernal"] = _gen_death_infernal()
+	_sfx_cache["save_game"] = _gen_save_game()
+	_sfx_cache["load_game"] = _gen_load_game()
 
 func _gen_sword_swing() -> AudioStreamWAV:
 	# Warm blade slice — smooth swoosh with subtle metal edge
@@ -1238,53 +1240,111 @@ func _gen_wench_debuff() -> AudioStreamWAV:
 	return _to_stream(samples)
 
 func _gen_shop_buy() -> AudioStreamWAV:
-	# Satisfying coin exchange — coins clinking on counter with register confirmation
-	# Multiple quick metallic clinks followed by a warm "cha-ching" tone
-	var samples = _make_samples(0.40)
-	# Coin clinks — three quick high metallic tinks at slightly different pitches
-	var clink_freqs = [3200.0, 3600.0, 4100.0]
-	var clink_times = [0.0, 0.04, 0.09]
-	for j in range(3):
-		var clink = _make_samples(0.05)
+	# Coins leaving your purse — descending clinks (spending), soft thud (goods received)
+	var samples = _make_samples(0.45)
+	# Descending coin clinks — money leaving, 4 coins falling away
+	var clink_freqs = [4200.0, 3600.0, 3000.0, 2500.0]
+	var clink_times = [0.0, 0.04, 0.08, 0.13]
+	for j in range(4):
+		var clink = _make_samples(0.06)
 		_add_sine(clink, clink_freqs[j], 0.2)
 		_add_sine(clink, clink_freqs[j] * 0.5, 0.1)
-		_add_pitched_noise(clink, clink_freqs[j], 800.0, 0.08)
-		_apply_envelope(clink, 0.001, 0.008, 0.04)
+		_add_pitched_noise(clink, clink_freqs[j], 700.0, 0.07)
+		_apply_envelope(clink, 0.001, 0.008, 0.045)
 		_mix_into(samples, clink, int(clink_times[j] * SAMPLE_RATE))
-	# Register confirmation — warm descending "cha-ching" two-note
-	_add_sine_segment(samples, 784.0, 0.3, 0.14, 0.10)   # G5
-	_add_sine_segment(samples, 523.0, 0.35, 0.20, 0.16)   # C5
-	_add_sine_segment(samples, 1046.0, 0.10, 0.20, 0.12)  # C6 overtone
-	# Warmth underneath
-	_add_sine_segment(samples, 261.6, 0.12, 0.14, 0.20)
-	_apply_envelope(samples, 0.002, 0.12, 0.28)
-	_soft_clip(samples, 1.3)
+	# Soft thud — item placed on counter / received
+	_add_sine_segment(samples, 120.0, 0.25, 0.18, 0.10)    # Low thud
+	_add_sine_segment(samples, 180.0, 0.15, 0.18, 0.08)    # Thud body
+	_add_pitched_noise(samples, 400.0, 300.0, 0.08, 0.18)   # Cloth rustle
+	# Warm confirmation note — you got something good
+	_add_sine_segment(samples, 440.0, 0.2, 0.22, 0.15)     # A4 warmth
+	_add_sine_segment(samples, 659.0, 0.15, 0.24, 0.12)    # E5 gentle confirm
+	_apply_envelope(samples, 0.002, 0.14, 0.28)
+	_soft_clip(samples, 1.2)
 	return _to_stream(samples)
 
 func _gen_shop_sell() -> AudioStreamWAV:
-	# Cha-ching! Satisfying cash register sound — coins tumbling then a bright register bell
-	var samples = _make_samples(0.50)
-	# Rapid coin cascade — 5 ascending metallic clinks like coins pouring in
-	var clink_freqs = [2800.0, 3200.0, 3600.0, 4000.0, 4500.0]
-	var clink_times = [0.0, 0.03, 0.06, 0.09, 0.12]
-	for j in range(5):
+	# Obvious CHA-CHING! — classic cash register with drawer slam and bell ring
+	var samples = _make_samples(0.65)
+	# Drawer slam — mechanical click-clack at the start
+	var slam = _make_samples(0.06)
+	_add_sine(slam, 200.0, 0.3)
+	_add_sine(slam, 350.0, 0.15)
+	_add_pitched_noise(slam, 1200.0, 800.0, 0.2)
+	_apply_envelope(slam, 0.001, 0.01, 0.04)
+	_mix_into(samples, slam)
+	# Rapid coin cascade — 6 ascending clinks, money pouring in
+	var clink_freqs = [2600.0, 3000.0, 3400.0, 3800.0, 4200.0, 4800.0]
+	var clink_times = [0.04, 0.07, 0.10, 0.13, 0.155, 0.175]
+	for j in range(6):
 		var clink = _make_samples(0.05)
-		_add_sine(clink, clink_freqs[j], 0.18)
-		_add_sine(clink, clink_freqs[j] * 0.5, 0.09)
-		_add_pitched_noise(clink, clink_freqs[j], 900.0, 0.07)
-		_apply_envelope(clink, 0.001, 0.008, 0.04)
+		_add_sine(clink, clink_freqs[j], 0.22)
+		_add_sine(clink, clink_freqs[j] * 0.5, 0.1)
+		_add_pitched_noise(clink, clink_freqs[j], 900.0, 0.08)
+		_apply_envelope(clink, 0.001, 0.008, 0.035)
 		_mix_into(samples, clink, int(clink_times[j] * SAMPLE_RATE))
-	# Register bell — bright ascending "cha-ching" two-note
-	_add_sine_segment(samples, 784.0, 0.25, 0.16, 0.08)    # G5 — "cha"
-	_add_sine_segment(samples, 1047.0, 0.35, 0.22, 0.18)   # C6 — "ching!"
-	_add_sine_segment(samples, 2093.0, 0.12, 0.22, 0.14)   # C7 overtone shimmer
-	# Bright sparkle trail
-	_add_sine_segment(samples, 1568.0, 0.08, 0.28, 0.12)   # G6 sparkle
-	_add_pitched_noise(samples, 6000.0, 1500.0, 0.03, 0.22)
-	# Warm low body
-	_add_sine_segment(samples, 523.0, 0.15, 0.16, 0.25)    # C5 warmth
-	_apply_envelope(samples, 0.002, 0.14, 0.34)
-	_soft_clip(samples, 1.3)
+	# CHA — sharp attack bell strike
+	_add_sine_segment(samples, 784.0, 0.35, 0.20, 0.06)    # G5 — "CHA"
+	_add_sine_segment(samples, 1568.0, 0.15, 0.20, 0.05)   # G6 overtone
+	# CHING! — bright sustained bell ring, higher pitch
+	_add_sine_segment(samples, 1047.0, 0.45, 0.26, 0.30)   # C6 — "CHING!"
+	_add_sine_segment(samples, 2093.0, 0.18, 0.26, 0.25)   # C7 bell overtone
+	_add_sine_segment(samples, 3140.0, 0.08, 0.26, 0.18)   # G7 shimmer
+	# Sparkle trail — the money feeling
+	_add_sine_segment(samples, 1568.0, 0.10, 0.35, 0.15)   # G6 sparkle
+	_add_sine_segment(samples, 2093.0, 0.06, 0.40, 0.12)   # C7 tail
+	_add_pitched_noise(samples, 7000.0, 2000.0, 0.04, 0.30)
+	# Low register body — gives it weight
+	_add_sine_segment(samples, 523.0, 0.18, 0.20, 0.35)    # C5 warmth
+	_add_sine_segment(samples, 262.0, 0.10, 0.20, 0.30)    # C4 foundation
+	_apply_envelope(samples, 0.002, 0.20, 0.42)
+	_soft_clip(samples, 1.4)
+	return _to_stream(samples)
+
+func _gen_save_game() -> AudioStreamWAV:
+	# Quill scratch on parchment + soft confirmation chime — "progress saved"
+	var samples = _make_samples(0.50)
+	# Quill scratch — quick bursts of filtered noise like pen on paper
+	var scratch_times = [0.0, 0.05, 0.11]
+	var scratch_freqs = [3500.0, 4000.0, 3800.0]
+	for j in range(3):
+		var scratch = _make_samples(0.06)
+		_add_pitched_noise(scratch, scratch_freqs[j], 1500.0, 0.12)
+		_add_sine(scratch, scratch_freqs[j] * 0.3, 0.03)
+		_apply_envelope(scratch, 0.002, 0.015, 0.04)
+		_mix_into(samples, scratch, int(scratch_times[j] * SAMPLE_RATE))
+	# Soft descending confirmation — warm and reassuring
+	_add_sine_segment(samples, 880.0, 0.22, 0.16, 0.14)    # A5
+	_add_sine_segment(samples, 659.0, 0.28, 0.22, 0.18)    # E5
+	_add_sine_segment(samples, 523.0, 0.20, 0.28, 0.16)    # C5 — settled
+	_add_sine_segment(samples, 1047.0, 0.08, 0.22, 0.12)   # C6 overtone
+	# Gentle warmth
+	_add_sine_segment(samples, 262.0, 0.10, 0.20, 0.22)    # C4 body
+	_apply_envelope(samples, 0.002, 0.16, 0.30)
+	_soft_clip(samples, 1.1)
+	return _to_stream(samples)
+
+func _gen_load_game() -> AudioStreamWAV:
+	# Page unfurling + ascending chime — "world restored"
+	var samples = _make_samples(0.55)
+	# Page turn — breathy noise sweep, like parchment unrolling
+	var page = _make_samples(0.15)
+	_add_pitched_noise(page, 2000.0, 2500.0, 0.10)
+	_add_pitched_noise(page, 4000.0, 1500.0, 0.06)
+	_apply_envelope(page, 0.01, 0.05, 0.09)
+	_mix_into(samples, page)
+	# Ascending warm chime — world coming back to life
+	_add_sine_segment(samples, 523.0, 0.20, 0.12, 0.12)    # C5
+	_add_sine_segment(samples, 659.0, 0.25, 0.18, 0.14)    # E5
+	_add_sine_segment(samples, 784.0, 0.30, 0.24, 0.18)    # G5
+	_add_sine_segment(samples, 1047.0, 0.22, 0.30, 0.16)   # C6 — arrival
+	_add_sine_segment(samples, 2093.0, 0.08, 0.30, 0.12)   # C7 shimmer
+	# Sparkle — world is alive again
+	_add_pitched_noise(samples, 5500.0, 1200.0, 0.03, 0.32)
+	# Low warmth body
+	_add_sine_segment(samples, 262.0, 0.12, 0.14, 0.30)    # C4 foundation
+	_apply_envelope(samples, 0.002, 0.18, 0.34)
+	_soft_clip(samples, 1.1)
 	return _to_stream(samples)
 
 func _gen_ui_tap() -> AudioStreamWAV:

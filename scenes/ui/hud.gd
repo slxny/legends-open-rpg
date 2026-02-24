@@ -598,9 +598,11 @@ func _on_inventory_pressed() -> void:
 
 func _on_save_pressed() -> void:
 	SaveLoadManager.save_game()
+	AudioManager.play_sfx("save_game")
 
 func _on_load_pressed() -> void:
 	SaveLoadManager.load_game()
+	AudioManager.play_sfx("load_game")
 	if _player and is_instance_valid(_player):
 		SaveLoadManager.apply_to_player(_player)
 

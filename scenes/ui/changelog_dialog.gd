@@ -9,9 +9,18 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.61.0"
+const GAME_VERSION := "v0.61.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.61.1",
+		"title": "Fix miniboss minimap diamond not appearing",
+		"date": "2026-02-23",
+		"entries": [
+			"Mini-boss camps now spawn enemies immediately regardless of distance",
+			"Fixes pulsing diamond indicator not showing on minimap when boss spawns far away",
+		]
+	},
 	{
 		"version": "v0.61.0",
 		"title": "New enemy: Tree God Elk",

@@ -257,9 +257,12 @@ const ENEMIES_PER_FRAME: int = 3  # Max enemies to instantiate per frame during 
 
 func _ready() -> void:
 	# Defer initial spawn: camps close to origin (player spawn) activate immediately,
-	# distant camps wait until the player approaches
+	# distant camps wait until the player approaches.
+	# Mini-boss camps always spawn immediately so their minimap indicator works.
+	var type_data = CAMP_TYPES.get(camp_type, CAMP_TYPES["goblin"])
+	var is_boss = type_data.get("is_mini_boss", false)
 	var dist_sq = global_position.length_squared()
-	if dist_sq < ACTIVATION_DISTANCE_SQ:
+	if is_boss or dist_sq < ACTIVATION_DISTANCE_SQ:
 		_spawn_enemies_staggered(false)
 	# Distant camps stay dormant until player is nearby (checked in _process)
 

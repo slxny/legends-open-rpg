@@ -8,6 +8,7 @@ const WORLD_SIZE = Vector2(12000, 9000)  # Haven's Rest total area
 
 var _player: Node2D = null
 var _redraw_timer: float = 0.0
+var click_to_move_enabled: bool = true  # When false, clicks are passed through (for small preview)
 const REDRAW_INTERVAL: float = 0.25  # Redraw 4 times per second, not 60
 var _cached_enemies: Array = []  # Cached enemy positions for minimap dots
 var _cached_bosses: Array = []  # Cached miniboss positions for pulsing diamond indicators
@@ -24,6 +25,8 @@ func setup(player: Node2D) -> void:
 	_player = player
 
 func _gui_input(event: InputEvent) -> void:
+	if not click_to_move_enabled:
+		return  # Let parent handle the click (e.g. to open expanded overlay)
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var local_pos = event.position
 		local_pos = local_pos.clamp(Vector2.ZERO, size)

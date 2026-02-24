@@ -54,6 +54,8 @@ var _cmd_overlay_visible: bool = false
 # Minimap overlay (mobile portrait)
 var _map_overlay: PanelContainer = null
 var _map_overlay_visible: bool = false
+var _map_overlay_vbox: VBoxContainer = null  # Overlay content container for reparenting minimap
+var _minimap_home: PanelContainer = null  # Bottom-bar container that holds minimap when overlay is closed
 
 func _ready() -> void:
 	_detect_mobile()
@@ -124,20 +126,29 @@ func _apply_mobile_layout() -> void:
 		btn_style_pressed.bg_color = Color(0.25, 0.2, 0.08, 0.95)
 		btn_style_pressed.border_color = Color(0.9, 0.75, 0.3, 1.0)
 
-		# MAP button — wide, left of bars
+		# MAP panel — shows live minimap, tap to expand
 		var btn_w = panel_h * 2  # 2x width for comfortable touch targets
-		var map_btn = Button.new()
-		map_btn.text = "MAP"
-		map_btn.custom_minimum_size = Vector2(btn_w, 0)
-		map_btn.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		map_btn.add_theme_font_size_override("font_size", 28)
-		map_btn.add_theme_color_override("font_color", Color(0.5, 0.85, 1.0))
-		map_btn.add_theme_stylebox_override("normal", btn_style_normal.duplicate())
-		map_btn.add_theme_stylebox_override("pressed", btn_style_pressed.duplicate())
-		map_btn.add_theme_stylebox_override("hover", btn_style_normal.duplicate())
-		map_btn.pressed.connect(_toggle_map_overlay)
-		bottom_hbox.add_child(map_btn)
-		bottom_hbox.move_child(map_btn, 0)  # Move to leftmost position
+		_minimap_home = PanelContainer.new()
+		_minimap_home.custom_minimum_size = Vector2(btn_w, 0)
+		_minimap_home.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		_minimap_home.add_theme_stylebox_override("panel", btn_style_normal.duplicate())
+		# Reparent minimap from bottom_hbox into this panel
+		minimap.get_parent().remove_child(minimap)
+		minimap.custom_minimum_size = Vector2(0, 0)
+		minimap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		minimap.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		minimap.visible = true
+		minimap.click_to_move_enabled = false  # Small preview: tap opens overlay instead
+		_minimap_home.add_child(minimap)
+		# Make the panel clickable via gui_input
+		_minimap_home.mouse_filter = Control.MOUSE_FILTER_STOP
+		_minimap_home.gui_input.connect(func(event: InputEvent):
+			if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+				_toggle_map_overlay()
+				_minimap_home.get_viewport().set_input_as_handled()
+		)
+		bottom_hbox.add_child(_minimap_home)
+		bottom_hbox.move_child(_minimap_home, 0)  # Move to leftmost position
 
 		# OPT button — wide, right of bars
 		var opt_btn = Button.new()
@@ -364,14 +375,14 @@ func _build_map_overlay() -> void:
 	style.set_content_margin_all(12)
 	_map_overlay.add_theme_stylebox_override("panel", style)
 
-	var vbox = VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 6)
-	_map_overlay.add_child(vbox)
+	_map_overlay_vbox = VBoxContainer.new()
+	_map_overlay_vbox.add_theme_constant_override("separation", 6)
+	_map_overlay.add_child(_map_overlay_vbox)
 
 	# Title row with close button
 	var title_row = HBoxContainer.new()
 	title_row.add_theme_constant_override("separation", 8)
-	vbox.add_child(title_row)
+	_map_overlay_vbox.add_child(title_row)
 	var title = Label.new()
 	title.text = "Map"
 	title.add_theme_font_size_override("font_size", 36)
@@ -386,14 +397,7 @@ func _build_map_overlay() -> void:
 	close_btn.pressed.connect(_toggle_map_overlay)
 	title_row.add_child(close_btn)
 
-	# Reparent the minimap into the overlay and scale it up
-	minimap.get_parent().remove_child(minimap)
-	minimap.custom_minimum_size = Vector2(0, 0)
-	minimap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	minimap.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	minimap.visible = true
-	vbox.add_child(minimap)
-
+	# Minimap will be reparented here when overlay opens (stays in bottom bar normally)
 	add_child(_map_overlay)
 
 func _toggle_map_overlay() -> void:
@@ -406,13 +410,17 @@ func _toggle_map_overlay() -> void:
 	_map_overlay.visible = _map_overlay_visible
 	if _map_overlay_visible:
 		AudioManager.play_sfx("ui_tap", -4.0)
+		# Reparent minimap into the expanded overlay
+		if _minimap_home and minimap.get_parent() == _minimap_home:
+			_minimap_home.remove_child(minimap)
+			_map_overlay_vbox.add_child(minimap)
+			minimap.click_to_move_enabled = true
 		await get_tree().process_frame
 		var vp_size = get_viewport().get_visible_rect().size
 		var is_ls = vp_size.x > vp_size.y
 		var overlay_w: float
 		var map_h: float
 		if is_ls:
-			# Landscape: compact overlay that doesn't dominate the screen
 			map_h = vp_size.y * 0.5
 			overlay_w = min(vp_size.x * 0.45, map_h * 1.3)
 		else:
@@ -420,6 +428,12 @@ func _toggle_map_overlay() -> void:
 			map_h = vp_size.x * 0.65
 		_map_overlay.size = Vector2(overlay_w, map_h)
 		_map_overlay.position = Vector2((vp_size.x - overlay_w) / 2.0, vp_size.y - bottom_panel.size.y - map_h - 8)
+	else:
+		# Reparent minimap back into the bottom-bar home panel
+		if _minimap_home and minimap.get_parent() != _minimap_home:
+			minimap.get_parent().remove_child(minimap)
+			_minimap_home.add_child(minimap)
+			minimap.click_to_move_enabled = false
 
 func _open_pause_menu() -> void:
 	var menus = get_tree().get_nodes_in_group("pause_menu")

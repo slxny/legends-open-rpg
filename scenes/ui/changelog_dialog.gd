@@ -9,16 +9,18 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.61.3"
+const GAME_VERSION := "v0.61.4"
 
 const CHANGELOG: Array[Dictionary] = [
 	{
-		"version": "v0.61.3",
-		"title": "Wider MAP & OPT buttons on mobile portrait",
+		"version": "v0.61.4",
+		"title": "Live minimap in bottom bar on mobile",
 		"date": "2026-02-23",
 		"entries": [
-			"MAP and OPT buttons are now 2x wider for easier touch targeting",
-			"Buttons no longer get cut off on smaller screens",
+			"MAP button replaced with live minimap preview in the bottom bar",
+			"Tap the small minimap to expand into full-size overlay",
+			"Click-to-move only works in the expanded overlay, not the small preview",
+			"MAP and OPT buttons are 2x wider for easier touch targeting",
 		]
 	},
 	{

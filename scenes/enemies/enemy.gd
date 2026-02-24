@@ -646,6 +646,8 @@ func _die() -> void:
 		_die_crumble()
 	elif sprite_type == "rat":
 		_die_rat_explode()
+	elif sprite_type == "tree_god_elk":
+		_die_elk_collapse()
 	elif is_mini_boss:
 		_spawn_blood_splatter()
 		_die_boss()
@@ -736,6 +738,54 @@ func _spawn_rat_gibs() -> void:
 		t.tween_interval(randf_range(1.0, 2.5))
 		t.tween_property(gib, "modulate:a", 0.0, 0.6)
 		t.tween_callback(gib.queue_free)
+
+func _die_elk_collapse() -> void:
+	# Nature collapse: stagger wobble, root tendrils grow outward, collapse sideways, green fade
+	var base_pos = sprite.position
+	var tween = create_tween()
+	# Phase 1: Stagger wobble — 3 side-to-side sways, green glow fades
+	tween.tween_property(sprite, "position", base_pos + Vector2(-4, 0), 0.12)
+	tween.parallel().tween_property(sprite, "modulate", Color(0.7, 1.2, 0.5), 0.12)
+	tween.tween_property(sprite, "position", base_pos + Vector2(5, 0), 0.12)
+	tween.tween_property(sprite, "position", base_pos + Vector2(-3, 0), 0.1)
+	tween.parallel().tween_property(sprite, "modulate", Color(0.6, 1.0, 0.4), 0.1)
+	# Phase 2: Spawn root/vine tendrils growing outward
+	tween.tween_callback(_spawn_elk_root_tendrils)
+	# Phase 3: Collapse sideways with rotation
+	tween.tween_property(sprite, "rotation", 1.2, 0.3)
+	tween.parallel().tween_property(sprite, "position", base_pos + Vector2(8, 6), 0.3)
+	tween.parallel().tween_property(sprite, "scale", _base_scale * Vector2(1.1, 0.8), 0.3)
+	# Phase 4: Fade to green-tinted transparent
+	tween.tween_property(sprite, "modulate", Color(0.3, 0.7, 0.2, 0.0), 0.5)
+	tween.tween_callback(queue_free)
+
+func _spawn_elk_root_tendrils() -> void:
+	var world = _get_world_node()
+	for _i in range(randi_range(4, 6)):
+		var tendril = Sprite2D.new()
+		# Use vines texture as root tendril
+		var tex = SpriteGenerator.get_texture("vines")
+		if tex:
+			tendril.texture = tex
+		tendril.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		tendril.global_position = global_position + Vector2(randf_range(-6, 6), randf_range(-4, 4))
+		tendril.rotation = randf() * TAU
+		tendril.scale = Vector2(0.1, 0.1)
+		tendril.modulate = Color(0.4, 0.7, 0.2, 0.9)
+		tendril.z_index = -1
+		world.add_child(tendril)
+		# Grow outward
+		var dir = Vector2(randf_range(-1, 1), randf_range(-1, 1)).normalized()
+		var dest = tendril.global_position + dir * randf_range(15, 35)
+		var t = tendril.create_tween()
+		t.set_parallel(true)
+		t.tween_property(tendril, "global_position", dest, randf_range(0.3, 0.5)).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		t.tween_property(tendril, "scale", Vector2(randf_range(0.6, 1.0), randf_range(0.6, 1.0)), 0.4)
+		t.set_parallel(false)
+		# Linger then fade
+		t.tween_interval(randf_range(1.5, 3.0))
+		t.tween_property(tendril, "modulate:a", 0.0, 0.8)
+		t.tween_callback(tendril.queue_free)
 
 func _die_boss() -> void:
 	# Dramatic mini-boss death: expand, flash bright, shake violently, explode outward
@@ -838,6 +888,8 @@ func _do_attack_lunge() -> void:
 			_anim_goblin_swing(dir, base_pos)
 		"troll":
 			_anim_troll_slam(dir, base_pos)
+		"tree_god_elk":
+			_anim_elk_charge(dir, base_pos)
 		_:
 			_anim_generic_lunge(dir, base_pos)
 
@@ -909,6 +961,34 @@ func _anim_troll_slam(dir: Vector2, base_pos: Vector2) -> void:
 	# Phase 6: Settle back to idle
 	tween.tween_property(sprite, "position", base_pos, 0.2)
 	tween.parallel().tween_property(sprite, "scale", _base_scale, 0.2)
+
+func _anim_elk_charge(dir: Vector2, base_pos: Vector2) -> void:
+	# Majestic antler charge — rear up, stamp, gore forward, antler toss, lumber back
+	var tween = create_tween()
+	var base_mod = _base_modulate if _base_modulate else Color.WHITE
+	# Phase 1: Rear up — antlers raised, stretch tall, green glow
+	tween.tween_property(sprite, "position", base_pos + Vector2(0, -8), 0.2)
+	tween.parallel().tween_property(sprite, "scale", _base_scale * Vector2(0.85, 1.3), 0.2)
+	tween.parallel().tween_property(sprite, "modulate", Color(0.8, 1.2, 0.7) * base_mod, 0.2)
+	# Phase 2: Stamp pause — brief menacing hold
+	tween.tween_interval(0.1)
+	# Phase 3: Explosive forward gore charge — flatten wide, green-brown flash
+	tween.tween_callback(func(): sprite.modulate = Color(1.1, 1.3, 0.8) * base_mod)
+	tween.tween_property(sprite, "position", base_pos + dir * 18.0 + Vector2(0, 3), 0.1)
+	tween.parallel().tween_property(sprite, "scale", _base_scale * Vector2(1.3, 0.75), 0.1)
+	tween.parallel().tween_property(sprite, "rotation", dir.angle() * 0.15, 0.1)
+	# Phase 4: Antler toss flick — upward snap with rotation
+	tween.tween_property(sprite, "position", base_pos + dir * 14.0 + Vector2(0, -5), 0.08)
+	tween.parallel().tween_property(sprite, "scale", _base_scale * Vector2(0.9, 1.15), 0.08)
+	tween.parallel().tween_property(sprite, "rotation", -0.15, 0.08)
+	# Phase 5: Lumber back to idle
+	tween.tween_property(sprite, "modulate", base_mod, 0.15)
+	tween.parallel().tween_property(sprite, "position", base_pos + dir * 5.0, 0.2)
+	tween.parallel().tween_property(sprite, "scale", _base_scale * Vector2(1.05, 0.95), 0.2)
+	tween.parallel().tween_property(sprite, "rotation", 0.0, 0.2)
+	# Phase 6: Settle
+	tween.tween_property(sprite, "position", base_pos, 0.15)
+	tween.parallel().tween_property(sprite, "scale", _base_scale, 0.15)
 
 func _anim_generic_lunge(dir: Vector2, base_pos: Vector2) -> void:
 	# Standard lunge with squash-stretch for weight

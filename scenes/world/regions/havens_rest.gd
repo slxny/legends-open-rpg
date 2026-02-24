@@ -18,6 +18,8 @@ const WAVE_SCHEDULE = [
 	{"time": 180.0, "type": "wolf", "min_dist": 1500.0, "max_dist": 2500.0, "camps": 5, "per_camp": 6, "msg": "Wolves are gathering in the wilds...", "color": Color(0.6, 0.6, 0.9)},
 	# Wave 2 (5 min): Bandits push in, trolls appear mid
 	{"time": 300.0, "type": "troll", "min_dist": 2000.0, "max_dist": 3500.0, "camps": 5, "per_camp": 4, "msg": "Trolls emerge from the deep forest!", "color": Color(0.4, 0.8, 0.4)},
+	# Wave 2.5 (6 min): Tree God Elks from sacred groves
+	{"time": 360.0, "type": "tree_god_elk", "min_dist": 2200.0, "max_dist": 3500.0, "camps": 5, "per_camp": 3, "msg": "Ancient elks emerge from the sacred groves...", "color": Color(0.5, 0.85, 0.3)},
 	# Wave 3 (7 min): Dark mages + first mini-boss
 	{"time": 420.0, "type": "dark_mage", "min_dist": 2500.0, "max_dist": 4000.0, "camps": 6, "per_camp": 4, "msg": "Dark magic crackles in the air...", "color": Color(0.7, 0.3, 0.9)},
 	# Wave 4 (10 min): Demon Knights arrive

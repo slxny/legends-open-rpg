@@ -86,7 +86,7 @@ func _all_sprite_names() -> Array[String]:
 			names.append("blade_knight_atk%s%d" % [swing, frame])
 	# Enemies
 	names.append_array(["rat", "goblin", "wolf", "bandit", "skeleton",
-		"spider", "troll", "dark_mage", "ogre", "ogre_boss",
+		"spider", "troll", "dark_mage", "tree_god_elk", "ogre", "ogre_boss",
 		"demon_knight", "ancient_golem", "shadow_wraith", "dragon_whelp",
 		"infernal"])
 	return names
@@ -207,6 +207,7 @@ func _generate_all() -> void:
 	_gen_or_load("shadow_wraith")
 	_gen_or_load("dragon_whelp")
 	_gen_or_load("infernal")
+	_gen_or_load("tree_god_elk")
 	# Environment
 	_gen_or_load("tree_jungle")
 	_gen_or_load("tree_small")
@@ -2664,6 +2665,96 @@ func _gen_infernal() -> void:
 	_fill_rect(img, 23, 1, 2, 3, c["fire"])
 	_fill_rect(img, 19, 0, 2, 4, c["fire"])
 	textures["infernal"] = ImageTexture.create_from_image(img)
+
+func _gen_tree_god_elk() -> void:
+	# Majestic nature-infused elk — bark body, branching antlers with green tips, glowing eyes
+	var img = Image.create(38, 44, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = {
+		"bark": Color(0.30, 0.20, 0.12),
+		"bark_dark": Color(0.20, 0.13, 0.07),
+		"bark_light": Color(0.40, 0.28, 0.16),
+		"bark_patch": Color(0.18, 0.10, 0.05),
+		"antler": Color(0.35, 0.25, 0.15),
+		"antler_tip": Color(0.3, 0.6, 0.2),
+		"leaf": Color(0.25, 0.55, 0.15),
+		"leaf_bright": Color(0.4, 0.7, 0.2),
+		"eye": Color(0.3, 1.0, 0.2),
+		"eye_core": Color(0.7, 1.0, 0.5),
+		"vine": Color(0.2, 0.45, 0.12, 0.7),
+		"shadow": Color(0, 0, 0, 0.3),
+	}
+	# Shadow ellipse
+	_fill_ellipse(img, 19, 42, 14, 3, c["shadow"])
+	# ---- Back legs (behind body) ----
+	_fill_rect(img, 8, 34, 4, 9, c["bark_dark"])
+	_fill_rect(img, 9, 35, 2, 7, c["bark"])
+	_fill_rect(img, 26, 34, 4, 9, c["bark_dark"])
+	_fill_rect(img, 27, 35, 2, 7, c["bark"])
+	# ---- Front legs ----
+	_fill_rect(img, 12, 34, 4, 9, c["bark"])
+	_fill_rect(img, 13, 35, 2, 7, c["bark_light"])
+	_fill_rect(img, 22, 34, 4, 9, c["bark"])
+	_fill_rect(img, 23, 35, 2, 7, c["bark_light"])
+	# Hooves
+	_fill_rect(img, 8, 41, 4, 2, c["bark_dark"])
+	_fill_rect(img, 12, 41, 4, 2, c["bark_dark"])
+	_fill_rect(img, 22, 41, 4, 2, c["bark_dark"])
+	_fill_rect(img, 26, 41, 4, 2, c["bark_dark"])
+	# ---- Body (large quadruped torso) ----
+	_fill_rect(img, 6, 24, 26, 12, c["bark"])
+	_fill_rect(img, 8, 25, 22, 10, c["bark_light"])
+	# Bark-like darker patches on flanks
+	_fill_rect(img, 10, 27, 3, 3, c["bark_patch"])
+	_fill_rect(img, 24, 28, 3, 3, c["bark_patch"])
+	_fill_rect(img, 16, 32, 3, 2, c["bark_patch"])
+	# Belly area
+	_fill_rect(img, 12, 33, 14, 2, c["bark_dark"])
+	# ---- Vine/root tendrils along lower body ----
+	_fill_rect(img, 6, 32, 2, 4, c["vine"])
+	_fill_rect(img, 30, 33, 2, 3, c["vine"])
+	_fill_rect(img, 14, 35, 2, 2, c["vine"])
+	_fill_rect(img, 20, 35, 2, 2, c["vine"])
+	# ---- Neck (thick, angled forward) ----
+	_fill_rect(img, 10, 18, 8, 8, c["bark"])
+	_fill_rect(img, 11, 19, 6, 6, c["bark_light"])
+	# ---- Head ----
+	_fill_rect(img, 7, 14, 10, 7, c["bark"])
+	_fill_rect(img, 8, 15, 8, 5, c["bark_light"])
+	# Snout
+	_fill_rect(img, 5, 16, 3, 4, c["bark"])
+	_fill_rect(img, 5, 17, 2, 2, c["bark_dark"])
+	# ---- Glowing green eyes ----
+	_fill_rect(img, 9, 15, 2, 2, c["eye"])
+	_fill_rect(img, 13, 15, 2, 2, c["eye"])
+	_fill_rect(img, 10, 16, 1, 1, c["eye_core"])
+	_fill_rect(img, 14, 16, 1, 1, c["eye_core"])
+	# ---- Large branching antlers ----
+	# Main antler shafts
+	_fill_rect(img, 9, 6, 2, 9, c["antler"])
+	_fill_rect(img, 15, 6, 2, 9, c["antler"])
+	# Left antler branches
+	_fill_rect(img, 5, 4, 6, 2, c["antler"])
+	_fill_rect(img, 4, 2, 2, 4, c["antler"])
+	_fill_rect(img, 7, 7, 2, 2, c["antler"])
+	# Right antler branches
+	_fill_rect(img, 15, 4, 6, 2, c["antler"])
+	_fill_rect(img, 20, 2, 2, 4, c["antler"])
+	_fill_rect(img, 17, 7, 2, 2, c["antler"])
+	# Green leaf/moss tips on antlers
+	_fill_rect(img, 3, 1, 3, 2, c["leaf"])
+	_fill_rect(img, 5, 3, 2, 2, c["leaf_bright"])
+	_fill_rect(img, 19, 1, 3, 2, c["leaf"])
+	_fill_rect(img, 20, 3, 2, 2, c["leaf_bright"])
+	_fill_rect(img, 6, 6, 2, 2, c["leaf"])
+	_fill_rect(img, 18, 6, 2, 2, c["leaf"])
+	# Extra leaf tips at crown
+	_fill_rect(img, 11, 4, 2, 2, c["leaf_bright"])
+	_fill_rect(img, 13, 5, 2, 2, c["leaf"])
+	# Moss on body (nature-infused look)
+	_fill_rect(img, 7, 24, 3, 2, c["leaf"])
+	_fill_rect(img, 28, 26, 3, 2, c["leaf"])
+	textures["tree_god_elk"] = ImageTexture.create_from_image(img)
 
 # ============================================================
 # ENVIRONMENT SPRITES

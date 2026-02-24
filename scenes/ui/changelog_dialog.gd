@@ -9,9 +9,21 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.60.4"
+const GAME_VERSION := "v0.61.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.61.0",
+		"title": "New enemy: Tree God Elk",
+		"date": "2026-02-23",
+		"entries": [
+			"Added Tree God Elk — majestic nature-infused elk enemy (Lv8-11)",
+			"Unique procedural sprite: bark body, branching antlers with green leaf tips, glowing green eyes",
+			"Unique antler charge attack animation: rear up, stamp, gore charge, antler toss",
+			"Unique nature collapse death animation: stagger wobble, root tendrils grow outward, green fade",
+			"Spawns at 6:00 wave between trolls and dark mages",
+		]
+	},
 	{
 		"version": "v0.60.4",
 		"title": "Miniboss minimap indicator",

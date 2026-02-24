@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.65.5"
+const GAME_VERSION := "v0.65.6"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.65.6",
+		"title": "Custom boot screen with cinematic title fade-in",
+		"date": "2026-02-24",
+		"entries": [
+			"Boot splash now shows a dark screen instead of the Godot logo",
+			"Title screen fades in cinematically from the dark boot background",
+			"Smooth overlay dissolve followed by content reveal for a branded launch experience",
+		]
+	},
 	{
 		"version": "v0.65.5",
 		"title": "Arrow Rain now reliably hits all nearby enemies",

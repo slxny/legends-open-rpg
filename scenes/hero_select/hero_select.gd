@@ -14,6 +14,7 @@ var _hero_selected := false
 var _cards: Dictionary = {}
 var _changelog_dialog: CanvasLayer = null
 var _is_mobile: bool = false
+var _fade_overlay: ColorRect = null
 
 func _ready() -> void:
 	_detect_mobile()
@@ -24,6 +25,8 @@ func _ready() -> void:
 	_build_version_button()
 	# Re-layout on resize
 	get_viewport().size_changed.connect(_on_viewport_resized)
+	# Cinematic fade-in from boot splash dark background
+	_start_title_fade_in()
 
 func _detect_mobile() -> void:
 	var vp_size = get_viewport().get_visible_rect().size
@@ -424,6 +427,25 @@ func _on_version_log_pressed() -> void:
 		_changelog_dialog = scene.instantiate()
 		add_child(_changelog_dialog)
 	_changelog_dialog.open()
+
+func _start_title_fade_in() -> void:
+	# Hide all content initially
+	scroll.modulate.a = 0.0
+
+	# Dark overlay matching boot_splash bg_color for seamless transition
+	_fade_overlay = ColorRect.new()
+	_fade_overlay.color = Color(0.05, 0.04, 0.03, 1.0)
+	_fade_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_fade_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_fade_overlay)
+
+	# Phase 1: fade overlay out over 1.2s (reveals dark background)
+	var tween = create_tween()
+	tween.tween_interval(0.3)  # brief hold on dark
+	tween.tween_property(_fade_overlay, "color:a", 0.0, 1.2).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	# Phase 2: fade content in over 0.8s
+	tween.tween_property(scroll, "modulate:a", 1.0, 0.8).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	tween.tween_callback(_fade_overlay.queue_free)
 
 func _on_hero_selected(hero_key: String) -> void:
 	if _hero_selected:

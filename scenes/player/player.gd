@@ -663,6 +663,16 @@ func _input(event: InputEvent) -> void:
 					_mobile_charge_aim_dir = drag_offset.normalized()
 					_set_facing(_mobile_charge_aim_dir)
 
+	# While charging on mobile, any non-ATK finger tap sets aim direction
+	if _is_mobile and _mobile_attack_held and _charge_time >= CHARGE_GRACE:
+		if event is InputEventScreenTouch and event.pressed and event.index != _mobile_atk_touch_index:
+			var tap_world = _screen_to_world(event.position)
+			var aim = (tap_world - global_position)
+			if aim.length() > 5.0:
+				_mobile_charge_aim_dir = aim.normalized()
+				_set_facing(_mobile_charge_aim_dir)
+				get_viewport().set_input_as_handled()
+
 	# Long-press on hero to open stats panel (mobile only)
 	if _is_mobile:
 		if event is InputEventScreenTouch:
@@ -721,6 +731,16 @@ func _unhandled_input(event: InputEvent) -> void:
 		var new_zoom = (camera.zoom * event.factor).clamp(z_min, z_max)
 		camera.zoom = new_zoom
 		return
+
+	# While charging, clicks set aim direction instead of moving
+	if _charge_time >= CHARGE_GRACE and event is InputEventMouseButton and event.pressed:
+		if event.button_index == MOUSE_BUTTON_LEFT or event.button_index == MOUSE_BUTTON_RIGHT:
+			var aim_world = _get_world_mouse_pos()
+			var aim = (aim_world - global_position)
+			if aim.length() > 5.0:
+				_set_facing(aim.normalized())
+			get_viewport().set_input_as_handled()
+			return
 
 	if event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
@@ -1991,6 +2011,9 @@ func _get_world_mouse_pos() -> Vector2:
 	# Use the viewport's canvas transform so the result matches what is
 	# visually on screen, even when camera position_smoothing is active.
 	return get_viewport().get_canvas_transform().affine_inverse() * get_viewport().get_mouse_position()
+
+func _screen_to_world(screen_pos: Vector2) -> Vector2:
+	return get_viewport().get_canvas_transform().affine_inverse() * screen_pos
 
 func _get_enemy_at_mouse() -> Node2D:
 	var mouse_pos = _get_world_mouse_pos()

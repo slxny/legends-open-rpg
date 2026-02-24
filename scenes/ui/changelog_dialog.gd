@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.64.4"
+const GAME_VERSION := "v0.64.5"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.64.5",
+		"title": "Tap-to-aim during charge attack",
+		"date": "2026-02-24",
+		"entries": [
+			"Mobile: tap anywhere on screen with a second finger while charging to aim the attack",
+			"Desktop: click anywhere while holding attack to change aim direction",
+			"Taps during charge set facing instead of issuing a move command",
+		]
+	},
 	{
 		"version": "v0.64.4",
 		"title": "Power Strike rework — AoE lunge slam",

@@ -13,6 +13,11 @@ var camp_markers: Array = [
 	Vector2(-2200, 1200), Vector2(900, 1800), Vector2(2400, -700), Vector2(-1800, -1800),
 	Vector2(3000, 1600), Vector2(-3500, -700), Vector2(3800, -1500),
 	Vector2(-2800, 2400), Vector2(-4200, -2500), Vector2(4400, 3000),
+	Vector2(1500, -3500), Vector2(-1500, 3500), Vector2(2000, -4000), Vector2(-2000, 4000),
+	Vector2(0, -3000), Vector2(0, 3000), Vector2(1000, 2200), Vector2(-1000, -2200),
+	Vector2(-3000, 3000), Vector2(3500, 2600), Vector2(5000, 0), Vector2(-5000, 0),
+	Vector2(1200, 3800), Vector2(-1200, -3800), Vector2(5200, 1200), Vector2(-5200, -1200),
+	Vector2(5000, -1500), Vector2(-5000, 1500), Vector2(4000, -4000), Vector2(-4000, 4000),
 ]
 var shop_markers: Array = [Vector2(260, -100)]
 var town_rect_world: Rect2 = Rect2(-500, -400, 1000, 800)

@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.64.1"
+const GAME_VERSION := "v0.64.2"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.64.2",
+		"title": "Fill empty map areas with enemy camps",
+		"date": "2026-02-24",
+		"entries": [
+			"Added 20 new enemy camps across previously empty outer and far zones",
+			"Wolves, skeletons, spiders, bandits, trolls, dark mages, and ogres now fill gaps",
+			"No more large empty stretches when exploring far from town",
+		]
+	},
 	{
 		"version": "v0.64.1",
 		"title": "Mobile charge attack drag-to-aim",

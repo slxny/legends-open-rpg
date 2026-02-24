@@ -82,6 +82,20 @@ var _camp_positions := [
 	Vector2(4600, -2000), Vector2(-4800, 1400), Vector2(3200, 2800), Vector2(-3400, -3200),
 	# Extra Ogres (far)
 	Vector2(4600, 1800), Vector2(-4400, -3400),
+	# Outer fill — bandits
+	Vector2(1500, -3500), Vector2(-1500, 3500), Vector2(2000, -4000), Vector2(-2000, 4000),
+	# Outer fill — wolves
+	Vector2(0, -3000), Vector2(0, 3000),
+	# Outer fill — skeletons
+	Vector2(1000, 2200), Vector2(-1000, -2200),
+	# Outer fill — spiders
+	Vector2(-3000, 3000), Vector2(3500, 2600),
+	# Outer fill — trolls
+	Vector2(5000, 0), Vector2(-5000, 0), Vector2(1200, 3800), Vector2(-1200, -3800),
+	# Outer fill — dark mages
+	Vector2(5200, 1200), Vector2(-5200, -1200), Vector2(5000, -1500), Vector2(-5000, 1500),
+	# Outer fill — ogres
+	Vector2(4000, -4000), Vector2(-4000, 4000),
 ]
 
 const HarvestableTree = preload("res://scenes/world/harvestable_tree.gd")
@@ -788,6 +802,33 @@ func _generate_decorations_async() -> void:
 	# Extra Ogres
 	_add_camp_marker(deco_layer, Vector2(4600, 1840), "Ogres Lv7-10")
 	_add_camp_marker(deco_layer, Vector2(-4400, -3360), "Ogres Lv7-10")
+	# Outer fill — bandits
+	_add_camp_marker(deco_layer, Vector2(1500, -3460), "Bandits Lv3-5")
+	_add_camp_marker(deco_layer, Vector2(-1500, 3540), "Bandits Lv3-5")
+	_add_camp_marker(deco_layer, Vector2(2000, -3960), "Bandits Lv3-5")
+	_add_camp_marker(deco_layer, Vector2(-2000, 4040), "Bandits Lv3-5")
+	# Outer fill — wolves
+	_add_camp_marker(deco_layer, Vector2(0, -2960), "Wolves Lv2-3")
+	_add_camp_marker(deco_layer, Vector2(0, 3040), "Wolves Lv2-3")
+	# Outer fill — skeletons
+	_add_camp_marker(deco_layer, Vector2(1000, 2240), "Skeletons Lv2-4")
+	_add_camp_marker(deco_layer, Vector2(-1000, -2160), "Skeletons Lv2-4")
+	# Outer fill — spiders
+	_add_camp_marker(deco_layer, Vector2(-3000, 3040), "Spiders Lv3-5")
+	_add_camp_marker(deco_layer, Vector2(3500, 2640), "Spiders Lv3-5")
+	# Outer fill — trolls
+	_add_camp_marker(deco_layer, Vector2(5000, 40), "Trolls Lv5-7")
+	_add_camp_marker(deco_layer, Vector2(-5000, 40), "Trolls Lv5-7")
+	_add_camp_marker(deco_layer, Vector2(1200, 3840), "Trolls Lv5-7")
+	_add_camp_marker(deco_layer, Vector2(-1200, -3760), "Trolls Lv5-7")
+	# Outer fill — dark mages
+	_add_camp_marker(deco_layer, Vector2(5200, 1240), "Dark Mages Lv5-8")
+	_add_camp_marker(deco_layer, Vector2(-5200, -1160), "Dark Mages Lv5-8")
+	_add_camp_marker(deco_layer, Vector2(5000, -1460), "Dark Mages Lv5-8")
+	_add_camp_marker(deco_layer, Vector2(-5000, 1540), "Dark Mages Lv5-8")
+	# Outer fill — ogres
+	_add_camp_marker(deco_layer, Vector2(4000, -3960), "Ogres Lv7-10")
+	_add_camp_marker(deco_layer, Vector2(-4000, 4040), "Ogres Lv7-10")
 
 	await get_tree().process_frame
 

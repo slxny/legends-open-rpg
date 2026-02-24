@@ -425,6 +425,18 @@ func _generate_all_sfx() -> void:
 	_sfx_cache["death_shadow_wraith"] = _gen_death_shadow_wraith()
 	_sfx_cache["death_dragon_whelp"] = _gen_death_dragon_whelp()
 	_sfx_cache["death_infernal"] = _gen_death_infernal()
+	# Dungeon enemy death SFX
+	_sfx_cache["death_cave_snake"] = _gen_death_cave_snake()
+	_sfx_cache["death_dungeon_bat"] = _gen_death_dungeon_bat()
+	_sfx_cache["death_vampire_bat"] = _gen_death_vampire_bat()
+	_sfx_cache["death_flan"] = _gen_death_flan()
+	_sfx_cache["death_mimic"] = _gen_death_mimic()
+	_sfx_cache["death_ghoul"] = _gen_death_ghoul()
+	_sfx_cache["death_crypt_knight"] = _gen_death_crypt_knight()
+	_sfx_cache["death_lich"] = _gen_death_lich()
+	# Dungeon transition SFX
+	_sfx_cache["dungeon_enter"] = _gen_dungeon_enter()
+	_sfx_cache["dungeon_exit"] = _gen_dungeon_exit()
 	_sfx_cache["save_game"] = _gen_save_game()
 	_sfx_cache["load_game"] = _gen_load_game()
 
@@ -1908,6 +1920,195 @@ func _gen_death_infernal() -> AudioStreamWAV:
 	_add_sine_segment(samples, 164.8, 0.04, 0.12, 0.28)
 	_apply_envelope(samples, 0.002, 0.15, 0.39)
 	_soft_clip(samples, 1.6)
+	return _to_stream(samples)
+
+# --- Dungeon enemy death SFX ---
+
+func _gen_death_cave_snake() -> AudioStreamWAV:
+	# Hiss fading out + soft thud as body drops
+	var samples = _make_samples(0.40)
+	# Hiss — filtered noise descending
+	_add_pitched_noise(samples, 4000.0, 2000.0, 0.15)
+	_add_pitched_noise(samples, 5500.0, 1500.0, 0.08)
+	# Body thud
+	_add_sine_segment(samples, 100.0, 0.2, 0.12, 0.10)
+	_add_sine_segment(samples, 65.0, 0.12, 0.14, 0.08)
+	_add_pitched_noise(samples, 300.0, 200.0, 0.06, 0.12)
+	_apply_envelope(samples, 0.002, 0.10, 0.28)
+	_soft_clip(samples, 1.2)
+	return _to_stream(samples)
+
+func _gen_death_dungeon_bat() -> AudioStreamWAV:
+	# High screech + fluttering wings fading
+	var samples = _make_samples(0.35)
+	# Screech — high sine sweep down
+	_pitch_sweep_sine(samples, 3500.0, 1500.0, 0.15)
+	_add_pitched_noise(samples, 4000.0, 1200.0, 0.08)
+	# Flutter — rapid modulated noise
+	_add_pitched_noise(samples, 2500.0, 1800.0, 0.06, 0.05)
+	_add_pitched_noise(samples, 1800.0, 1200.0, 0.04, 0.10)
+	_apply_envelope(samples, 0.002, 0.08, 0.25)
+	_soft_clip(samples, 1.1)
+	return _to_stream(samples)
+
+func _gen_death_vampire_bat() -> AudioStreamWAV:
+	# Deeper screech + wet splat
+	var samples = _make_samples(0.40)
+	# Screech — deeper than regular bat
+	_pitch_sweep_sine(samples, 2500.0, 800.0, 0.2)
+	_add_pitched_noise(samples, 3000.0, 1500.0, 0.1)
+	# Wet splat
+	var splat = _make_samples(0.06)
+	_add_pitched_noise(splat, 600.0, 400.0, 0.15)
+	_add_sine(splat, 150.0, 0.1)
+	_apply_envelope(splat, 0.001, 0.01, 0.045)
+	_mix_into(samples, splat, int(0.15 * SAMPLE_RATE))
+	_apply_envelope(samples, 0.002, 0.12, 0.26)
+	_soft_clip(samples, 1.2)
+	return _to_stream(samples)
+
+func _gen_death_flan() -> AudioStreamWAV:
+	# Squelch + bubble pop — gelatinous dissolving
+	var samples = _make_samples(0.45)
+	# Squelch — low wet noise
+	_add_pitched_noise(samples, 400.0, 300.0, 0.15)
+	_add_sine_segment(samples, 180.0, 0.12, 0.0, 0.15)
+	_pitch_sweep_sine(samples, 250.0, 80.0, 0.1)
+	# Bubble pops — quick high plinks
+	var pop_times = [0.10, 0.16, 0.22, 0.26]
+	var pop_freqs = [1200.0, 1600.0, 1400.0, 1800.0]
+	for j in range(4):
+		var pop = _make_samples(0.03)
+		_add_sine(pop, pop_freqs[j], 0.12)
+		_add_pitched_noise(pop, pop_freqs[j], 400.0, 0.06)
+		_apply_envelope(pop, 0.001, 0.005, 0.02)
+		_mix_into(samples, pop, int(pop_times[j] * SAMPLE_RATE))
+	_apply_envelope(samples, 0.002, 0.12, 0.30)
+	_soft_clip(samples, 1.2)
+	return _to_stream(samples)
+
+func _gen_death_mimic() -> AudioStreamWAV:
+	# Wood creak + metal clatter — chest falling apart
+	var samples = _make_samples(0.45)
+	# Wood creak
+	_pitch_sweep_sine(samples, 300.0, 150.0, 0.15)
+	_add_pitched_noise(samples, 800.0, 500.0, 0.1)
+	# Metal clatter — multiple clanks
+	var clank_times = [0.08, 0.14, 0.20]
+	var clank_freqs = [2200.0, 1800.0, 2500.0]
+	for j in range(3):
+		var clank = _make_samples(0.05)
+		_add_sine(clank, clank_freqs[j], 0.18)
+		_add_sine(clank, clank_freqs[j] * 0.5, 0.08)
+		_add_pitched_noise(clank, clank_freqs[j], 600.0, 0.06)
+		_apply_envelope(clank, 0.001, 0.008, 0.038)
+		_mix_into(samples, clank, int(clank_times[j] * SAMPLE_RATE))
+	# Wood snap
+	_add_pitched_noise(samples, 1200.0, 800.0, 0.08, 0.12)
+	_apply_envelope(samples, 0.002, 0.12, 0.30)
+	_soft_clip(samples, 1.3)
+	return _to_stream(samples)
+
+func _gen_death_ghoul() -> AudioStreamWAV:
+	# Low groan + crumble to dust
+	var samples = _make_samples(0.50)
+	# Groan — low descending tone
+	_pitch_sweep_sine(samples, 200.0, 80.0, 0.25)
+	_pitch_sweep_sine(samples, 280.0, 120.0, 0.12)
+	_add_pitched_noise(samples, 500.0, 300.0, 0.04)
+	# Crumble — gritty noise burst
+	_add_pitched_noise(samples, 800.0, 600.0, 0.08, 0.15)
+	_add_pitched_noise(samples, 400.0, 300.0, 0.06, 0.20)
+	_add_sine_segment(samples, 70.0, 0.1, 0.18, 0.15)
+	_apply_envelope(samples, 0.002, 0.14, 0.34)
+	_soft_clip(samples, 1.2)
+	return _to_stream(samples)
+
+func _gen_death_crypt_knight() -> AudioStreamWAV:
+	# Armor plates clattering to ground + metallic collapse
+	var samples = _make_samples(0.55)
+	# Initial armor hit
+	_add_sine_segment(samples, 1500.0, 0.2, 0.0, 0.04)
+	_add_pitched_noise(samples, 2000.0, 800.0, 0.12)
+	# Armor plates clattering — multiple metallic impacts
+	var plate_times = [0.06, 0.12, 0.18, 0.24, 0.30]
+	var plate_freqs = [1800.0, 2200.0, 1600.0, 2400.0, 1400.0]
+	for j in range(5):
+		var plate = _make_samples(0.06)
+		_add_sine(plate, plate_freqs[j], 0.15)
+		_add_sine(plate, plate_freqs[j] * 0.5, 0.08)
+		_add_pitched_noise(plate, plate_freqs[j], 500.0, 0.06)
+		_apply_envelope(plate, 0.001, 0.01, 0.045)
+		_mix_into(samples, plate, int(plate_times[j] * SAMPLE_RATE))
+	# Heavy thud at end
+	_add_sine_segment(samples, 80.0, 0.2, 0.28, 0.12)
+	_add_sine_segment(samples, 120.0, 0.1, 0.30, 0.10)
+	_apply_envelope(samples, 0.002, 0.16, 0.37)
+	_soft_clip(samples, 1.3)
+	return _to_stream(samples)
+
+func _gen_death_lich() -> AudioStreamWAV:
+	# Ethereal wail + magical shatter — dramatic boss-tier death
+	var samples = _make_samples(0.65)
+	# Ethereal wail — descending sine with vibrato
+	_pitch_sweep_sine(samples, 600.0, 200.0, 0.25)
+	_pitch_sweep_sine(samples, 900.0, 300.0, 0.12)
+	_add_pitched_noise(samples, 1500.0, 800.0, 0.04)
+	# Crystal shatter — bright high noise burst
+	var shatter = _make_samples(0.08)
+	_add_pitched_noise(shatter, 5000.0, 2000.0, 0.2)
+	_add_sine(shatter, 3000.0, 0.15)
+	_add_sine(shatter, 4500.0, 0.08)
+	_apply_envelope(shatter, 0.001, 0.015, 0.06)
+	_mix_into(samples, shatter, int(0.18 * SAMPLE_RATE))
+	# Magical dissipation — descending sparkles
+	_add_sine_segment(samples, 2000.0, 0.06, 0.25, 0.15)
+	_add_sine_segment(samples, 1500.0, 0.05, 0.30, 0.12)
+	_add_sine_segment(samples, 1000.0, 0.04, 0.35, 0.10)
+	# Deep dark rumble underneath
+	_add_sine_segment(samples, 60.0, 0.12, 0.05, 0.40)
+	_add_sine_segment(samples, 90.0, 0.08, 0.08, 0.35)
+	_apply_envelope(samples, 0.002, 0.18, 0.45)
+	_soft_clip(samples, 1.4)
+	return _to_stream(samples)
+
+# --- Dungeon transition SFX ---
+
+func _gen_dungeon_enter() -> AudioStreamWAV:
+	# Stone grinding + descending dark tone — entering the depths
+	var samples = _make_samples(0.60)
+	# Stone grinding — rough noise
+	_add_pitched_noise(samples, 600.0, 400.0, 0.12)
+	_add_pitched_noise(samples, 1200.0, 600.0, 0.06)
+	# Descending ominous tone
+	_pitch_sweep_sine(samples, 300.0, 80.0, 0.2, 0.08)
+	_pitch_sweep_sine(samples, 200.0, 55.0, 0.15, 0.10)
+	# Deep rumble
+	_add_sine_segment(samples, 50.0, 0.15, 0.15, 0.30)
+	# Distant echo — reverberant ping
+	_add_sine_segment(samples, 400.0, 0.06, 0.30, 0.15)
+	_add_sine_segment(samples, 300.0, 0.04, 0.35, 0.12)
+	_apply_envelope(samples, 0.01, 0.18, 0.40)
+	_soft_clip(samples, 1.2)
+	return _to_stream(samples)
+
+func _gen_dungeon_exit() -> AudioStreamWAV:
+	# Ascending bright tone + fresh air breeze — returning to surface
+	var samples = _make_samples(0.55)
+	# Stone scrape (brief)
+	_add_pitched_noise(samples, 800.0, 500.0, 0.06)
+	# Ascending hopeful chime
+	_add_sine_segment(samples, 440.0, 0.15, 0.06, 0.12)   # A4
+	_add_sine_segment(samples, 523.0, 0.2, 0.12, 0.14)    # C5
+	_add_sine_segment(samples, 659.0, 0.22, 0.18, 0.16)   # E5
+	_add_sine_segment(samples, 784.0, 0.18, 0.24, 0.18)   # G5
+	_add_sine_segment(samples, 1568.0, 0.06, 0.28, 0.12)  # G6 shimmer
+	# Breeze — gentle wide noise
+	_add_pitched_noise(samples, 3000.0, 2500.0, 0.03, 0.20)
+	# Warm body
+	_add_sine_segment(samples, 262.0, 0.1, 0.10, 0.30)    # C4
+	_apply_envelope(samples, 0.002, 0.16, 0.36)
+	_soft_clip(samples, 1.1)
 	return _to_stream(samples)
 
 # ============================================================

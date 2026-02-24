@@ -28,6 +28,10 @@ func activate(beacon_type: String, data: Dictionary, player: Node2D = null) -> v
 			_handle_town_purchase(data, player)
 		"alignment_choice":
 			_handle_alignment_choice(data, player)
+		"dungeon_enter":
+			_handle_dungeon_enter(data, player)
+		"dungeon_exit":
+			_handle_dungeon_exit(data, player)
 		_:
 			pass
 
@@ -93,6 +97,26 @@ func _handle_alignment_choice(data: Dictionary, _player: Node2D) -> void:
 		AlignmentManager.modify_alignment(amount, player_id)
 		var direction = "Good" if amount > 0 else "Dark"
 		GameManager.game_message.emit("Alignment shifted toward %s!" % direction, Color(0.8, 0.6, 1.0))
+
+func _handle_dungeon_exit(data: Dictionary, player: Node2D) -> void:
+	var dest = data.get("destination", Vector2.ZERO)
+	if dest != Vector2.ZERO and player:
+		player.global_position = dest
+		AudioManager.play_sfx("dungeon_exit")
+		GameManager.game_message.emit("Returned to Haven's Rest", Color(0.3, 1.0, 0.5))
+
+func _handle_dungeon_enter(data: Dictionary, player: Node2D) -> void:
+	var min_level = data.get("min_level", 1)
+	if player and player.has_node("StatsComponent"):
+		var stats = player.get_node("StatsComponent")
+		if stats.level < min_level:
+			GameManager.game_message.emit("You must be Level %d to enter!" % min_level, Color(1.0, 0.3, 0.3))
+			return
+	var dest = data.get("destination", Vector2.ZERO)
+	if dest != Vector2.ZERO and player:
+		player.global_position = dest
+		AudioManager.play_sfx("dungeon_enter")
+		GameManager.game_message.emit("Descending into the Crypt...", Color(0.6, 0.4, 0.8))
 
 func _get_players() -> Array:
 	return Engine.get_main_loop().root.get_tree().get_nodes_in_group("player") if Engine.get_main_loop() else []

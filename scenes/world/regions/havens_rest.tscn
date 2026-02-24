@@ -430,6 +430,14 @@ position = Vector2(-4400, -3400)
 camp_type = "ogre"
 enemy_count = 3
 
+[node name="DungeonBeacon" parent="." instance=ExtResource("4_beacon")]
+position = Vector2(160, 220)
+beacon_color = Color(0.8, 0.2, 0.2, 1)
+beacon_label = "Dungeon Lv10+"
+beacon_radius = 30.0
+beacon_type = "dungeon_enter"
+beacon_data = {"min_level": 10, "destination": Vector2(0, 15000)}
+
 [node name="Walls" type="Node2D" parent="."]
 
 [node name="WallTop" type="StaticBody2D" parent="Walls"]

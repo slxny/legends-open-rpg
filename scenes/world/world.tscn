@@ -1,14 +1,19 @@
-[gd_scene load_steps=4 format=3 uid="uid://bworldscn"]
+[gd_scene load_steps=5 format=3 uid="uid://bworldscn"]
 
 [ext_resource type="Script" path="res://scenes/world/world.gd" id="1_world"]
 [ext_resource type="PackedScene" uid="uid://bhavensrest" path="res://scenes/world/regions/havens_rest.tscn" id="2_region"]
 [ext_resource type="Script" path="res://scenes/world/fog_overlay.gd" id="3_fog"]
+[ext_resource type="PackedScene" uid="uid://bdungcrypt" path="res://scenes/world/regions/dungeon_crypt.tscn" id="4_dungeon"]
 
 [node name="World" type="Node2D"]
 y_sort_enabled = true
 script = ExtResource("1_world")
 
 [node name="HavensRest" parent="." instance=ExtResource("2_region")]
+y_sort_enabled = true
+
+[node name="DungeonCrypt" parent="." instance=ExtResource("4_dungeon")]
+position = Vector2(0, 15000)
 y_sort_enabled = true
 
 [node name="PlayerSpawn" type="Marker2D" parent="."]

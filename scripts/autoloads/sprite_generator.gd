@@ -53,7 +53,8 @@ func _all_sprite_names() -> Array[String]:
 		"shop_building", "armory_building", "inn_building", "barracks_building",
 		"stable_building", "chapel_building", "tavern_building",
 		"crate_stack", "barrel", "well", "lamp_post", "wall_torch",
-		"woodworking_bench", "town_hall", "landing_pad"])
+		"woodworking_bench", "town_hall", "landing_pad",
+		"dungeon_stairwell"])
 	# Environment decorations
 	names.append_array(["tree_jungle", "tree_small", "tree_dead", "rock",
 		"rock_large", "bush", "flowers", "grass_tuft", "grass_tuft_tall",
@@ -88,7 +89,9 @@ func _all_sprite_names() -> Array[String]:
 	names.append_array(["rat", "goblin", "wolf", "bandit", "skeleton",
 		"spider", "troll", "dark_mage", "tree_god_elk", "ogre", "ogre_boss",
 		"demon_knight", "ancient_golem", "shadow_wraith", "dragon_whelp",
-		"infernal"])
+		"infernal",
+		"cave_snake", "dungeon_bat", "vampire_bat", "flan", "mimic",
+		"ghoul", "crypt_knight", "lich"])
 	return names
 
 ## Try loading a PNG from res://assets/sprites/<subdir>/<name>.png
@@ -132,7 +135,9 @@ func _init_asset_dirs() -> void:
 		_asset_dirs[n] = "heroes"
 	# Enemies
 	for n in ["rat", "goblin", "wolf", "bandit", "skeleton", "spider", "troll", "dark_mage", "ogre", "ogre_boss",
-			"demon_knight", "ancient_golem", "shadow_wraith", "dragon_whelp", "infernal"]:
+			"demon_knight", "ancient_golem", "shadow_wraith", "dragon_whelp", "infernal",
+			"cave_snake", "dungeon_bat", "vampire_bat", "flan", "mimic",
+			"ghoul", "crypt_knight", "lich"]:
 		_asset_dirs[n] = "enemies"
 	# Environment
 	for n in ["tree_jungle", "tree_small", "tree_dead", "rock", "rock_large",
@@ -208,6 +213,17 @@ func _generate_all() -> void:
 	_gen_or_load("dragon_whelp")
 	_gen_or_load("infernal")
 	_gen_or_load("tree_god_elk")
+	# Dungeon enemies
+	_gen_or_load("cave_snake")
+	_gen_or_load("dungeon_bat")
+	_gen_or_load("vampire_bat")
+	_gen_or_load("flan")
+	_gen_or_load("mimic")
+	_gen_or_load("ghoul")
+	_gen_or_load("crypt_knight")
+	_gen_or_load("lich")
+	# Dungeon building
+	_gen_or_load("dungeon_stairwell")
 	# Environment
 	_gen_or_load("tree_jungle")
 	_gen_or_load("tree_small")
@@ -2755,6 +2771,393 @@ func _gen_tree_god_elk() -> void:
 	_fill_rect(img, 7, 24, 3, 2, c["leaf"])
 	_fill_rect(img, 28, 26, 3, 2, c["leaf"])
 	textures["tree_god_elk"] = ImageTexture.create_from_image(img)
+
+# ============================================================
+# DUNGEON ENEMY SPRITES
+# ============================================================
+
+func _gen_cave_snake() -> void:
+	# Coiled green serpent with forked tongue
+	var img = Image.create(24, 18, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = {
+		"body": Color(0.25, 0.55, 0.2),
+		"body_dark": Color(0.15, 0.4, 0.1),
+		"belly": Color(0.5, 0.6, 0.3),
+		"eye": Color(0.95, 0.3, 0.1),
+		"tongue": Color(0.85, 0.2, 0.2),
+		"pattern": Color(0.18, 0.35, 0.12),
+		"shadow": Color(0, 0, 0, 0.2),
+	}
+	_fill_rect(img, 4, 15, 16, 3, c["shadow"])
+	# Coiled body segments
+	_fill_rect(img, 8, 10, 12, 6, c["body"])
+	_fill_rect(img, 10, 11, 8, 4, c["belly"])
+	_fill_rect(img, 5, 8, 8, 5, c["body"])
+	_fill_rect(img, 6, 9, 6, 3, c["belly"])
+	# Diamond pattern on back
+	_fill_rect(img, 9, 10, 2, 2, c["pattern"])
+	_fill_rect(img, 14, 11, 2, 2, c["pattern"])
+	_fill_rect(img, 18, 10, 2, 2, c["pattern"])
+	# Head
+	_fill_rect(img, 2, 5, 7, 5, c["body"])
+	_fill_rect(img, 1, 6, 4, 3, c["body_dark"])
+	# Eyes
+	_fill_rect(img, 3, 6, 1, 1, c["eye"])
+	_fill_rect(img, 6, 6, 1, 1, c["eye"])
+	# Forked tongue
+	_fill_rect(img, 0, 7, 2, 1, c["tongue"])
+	# Tail
+	_fill_rect(img, 19, 8, 4, 2, c["body"])
+	_fill_rect(img, 22, 7, 2, 2, c["body_dark"])
+	textures["cave_snake"] = ImageTexture.create_from_image(img)
+
+func _gen_dungeon_bat() -> void:
+	# Small dark bat with spread wings
+	var img = Image.create(22, 16, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = {
+		"wing": Color(0.2, 0.15, 0.25),
+		"wing_dark": Color(0.12, 0.08, 0.18),
+		"wing_mem": Color(0.25, 0.18, 0.3),
+		"body": Color(0.3, 0.2, 0.15),
+		"eye": Color(0.9, 0.2, 0.2),
+		"ear": Color(0.22, 0.15, 0.2),
+	}
+	# Left wing
+	_fill_rect(img, 0, 4, 8, 6, c["wing"])
+	_fill_rect(img, 1, 5, 6, 4, c["wing_mem"])
+	_fill_rect(img, 0, 3, 3, 2, c["wing_dark"])
+	# Right wing
+	_fill_rect(img, 14, 4, 8, 6, c["wing"])
+	_fill_rect(img, 15, 5, 6, 4, c["wing_mem"])
+	_fill_rect(img, 19, 3, 3, 2, c["wing_dark"])
+	# Body
+	_fill_rect(img, 8, 4, 6, 8, c["body"])
+	_fill_rect(img, 9, 5, 4, 6, c["wing"])
+	# Head
+	_fill_rect(img, 8, 2, 6, 4, c["body"])
+	# Ears
+	_fill_rect(img, 8, 0, 2, 3, c["ear"])
+	_fill_rect(img, 12, 0, 2, 3, c["ear"])
+	# Eyes
+	_fill_rect(img, 9, 3, 1, 1, c["eye"])
+	_fill_rect(img, 12, 3, 1, 1, c["eye"])
+	# Feet
+	_fill_rect(img, 9, 12, 1, 2, c["wing_dark"])
+	_fill_rect(img, 12, 12, 1, 2, c["wing_dark"])
+	textures["dungeon_bat"] = ImageTexture.create_from_image(img)
+
+func _gen_vampire_bat() -> void:
+	# Larger bat with red eyes and visible fangs
+	var img = Image.create(32, 24, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = {
+		"wing": Color(0.18, 0.1, 0.22),
+		"wing_dark": Color(0.1, 0.05, 0.15),
+		"wing_mem": Color(0.25, 0.12, 0.3),
+		"body": Color(0.25, 0.15, 0.12),
+		"body_dark": Color(0.15, 0.08, 0.08),
+		"eye": Color(1.0, 0.15, 0.1),
+		"eye_glow": Color(1.0, 0.4, 0.3),
+		"fang": Color(0.9, 0.9, 0.85),
+		"ear": Color(0.2, 0.12, 0.18),
+		"shadow": Color(0, 0, 0, 0.2),
+	}
+	_fill_rect(img, 6, 21, 20, 3, c["shadow"])
+	# Left wing (large)
+	_fill_rect(img, 0, 6, 12, 10, c["wing"])
+	_fill_rect(img, 1, 7, 10, 8, c["wing_mem"])
+	_fill_rect(img, 0, 4, 4, 4, c["wing_dark"])
+	_fill_rect(img, 4, 5, 3, 2, c["wing_dark"])
+	# Right wing
+	_fill_rect(img, 20, 6, 12, 10, c["wing"])
+	_fill_rect(img, 21, 7, 10, 8, c["wing_mem"])
+	_fill_rect(img, 28, 4, 4, 4, c["wing_dark"])
+	_fill_rect(img, 25, 5, 3, 2, c["wing_dark"])
+	# Body
+	_fill_rect(img, 12, 6, 8, 12, c["body"])
+	_fill_rect(img, 13, 7, 6, 10, c["body_dark"])
+	# Head
+	_fill_rect(img, 11, 3, 10, 6, c["body"])
+	_fill_rect(img, 12, 4, 8, 4, c["body_dark"])
+	# Ears (tall, pointed)
+	_fill_rect(img, 11, 0, 3, 5, c["ear"])
+	_fill_rect(img, 18, 0, 3, 5, c["ear"])
+	# Eyes (glowing red)
+	_fill_rect(img, 13, 4, 2, 2, c["eye"])
+	_fill_rect(img, 17, 4, 2, 2, c["eye"])
+	_fill_rect(img, 14, 5, 1, 1, c["eye_glow"])
+	_fill_rect(img, 18, 5, 1, 1, c["eye_glow"])
+	# Fangs
+	_fill_rect(img, 14, 8, 1, 2, c["fang"])
+	_fill_rect(img, 17, 8, 1, 2, c["fang"])
+	# Feet with claws
+	_fill_rect(img, 13, 18, 2, 3, c["wing_dark"])
+	_fill_rect(img, 17, 18, 2, 3, c["wing_dark"])
+	textures["vampire_bat"] = ImageTexture.create_from_image(img)
+
+func _gen_flan() -> void:
+	# Gelatinous blob / slime — dome shape, translucent
+	var img = Image.create(24, 20, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = {
+		"body": Color(0.2, 0.5, 0.55, 0.85),
+		"body_dark": Color(0.12, 0.35, 0.4, 0.9),
+		"body_light": Color(0.35, 0.65, 0.7, 0.7),
+		"shine": Color(0.6, 0.85, 0.9, 0.5),
+		"eye": Color(0.1, 0.1, 0.15),
+		"shadow": Color(0, 0, 0, 0.25),
+	}
+	_fill_rect(img, 4, 17, 16, 3, c["shadow"])
+	# Base (wide, spreads on ground)
+	_fill_rect(img, 3, 14, 18, 4, c["body_dark"])
+	_fill_rect(img, 5, 15, 14, 2, c["body"])
+	# Main dome body
+	_fill_rect(img, 4, 8, 16, 7, c["body"])
+	_fill_rect(img, 6, 6, 12, 9, c["body"])
+	_fill_rect(img, 8, 4, 8, 11, c["body"])
+	# Inner lighter area
+	_fill_rect(img, 7, 8, 10, 5, c["body_light"])
+	_fill_rect(img, 9, 6, 6, 7, c["body_light"])
+	# Shine highlights (gelatin gloss)
+	_fill_rect(img, 8, 5, 3, 2, c["shine"])
+	_fill_rect(img, 14, 7, 2, 2, c["shine"])
+	# Eyes (simple dots floating inside)
+	_fill_rect(img, 9, 9, 2, 2, c["eye"])
+	_fill_rect(img, 13, 9, 2, 2, c["eye"])
+	textures["flan"] = ImageTexture.create_from_image(img)
+
+func _gen_mimic() -> void:
+	# Treasure chest with teeth and one eye — closed when idle
+	var img = Image.create(24, 22, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = {
+		"wood": Color(0.45, 0.3, 0.15),
+		"wood_dark": Color(0.3, 0.2, 0.08),
+		"wood_light": Color(0.55, 0.4, 0.2),
+		"metal": Color(0.5, 0.45, 0.35),
+		"metal_dark": Color(0.35, 0.3, 0.22),
+		"teeth": Color(0.9, 0.85, 0.7),
+		"eye": Color(1.0, 0.3, 0.1),
+		"eye_pupil": Color(0.1, 0.05, 0.05),
+		"tongue": Color(0.75, 0.2, 0.25),
+		"shadow": Color(0, 0, 0, 0.25),
+	}
+	_fill_rect(img, 3, 19, 18, 3, c["shadow"])
+	# Chest bottom
+	_fill_rect(img, 3, 12, 18, 8, c["wood"])
+	_fill_rect(img, 4, 13, 16, 6, c["wood_light"])
+	_fill_rect(img, 3, 12, 18, 2, c["metal"])  # Metal rim
+	# Chest lid (slightly open, showing teeth)
+	_fill_rect(img, 2, 6, 20, 7, c["wood"])
+	_fill_rect(img, 3, 7, 18, 5, c["wood_dark"])
+	_fill_rect(img, 2, 12, 20, 1, c["metal_dark"])  # Hinge line
+	# Metal bands
+	_fill_rect(img, 3, 6, 18, 1, c["metal"])
+	_fill_rect(img, 10, 14, 4, 4, c["metal"])  # Lock
+	_fill_rect(img, 11, 15, 2, 2, c["metal_dark"])  # Keyhole
+	# Teeth (jagged row in the opening)
+	for tx in range(4, 20, 3):
+		_fill_rect(img, tx, 11, 2, 2, c["teeth"])
+	# Eye (peeking from lid gap)
+	_fill_rect(img, 14, 9, 3, 3, c["eye"])
+	_fill_rect(img, 15, 10, 1, 1, c["eye_pupil"])
+	# Tongue (lolling out)
+	_fill_rect(img, 8, 13, 3, 2, c["tongue"])
+	_fill_rect(img, 7, 14, 2, 2, c["tongue"])
+	textures["mimic"] = ImageTexture.create_from_image(img)
+
+func _gen_ghoul() -> void:
+	# Pale hunched undead humanoid in tattered rags
+	var img = Image.create(24, 30, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = {
+		"skin": Color(0.55, 0.6, 0.5),
+		"skin_dark": Color(0.4, 0.45, 0.35),
+		"skin_pale": Color(0.65, 0.7, 0.6),
+		"rags": Color(0.3, 0.25, 0.2),
+		"rags_dark": Color(0.2, 0.15, 0.1),
+		"eye": Color(0.9, 0.85, 0.2),
+		"mouth": Color(0.3, 0.1, 0.1),
+		"claws": Color(0.35, 0.3, 0.25),
+		"shadow": Color(0, 0, 0, 0.25),
+	}
+	_fill_rect(img, 6, 27, 12, 3, c["shadow"])
+	# Feet (bare, twisted)
+	_fill_rect(img, 7, 25, 3, 4, c["skin_dark"])
+	_fill_rect(img, 14, 25, 3, 4, c["skin_dark"])
+	# Legs
+	_fill_rect(img, 8, 20, 3, 6, c["rags"])
+	_fill_rect(img, 13, 20, 3, 6, c["rags"])
+	# Body (hunched forward)
+	_fill_rect(img, 6, 12, 12, 9, c["rags"])
+	_fill_rect(img, 7, 13, 10, 7, c["rags_dark"])
+	# Exposed skin patches
+	_fill_rect(img, 8, 15, 3, 3, c["skin"])
+	_fill_rect(img, 14, 14, 3, 2, c["skin_pale"])
+	# Arms (long, dangling, clawed)
+	_fill_rect(img, 4, 14, 3, 10, c["skin"])
+	_fill_rect(img, 17, 14, 3, 10, c["skin"])
+	_fill_rect(img, 3, 23, 3, 2, c["claws"])
+	_fill_rect(img, 18, 23, 3, 2, c["claws"])
+	# Head (hunched forward, gaunt)
+	_fill_rect(img, 7, 4, 10, 9, c["skin"])
+	_fill_rect(img, 8, 5, 8, 7, c["skin_pale"])
+	# Sunken eyes
+	_fill_rect(img, 9, 6, 2, 2, c["eye"])
+	_fill_rect(img, 13, 6, 2, 2, c["eye"])
+	_fill_rect(img, 10, 7, 1, 1, c["mouth"])
+	_fill_rect(img, 14, 7, 1, 1, c["mouth"])
+	# Mouth (gaping)
+	_fill_rect(img, 10, 9, 4, 2, c["mouth"])
+	# Sparse hair
+	_fill_rect(img, 7, 3, 3, 2, c["rags_dark"])
+	_fill_rect(img, 14, 3, 3, 2, c["rags_dark"])
+	textures["ghoul"] = ImageTexture.create_from_image(img)
+
+func _gen_crypt_knight() -> void:
+	# Dark armored skeleton warrior with sword and shield
+	var img = Image.create(28, 34, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = {
+		"armor": Color(0.25, 0.22, 0.3),
+		"armor_dark": Color(0.15, 0.12, 0.2),
+		"armor_light": Color(0.35, 0.32, 0.4),
+		"bone": Color(0.7, 0.65, 0.55),
+		"bone_dark": Color(0.5, 0.45, 0.35),
+		"eye": Color(0.4, 0.9, 0.3),
+		"sword": Color(0.55, 0.55, 0.6),
+		"sword_edge": Color(0.7, 0.7, 0.75),
+		"shield": Color(0.3, 0.25, 0.35),
+		"shield_emblem": Color(0.5, 0.15, 0.15),
+		"shadow": Color(0, 0, 0, 0.25),
+	}
+	_fill_rect(img, 6, 31, 16, 3, c["shadow"])
+	# Feet (armored boots)
+	_fill_rect(img, 8, 29, 4, 4, c["armor_dark"])
+	_fill_rect(img, 16, 29, 4, 4, c["armor_dark"])
+	# Legs (armored greaves)
+	_fill_rect(img, 9, 22, 3, 8, c["armor"])
+	_fill_rect(img, 16, 22, 3, 8, c["armor"])
+	_fill_rect(img, 10, 23, 1, 6, c["armor_light"])
+	_fill_rect(img, 17, 23, 1, 6, c["armor_light"])
+	# Body (dark plate armor)
+	_fill_rect(img, 8, 12, 12, 11, c["armor"])
+	_fill_rect(img, 9, 13, 10, 9, c["armor_dark"])
+	_fill_rect(img, 11, 14, 6, 4, c["armor_light"])  # Chest plate highlight
+	# Skull head
+	_fill_rect(img, 9, 3, 10, 10, c["bone"])
+	_fill_rect(img, 10, 4, 8, 8, c["bone_dark"])
+	# Helmet overlay
+	_fill_rect(img, 8, 2, 12, 5, c["armor"])
+	_fill_rect(img, 9, 3, 10, 3, c["armor_dark"])
+	# Eye sockets (glowing green)
+	_fill_rect(img, 11, 5, 2, 2, c["eye"])
+	_fill_rect(img, 15, 5, 2, 2, c["eye"])
+	# Jaw
+	_fill_rect(img, 11, 9, 6, 2, c["bone"])
+	_fill_rect(img, 12, 10, 4, 1, c["bone_dark"])
+	# Right arm + sword
+	_fill_rect(img, 20, 10, 3, 12, c["armor"])
+	_fill_rect(img, 22, 4, 2, 14, c["sword"])
+	_fill_rect(img, 23, 4, 1, 12, c["sword_edge"])
+	_fill_rect(img, 21, 2, 4, 3, c["sword"])  # Hilt
+	# Left arm + shield
+	_fill_rect(img, 5, 10, 3, 12, c["armor"])
+	_fill_rect(img, 1, 12, 6, 8, c["shield"])
+	_fill_rect(img, 2, 13, 4, 6, c["armor_dark"])
+	_fill_rect(img, 3, 15, 2, 2, c["shield_emblem"])  # Shield emblem
+	textures["crypt_knight"] = ImageTexture.create_from_image(img)
+
+func _gen_lich() -> void:
+	# Robed skeletal mage with glowing eyes and staff
+	var img = Image.create(28, 36, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = {
+		"robe": Color(0.15, 0.1, 0.25),
+		"robe_dark": Color(0.08, 0.05, 0.15),
+		"robe_trim": Color(0.4, 0.2, 0.5),
+		"bone": Color(0.7, 0.65, 0.55),
+		"bone_dark": Color(0.5, 0.45, 0.35),
+		"eye": Color(0.3, 0.9, 1.0),
+		"eye_glow": Color(0.5, 1.0, 1.0),
+		"staff": Color(0.35, 0.25, 0.15),
+		"staff_gem": Color(0.4, 0.1, 0.8),
+		"staff_glow": Color(0.6, 0.3, 1.0),
+		"shadow": Color(0, 0, 0, 0.3),
+	}
+	_fill_rect(img, 6, 33, 16, 3, c["shadow"])
+	# Robe bottom (wide, flowing)
+	_fill_rect(img, 5, 26, 18, 8, c["robe"])
+	_fill_rect(img, 6, 27, 16, 6, c["robe_dark"])
+	_fill_rect(img, 5, 26, 18, 1, c["robe_trim"])  # Hem trim
+	# Body (narrow under robe)
+	_fill_rect(img, 8, 14, 12, 13, c["robe"])
+	_fill_rect(img, 9, 15, 10, 11, c["robe_dark"])
+	# Robe collar/trim
+	_fill_rect(img, 8, 13, 12, 2, c["robe_trim"])
+	# Skeletal hands extending from sleeves
+	_fill_rect(img, 4, 18, 4, 2, c["bone"])
+	_fill_rect(img, 3, 19, 3, 1, c["bone_dark"])
+	_fill_rect(img, 20, 18, 4, 2, c["bone"])
+	_fill_rect(img, 21, 19, 3, 1, c["bone_dark"])
+	# Hood
+	_fill_rect(img, 7, 3, 14, 12, c["robe"])
+	_fill_rect(img, 8, 4, 12, 10, c["robe_dark"])
+	_fill_rect(img, 7, 2, 14, 2, c["robe"])
+	# Skull face inside hood
+	_fill_rect(img, 10, 5, 8, 8, c["bone"])
+	_fill_rect(img, 11, 6, 6, 6, c["bone_dark"])
+	# Glowing eyes
+	_fill_rect(img, 11, 7, 2, 2, c["eye"])
+	_fill_rect(img, 15, 7, 2, 2, c["eye"])
+	_fill_rect(img, 12, 8, 1, 1, c["eye_glow"])
+	_fill_rect(img, 16, 8, 1, 1, c["eye_glow"])
+	# Jaw
+	_fill_rect(img, 12, 11, 4, 1, c["bone_dark"])
+	# Staff (held in right hand)
+	_fill_rect(img, 23, 0, 2, 32, c["staff"])
+	_fill_rect(img, 22, 0, 4, 4, c["staff_gem"])
+	_fill_rect(img, 23, 1, 2, 2, c["staff_glow"])
+	textures["lich"] = ImageTexture.create_from_image(img)
+
+func _gen_dungeon_stairwell() -> void:
+	# Dark stone archway with descending stairs
+	var img = Image.create(32, 40, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c = {
+		"stone": Color(0.3, 0.28, 0.25),
+		"stone_dark": Color(0.18, 0.16, 0.14),
+		"stone_light": Color(0.4, 0.38, 0.34),
+		"arch": Color(0.25, 0.22, 0.2),
+		"dark": Color(0.06, 0.04, 0.08),
+		"step": Color(0.22, 0.2, 0.18),
+		"step_light": Color(0.32, 0.3, 0.26),
+	}
+	# Base pillars
+	_fill_rect(img, 2, 8, 6, 30, c["stone"])
+	_fill_rect(img, 3, 9, 4, 28, c["stone_light"])
+	_fill_rect(img, 24, 8, 6, 30, c["stone"])
+	_fill_rect(img, 25, 9, 4, 28, c["stone_light"])
+	# Arch top
+	_fill_rect(img, 2, 4, 28, 6, c["stone"])
+	_fill_rect(img, 4, 5, 24, 4, c["arch"])
+	_fill_rect(img, 6, 2, 20, 4, c["stone"])
+	_fill_rect(img, 8, 1, 16, 3, c["stone_dark"])
+	# Dark entrance (the void)
+	_fill_rect(img, 8, 10, 16, 22, c["dark"])
+	# Descending steps
+	for i in range(5):
+		var sy = 26 + i * 3
+		_fill_rect(img, 8, sy, 16, 2, c["step"])
+		_fill_rect(img, 9, sy, 14, 1, c["step_light"])
+	# Stone detail on pillars
+	_fill_rect(img, 2, 8, 6, 1, c["stone_dark"])
+	_fill_rect(img, 24, 8, 6, 1, c["stone_dark"])
+	_fill_rect(img, 2, 20, 6, 1, c["stone_dark"])
+	_fill_rect(img, 24, 20, 6, 1, c["stone_dark"])
+	textures["dungeon_stairwell"] = ImageTexture.create_from_image(img)
 
 # ============================================================
 # ENVIRONMENT SPRITES

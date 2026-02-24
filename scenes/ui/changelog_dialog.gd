@@ -9,9 +9,22 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.62.3"
+const GAME_VERSION := "v0.63.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.63.0",
+		"title": "Underground Crypt dungeon",
+		"date": "2026-02-24",
+		"entries": [
+			"New dungeon stairwell in town — enter the Crypt (requires Level 10)",
+			"8 new dungeon enemy types: Cave Snake, Dungeon Bat, Vampire Bat, Flan, Mimic, Ghoul, Crypt Knight, Lich",
+			"Each enemy has unique procedural sprite and death SFX",
+			"Dark underground atmosphere with stone corridors",
+			"Exit beacon to return to town",
+			"Dungeon enter/exit sound effects",
+		]
+	},
 	{
 		"version": "v0.62.3",
 		"title": "Fix ATK button overlapping OPT menu on mobile",

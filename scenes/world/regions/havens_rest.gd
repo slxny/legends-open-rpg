@@ -400,6 +400,12 @@ func _generate_town_async() -> void:
 	_add_building_label(town, Vector2(-300, 200), "Stables")
 	_add_town_building(town, Vector2(280, -220), "chapel_building")
 	_add_building_label(town, Vector2(280, -190), "Chapel")
+	# Dungeon entrance — stairwell between barracks and well
+	_add_town_building(town, Vector2(160, 200), "dungeon_stairwell")
+	_add_building_label(town, Vector2(160, 230), "Crypt")
+	# Flanking torches
+	_add_wall_torch(town, Vector2(145, 200))
+	_add_wall_torch(town, Vector2(178, 200))
 
 	# ---- Wall torches along the fortress walls ----
 	for wx in range(-450, 461, 42):

@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.65.6"
+const GAME_VERSION := "v0.65.7"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.65.7",
+		"title": "Fix loading in Facebook Messenger and in-app browsers",
+		"date": "2026-02-24",
+		"entries": [
+			"Game now detects in-app browsers (Facebook, Instagram, Snapchat, TikTok, etc.)",
+			"Shows a branded 'Open in Browser' page instead of hanging on a loading screen",
+			"Tap the button to launch in Chrome/Safari where the game runs properly",
+		]
+	},
 	{
 		"version": "v0.65.6",
 		"title": "Custom boot screen with cinematic title fade-in",

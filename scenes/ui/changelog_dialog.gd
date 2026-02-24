@@ -9,9 +9,23 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.60.2"
+const GAME_VERSION := "v0.60.3"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.60.3",
+		"title": "Button visual feedback across all UI",
+		"date": "2026-02-23",
+		"entries": [
+			"All buttons now have hover glow, press feedback, and styled borders",
+			"Pause menu: Resume, Save, Load, Changelog, Help, Quit, and Close buttons styled",
+			"Tavern: Close and Visit buttons now have press/hover states",
+			"Shop: Close, Buy/Sell tabs, Buy/Sell action, and Back buttons styled",
+			"Changelog: Close button styled",
+			"HUD: Menu button, command overlay buttons, and map overlay close button styled",
+			"Help dialog: Close button styled",
+		]
+	},
 	{
 		"version": "v0.60.2",
 		"title": "Fix mobile top bar cutoff & add kills to stats panel",
@@ -1123,6 +1137,7 @@ const CHANGELOG: Array[Dictionary] = [
 func _ready() -> void:
 	panel.visible = false
 	close_button.pressed.connect(close)
+	_style_btn(close_button, Color(1.0, 0.4, 0.3))
 	version_label.text = GAME_VERSION
 
 func open() -> void:
@@ -1191,6 +1206,24 @@ func _build_entries() -> void:
 		var spacer = Control.new()
 		spacer.custom_minimum_size = Vector2(0, spacer_height)
 		entries_container.add_child(spacer)
+
+func _style_btn(btn: Button, accent: Color = Color(0.9, 0.75, 0.3)) -> void:
+	var normal = StyleBoxFlat.new()
+	normal.bg_color = Color(0.12, 0.11, 0.08, 0.95)
+	normal.border_color = accent * Color(0.5, 0.5, 0.5, 0.6)
+	normal.set_border_width_all(2)
+	normal.set_corner_radius_all(6)
+	normal.set_content_margin_all(4)
+	var hover = normal.duplicate()
+	hover.bg_color = Color(0.18, 0.16, 0.12, 0.95)
+	hover.border_color = accent * Color(0.8, 0.8, 0.8, 0.8)
+	var pressed = normal.duplicate()
+	pressed.bg_color = Color(0.25, 0.22, 0.14, 0.95)
+	pressed.border_color = accent
+	btn.add_theme_stylebox_override("normal", normal)
+	btn.add_theme_stylebox_override("hover", hover)
+	btn.add_theme_stylebox_override("pressed", pressed)
+	btn.add_theme_stylebox_override("focus", hover)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if _is_visible and (event.is_action_pressed("ui_cancel") or event.is_action_pressed("ability_1")):

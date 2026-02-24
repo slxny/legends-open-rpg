@@ -211,6 +211,7 @@ func _build_cmd_overlay() -> void:
 	close_btn.text = "X"
 	close_btn.custom_minimum_size = Vector2(120, 100)
 	close_btn.add_theme_font_size_override("font_size", 50)
+	_style_btn(close_btn, Color(1.0, 0.4, 0.3))
 	close_btn.pressed.connect(_toggle_cmd_overlay)
 	title_row.add_child(close_btn)
 
@@ -230,6 +231,7 @@ func _build_cmd_overlay() -> void:
 	log_b.custom_minimum_size = btn_size
 	log_b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	log_b.add_theme_font_size_override("font_size", fs)
+	_style_btn(log_b, Color(0.7, 0.7, 0.8))
 	log_b.pressed.connect(func():
 		_on_changelog_pressed()
 		_toggle_cmd_overlay()
@@ -243,6 +245,7 @@ func _build_cmd_overlay() -> void:
 		p.custom_minimum_size = btn_size
 		p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		p.add_theme_font_size_override("font_size", fs)
+		_style_btn(p, Color(0.5, 1.0, 0.5))
 		var idx = i
 		p.pressed.connect(func():
 			if _player and is_instance_valid(_player):
@@ -257,6 +260,7 @@ func _build_cmd_overlay() -> void:
 	inv_b.custom_minimum_size = btn_size
 	inv_b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	inv_b.add_theme_font_size_override("font_size", fs)
+	_style_btn(inv_b, Color(0.5, 0.8, 1.0))
 	inv_b.pressed.connect(func():
 		_on_inventory_pressed()
 		_toggle_cmd_overlay()
@@ -268,6 +272,7 @@ func _build_cmd_overlay() -> void:
 	save_b.custom_minimum_size = btn_size
 	save_b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	save_b.add_theme_font_size_override("font_size", fs)
+	_style_btn(save_b, Color(0.4, 0.7, 1.0))
 	save_b.pressed.connect(func():
 		_on_save_pressed()
 		_toggle_cmd_overlay()
@@ -279,6 +284,7 @@ func _build_cmd_overlay() -> void:
 	load_b.custom_minimum_size = btn_size
 	load_b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	load_b.add_theme_font_size_override("font_size", fs)
+	_style_btn(load_b, Color(0.4, 0.7, 1.0))
 	load_b.pressed.connect(func():
 		_on_load_pressed()
 		_toggle_cmd_overlay()
@@ -355,6 +361,7 @@ func _build_map_overlay() -> void:
 	close_btn.text = "X"
 	close_btn.custom_minimum_size = Vector2(120, 100)
 	close_btn.add_theme_font_size_override("font_size", 50)
+	_style_btn(close_btn, Color(1.0, 0.4, 0.3))
 	close_btn.pressed.connect(_toggle_map_overlay)
 	title_row.add_child(close_btn)
 
@@ -405,6 +412,7 @@ func _add_mobile_menu_button() -> void:
 		menu_btn.custom_minimum_size = Vector2(140, 60)
 		menu_btn.add_theme_font_size_override("font_size", 34)
 	menu_btn.modulate = Color(1, 1, 1, 0.7)
+	_style_btn(menu_btn, Color(0.9, 0.75, 0.3))
 	menu_btn.pressed.connect(func():
 		var menus = get_tree().get_nodes_in_group("pause_menu")
 		if menus.size() > 0:
@@ -507,6 +515,24 @@ func _on_gold_changed(amount: int) -> void:
 
 func _on_wood_changed(amount: int) -> void:
 	wood_label.text = "Wood: %d" % amount
+
+func _style_btn(btn: Button, accent: Color = Color(0.9, 0.75, 0.3)) -> void:
+	var normal = StyleBoxFlat.new()
+	normal.bg_color = Color(0.12, 0.11, 0.08, 0.95)
+	normal.border_color = accent * Color(0.5, 0.5, 0.5, 0.6)
+	normal.set_border_width_all(2)
+	normal.set_corner_radius_all(6)
+	normal.set_content_margin_all(4)
+	var hover = normal.duplicate()
+	hover.bg_color = Color(0.18, 0.16, 0.12, 0.95)
+	hover.border_color = accent * Color(0.8, 0.8, 0.8, 0.8)
+	var pressed = normal.duplicate()
+	pressed.bg_color = Color(0.25, 0.22, 0.14, 0.95)
+	pressed.border_color = accent
+	btn.add_theme_stylebox_override("normal", normal)
+	btn.add_theme_stylebox_override("hover", hover)
+	btn.add_theme_stylebox_override("pressed", pressed)
+	btn.add_theme_stylebox_override("focus", hover)
 
 func _on_kills_changed(total: int) -> void:
 	kills_label.text = "Kills: %d" % total

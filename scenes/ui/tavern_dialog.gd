@@ -35,6 +35,7 @@ const DEBUFFS: Array[Dictionary] = [
 func _ready() -> void:
 	panel.visible = false
 	close_button.pressed.connect(close)
+	_style_btn(close_button, Color(1.0, 0.4, 0.3))
 
 func setup(player: Node2D) -> void:
 	_player = player
@@ -128,6 +129,7 @@ func _refresh() -> void:
 	visit_btn.custom_minimum_size = Vector2(320, 80) if _is_mobile else Vector2(130, 36)
 	if _is_mobile:
 		visit_btn.add_theme_font_size_override("font_size", 34)
+	_style_btn(visit_btn, Color(0.9, 0.4, 0.5))
 	visit_btn.pressed.connect(_on_visit)
 	if GameManager.gold < VISIT_COST:
 		visit_btn.disabled = true
@@ -198,6 +200,28 @@ func _get_active_tavern_buff() -> Dictionary:
 		if b["id"].begins_with("tavern_"):
 			return b
 	return {}
+
+func _style_btn(btn: Button, accent: Color = Color(0.9, 0.75, 0.3)) -> void:
+	var normal = StyleBoxFlat.new()
+	normal.bg_color = Color(0.12, 0.11, 0.08, 0.95)
+	normal.border_color = accent * Color(0.5, 0.5, 0.5, 0.6)
+	normal.set_border_width_all(2)
+	normal.set_corner_radius_all(6)
+	normal.set_content_margin_all(4)
+	var hover = normal.duplicate()
+	hover.bg_color = Color(0.18, 0.16, 0.12, 0.95)
+	hover.border_color = accent * Color(0.8, 0.8, 0.8, 0.8)
+	var pressed = normal.duplicate()
+	pressed.bg_color = Color(0.25, 0.22, 0.14, 0.95)
+	pressed.border_color = accent
+	var disabled = normal.duplicate()
+	disabled.bg_color = Color(0.08, 0.08, 0.06, 0.7)
+	disabled.border_color = Color(0.3, 0.3, 0.3, 0.4)
+	btn.add_theme_stylebox_override("normal", normal)
+	btn.add_theme_stylebox_override("hover", hover)
+	btn.add_theme_stylebox_override("pressed", pressed)
+	btn.add_theme_stylebox_override("disabled", disabled)
+	btn.add_theme_stylebox_override("focus", hover)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if _is_visible and (event.is_action_pressed("ui_cancel") or event.is_action_pressed("ability_1")):

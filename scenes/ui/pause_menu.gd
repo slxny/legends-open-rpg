@@ -88,6 +88,7 @@ func _build_menu() -> void:
 	close_btn.custom_minimum_size = Vector2(120, 100) if _is_mobile else Vector2(40, 32)
 	close_btn.add_theme_font_size_override("font_size", 50 if _is_mobile else 16)
 	close_btn.add_theme_color_override("font_color", Color(1.0, 0.4, 0.3))
+	_style_btn(close_btn, Color(1.0, 0.4, 0.3))
 	close_btn.pressed.connect(func(): close())
 	top_bar.add_child(close_btn)
 
@@ -118,8 +119,27 @@ func _add_menu_button(parent: VBoxContainer, text: String, min_size: Vector2, fo
 	btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	btn.add_theme_font_size_override("font_size", font_size)
 	btn.add_theme_color_override("font_color", color)
+	_style_btn(btn, color)
 	btn.pressed.connect(callback)
 	parent.add_child(btn)
+
+func _style_btn(btn: Button, accent: Color = Color(0.9, 0.75, 0.3)) -> void:
+	var normal = StyleBoxFlat.new()
+	normal.bg_color = Color(0.12, 0.11, 0.08, 0.95)
+	normal.border_color = accent * Color(0.5, 0.5, 0.5, 0.6)
+	normal.set_border_width_all(2)
+	normal.set_corner_radius_all(6)
+	normal.set_content_margin_all(4)
+	var hover = normal.duplicate()
+	hover.bg_color = Color(0.18, 0.16, 0.12, 0.95)
+	hover.border_color = accent * Color(0.8, 0.8, 0.8, 0.8)
+	var pressed = normal.duplicate()
+	pressed.bg_color = Color(0.25, 0.22, 0.14, 0.95)
+	pressed.border_color = accent
+	btn.add_theme_stylebox_override("normal", normal)
+	btn.add_theme_stylebox_override("hover", hover)
+	btn.add_theme_stylebox_override("pressed", pressed)
+	btn.add_theme_stylebox_override("focus", hover)
 
 func _on_save() -> void:
 	SaveLoadManager.save_game()
@@ -196,6 +216,7 @@ func _show_help_dialog() -> void:
 	close_btn.custom_minimum_size = Vector2(120, 100) if _is_mobile else Vector2(80, 32)
 	if _is_mobile:
 		close_btn.add_theme_font_size_override("font_size", 50)
+	_style_btn(close_btn, Color(1.0, 0.4, 0.3))
 	close_btn.pressed.connect(func(): help_layer.queue_free())
 	top.add_child(close_btn)
 	vbox.add_child(top)

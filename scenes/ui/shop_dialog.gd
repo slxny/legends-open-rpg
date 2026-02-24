@@ -125,6 +125,7 @@ func _build_ui() -> void:
 		_close_btn.text = "Close [Q]"
 		_close_btn.custom_minimum_size = Vector2(90, 30)
 		_close_btn.add_theme_font_size_override("font_size", fs_btn)
+	_style_btn(_close_btn, Color(1.0, 0.4, 0.3))
 	_close_btn.pressed.connect(close)
 	top_bar.add_child(_close_btn)
 
@@ -143,6 +144,7 @@ func _build_ui() -> void:
 	_buy_tab_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_buy_tab_btn.custom_minimum_size = Vector2(0, tab_h)
 	_buy_tab_btn.add_theme_font_size_override("font_size", fs_btn)
+	_style_btn(_buy_tab_btn, Color(0.3, 0.8, 0.4))
 	_buy_tab_btn.pressed.connect(func(): _switch_tab(0))
 	tab_bar.add_child(_buy_tab_btn)
 
@@ -151,6 +153,7 @@ func _build_ui() -> void:
 	_sell_tab_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_sell_tab_btn.custom_minimum_size = Vector2(0, tab_h)
 	_sell_tab_btn.add_theme_font_size_override("font_size", fs_btn)
+	_style_btn(_sell_tab_btn, Color(1.0, 0.85, 0.3))
 	_sell_tab_btn.pressed.connect(func(): _switch_tab(1))
 	tab_bar.add_child(_sell_tab_btn)
 
@@ -235,12 +238,14 @@ func _build_ui() -> void:
 	_detail_action_btn = Button.new()
 	_detail_action_btn.custom_minimum_size = Vector2(280 if _is_mobile else 100, btn_h + 10 if _is_mobile else btn_h + 4)
 	_detail_action_btn.add_theme_font_size_override("font_size", fs_btn)
+	_style_btn(_detail_action_btn, Color(0.3, 0.9, 0.4))
 	action_row.add_child(_detail_action_btn)
 
 	_detail_close_btn = Button.new()
 	_detail_close_btn.text = "Back"
 	_detail_close_btn.custom_minimum_size = Vector2(220 if _is_mobile else 80, btn_h + 10 if _is_mobile else btn_h + 4)
 	_detail_close_btn.add_theme_font_size_override("font_size", fs_btn)
+	_style_btn(_detail_close_btn, Color(0.7, 0.7, 0.7))
 	_detail_close_btn.pressed.connect(func():
 		AudioManager.play_sfx("ui_tap", -4.0)
 		_hide_detail()
@@ -492,6 +497,28 @@ func _sell_item(bag_index: int) -> void:
 	GameManager.game_message.emit("Sold %s for %dg" % [item.get("name", ""), sell_price], Color(1, 0.85, 0.2))
 	_hide_detail()
 	_refresh()
+
+func _style_btn(btn: Button, accent: Color = Color(0.9, 0.75, 0.3)) -> void:
+	var normal = StyleBoxFlat.new()
+	normal.bg_color = Color(0.12, 0.11, 0.08, 0.95)
+	normal.border_color = accent * Color(0.5, 0.5, 0.5, 0.6)
+	normal.set_border_width_all(2)
+	normal.set_corner_radius_all(6)
+	normal.set_content_margin_all(4)
+	var hover = normal.duplicate()
+	hover.bg_color = Color(0.18, 0.16, 0.12, 0.95)
+	hover.border_color = accent * Color(0.8, 0.8, 0.8, 0.8)
+	var pressed = normal.duplicate()
+	pressed.bg_color = Color(0.25, 0.22, 0.14, 0.95)
+	pressed.border_color = accent
+	var disabled = normal.duplicate()
+	disabled.bg_color = Color(0.08, 0.08, 0.06, 0.7)
+	disabled.border_color = Color(0.3, 0.3, 0.3, 0.4)
+	btn.add_theme_stylebox_override("normal", normal)
+	btn.add_theme_stylebox_override("hover", hover)
+	btn.add_theme_stylebox_override("pressed", pressed)
+	btn.add_theme_stylebox_override("disabled", disabled)
+	btn.add_theme_stylebox_override("focus", hover)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not _is_visible:

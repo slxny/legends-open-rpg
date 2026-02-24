@@ -9,9 +9,17 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.63.2"
+const GAME_VERSION := "v0.63.3"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.63.3",
+		"title": "Larger ATK button on mobile",
+		"date": "2026-02-24",
+		"entries": [
+			"Mobile ATK button is now 20% larger for easier tapping",
+		]
+	},
 	{
 		"version": "v0.63.2",
 		"title": "Fix dungeon enter/exit teleport loop",

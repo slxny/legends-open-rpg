@@ -1829,7 +1829,7 @@ func _reposition_atk_button() -> void:
 		return
 	var vp_size = get_viewport().get_visible_rect().size
 	var is_landscape = vp_size.x > vp_size.y
-	var btn_size = 120 if is_landscape else 180
+	var btn_size = 144 if is_landscape else 216
 
 	_mobile_atk_btn.custom_minimum_size = Vector2(btn_size, btn_size)
 	_mobile_atk_btn.size = Vector2(btn_size, btn_size)
@@ -1855,7 +1855,7 @@ func _reposition_atk_button() -> void:
 	var style_hover = style_normal.duplicate()
 	_mobile_atk_btn.add_theme_stylebox_override("hover", style_hover)
 
-	_mobile_atk_btn.add_theme_font_size_override("font_size", 36 if is_landscape else 52)
+	_mobile_atk_btn.add_theme_font_size_override("font_size", 43 if is_landscape else 62)
 	_mobile_atk_btn.pivot_offset = Vector2(btn_size / 2.0, btn_size / 2.0)
 
 func set_atk_button_visible(vis: bool) -> void:

@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.61.5"
+const GAME_VERSION := "v0.62.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.62.0",
+		"title": "Double-tap quick-sell in shop",
+		"date": "2026-02-24",
+		"entries": [
+			"Double-tap/double-click an item in the Sell tab to instantly sell it",
+			"Hint label shown above sell list as a reminder",
+			"Single-tap still opens item detail panel as before",
+		]
+	},
 	{
 		"version": "v0.61.5",
 		"title": "Fix minimap tap-to-expand on mobile",

@@ -13,6 +13,11 @@ var _selected_item: Dictionary = {}
 var _selected_item_id: String = ""
 var _selected_bag_index: int = -1
 
+# Double-click quick-sell tracking
+var _last_click_index: int = -1
+var _last_click_time: int = 0
+const DOUBLE_CLICK_MS: int = 400
+
 # UI references built in code
 var _title_label: Label
 var _gold_label: Label
@@ -255,6 +260,7 @@ func _build_ui() -> void:
 func _switch_tab(tab: int) -> void:
 	AudioManager.play_sfx("ui_tap", -4.0)
 	_current_tab = tab
+	_last_click_index = -1
 	_hide_detail()
 	_refresh()
 
@@ -309,6 +315,15 @@ func _build_sell_list() -> void:
 			has_items = true
 			var row = _create_item_row(item, item.get("id", ""), i, fs, row_h)
 			_item_list.add_child(row)
+
+	if has_items:
+		var hint = Label.new()
+		hint.text = "Double-tap item to quick-sell"
+		hint.add_theme_font_size_override("font_size", 30 if _is_mobile else 11)
+		hint.add_theme_color_override("font_color", Color(0.7, 0.6, 0.35, 0.7))
+		hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_item_list.add_child(hint)
+		_item_list.move_child(hint, 1)  # after _no_items_label at index 0
 
 	_no_items_label.visible = not has_items
 	if not has_items:
@@ -395,6 +410,15 @@ func _create_item_row(item: Dictionary, item_id: String, bag_index: int, fs: int
 	var _item = item
 	btn_overlay.pressed.connect(func():
 		AudioManager.play_sfx("ui_tap", -4.0)
+		if _current_tab == 1 and _idx >= 0:
+			var now = Time.get_ticks_msec()
+			if _last_click_index == _idx and (now - _last_click_time) <= DOUBLE_CLICK_MS:
+				_last_click_index = -1
+				_last_click_time = 0
+				_sell_item(_idx)
+				return
+			_last_click_index = _idx
+			_last_click_time = now
 		_show_detail(_item, _id, _idx)
 	)
 	btn_overlay.mouse_entered.connect(func():
@@ -466,6 +490,7 @@ func _show_detail(item: Dictionary, item_id: String, bag_index: int) -> void:
 func _hide_detail() -> void:
 	_detail_panel.visible = false
 	_selected_item = {}
+	_last_click_index = -1
 
 func _buy_item(item_id: String) -> void:
 	var item = ItemData.get_item(item_id)

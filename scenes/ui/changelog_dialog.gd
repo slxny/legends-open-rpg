@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.67.2"
+const GAME_VERSION := "v0.67.3"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.67.3",
+		"title": "Minibosses always visible on minimap",
+		"date": "2026-02-25",
+		"entries": [
+			"Minibosses now always show on the minimap as pulsing red diamonds once spawned",
+			"No longer hidden by fog of war — you can track them from anywhere on the map",
+			"Diamond indicator made larger and brighter red with outline for better visibility",
+		]
+	},
 	{
 		"version": "v0.67.2",
 		"title": "Inventory fits on landscape mobile",

@@ -97,11 +97,13 @@ func _process(delta: float) -> void:
 		_cached_bosses.clear()
 		var enemies = get_tree().get_nodes_in_group("enemies")
 		for enemy in enemies:
-			if is_instance_valid(enemy) and FogOfWarManager.is_visible(enemy.global_position):
-				if enemy.is_mini_boss:
-					_cached_bosses.append(enemy.global_position)
-				else:
-					_cached_enemies.append(enemy.global_position)
+			if not is_instance_valid(enemy):
+				continue
+			if enemy.is_mini_boss:
+				# Minibosses always show on minimap once alive
+				_cached_bosses.append(enemy.global_position)
+			elif FogOfWarManager.is_visible(enemy.global_position):
+				_cached_enemies.append(enemy.global_position)
 		queue_redraw()
 
 func _draw() -> void:
@@ -146,16 +148,22 @@ func _draw() -> void:
 	for epos in _cached_enemies:
 		draw_circle(_world_to_minimap(epos, ms), 1.5 * dot_scale, Color(1.0, 0.3, 0.3, 0.8))
 
-	# Miniboss diamonds (pulsing orange-red, larger than enemy dots)
+	# Miniboss diamonds (pulsing red, always visible once spawned)
 	for bpos in _cached_bosses:
 		var mpos = _world_to_minimap(bpos, ms)
 		var pulse = 0.7 + 0.3 * sin(Time.get_ticks_msec() / 150.0)
-		var d = 4.0 * dot_scale * pulse
+		var d = 5.0 * dot_scale * pulse
 		var points = PackedVector2Array([
 			mpos + Vector2(0, -d), mpos + Vector2(d, 0),
 			mpos + Vector2(0, d), mpos + Vector2(-d, 0)
 		])
-		draw_colored_polygon(points, Color(1.0, 0.4, 0.1, pulse))
+		draw_colored_polygon(points, Color(1.0, 0.15, 0.1, pulse))
+		# Red outline for extra visibility
+		draw_polyline(PackedVector2Array([
+			mpos + Vector2(0, -d), mpos + Vector2(d, 0),
+			mpos + Vector2(0, d), mpos + Vector2(-d, 0),
+			mpos + Vector2(0, -d)
+		]), Color(1.0, 0.3, 0.2, 0.9), 1.5)
 
 	# Shop markers (yellow) — only if explored
 	for shop_pos in shop_markers:

@@ -9,9 +9,18 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.68.4"
+const GAME_VERSION := "v0.68.5"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.68.5",
+		"title": "All panels fully opaque and dark",
+		"date": "2026-02-25",
+		"entries": [
+			"All UI panels (shop, armory, tavern, woodworking, inventory, hero stats, changelog, pause) now have dark opaque backgrounds",
+			"Text behind panels no longer bleeds through — much easier to read",
+		]
+	},
 	{
 		"version": "v0.68.4",
 		"title": "Dungeon enemies are much harder",

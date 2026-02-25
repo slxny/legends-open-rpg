@@ -1,6 +1,18 @@
-[gd_scene format=3 uid="uid://barmscn"]
+[gd_scene load_steps=2 format=3 uid="uid://barmscn"]
 
 [ext_resource type="Script" path="res://scenes/ui/armory_dialog.gd" id="1_armory"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_armory"]
+bg_color = Color(0.05, 0.05, 0.08, 1.0)
+border_color = Color(0.6, 0.5, 0.2, 0.7)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
 
 [node name="ArmoryDialog" type="CanvasLayer"]
 layer = 25
@@ -18,4 +30,5 @@ offset_right = 280.0
 offset_bottom = 220.0
 grow_horizontal = 2
 grow_vertical = 2
-self_modulate = Color(1, 1, 1, 0.93)
+self_modulate = Color(1, 1, 1, 1.0)
+theme_override_styles/panel = SubResource("StyleBoxFlat_armory")

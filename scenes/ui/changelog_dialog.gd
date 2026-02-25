@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.66.6"
+const GAME_VERSION := "v0.66.7"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.66.7",
+		"title": "Tavern back to random visit + UI polish",
+		"date": "2026-02-24",
+		"entries": [
+			"Tavern reverted to simple random visit — single button, random buff/debuff outcome",
+			"Tavern shows result text and active buff timer after visiting",
+			"Armory keeps sleek detail panel with manual select → view stats → upgrade flow",
+		]
+	},
 	{
 		"version": "v0.66.6",
 		"title": "Armory & Tavern UI redesign + double-click quick-build",

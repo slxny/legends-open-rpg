@@ -7,30 +7,14 @@ signal closed
 var _player: Node2D = null
 var _is_visible: bool = false
 var _is_mobile: bool = false
-var _selected_buff: Dictionary = {}
-
-# Double-click quick-visit tracking
-var _last_click_id: String = ""
-var _last_click_time: int = 0
-const DOUBLE_CLICK_MS: int = 400
-var _pending_detail_timer: SceneTreeTimer = null
-var _pending_detail_buff: Dictionary = {}
 
 # UI refs built in code
 var _title_label: Label
 var _gold_label: Label
 var _close_btn: Button
-var _item_scroll: ScrollContainer
-var _item_list: VBoxContainer
-var _detail_panel: PanelContainer
-var _detail_name: Label
-var _detail_desc: Label
-var _detail_effect: Label
-var _detail_duration: Label
-var _detail_cost: Label
-var _detail_action_btn: Button
-var _detail_close_btn: Button
 var _active_label: Label
+var _visit_btn: Button
+var _result_label: Label
 
 const VISIT_COST: int = 50
 
@@ -67,7 +51,6 @@ func open() -> void:
 	panel.visible = true
 	_detect_mobile()
 	_build_ui()
-	_selected_buff = {}
 	_refresh()
 	AudioManager.play_sfx("enter_tavern")
 
@@ -81,15 +64,14 @@ func _detect_mobile() -> void:
 		panel.offset_top = -vp_size.y / 2.0 + margin
 		panel.offset_bottom = vp_size.y / 2.0 - margin
 	else:
-		panel.offset_left = -280.0
-		panel.offset_right = 280.0
-		panel.offset_top = -250.0
-		panel.offset_bottom = 250.0
+		panel.offset_left = -240.0
+		panel.offset_right = 240.0
+		panel.offset_top = -180.0
+		panel.offset_bottom = 180.0
 
 func close() -> void:
 	_is_visible = false
 	panel.visible = false
-	_cancel_pending_detail()
 	closed.emit()
 
 func _build_ui() -> void:
@@ -167,88 +149,31 @@ func _build_ui() -> void:
 	_active_label.visible = false
 	root_vbox.add_child(_active_label)
 
-	# Double-click hint
-	var hint = Label.new()
-	hint.text = "Double-click a buff to visit directly (%dg)" % VISIT_COST
-	hint.add_theme_font_size_override("font_size", 30 if _is_mobile else 11)
-	hint.add_theme_color_override("font_color", Color(0.6, 0.55, 0.4, 0.7))
-	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	root_vbox.add_child(hint)
+	# Result label (shows after visiting)
+	_result_label = Label.new()
+	_result_label.add_theme_font_size_override("font_size", fs_normal)
+	_result_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_result_label.visible = false
+	root_vbox.add_child(_result_label)
 
-	# Buff list (scrollable)
-	_item_scroll = ScrollContainer.new()
-	_item_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_item_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	root_vbox.add_child(_item_scroll)
+	# Spacer to push button down
+	var mid_spacer = Control.new()
+	mid_spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	root_vbox.add_child(mid_spacer)
 
-	_item_list = VBoxContainer.new()
-	_item_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_item_list.add_theme_constant_override("separation", 10 if _is_mobile else 2)
-	_item_scroll.add_child(_item_list)
-
-	# Detail panel
-	_detail_panel = PanelContainer.new()
-	_detail_panel.visible = false
-	var detail_style = StyleBoxFlat.new()
-	detail_style.bg_color = Color(0.14, 0.10, 0.12, 0.95)
-	detail_style.border_color = Color(0.6, 0.3, 0.35)
-	detail_style.set_border_width_all(2)
-	detail_style.set_corner_radius_all(6)
-	detail_style.set_content_margin_all(margin_px)
-	_detail_panel.add_theme_stylebox_override("panel", detail_style)
-	root_vbox.add_child(_detail_panel)
-
-	var detail_vbox = VBoxContainer.new()
-	detail_vbox.add_theme_constant_override("separation", 4 if _is_mobile else 2)
-	_detail_panel.add_child(detail_vbox)
-
-	_detail_name = Label.new()
-	_detail_name.add_theme_font_size_override("font_size", fs_title - 4)
-	detail_vbox.add_child(_detail_name)
-
-	_detail_desc = Label.new()
-	_detail_desc.add_theme_font_size_override("font_size", fs_small)
-	_detail_desc.add_theme_color_override("font_color", Color(0.75, 0.72, 0.65))
-	_detail_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	detail_vbox.add_child(_detail_desc)
-
-	_detail_effect = Label.new()
-	_detail_effect.add_theme_font_size_override("font_size", fs_normal)
-	detail_vbox.add_child(_detail_effect)
-
-	_detail_duration = Label.new()
-	_detail_duration.add_theme_font_size_override("font_size", fs_small)
-	_detail_duration.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
-	detail_vbox.add_child(_detail_duration)
-
-	_detail_cost = Label.new()
-	_detail_cost.add_theme_font_size_override("font_size", fs_normal)
-	_detail_cost.add_theme_color_override("font_color", Color(1, 0.85, 0.2))
-	detail_vbox.add_child(_detail_cost)
-
-	var action_row = HBoxContainer.new()
-	action_row.add_theme_constant_override("separation", 8)
-	detail_vbox.add_child(action_row)
-
-	_detail_action_btn = Button.new()
-	_detail_action_btn.custom_minimum_size = Vector2(280 if _is_mobile else 140, btn_h + 10 if _is_mobile else btn_h + 4)
-	_detail_action_btn.add_theme_font_size_override("font_size", fs_btn)
-	_style_btn(_detail_action_btn, Color(0.9, 0.4, 0.5))
-	action_row.add_child(_detail_action_btn)
-
-	_detail_close_btn = Button.new()
-	_detail_close_btn.text = "Back"
-	_detail_close_btn.custom_minimum_size = Vector2(220 if _is_mobile else 80, btn_h + 10 if _is_mobile else btn_h + 4)
-	_detail_close_btn.add_theme_font_size_override("font_size", fs_btn)
-	_style_btn(_detail_close_btn, Color(0.7, 0.7, 0.7))
-	_detail_close_btn.pressed.connect(func():
-		AudioManager.play_sfx("ui_tap", -4.0)
-		_hide_detail()
-	)
-	action_row.add_child(_detail_close_btn)
+	# Visit button
+	_visit_btn = Button.new()
+	_visit_btn.custom_minimum_size = Vector2(0, btn_h + 16 if _is_mobile else btn_h + 8)
+	_visit_btn.add_theme_font_size_override("font_size", fs_btn + 4 if _is_mobile else fs_btn + 2)
+	_visit_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_style_btn(_visit_btn, Color(0.9, 0.4, 0.5))
+	_visit_btn.pressed.connect(_on_visit)
+	root_vbox.add_child(_visit_btn)
 
 func _refresh() -> void:
 	_gold_label.text = "Gold: %d" % GameManager.gold
+	_visit_btn.text = "Visit the Wench (%dg)" % VISIT_COST
+	_visit_btn.disabled = GameManager.gold < VISIT_COST
 
 	# Active buff
 	if _player:
@@ -262,160 +187,6 @@ func _refresh() -> void:
 			_active_label.visible = true
 		else:
 			_active_label.visible = false
-
-	for child in _item_list.get_children():
-		child.queue_free()
-
-	# Show all possible buffs as browsable list
-	for buff in BUFFS:
-		_add_buff_row(buff, false)
-
-	if _selected_buff.size() > 0 and _detail_panel.visible:
-		_show_detail(_selected_buff)
-
-func _get_effect_text(buff: Dictionary) -> String:
-	var sign = "+" if buff["amount"] > 0 else ""
-	var val = buff["amount"]
-	if buff["stat"] == "dodge":
-		return "%s%d%% %s" % [sign, int(val * 100), buff["stat"].capitalize()]
-	return "%s%s %s" % [sign, str(int(val)), buff["stat"].replace("_", " ").capitalize()]
-
-func _add_buff_row(buff: Dictionary, _is_debuff: bool) -> void:
-	var fs = 40 if _is_mobile else 14
-	var row_h = 100 if _is_mobile else 30
-
-	var row_style = StyleBoxFlat.new()
-	row_style.bg_color = Color(0.16, 0.14, 0.16, 0.7)
-	row_style.set_corner_radius_all(6)
-	row_style.set_content_margin_all(10 if _is_mobile else 4)
-	row_style.border_color = Color(0.3, 0.25, 0.25, 0.4)
-	row_style.set_border_width_all(1)
-
-	var hover_style = StyleBoxFlat.new()
-	hover_style.bg_color = Color(0.26, 0.20, 0.22, 0.85)
-	hover_style.set_corner_radius_all(6)
-	hover_style.set_content_margin_all(10 if _is_mobile else 4)
-	hover_style.border_color = Color(0.9, 0.4, 0.5, 0.7)
-	hover_style.set_border_width_all(2)
-
-	var row_panel = PanelContainer.new()
-	row_panel.add_theme_stylebox_override("panel", row_style)
-	row_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row_panel.custom_minimum_size = Vector2(0, row_h)
-
-	var hbox = HBoxContainer.new()
-	hbox.add_theme_constant_override("separation", 8)
-	row_panel.add_child(hbox)
-
-	var name_label = Label.new()
-	name_label.text = buff["name"]
-	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	name_label.add_theme_color_override("font_color", buff["color"])
-	name_label.add_theme_font_size_override("font_size", fs)
-	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	hbox.add_child(name_label)
-
-	var effect_label = Label.new()
-	effect_label.text = _get_effect_text(buff)
-	effect_label.add_theme_color_override("font_color", Color(0.6, 0.85, 0.6))
-	effect_label.add_theme_font_size_override("font_size", 34 if _is_mobile else 12)
-	effect_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	hbox.add_child(effect_label)
-
-	# Clickable overlay with double-click
-	var btn_overlay = Button.new()
-	btn_overlay.flat = true
-	btn_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	btn_overlay.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	var btn_normal = StyleBoxFlat.new()
-	btn_normal.bg_color = Color(0, 0, 0, 0)
-	btn_normal.set_corner_radius_all(6)
-	var btn_hover = StyleBoxFlat.new()
-	btn_hover.bg_color = Color(0.9, 0.4, 0.5, 0.08)
-	btn_hover.set_corner_radius_all(6)
-	btn_hover.border_color = Color(0.9, 0.4, 0.5, 0.5)
-	btn_hover.set_border_width_all(1)
-	var btn_pressed = StyleBoxFlat.new()
-	btn_pressed.bg_color = Color(0.9, 0.4, 0.5, 0.15)
-	btn_pressed.set_corner_radius_all(6)
-	btn_pressed.border_color = Color(1.0, 0.5, 0.6, 0.7)
-	btn_pressed.set_border_width_all(2)
-	btn_overlay.add_theme_stylebox_override("normal", btn_normal)
-	btn_overlay.add_theme_stylebox_override("hover", btn_hover)
-	btn_overlay.add_theme_stylebox_override("pressed", btn_pressed)
-	btn_overlay.add_theme_stylebox_override("focus", btn_hover)
-	var b = buff
-	btn_overlay.pressed.connect(func():
-		AudioManager.play_sfx("ui_tap", -4.0)
-		var now = Time.get_ticks_msec()
-		if _last_click_id == b["id"] and (now - _last_click_time) <= DOUBLE_CLICK_MS:
-			_cancel_pending_detail()
-			_last_click_id = ""
-			_last_click_time = 0
-			_on_visit()
-			return
-		_last_click_id = b["id"]
-		_last_click_time = now
-		_pending_detail_buff = b
-		_cancel_pending_detail()
-		_pending_detail_timer = get_tree().create_timer(DOUBLE_CLICK_MS / 1000.0)
-		_pending_detail_timer.timeout.connect(func():
-			_pending_detail_timer = null
-			if _pending_detail_buff.size() > 0:
-				_show_detail(_pending_detail_buff)
-				_pending_detail_buff = {}
-		)
-	)
-	btn_overlay.mouse_entered.connect(func():
-		AudioManager.play_sfx("ui_hover", -8.0)
-		row_panel.add_theme_stylebox_override("panel", hover_style)
-	)
-	btn_overlay.mouse_exited.connect(func():
-		row_panel.add_theme_stylebox_override("panel", row_style)
-	)
-	row_panel.add_child(btn_overlay)
-
-	_item_list.add_child(row_panel)
-
-func _show_detail(buff: Dictionary) -> void:
-	_selected_buff = buff
-	_detail_panel.visible = true
-
-	_detail_name.text = buff["name"]
-	_detail_name.add_theme_color_override("font_color", buff["color"])
-	_detail_desc.text = buff["desc"]
-
-	_detail_effect.text = "Effect: %s" % _get_effect_text(buff)
-	_detail_effect.add_theme_color_override("font_color", Color(0.6, 0.85, 0.6))
-
-	var mins = int(buff["duration"]) / 60
-	_detail_duration.text = "Duration: %d minutes" % mins
-
-	_detail_cost.text = "Cost: %dg (random outcome)" % VISIT_COST
-
-	_detail_action_btn.visible = true
-	_detail_action_btn.text = "Visit (%dg)" % VISIT_COST
-	_detail_action_btn.disabled = GameManager.gold < VISIT_COST
-	for conn in _detail_action_btn.pressed.get_connections():
-		_detail_action_btn.pressed.disconnect(conn["callable"])
-	_detail_action_btn.pressed.connect(func():
-		AudioManager.play_sfx("ui_tap", -4.0)
-		_on_visit()
-	)
-
-func _hide_detail() -> void:
-	_detail_panel.visible = false
-	_selected_buff = {}
-	_last_click_id = ""
-
-func _cancel_pending_detail() -> void:
-	if _pending_detail_timer != null:
-		if _pending_detail_timer.timeout.get_connections().size() > 0:
-			for conn in _pending_detail_timer.timeout.get_connections():
-				_pending_detail_timer.timeout.disconnect(conn["callable"])
-		_pending_detail_timer = null
-	_pending_detail_buff = {}
 
 func _on_visit() -> void:
 	if not _player:
@@ -446,7 +217,11 @@ func _on_visit() -> void:
 	AudioManager.play_sfx("wench_debuff" if is_debuff else "wench_buff")
 	GameManager.game_message.emit(chosen["name"] + ": " + chosen["desc"], chosen.get("color", Color.WHITE))
 
-	_hide_detail()
+	# Show result in dialog
+	_result_label.text = chosen["name"] + " — " + chosen["desc"]
+	_result_label.add_theme_color_override("font_color", chosen["color"])
+	_result_label.visible = true
+
 	_refresh()
 
 	# Visual flash
@@ -497,10 +272,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not _is_visible:
 		return
 	if event.is_action_pressed("ui_cancel") or event.is_action_pressed("ability_1"):
-		if _detail_panel.visible:
-			_hide_detail()
-		else:
-			close()
+		close()
 		get_viewport().set_input_as_handled()
 		return
 	var pos := Vector2(-1, -1)

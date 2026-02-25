@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.66.0"
+const GAME_VERSION := "v0.66.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.66.1",
+		"title": "Fix PWA (Add to Home Screen) always showing desktop layout",
+		"date": "2026-02-24",
+		"entries": [
+			"PWA/standalone mode on Android now correctly detects as mobile",
+			"Added CSS pointer:coarse media query check — reliably identifies touch-primary devices",
+			"Works for Chrome Add to Home Screen, Samsung Internet, and other PWA launchers",
+		]
+	},
 	{
 		"version": "v0.66.0",
 		"title": "Robust mobile detection with JavaScript fallback",

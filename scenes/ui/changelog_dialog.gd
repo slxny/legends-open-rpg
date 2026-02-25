@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.70.8"
+const GAME_VERSION := "v0.70.9"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.70.9",
+		"title": "Messenger browser fix, hero select matches loading screen",
+		"date": "2026-02-25",
+		"entries": [
+			"Removed unreliable 'Open in Browser' button from messenger in-app browser detection",
+			"Now shows clear instructions to tap menu and choose 'Open in Browser' instead",
+			"Hero select screen restyled to match loading screen: dark background, gold glowing title, matching decorative elements",
+			"Added no-cache headers to prevent messenger browsers from serving stale pages",
+		]
+	},
 	{
 		"version": "v0.70.8",
 		"title": "Messages moved below resource bar, level up shows transition",

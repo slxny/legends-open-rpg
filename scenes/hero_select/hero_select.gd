@@ -47,6 +47,9 @@ func _on_viewport_resized() -> void:
 		_build_hero_cards()
 
 func _apply_responsive_layout() -> void:
+	# Title colors match loading screen gold theme
+	title_label.add_theme_color_override("font_color", Color(0.94, 0.80, 0.29))
+	subtitle_label.add_theme_color_override("font_color", Color(0.67, 0.6, 0.4))
 	if _is_mobile:
 		margin.add_theme_constant_override("margin_left", 20)
 		margin.add_theme_constant_override("margin_top", 30)
@@ -55,7 +58,6 @@ func _apply_responsive_layout() -> void:
 		vbox.add_theme_constant_override("separation", 30)
 		title_label.add_theme_font_size_override("font_size", 52)
 		subtitle_label.add_theme_font_size_override("font_size", 28)
-		subtitle_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
 		hero_container.add_theme_constant_override("separation", 30)
 		# Switch to vertical layout for mobile
 		if hero_container is HBoxContainer:
@@ -68,7 +70,6 @@ func _apply_responsive_layout() -> void:
 		vbox.add_theme_constant_override("separation", 24)
 		title_label.add_theme_font_size_override("font_size", 44)
 		subtitle_label.add_theme_font_size_override("font_size", 22)
-		subtitle_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
 		hero_container.add_theme_constant_override("separation", 40)
 
 func _switch_to_vertical_layout() -> void:
@@ -109,7 +110,7 @@ func _create_mobile_hero_card(hero_key: String, data: Dictionary) -> PanelContai
 	var hero_color: Color = data.get("color", Color.WHITE)
 
 	var style = StyleBoxFlat.new()
-	style.bg_color = Color(0.12, 0.12, 0.18)
+	style.bg_color = Color(0.08, 0.06, 0.04)
 	style.border_color = hero_color
 	style.set_border_width_all(4)
 	style.set_corner_radius_all(16)
@@ -199,7 +200,7 @@ func _create_desktop_hero_card(hero_key: String, data: Dictionary) -> PanelConta
 	_cards[hero_key] = panel
 
 	var style = StyleBoxFlat.new()
-	style.bg_color = Color(0.09, 0.09, 0.13)
+	style.bg_color = Color(0.08, 0.06, 0.04)
 	style.border_color = hero_color.darkened(0.35)
 	style.set_border_width_all(3)
 	style.set_corner_radius_all(10)
@@ -220,7 +221,7 @@ func _create_desktop_hero_card(hero_key: String, data: Dictionary) -> PanelConta
 	var preview_bg = ColorRect.new()
 	var preview_h = 130
 	preview_bg.custom_minimum_size = Vector2(0, preview_h)
-	preview_bg.color = Color(0.05, 0.05, 0.07)
+	preview_bg.color = Color(0.04, 0.03, 0.02)
 	card_vbox.add_child(preview_bg)
 
 	# Hero figure centered in preview
@@ -344,46 +345,52 @@ func _create_desktop_hero_card(hero_key: String, data: Dictionary) -> PanelConta
 	return panel
 
 func _build_game_title() -> void:
-	# Insert game title section ABOVE "Choose Your Hero"
+	# Insert game title section ABOVE "Choose Your Hero" — matches loading screen style
 	_title_section = VBoxContainer.new()
 	_title_section.add_theme_constant_override("separation", 4 if _is_mobile else 2)
 	_title_section.alignment = BoxContainer.ALIGNMENT_CENTER
 
-	# Top decorative line
+	# Top decorative line — em-dash middot pattern matching loading screen
 	_deco_top_line = HBoxContainer.new()
 	_deco_top_line.alignment = BoxContainer.ALIGNMENT_CENTER
 	var deco_top = Label.new()
-	deco_top.text = "~ ~ ~"
+	deco_top.text = "\u2014 \u00B7 \u2014"
 	deco_top.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	deco_top.add_theme_font_size_override("font_size", 28 if _is_mobile else 20)
-	deco_top.add_theme_color_override("font_color", Color(0.7, 0.55, 0.2, 0.6))
+	deco_top.add_theme_color_override("font_color", Color(0.72, 0.58, 0.16, 0.35))
 	_deco_top_line.add_child(deco_top)
 	_title_section.add_child(_deco_top_line)
 
-	# Main game title
+	# Main game title — gold with glow like loading screen (#f0cc4a)
 	_game_title_label = Label.new()
 	_game_title_label.text = "OPEN LEGENDS RPG"
 	_game_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_game_title_label.add_theme_font_size_override("font_size", 72 if _is_mobile else 64)
-	_game_title_label.add_theme_color_override("font_color", Color(0.95, 0.8, 0.3))
+	var title_settings = LabelSettings.new()
+	title_settings.font_color = Color(0.94, 0.80, 0.29)  # #f0cc4a
+	title_settings.outline_size = 8 if _is_mobile else 6
+	title_settings.outline_color = Color(0.94, 0.80, 0.29, 0.25)
+	title_settings.shadow_color = Color(0.94, 0.80, 0.29, 0.3)
+	title_settings.shadow_offset = Vector2(0, 0)
+	_game_title_label.label_settings = title_settings
 	_title_section.add_child(_game_title_label)
 
-	# Subtitle accent
+	# Subtitle accent — muted gold matching loading screen (#aa9966)
 	_game_sub_label = Label.new()
 	_game_sub_label.text = "FORGE YOUR LEGEND"
 	_game_sub_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_game_sub_label.add_theme_font_size_override("font_size", 28 if _is_mobile else 22)
-	_game_sub_label.add_theme_color_override("font_color", Color(0.6, 0.5, 0.3, 0.7))
+	_game_sub_label.add_theme_color_override("font_color", Color(0.67, 0.6, 0.4))
 	_title_section.add_child(_game_sub_label)
 
 	# Bottom decorative line
 	_deco_bot_line = HBoxContainer.new()
 	_deco_bot_line.alignment = BoxContainer.ALIGNMENT_CENTER
 	var deco_bot = Label.new()
-	deco_bot.text = "~ ~ ~"
+	deco_bot.text = "\u2014 \u00B7 \u2014"
 	deco_bot.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	deco_bot.add_theme_font_size_override("font_size", 28 if _is_mobile else 20)
-	deco_bot.add_theme_color_override("font_color", Color(0.7, 0.55, 0.2, 0.6))
+	deco_bot.add_theme_color_override("font_color", Color(0.72, 0.58, 0.16, 0.35))
 	_deco_bot_line.add_child(deco_bot)
 	_title_section.add_child(_deco_bot_line)
 

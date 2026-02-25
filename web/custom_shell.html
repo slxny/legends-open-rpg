@@ -6,6 +6,9 @@
 		<meta name="apple-mobile-web-app-capable" content="yes">
 		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 		<meta name="mobile-web-app-capable" content="yes">
+		<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+		<meta http-equiv="Pragma" content="no-cache">
+		<meta http-equiv="Expires" content="0">
 		<title>$GODOT_PROJECT_NAME</title>
 		<style>
 html, body, #canvas {
@@ -210,23 +213,15 @@ body {
 	margin-bottom: 28px;
 }
 
-#inapp-block .ib-btn {
-	display: inline-block;
-	padding: 16px 36px;
-	background: #b8942a;
-	color: #0d0a07;
-	font-size: 18px;
-	font-weight: bold;
-	border-radius: 10px;
-	text-decoration: none;
-	cursor: pointer;
-	border: none;
-}
-
 #inapp-block .ib-hint {
-	color: #887755;
-	font-size: 13px;
-	margin-top: 24px;
+	color: #f0cc4a;
+	font-size: 18px;
+	line-height: 1.8;
+	margin-top: 28px;
+	padding: 16px 24px;
+	background: rgba(240, 204, 74, 0.08);
+	border: 1px solid rgba(240, 204, 74, 0.2);
+	border-radius: 10px;
 }
 		</style>
 		$GODOT_HEAD_INCLUDE
@@ -271,18 +266,8 @@ body {
 			d.innerHTML = '<div class="ib-title">OPEN LEGENDS RPG</div>'
 				+ '<div class="ib-sub">FORGE YOUR LEGEND</div>'
 				+ '<div class="ib-msg">This game needs a full browser to run.<br>In-app browsers (Facebook, Instagram, etc.) are not supported.</div>'
-				+ '<button class="ib-btn" id="ob">Open in Browser</button>'
-				+ '<div class="ib-hint">Tap the button above, or tap \u22ee / \u2026 and choose "Open in Browser"</div>';
+				+ '<div class="ib-hint">Tap the <b>\u22ee</b> or <b>\u2026</b> menu at the top,<br>then choose <b>"Open in Browser"</b></div>';
 			document.body.appendChild(d);
-
-			var url = window.location.href;
-			document.getElementById('ob').addEventListener('click', function(e) {
-				e.preventDefault();
-				var w = window.open(url, '_system');
-				if (!w) {
-					window.location.href = 'intent://' + url.replace(/^https?:\/\//, '') + '#Intent;scheme=https;end';
-				}
-			});
 		});
 		return;
 	}

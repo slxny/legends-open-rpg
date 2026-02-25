@@ -9,9 +9,22 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.67.1"
+const GAME_VERSION := "v0.67.2"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.67.2",
+		"title": "Inventory fits on landscape mobile",
+		"date": "2026-02-25",
+		"entries": [
+			"Inventory now fits on landscape mobile — compact slots, smaller fonts, tighter layout",
+			"Equipment slots and bag grid properly sized for landscape (46px / 42px vs 110px portrait)",
+			"Bag uses 4 columns in landscape (vs 2 portrait) so all 16 slots fit on screen",
+			"Item detail is now a floating popup overlay — no longer eats fixed space at the bottom",
+			"Detail popup auto-dismisses after 4 seconds so it doesn't block interaction",
+			"Stats label and fixed detail panel hidden on mobile to maximize content space",
+		]
+	},
 	{
 		"version": "v0.67.1",
 		"title": "Multi-touch potion usage",

@@ -11,8 +11,10 @@ extends CanvasLayer
 var _player: Node2D = null
 var _is_visible: bool = false
 var _is_mobile: bool = false
+var _is_landscape: bool = false
 var _current_tab: int = 0  # 0 = Equipment, 1 = Bag
 var _selected_item: Dictionary = {}
+var _detail_popup: PanelContainer = null  # Floating detail overlay for mobile
 
 const TAB_ACTIVE_COLOR := Color(1.0, 0.85, 0.4)
 const TAB_INACTIVE_COLOR := Color(0.6, 0.6, 0.6)
@@ -88,10 +90,13 @@ func toggle() -> void:
 		_selected_item = {}
 		_detect_mobile()
 		_refresh()
+	else:
+		_dismiss_detail_popup()
 
 func _detect_mobile() -> void:
 	var vp_size = get_viewport().get_visible_rect().size
 	_is_mobile = GameManager.is_mobile_device()
+	_is_landscape = vp_size.x > vp_size.y
 	if _is_mobile:
 		var margin = 8.0
 		panel.anchor_left = 0.0
@@ -102,13 +107,23 @@ func _detect_mobile() -> void:
 		panel.offset_right = -margin
 		panel.offset_top = margin
 		panel.offset_bottom = -margin
-		$Panel/MarginContainer/VBox/TopBar/Title.add_theme_font_size_override("font_size", 48)
-		equip_tab_btn.add_theme_font_size_override("font_size", 38)
-		equip_tab_btn.custom_minimum_size.y = 80
-		bag_tab_btn.add_theme_font_size_override("font_size", 38)
-		bag_tab_btn.custom_minimum_size.y = 80
-		detail_label.add_theme_font_size_override("font_size", 34)
-		stats_label.add_theme_font_size_override("font_size", 32)
+		var fs_title = 28 if _is_landscape else 48
+		var fs_tab = 22 if _is_landscape else 38
+		var tab_h = 36 if _is_landscape else 80
+		var fs_detail = 20 if _is_landscape else 34
+		var fs_stats = 18 if _is_landscape else 32
+		$Panel/MarginContainer/VBox/TopBar/Title.add_theme_font_size_override("font_size", fs_title)
+		equip_tab_btn.add_theme_font_size_override("font_size", fs_tab)
+		equip_tab_btn.custom_minimum_size.y = tab_h
+		bag_tab_btn.add_theme_font_size_override("font_size", fs_tab)
+		bag_tab_btn.custom_minimum_size.y = tab_h
+		detail_label.add_theme_font_size_override("font_size", fs_detail)
+		stats_label.add_theme_font_size_override("font_size", fs_stats)
+		# Hide fixed detail panel and stats on mobile — use floating popup instead
+		$Panel/MarginContainer/VBox/DetailPanel.visible = false
+		$Panel/MarginContainer/VBox/Sep2.visible = false
+		$Panel/MarginContainer/VBox/Sep3.visible = false
+		stats_label.visible = false
 		# Replace keyboard hint with close button (only once)
 		var close_hint = $Panel/MarginContainer/VBox/TopBar.get_node_or_null("CloseHint")
 		if close_hint:
@@ -117,10 +132,16 @@ func _detect_mobile() -> void:
 			var close_btn = Button.new()
 			close_btn.name = "MobileCloseBtn"
 			close_btn.text = "X"
-			close_btn.custom_minimum_size = Vector2(160, 130)
-			close_btn.add_theme_font_size_override("font_size", 60)
+			var btn_sz = Vector2(80, 60) if _is_landscape else Vector2(160, 130)
+			close_btn.custom_minimum_size = btn_sz
+			close_btn.add_theme_font_size_override("font_size", 32 if _is_landscape else 60)
 			close_btn.pressed.connect(toggle)
 			$Panel/MarginContainer/VBox/TopBar.add_child(close_btn)
+		else:
+			var existing_btn = $Panel/MarginContainer/VBox/TopBar.get_node("MobileCloseBtn")
+			var btn_sz = Vector2(80, 60) if _is_landscape else Vector2(160, 130)
+			existing_btn.custom_minimum_size = btn_sz
+			existing_btn.add_theme_font_size_override("font_size", 32 if _is_landscape else 60)
 	else:
 		# Desktop: compact right-side panel, stops above the 115px bottom HUD
 		panel.anchor_left = 1.0
@@ -131,11 +152,17 @@ func _detect_mobile() -> void:
 		panel.offset_right = -8.0
 		panel.offset_top = 0.0
 		panel.offset_bottom = -120.0
+		# Show fixed detail panel on desktop
+		$Panel/MarginContainer/VBox/DetailPanel.visible = true
+		$Panel/MarginContainer/VBox/Sep2.visible = true
+		$Panel/MarginContainer/VBox/Sep3.visible = true
+		stats_label.visible = true
 
 func _switch_tab(tab: int) -> void:
 	AudioManager.play_sfx("ui_tap", -4.0)
 	_current_tab = tab
 	_selected_item = {}
+	_dismiss_detail_popup()
 	_refresh()
 
 func _refresh() -> void:
@@ -159,18 +186,26 @@ func _refresh_equipment() -> void:
 
 	var inv = _player.inventory
 	var slot_names = ["weapon", "armor", "helm", "boots", "ring", "amulet"]
-	var btn_size = Vector2(0, 110) if _is_mobile else Vector2(0, 32)
-	var font_size = 38 if _is_mobile else 12
+	var btn_h: int
+	var font_size: int
+	if not _is_mobile:
+		btn_h = 32; font_size = 12
+	elif _is_landscape:
+		btn_h = 46; font_size = 20
+	else:
+		btn_h = 110; font_size = 38
+	var btn_size = Vector2(0, btn_h)
 
 	for slot_name in slot_names:
 		var item = inv.equipment.get(slot_name, {})
 		var row = HBoxContainer.new()
-		row.add_theme_constant_override("separation", 10 if _is_mobile else 3)
+		row.add_theme_constant_override("separation", 6 if _is_landscape else (10 if _is_mobile else 3))
 
 		# Slot label
 		var slot_label = Label.new()
 		slot_label.text = slot_name.capitalize() + ":"
-		slot_label.custom_minimum_size = Vector2(80 if not _is_mobile else 190, 0)
+		var lbl_w = 80 if not _is_mobile else (100 if _is_landscape else 190)
+		slot_label.custom_minimum_size = Vector2(lbl_w, 0)
 		slot_label.add_theme_font_size_override("font_size", font_size)
 		slot_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
 		slot_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -209,8 +244,9 @@ func _refresh_equipment() -> void:
 		if not item.is_empty():
 			var unequip_btn = Button.new()
 			unequip_btn.text = "X"
-			unequip_btn.custom_minimum_size = Vector2(36, 0) if not _is_mobile else Vector2(96, 96)
-			unequip_btn.add_theme_font_size_override("font_size", 38 if _is_mobile else font_size)
+			var uneq_sz = Vector2(36, 0) if not _is_mobile else (Vector2(50, 44) if _is_landscape else Vector2(96, 96))
+			unequip_btn.custom_minimum_size = uneq_sz
+			unequip_btn.add_theme_font_size_override("font_size", font_size)
 			unequip_btn.add_theme_color_override("font_color", Color(1.0, 0.4, 0.4))
 			unequip_btn.tooltip_text = "Unequip"
 			var s_name = slot_name
@@ -228,15 +264,22 @@ func _refresh_bag() -> void:
 		child.queue_free()
 
 	var inv = _player.inventory
-	var cols = 3 if not _is_mobile else 2
-	var btn_height = 32 if not _is_mobile else 110
-	var font_size = 11 if not _is_mobile else 34
+	var cols: int
+	var btn_height: int
+	var font_size: int
+	var spacing: int
+	if not _is_mobile:
+		cols = 3; btn_height = 32; font_size = 11; spacing = 3
+	elif _is_landscape:
+		cols = 4; btn_height = 42; font_size = 18; spacing = 4
+	else:
+		cols = 2; btn_height = 110; font_size = 34; spacing = 10
 
 	var grid = GridContainer.new()
 	grid.columns = cols
 	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	grid.add_theme_constant_override("h_separation", 10 if _is_mobile else 3)
-	grid.add_theme_constant_override("v_separation", 10 if _is_mobile else 3)
+	grid.add_theme_constant_override("h_separation", spacing)
+	grid.add_theme_constant_override("v_separation", spacing)
 
 	for i in range(inv.bag.size()):
 		var item = inv.bag[i]
@@ -276,12 +319,7 @@ func _refresh_bag() -> void:
 
 	content_vbox.add_child(grid)
 
-func _refresh_detail() -> void:
-	if _selected_item.is_empty():
-		detail_label.text = "Hover or tap an item to see stats"
-		return
-
-	var item = _selected_item
+func _get_item_detail_text(item: Dictionary) -> String:
 	var rarity_name = ItemData.RARITY_NAMES.get(item.get("rarity", 0), "")
 	var text = "%s  (%s)\n" % [item.get("name", ""), rarity_name]
 	var desc = item.get("description", "")
@@ -295,7 +333,67 @@ func _refresh_detail() -> void:
 		text += ", ".join(stat_parts)
 	if item.has("buy_price"):
 		text += "\nValue: %dg" % item["buy_price"]
-	detail_label.text = text.strip_edges()
+	return text.strip_edges()
+
+func _refresh_detail() -> void:
+	if not _is_mobile:
+		# Desktop: use fixed detail label
+		if _selected_item.is_empty():
+			detail_label.text = "Hover or tap an item to see stats"
+		else:
+			detail_label.text = _get_item_detail_text(_selected_item)
+		return
+
+	# Mobile: show floating popup that auto-dismisses
+	_dismiss_detail_popup()
+	if _selected_item.is_empty():
+		return
+	_show_detail_popup(_selected_item)
+
+func _show_detail_popup(item: Dictionary) -> void:
+	_dismiss_detail_popup()
+	var fs = 18 if _is_landscape else 30
+	var pad = 10 if _is_landscape else 14
+
+	_detail_popup = PanelContainer.new()
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.08, 0.08, 0.12, 0.95)
+	style.border_color = Color(0.9, 0.75, 0.3, 0.8)
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(8)
+	style.set_content_margin_all(pad)
+	_detail_popup.add_theme_stylebox_override("panel", style)
+
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 2)
+	_detail_popup.add_child(vbox)
+
+	var lbl = Label.new()
+	lbl.text = _get_item_detail_text(item)
+	lbl.add_theme_font_size_override("font_size", fs)
+	lbl.add_theme_color_override("font_color", Color(0.9, 0.87, 0.78))
+	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	vbox.add_child(lbl)
+
+	# Position as overlay centered near bottom of the panel
+	panel.add_child(_detail_popup)
+	_detail_popup.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+	_detail_popup.offset_left = 20
+	_detail_popup.offset_right = -20
+	_detail_popup.offset_bottom = -8
+	_detail_popup.offset_top = -(_detail_popup.get_combined_minimum_size().y + 8)
+
+	# Auto-dismiss after a few seconds
+	var popup_ref = _detail_popup
+	get_tree().create_timer(4.0).timeout.connect(func():
+		if is_instance_valid(popup_ref) and popup_ref == _detail_popup:
+			_dismiss_detail_popup()
+	)
+
+func _dismiss_detail_popup() -> void:
+	if _detail_popup and is_instance_valid(_detail_popup):
+		_detail_popup.queue_free()
+	_detail_popup = null
 
 func _refresh_stats() -> void:
 	if not _player:

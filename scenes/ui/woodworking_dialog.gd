@@ -9,6 +9,11 @@ var _is_visible: bool = false
 var _is_mobile: bool = false
 var _selected_key: String = ""
 
+# Double-click/tap quick-build
+var _last_click_key: String = ""
+var _last_click_time: int = 0
+const DOUBLE_CLICK_MS: int = 400
+
 # UI refs built in code
 var _title_label: Label
 var _wood_label: Label
@@ -200,6 +205,14 @@ func _build_ui() -> void:
 	sep.add_theme_constant_override("separation", 4)
 	root_vbox.add_child(sep)
 
+	# Hint
+	var hint = Label.new()
+	hint.text = "Double-click to quick-build"
+	hint.add_theme_font_size_override("font_size", 30 if _is_mobile else 11)
+	hint.add_theme_color_override("font_color", Color(0.5, 0.45, 0.35, 0.5))
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	root_vbox.add_child(hint)
+
 	# ---- Upgrade list (scrollable) ----
 	_item_scroll = ScrollContainer.new()
 	_item_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -380,6 +393,14 @@ func _add_upgrade_row(key: String) -> void:
 	var k = key
 	btn_overlay.pressed.connect(func():
 		AudioManager.play_sfx("ui_tap", -4.0)
+		var now = Time.get_ticks_msec()
+		if _last_click_key == k and (now - _last_click_time) <= DOUBLE_CLICK_MS:
+			_last_click_key = ""
+			_last_click_time = 0
+			_do_upgrade(k)
+			return
+		_last_click_key = k
+		_last_click_time = now
 		_show_detail(k)
 	)
 	btn_overlay.mouse_entered.connect(func():

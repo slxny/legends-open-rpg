@@ -9,9 +9,21 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.66.9"
+const GAME_VERSION := "v0.67.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.67.0",
+		"title": "Double-click/tap to buy & upgrade everywhere",
+		"date": "2026-02-25",
+		"entries": [
+			"Double-click/tap to quick-buy items in the shop (Buy tab)",
+			"Double-click/tap to quick-sell items in the shop (Sell tab)",
+			"Double-click/tap to quick-build upgrades at the woodworker",
+			"Double-click/tap to quick-upgrade at the armory",
+			"Single click still shows detail panel with stats — both options available",
+		]
+	},
 	{
 		"version": "v0.66.9",
 		"title": "Armory double-click upgrade + scaling bonuses",

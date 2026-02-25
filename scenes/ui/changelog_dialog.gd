@@ -9,9 +9,18 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.70.5"
+const GAME_VERSION := "v0.70.6"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.70.6",
+		"title": "Dungeon unlock message at level 10",
+		"date": "2026-02-25",
+		"entries": [
+			"Reaching level 10 now shows a dramatic center-screen message: DUNGEON UNLOCKED — check in town!",
+			"Level Up messages also now appear as dramatic center-screen text",
+		]
+	},
 	{
 		"version": "v0.70.5",
 		"title": "Tutorial hints spaced out to 30s minimum",

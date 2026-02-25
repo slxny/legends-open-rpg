@@ -195,6 +195,10 @@ func _on_player_leveled_up(new_level: int) -> void:
 	for g in gains:
 		GameManager.game_message.emit(g, stat_color)
 
+	# Dungeon unlock milestone
+	if new_level == 10:
+		GameManager.game_message.emit("DUNGEON UNLOCKED — check in town!", Color(0.6, 0.4, 1.0))
+
 func _on_player_died() -> void:
 	# Instant death — show fallen message, route to RespawnManager immediately
 	GameManager.game_message.emit("YOU HAVE FALLEN!", Color(1.0, 0.15, 0.15))

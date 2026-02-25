@@ -19,7 +19,7 @@ func _ready() -> void:
 func _on_game_message(text: String, color: Color = Color.WHITE) -> void:
 	# Only show dramatic messages (level up, boss, settlement, etc.)
 	var dramatic_keywords = ["BOSS", "Purchased", "DEFEATED", "Respawned",
-		"Alignment", "FALLEN", "Respawning"]
+		"Alignment", "FALLEN", "Respawning", "DUNGEON", "Level Up"]
 	var is_dramatic = false
 	for keyword in dramatic_keywords:
 		if text.find(keyword) >= 0:

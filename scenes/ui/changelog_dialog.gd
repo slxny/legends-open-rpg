@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.66.2"
+const GAME_VERSION := "v0.66.3"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.66.3",
+		"title": "Fix enemies getting stuck on the hero",
+		"date": "2026-02-24",
+		"entries": [
+			"Enemies no longer chase the player at full speed while in attack state",
+			"Narrowed attack disengage range so enemies let go sooner when player moves away",
+			"Added player-repulsion push so enemies don't pile on top of the hero",
+		]
+	},
 	{
 		"version": "v0.66.2",
 		"title": "Fix PWA orientation and mobile detection",

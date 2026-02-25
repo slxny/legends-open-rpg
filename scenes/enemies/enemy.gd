@@ -219,7 +219,7 @@ func initialize(config: Dictionary) -> void:
 	_aggro_range_sq = aggro_range * aggro_range
 	_chase_range_sq = chase_range * chase_range
 	_attack_range_sq = stats.attack_range * stats.attack_range
-	var disengage = stats.attack_range * 2.0
+	var disengage = stats.attack_range * 1.3
 	_attack_disengage_sq = disengage * disengage
 	var alert_range = aggro_range * ALERT_RANGE_MULTIPLIER
 	_alert_range_sq = alert_range * alert_range
@@ -459,6 +459,16 @@ func _get_separation_push(in_attack: bool = false) -> Vector2:
 			# Inverse-linear falloff: stronger push when closer
 			var strength = (1.0 - dist / check_radius) * 150.0
 			push += diff.normalized() * strength
+	# Push away from the player to prevent piling on top of them
+	if is_instance_valid(target):
+		var player_diff = pos - target.global_position
+		var player_dist_sq = player_diff.length_squared()
+		var player_push_radius: float = 20.0
+		var player_push_radius_sq = player_push_radius * player_push_radius
+		if player_dist_sq < player_push_radius_sq and player_dist_sq > 0.1:
+			var player_dist = sqrt(player_dist_sq)
+			var player_strength = (1.0 - player_dist / player_push_radius) * 200.0
+			push += player_diff.normalized() * player_strength
 	# Softer cap during attack so combat positioning isn't disrupted
 	var max_push = 70.0 if in_attack else 120.0
 	if push.length_squared() > max_push * max_push:
@@ -516,14 +526,16 @@ func _process_attack(delta: float) -> void:
 	# Keep enemies spread apart and maintain comfortable combat distance
 	var sep = _get_separation_push(true)
 	var dist = to_target.length()
-	var ideal_dist = stats.attack_range * 0.7
+	var ideal_dist = stats.attack_range * 0.85
 	var move_toward = Vector2.ZERO
 	if dist > 0.1:
 		var dir_to_target = to_target.normalized()
 		if dist < ideal_dist:
-			move_toward = -dir_to_target * stats.move_speed * 0.2
-		elif dist > ideal_dist + 3.0:
-			var urgency = clampf((dist - ideal_dist) / (stats.attack_range * 0.5), 0.4, 1.0)
+			# Back off slowly if too close
+			move_toward = -dir_to_target * stats.move_speed * 0.15
+		elif dist > ideal_dist + 5.0:
+			# Close in gently — don't chase the player at full speed
+			var urgency = clampf((dist - ideal_dist) / (stats.attack_range * 0.5), 0.1, 0.3)
 			move_toward = dir_to_target * stats.move_speed * urgency
 
 		# Project separation perpendicular to target direction so enemies

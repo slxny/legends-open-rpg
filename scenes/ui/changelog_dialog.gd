@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.70.1"
+const GAME_VERSION := "v0.70.2"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.70.2",
+		"title": "Inventory text scales with screen size",
+		"date": "2026-02-25",
+		"entries": [
+			"All inventory fonts and button sizes now scale relative to screen height (base 1080p)",
+			"Portrait mode gets bigger, more readable text for item stats and comparisons",
+			"Detail panel font scaled up from 22 to 30 (at 1080p base) so stats are easy to read",
+		]
+	},
 	{
 		"version": "v0.70.1",
 		"title": "Inventory: fixed detail panel at bottom, no more overlay",

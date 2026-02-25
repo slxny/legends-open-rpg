@@ -122,11 +122,13 @@ func _detect_mobile() -> void:
 		panel.offset_right = -margin
 		panel.offset_top = margin
 		panel.offset_bottom = -margin
-		var fs_title = 28 if _is_landscape else 48
-		var fs_tab = 22 if _is_landscape else 38
-		var tab_h = 36 if _is_landscape else 80
-		var fs_detail = 16 if _is_landscape else 22
-		var fs_stats = 14 if _is_landscape else 20
+		# Scale all sizes relative to screen height (base = 1080)
+		var scale = vp_size.y / 1080.0
+		var fs_title = int(44 * scale)
+		var fs_tab = int(36 * scale)
+		var tab_h = int(70 * scale)
+		var fs_detail = int(30 * scale)
+		var fs_stats = int(26 * scale)
 		$Panel/MarginContainer/VBox/TopBar/Title.add_theme_font_size_override("font_size", fs_title)
 		equip_tab_btn.add_theme_font_size_override("font_size", fs_tab)
 		equip_tab_btn.custom_minimum_size.y = tab_h
@@ -143,20 +145,20 @@ func _detect_mobile() -> void:
 		var close_hint = $Panel/MarginContainer/VBox/TopBar.get_node_or_null("CloseHint")
 		if close_hint:
 			close_hint.queue_free()
+		var close_sz = Vector2(int(120 * scale), int(80 * scale))
+		var close_fs = int(44 * scale)
 		if not $Panel/MarginContainer/VBox/TopBar.get_node_or_null("MobileCloseBtn"):
 			var close_btn = Button.new()
 			close_btn.name = "MobileCloseBtn"
 			close_btn.text = "X"
-			var btn_sz = Vector2(80, 60) if _is_landscape else Vector2(160, 130)
-			close_btn.custom_minimum_size = btn_sz
-			close_btn.add_theme_font_size_override("font_size", 32 if _is_landscape else 60)
+			close_btn.custom_minimum_size = close_sz
+			close_btn.add_theme_font_size_override("font_size", close_fs)
 			close_btn.pressed.connect(toggle)
 			$Panel/MarginContainer/VBox/TopBar.add_child(close_btn)
 		else:
 			var existing_btn = $Panel/MarginContainer/VBox/TopBar.get_node("MobileCloseBtn")
-			var btn_sz = Vector2(80, 60) if _is_landscape else Vector2(160, 130)
-			existing_btn.custom_minimum_size = btn_sz
-			existing_btn.add_theme_font_size_override("font_size", 32 if _is_landscape else 60)
+			existing_btn.custom_minimum_size = close_sz
+			existing_btn.add_theme_font_size_override("font_size", close_fs)
 	else:
 		# Desktop: compact right-side panel, stops above the 115px bottom HUD
 		panel.anchor_left = 1.0
@@ -202,25 +204,25 @@ func _refresh_equipment() -> void:
 
 	var inv = _player.inventory
 	var slot_names = ["weapon", "armor", "helm", "boots", "ring", "amulet"]
+	var vp_h = get_viewport().get_visible_rect().size.y
+	var scale = vp_h / 1080.0
 	var btn_h: int
 	var font_size: int
 	if not _is_mobile:
 		btn_h = 32; font_size = 12
-	elif _is_landscape:
-		btn_h = 46; font_size = 20
 	else:
-		btn_h = 70; font_size = 28
+		btn_h = int(60 * scale); font_size = int(26 * scale)
 	var btn_size = Vector2(0, btn_h)
 
 	for slot_name in slot_names:
 		var item = inv.equipment.get(slot_name, {})
 		var row = HBoxContainer.new()
-		row.add_theme_constant_override("separation", 6 if _is_landscape else (10 if _is_mobile else 3))
+		row.add_theme_constant_override("separation", int(8 * scale) if _is_mobile else 3)
 
 		# Slot label
 		var slot_label = Label.new()
 		slot_label.text = slot_name.capitalize() + ":"
-		var lbl_w = 80 if not _is_mobile else (100 if _is_landscape else 140)
+		var lbl_w = 80 if not _is_mobile else int(130 * scale)
 		slot_label.custom_minimum_size = Vector2(lbl_w, 0)
 		slot_label.add_theme_font_size_override("font_size", font_size)
 		slot_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
@@ -261,7 +263,7 @@ func _refresh_equipment() -> void:
 		if not item.is_empty():
 			var unequip_btn = Button.new()
 			unequip_btn.text = "X"
-			var uneq_sz = Vector2(36, 0) if not _is_mobile else (Vector2(50, 44) if _is_landscape else Vector2(70, 70))
+			var uneq_sz = Vector2(36, 0) if not _is_mobile else Vector2(int(60 * scale), int(60 * scale))
 			unequip_btn.custom_minimum_size = uneq_sz
 			unequip_btn.add_theme_font_size_override("font_size", font_size)
 			unequip_btn.add_theme_color_override("font_color", Color(1.0, 0.4, 0.4))
@@ -281,16 +283,16 @@ func _refresh_bag() -> void:
 		child.queue_free()
 
 	var inv = _player.inventory
+	var vp_h = get_viewport().get_visible_rect().size.y
+	var scale = vp_h / 1080.0
 	var cols: int
 	var btn_height: int
 	var font_size: int
 	var spacing: int
 	if not _is_mobile:
 		cols = 3; btn_height = 32; font_size = 11; spacing = 3
-	elif _is_landscape:
-		cols = 4; btn_height = 42; font_size = 18; spacing = 4
 	else:
-		cols = 3; btn_height = 60; font_size = 22; spacing = 6
+		cols = 3; btn_height = int(56 * scale); font_size = int(24 * scale); spacing = int(6 * scale)
 
 	var grid = GridContainer.new()
 	grid.columns = cols

@@ -122,13 +122,14 @@ func _detect_mobile() -> void:
 		panel.offset_right = -margin
 		panel.offset_top = margin
 		panel.offset_bottom = -margin
-		# Scale all sizes relative to screen height (base = 1080)
-		var scale = vp_size.y / 1080.0
-		var fs_title = int(44 * scale)
-		var fs_tab = int(36 * scale)
-		var tab_h = int(70 * scale)
-		var fs_detail = int(30 * scale)
-		var fs_stats = int(26 * scale)
+		# Scale all sizes relative to shorter screen dimension for consistency
+		var base_dim = min(vp_size.x, vp_size.y)
+		var scale = base_dim / 1080.0
+		var fs_title = int(48 * scale)
+		var fs_tab = int(40 * scale)
+		var tab_h = int(72 * scale)
+		var fs_detail = int(34 * scale)
+		var fs_stats = int(30 * scale)
 		$Panel/MarginContainer/VBox/TopBar/Title.add_theme_font_size_override("font_size", fs_title)
 		equip_tab_btn.add_theme_font_size_override("font_size", fs_tab)
 		equip_tab_btn.custom_minimum_size.y = tab_h
@@ -204,8 +205,8 @@ func _refresh_equipment() -> void:
 
 	var inv = _player.inventory
 	var slot_names = ["weapon", "armor", "helm", "boots", "ring", "amulet"]
-	var vp_h = get_viewport().get_visible_rect().size.y
-	var scale = vp_h / 1080.0
+	var vp_size_local = get_viewport().get_visible_rect().size
+	var scale = min(vp_size_local.x, vp_size_local.y) / 1080.0
 	var btn_h: int
 	var font_size: int
 	if not _is_mobile:
@@ -283,8 +284,8 @@ func _refresh_bag() -> void:
 		child.queue_free()
 
 	var inv = _player.inventory
-	var vp_h = get_viewport().get_visible_rect().size.y
-	var scale = vp_h / 1080.0
+	var vp_size_local = get_viewport().get_visible_rect().size
+	var scale = min(vp_size_local.x, vp_size_local.y) / 1080.0
 	var cols: int
 	var btn_height: int
 	var font_size: int

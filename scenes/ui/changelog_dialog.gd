@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.67.0"
+const GAME_VERSION := "v0.67.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.67.1",
+		"title": "Multi-touch potion usage",
+		"date": "2026-02-25",
+		"entries": [
+			"Use potions while holding the joystick or attack button (multi-touch)",
+			"Potion buttons now respond to any finger, not just the first touch",
+			"Fixes Godot Button control ignoring second-finger taps on mobile",
+		]
+	},
 	{
 		"version": "v0.67.0",
 		"title": "Double-click/tap to buy & upgrade everywhere",

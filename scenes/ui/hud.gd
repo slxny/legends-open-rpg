@@ -476,7 +476,7 @@ func setup(player: Node2D) -> void:
 	log_btn.disabled = false
 	log_btn.pressed.connect(_on_changelog_pressed)
 
-	# Potion slots — tap to use consumable
+	# Potion slots — tap to use consumable (Button.pressed for desktop mouse clicks)
 	potion_1_btn.pressed.connect(func():
 		if _player and is_instance_valid(_player):
 			_player.inventory.use_consumable(0)
@@ -489,6 +489,9 @@ func setup(player: Node2D) -> void:
 		if _player and is_instance_valid(_player):
 			_player.inventory.use_consumable(2)
 	)
+
+	# Pass potion button refs to player for multitouch handling on mobile
+	player._mobile_potion_btns = [potion_1_btn, potion_2_btn, potion_3_btn]
 
 	# Update potion button labels when inventory changes
 	player.inventory.inventory_changed.connect(_update_potion_labels)

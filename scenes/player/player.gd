@@ -151,6 +151,7 @@ var _mobile_attack_held: bool = false   # True while mobile attack button is hel
 var _mobile_atk_canvas: CanvasLayer = null
 var _mobile_atk_btn: Button = null
 var _mobile_atk_touch_index: int = -1  # Touch index currently pressing the ATK button
+var _mobile_potion_btns: Array[Button] = []  # Potion button refs from HUD for multitouch
 var _mobile_atk_start_pos: Vector2 = Vector2.ZERO  # Where the ATK touch began (for drag-to-aim)
 var _mobile_charge_aim_dir: Vector2 = Vector2.ZERO  # Drag-aim direction while charging (zero = not aiming)
 const CHARGE_AIM_DRAG_THRESHOLD: float = 30.0  # Minimum drag distance to change aim direction
@@ -733,6 +734,16 @@ func _input(event: InputEvent) -> void:
 				if drag_offset.length() > CHARGE_AIM_DRAG_THRESHOLD:
 					_mobile_charge_aim_dir = drag_offset.normalized()
 					_set_facing(_mobile_charge_aim_dir)
+
+	# Manual multitouch handling for potion buttons (same reason as ATK above).
+	if _is_mobile and event is InputEventScreenTouch and event.pressed:
+		for i in range(_mobile_potion_btns.size()):
+			var btn = _mobile_potion_btns[i]
+			if btn and is_instance_valid(btn) and btn.visible:
+				if btn.get_global_rect().has_point(event.position):
+					inventory.use_consumable(i)
+					get_viewport().set_input_as_handled()
+					return
 
 	# Non-ATK finger tap: record aim direction (used by attacks and charge aiming)
 	if _is_mobile and event is InputEventScreenTouch and event.pressed and event.index != _mobile_atk_touch_index:

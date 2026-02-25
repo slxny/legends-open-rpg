@@ -9,26 +9,22 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.69.0"
+const GAME_VERSION := "v0.68.4"
 
 const CHANGELOG: Array[Dictionary] = [
 	{
-		"version": "v0.69.0",
-		"title": "Dungeon difficulty overhaul",
+		"version": "v0.68.4",
+		"title": "Dungeon enemies are much harder",
 		"date": "2026-02-25",
 		"entries": [
-			"All dungeon enemies significantly buffed — higher damage, faster attacks, wider aggro",
-			"Dungeon Bat: +50% damage (15), faster cooldown (0.6s), 130 aggro range",
-			"Cave Snake: +43% damage (20), 0.8s cooldown, 130 aggro",
-			"Vampire Bat: +50% damage (24), 1.0s cooldown, 150 aggro, level 13-16",
-			"Flan: +83% damage (22), faster cooldown (1.8s), 110 aggro",
-			"Mimic: +46% damage (35), faster attacks (1.6s), level 14-17",
-			"Ghoul: +44% damage (26), 1.2s cooldown, 140 aggro, faster movement",
-			"Crypt Knight: +45% damage (32), 1.4s cooldown, 150 aggro, level 16-20",
-			"Lich: +50% damage (30), 180 aggro, level 18-22",
-			"16 camps now (up from 12) — more enemies per camp across the board",
-			"Liches now spawn in the dungeon core — dangerous ranged attackers",
-			"Respawn time increased to 90s (up from 60s) — less mindless farming",
+			"All dungeon crypt enemies got major stat buffs — the dungeon is now genuinely dangerous",
+			"Attack damage roughly doubled across all dungeon enemies to match overworld scaling",
+			"Flan: speed 40->65, cooldown 2.5->1.6s, damage 12->35, aggro 80->120",
+			"Mimic: speed 30->70, cooldown 2.0->1.4s, damage 24->42, aggro 60->120",
+			"Ghoul: speed 60->85, cooldown 1.6->1.2s, damage 18->38",
+			"Crypt Knight: damage 22->48, cooldown 1.8->1.3s, aggro 130->150",
+			"Lich: damage 20->55, speed 50->65, cooldown 2.2->1.4s, aggro 160->180",
+			"Bats and snakes also significantly buffed in damage, speed, and aggro range",
 		]
 	},
 	{

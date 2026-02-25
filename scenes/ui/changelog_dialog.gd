@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.66.7"
+const GAME_VERSION := "v0.66.8"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.66.8",
+		"title": "Consistent single-click detail across all shops",
+		"date": "2026-02-24",
+		"entries": [
+			"Single click instantly shows detail panel in armory and woodworker (no more delay)",
+			"Removed double-click quick-upgrade from armory and woodworker for consistency",
+			"All shops now use the same pattern: click to view stats → button to buy/upgrade",
+		]
+	},
 	{
 		"version": "v0.66.7",
 		"title": "Tavern back to random visit + UI polish",

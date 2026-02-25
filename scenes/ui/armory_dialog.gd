@@ -9,13 +9,6 @@ var _is_visible: bool = false
 var _is_mobile: bool = false
 var _selected_key: String = ""
 
-# Double-click quick-upgrade tracking
-var _last_click_key: String = ""
-var _last_click_time: int = 0
-const DOUBLE_CLICK_MS: int = 400
-var _pending_detail_timer: SceneTreeTimer = null
-var _pending_detail_key: String = ""
-
 # UI refs built in code
 var _title_label: Label
 var _gold_label: Label
@@ -80,7 +73,6 @@ func _detect_mobile() -> void:
 func close() -> void:
 	_is_visible = false
 	panel.visible = false
-	_cancel_pending_detail()
 	closed.emit()
 
 func _get_level(key: String) -> int:
@@ -168,14 +160,6 @@ func _build_ui() -> void:
 	var sep = HSeparator.new()
 	sep.add_theme_constant_override("separation", 4)
 	root_vbox.add_child(sep)
-
-	# Hint
-	var hint = Label.new()
-	hint.text = "Double-click to quick-upgrade"
-	hint.add_theme_font_size_override("font_size", 30 if _is_mobile else 11)
-	hint.add_theme_color_override("font_color", Color(0.6, 0.55, 0.4, 0.7))
-	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	root_vbox.add_child(hint)
 
 	# Upgrade list
 	_item_scroll = ScrollContainer.new()
@@ -346,24 +330,7 @@ func _add_upgrade_row(key: String) -> void:
 	var k = key
 	btn_overlay.pressed.connect(func():
 		AudioManager.play_sfx("ui_tap", -4.0)
-		var now = Time.get_ticks_msec()
-		if _last_click_key == k and (now - _last_click_time) <= DOUBLE_CLICK_MS:
-			_cancel_pending_detail()
-			_last_click_key = ""
-			_last_click_time = 0
-			_do_upgrade(k)
-			return
-		_last_click_key = k
-		_last_click_time = now
-		_pending_detail_key = k
-		_cancel_pending_detail()
-		_pending_detail_timer = get_tree().create_timer(DOUBLE_CLICK_MS / 1000.0)
-		_pending_detail_timer.timeout.connect(func():
-			_pending_detail_timer = null
-			if _pending_detail_key != "":
-				_show_detail(_pending_detail_key)
-				_pending_detail_key = ""
-		)
+		_show_detail(k)
 	)
 	btn_overlay.mouse_entered.connect(func():
 		AudioManager.play_sfx("ui_hover", -8.0)
@@ -412,15 +379,6 @@ func _show_detail(key: String) -> void:
 func _hide_detail() -> void:
 	_detail_panel.visible = false
 	_selected_key = ""
-	_last_click_key = ""
-
-func _cancel_pending_detail() -> void:
-	if _pending_detail_timer != null:
-		if _pending_detail_timer.timeout.get_connections().size() > 0:
-			for conn in _pending_detail_timer.timeout.get_connections():
-				_pending_detail_timer.timeout.disconnect(conn["callable"])
-		_pending_detail_timer = null
-	_pending_detail_key = ""
 
 func _do_upgrade(key: String) -> void:
 	var level = _get_level(key)

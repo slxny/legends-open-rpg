@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.69.1"
+const GAME_VERSION := "v0.69.2"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.69.2",
+		"title": "Bag item detail shows inline, not as overlay",
+		"date": "2026-02-25",
+		"entries": [
+			"Item detail and comparison now appears inline below the bag grid, inside the scroll area",
+			"No more fullscreen overlay blocking bag items — buttons stay accessible for double-tap to equip",
+			"Single tap selects and shows stats + comparison below, double-tap equips",
+		]
+	},
 	{
 		"version": "v0.69.1",
 		"title": "Bag items: tap to preview, double-tap to equip",
@@ -20,7 +30,6 @@ const CHANGELOG: Array[Dictionary] = [
 			"Single tap/click on a bag item now shows its stats and a comparison with your equipped item",
 			"Stat differences shown (e.g. +5 Strength, -2 Agility) so you can decide before equipping",
 			"Double-tap/click to actually equip the item",
-			"Mobile detail popup no longer takes over the screen — limited to bottom 45% with an X to dismiss",
 		]
 	},
 	{

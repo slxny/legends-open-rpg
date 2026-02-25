@@ -18,7 +18,8 @@ var _selected_bag_index: int = -1  # Track which bag slot is selected for double
 var _last_tap_index: int = -1  # Last tapped bag index for double-tap detection
 var _last_tap_time: float = 0.0  # Timestamp of last tap
 const DOUBLE_TAP_WINDOW: float = 0.4  # Seconds to register a double-tap
-var _detail_popup: PanelContainer = null  # Floating detail overlay for mobile
+var _detail_popup: PanelContainer = null  # Floating detail overlay (legacy, unused)
+var _inline_detail: PanelContainer = null  # Inline detail shown below bag grid
 
 const TAB_ACTIVE_COLOR := Color(1.0, 0.85, 0.4)
 const TAB_INACTIVE_COLOR := Color(0.6, 0.6, 0.6)
@@ -377,12 +378,16 @@ func _get_comparison_text(bag_item: Dictionary, equipped_item: Dictionary) -> St
 	return text
 
 func _refresh_detail() -> void:
-	# Build detail text with comparison if a bag item is selected
-	var detail_text: String
+	# Clear any inline detail from content_vbox
+	_dismiss_inline_detail()
+
 	if _selected_item.is_empty():
-		detail_text = "Tap an item to see stats"
-	elif _selected_bag_index >= 0 and _player:
-		# Bag item selected — show comparison with equipped
+		if not _is_mobile:
+			detail_label.text = "Tap an item to see stats"
+		return
+
+	var detail_text: String
+	if _selected_bag_index >= 0 and _player:
 		var inv = _player.inventory
 		var slot_name = _slot_name_for_item(_selected_item)
 		var equipped = inv.equipment.get(slot_name, {}) if not slot_name.is_empty() else {}
@@ -392,69 +397,51 @@ func _refresh_detail() -> void:
 
 	if not _is_mobile:
 		detail_label.text = detail_text
-		return
+	# Always add inline detail below the grid inside the scroll area
+	_show_inline_detail(detail_text)
 
-	# Mobile: show floating popup at bottom with dismiss X
-	_dismiss_detail_popup()
-	if _selected_item.is_empty():
-		return
-	_show_detail_popup(detail_text)
+func _show_inline_detail(text: String) -> void:
+	_dismiss_inline_detail()
+	var fs: int
+	var pad: int
+	if not _is_mobile:
+		fs = 11; pad = 6
+	elif _is_landscape:
+		fs = 18; pad = 8
+	else:
+		fs = 26; pad = 10
 
-func _show_detail_popup(text: String) -> void:
-	_dismiss_detail_popup()
-	var fs = 18 if _is_landscape else 30
-	var pad = 10 if _is_landscape else 14
-
-	_detail_popup = PanelContainer.new()
+	_inline_detail = PanelContainer.new()
+	_inline_detail.name = "InlineDetail"
 	var style = StyleBoxFlat.new()
-	style.bg_color = Color(0.08, 0.08, 0.12, 0.97)
-	style.border_color = Color(0.9, 0.75, 0.3, 0.8)
-	style.set_border_width_all(2)
-	style.set_corner_radius_all(8)
+	style.bg_color = Color(0.1, 0.1, 0.15, 0.95)
+	style.border_color = Color(0.9, 0.75, 0.3, 0.6)
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(6)
 	style.set_content_margin_all(pad)
-	_detail_popup.add_theme_stylebox_override("panel", style)
-
-	var vbox = VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 2)
-	_detail_popup.add_child(vbox)
-
-	# Top bar with close button
-	var top = HBoxContainer.new()
-	vbox.add_child(top)
-	var spacer = Control.new()
-	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	top.add_child(spacer)
-	var close_btn = Button.new()
-	close_btn.text = "X"
-	var close_sz = Vector2(50, 36) if _is_landscape else Vector2(100, 80)
-	close_btn.custom_minimum_size = close_sz
-	close_btn.add_theme_font_size_override("font_size", 16 if _is_landscape else 32)
-	close_btn.pressed.connect(_dismiss_detail_popup)
-	top.add_child(close_btn)
+	_inline_detail.add_theme_stylebox_override("panel", style)
+	_inline_detail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 	var lbl = Label.new()
 	lbl.text = text
 	lbl.add_theme_font_size_override("font_size", fs)
 	lbl.add_theme_color_override("font_color", Color(0.9, 0.87, 0.78))
 	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	vbox.add_child(lbl)
+	_inline_detail.add_child(lbl)
 
-	# Position as overlay at the bottom of the panel, not fullscreen
-	panel.add_child(_detail_popup)
-	_detail_popup.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
-	_detail_popup.offset_left = 10
-	_detail_popup.offset_right = -10
-	_detail_popup.offset_bottom = -4
-	# Limit max height to 45% of the panel so it doesn't take over
-	var max_h = panel.size.y * 0.45
-	var desired_h = _detail_popup.get_combined_minimum_size().y + 8
-	var h = min(desired_h, max_h)
-	_detail_popup.offset_top = -h
+	content_vbox.add_child(_inline_detail)
 
+func _dismiss_inline_detail() -> void:
+	if _inline_detail and is_instance_valid(_inline_detail):
+		_inline_detail.queue_free()
+	_inline_detail = null
+
+# Legacy popup dismiss (called from toggle)
 func _dismiss_detail_popup() -> void:
 	if _detail_popup and is_instance_valid(_detail_popup):
 		_detail_popup.queue_free()
 	_detail_popup = null
+	_dismiss_inline_detail()
 
 func _refresh_stats() -> void:
 	if not _player:

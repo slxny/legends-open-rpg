@@ -51,10 +51,16 @@ func get_upgrade_cost(current_level: int) -> int:
 
 func _ready() -> void:
 	_setup_custom_cursor()
+	get_viewport().size_changed.connect(_setup_custom_cursor)
 
 func _setup_custom_cursor() -> void:
 	var is_mobile = DisplayServer.is_touchscreen_available()
-	var sz = 28 if is_mobile else 24  # 15% larger on mobile
+	# Scale cursor relative to viewport — ~2.5% of the shorter dimension
+	# Desktop baseline: 24px at 960px height. Mobile gets 15% extra.
+	var vp = get_viewport().get_visible_rect().size
+	var short_side = min(vp.x, vp.y)
+	var base_sz = max(20, int(short_side * 0.025))
+	var sz = int(base_sz * 1.15) if is_mobile else base_sz
 	var img = Image.create(sz, sz, false, Image.FORMAT_RGBA8)
 	var gold = Color(0.94, 0.8, 0.28)
 	var outline = Color(0.12, 0.1, 0.06)

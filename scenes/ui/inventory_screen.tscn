@@ -96,7 +96,7 @@ layout_mode = 2
 
 [node name="DetailPanel" type="PanelContainer" parent="Panel/MarginContainer/VBox"]
 layout_mode = 2
-custom_minimum_size = Vector2(0, 60)
+custom_minimum_size = Vector2(0, 50)
 
 [node name="DetailMargin" type="MarginContainer" parent="Panel/MarginContainer/VBox/DetailPanel"]
 layout_mode = 2
@@ -107,7 +107,7 @@ theme_override_constants/margin_bottom = 4
 
 [node name="DetailLabel" type="Label" parent="Panel/MarginContainer/VBox/DetailPanel/DetailMargin"]
 layout_mode = 2
-text = "Select an item..."
+text = "Tap item to see stats"
 theme_override_font_sizes/font_size = 11
 theme_override_colors/font_color = Color(0.8, 0.78, 0.72, 1)
 autowrap_mode = 3

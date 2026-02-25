@@ -14,15 +14,25 @@ var _is_mobile: bool = false
 var _is_landscape: bool = false
 var _current_tab: int = 0  # 0 = Equipment, 1 = Bag
 var _selected_item: Dictionary = {}
-var _selected_bag_index: int = -1  # Track which bag slot is selected for double-tap equip
-var _last_tap_index: int = -1  # Last tapped bag index for double-tap detection
-var _last_tap_time: float = 0.0  # Timestamp of last tap
-const DOUBLE_TAP_WINDOW: float = 0.4  # Seconds to register a double-tap
-var _detail_popup: PanelContainer = null  # Floating detail overlay (legacy, unused)
-var _inline_detail: PanelContainer = null  # Inline detail shown below bag grid
+var _selected_bag_index: int = -1
+var _last_tap_index: int = -1
+var _last_tap_time: float = 0.0
+const DOUBLE_TAP_WINDOW: float = 0.4
 
 const TAB_ACTIVE_COLOR := Color(1.0, 0.85, 0.4)
 const TAB_INACTIVE_COLOR := Color(0.6, 0.6, 0.6)
+
+const SLOT_NAMES = {
+	ItemData.Slot.WEAPON: "weapon",
+	ItemData.Slot.ARMOR: "armor",
+	ItemData.Slot.HELM: "helm",
+	ItemData.Slot.BOOTS: "boots",
+	ItemData.Slot.RING: "ring",
+	ItemData.Slot.AMULET: "amulet",
+}
+
+func _slot_name_for_item(item: Dictionary) -> String:
+	return SLOT_NAMES.get(item.get("slot", -1), "")
 
 # Style helpers for item buttons
 func _make_item_style(is_empty: bool) -> StyleBoxFlat:
@@ -97,8 +107,6 @@ func toggle() -> void:
 		_last_tap_index = -1
 		_detect_mobile()
 		_refresh()
-	else:
-		_dismiss_detail_popup()
 
 func _detect_mobile() -> void:
 	var vp_size = get_viewport().get_visible_rect().size
@@ -117,8 +125,8 @@ func _detect_mobile() -> void:
 		var fs_title = 28 if _is_landscape else 48
 		var fs_tab = 22 if _is_landscape else 38
 		var tab_h = 36 if _is_landscape else 80
-		var fs_detail = 20 if _is_landscape else 34
-		var fs_stats = 18 if _is_landscape else 32
+		var fs_detail = 16 if _is_landscape else 22
+		var fs_stats = 14 if _is_landscape else 20
 		$Panel/MarginContainer/VBox/TopBar/Title.add_theme_font_size_override("font_size", fs_title)
 		equip_tab_btn.add_theme_font_size_override("font_size", fs_tab)
 		equip_tab_btn.custom_minimum_size.y = tab_h
@@ -126,9 +134,9 @@ func _detect_mobile() -> void:
 		bag_tab_btn.custom_minimum_size.y = tab_h
 		detail_label.add_theme_font_size_override("font_size", fs_detail)
 		stats_label.add_theme_font_size_override("font_size", fs_stats)
-		# Hide fixed detail panel and stats on mobile — use floating popup instead
-		$Panel/MarginContainer/VBox/DetailPanel.visible = false
-		$Panel/MarginContainer/VBox/Sep2.visible = false
+		# Always show the fixed detail panel — it stays at the bottom, items scroll above
+		$Panel/MarginContainer/VBox/DetailPanel.visible = true
+		$Panel/MarginContainer/VBox/Sep2.visible = true
 		$Panel/MarginContainer/VBox/Sep3.visible = false
 		stats_label.visible = false
 		# Replace keyboard hint with close button (only once)
@@ -171,7 +179,6 @@ func _switch_tab(tab: int) -> void:
 	_selected_item = {}
 	_selected_bag_index = -1
 	_last_tap_index = -1
-	_dismiss_detail_popup()
 	_refresh()
 
 func _refresh() -> void:
@@ -202,7 +209,7 @@ func _refresh_equipment() -> void:
 	elif _is_landscape:
 		btn_h = 46; font_size = 20
 	else:
-		btn_h = 110; font_size = 38
+		btn_h = 70; font_size = 28
 	var btn_size = Vector2(0, btn_h)
 
 	for slot_name in slot_names:
@@ -213,7 +220,7 @@ func _refresh_equipment() -> void:
 		# Slot label
 		var slot_label = Label.new()
 		slot_label.text = slot_name.capitalize() + ":"
-		var lbl_w = 80 if not _is_mobile else (100 if _is_landscape else 190)
+		var lbl_w = 80 if not _is_mobile else (100 if _is_landscape else 140)
 		slot_label.custom_minimum_size = Vector2(lbl_w, 0)
 		slot_label.add_theme_font_size_override("font_size", font_size)
 		slot_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
@@ -235,7 +242,6 @@ func _refresh_equipment() -> void:
 			btn.add_theme_color_override("font_color", ItemData.RARITY_COLORS.get(rarity, Color.WHITE))
 			_style_item_btn(btn, false)
 			var bound_item = item
-			var bound_slot = slot_name
 			btn.pressed.connect(func():
 				AudioManager.play_sfx("ui_tap", -4.0)
 				_selected_item = bound_item
@@ -255,7 +261,7 @@ func _refresh_equipment() -> void:
 		if not item.is_empty():
 			var unequip_btn = Button.new()
 			unequip_btn.text = "X"
-			var uneq_sz = Vector2(36, 0) if not _is_mobile else (Vector2(50, 44) if _is_landscape else Vector2(96, 96))
+			var uneq_sz = Vector2(36, 0) if not _is_mobile else (Vector2(50, 44) if _is_landscape else Vector2(70, 70))
 			unequip_btn.custom_minimum_size = uneq_sz
 			unequip_btn.add_theme_font_size_override("font_size", font_size)
 			unequip_btn.add_theme_color_override("font_color", Color(1.0, 0.4, 0.4))
@@ -284,7 +290,7 @@ func _refresh_bag() -> void:
 	elif _is_landscape:
 		cols = 4; btn_height = 42; font_size = 18; spacing = 4
 	else:
-		cols = 2; btn_height = 110; font_size = 34; spacing = 10
+		cols = 3; btn_height = 60; font_size = 22; spacing = 6
 
 	var grid = GridContainer.new()
 	grid.columns = cols
@@ -337,25 +343,22 @@ func _get_item_stat_line(item: Dictionary) -> String:
 
 func _get_item_detail_text(item: Dictionary) -> String:
 	var rarity_name = ItemData.RARITY_NAMES.get(item.get("rarity", 0), "")
-	var text = "%s  (%s)\n" % [item.get("name", ""), rarity_name]
-	var desc = item.get("description", "")
-	if desc != "":
-		text += desc + "\n"
+	var text = "%s (%s)" % [item.get("name", ""), rarity_name]
 	var stat_line = _get_item_stat_line(item)
 	if stat_line != "":
-		text += stat_line
+		text += " — " + stat_line
 	if item.has("buy_price"):
-		text += "\nValue: %dg" % item["buy_price"]
-	return text.strip_edges()
+		text += "  [%dg]" % item["buy_price"]
+	return text
 
 func _get_comparison_text(bag_item: Dictionary, equipped_item: Dictionary) -> String:
+	# Compact: item name + stats on one line, equipped on next, diff on third
 	var text = _get_item_detail_text(bag_item)
-	text += "\n\n--- Equipped ---\n"
 	if equipped_item.is_empty():
-		text += "(empty slot)"
+		text += "\nEquipped: (empty)"
 	else:
-		text += _get_item_detail_text(equipped_item)
-	# Stat diff summary
+		text += "\nEquipped: " + _get_item_detail_text(equipped_item)
+	# Stat diff
 	var bag_stats = bag_item.get("stats", {})
 	var eq_stats = equipped_item.get("stats", {})
 	var all_keys: Dictionary = {}
@@ -370,81 +373,30 @@ func _get_comparison_text(bag_item: Dictionary, equipped_item: Dictionary) -> St
 		var diff = bag_val - eq_val
 		if diff != 0:
 			var sign = "+" if diff > 0 else ""
-			var color = "green" if diff > 0 else "red"
 			diffs.append("%s%d %s" % [sign, diff, k.replace("_", " ").capitalize()])
 	if diffs.size() > 0:
 		text += "\n" + ", ".join(diffs)
-	text += "\n\nDouble-tap to equip"
+	text += "  [2x tap = equip]"
 	return text
 
 func _refresh_detail() -> void:
-	# Clear any inline detail from content_vbox
-	_dismiss_inline_detail()
-
+	# Always use the fixed detail_label at the bottom of the panel
 	if _selected_item.is_empty():
-		if not _is_mobile:
-			detail_label.text = "Tap an item to see stats"
+		detail_label.text = "Tap item to see stats, double-tap to equip"
 		return
 
-	var detail_text: String
 	if _selected_bag_index >= 0 and _player:
 		var inv = _player.inventory
 		var slot_name = _slot_name_for_item(_selected_item)
 		var equipped = inv.equipment.get(slot_name, {}) if not slot_name.is_empty() else {}
-		detail_text = _get_comparison_text(_selected_item, equipped)
+		detail_label.text = _get_comparison_text(_selected_item, equipped)
 	else:
-		detail_text = _get_item_detail_text(_selected_item)
-
-	if not _is_mobile:
-		detail_label.text = detail_text
-	# Always add inline detail below the grid inside the scroll area
-	_show_inline_detail(detail_text)
-
-func _show_inline_detail(text: String) -> void:
-	_dismiss_inline_detail()
-	var fs: int
-	var pad: int
-	if not _is_mobile:
-		fs = 11; pad = 6
-	elif _is_landscape:
-		fs = 18; pad = 8
-	else:
-		fs = 26; pad = 10
-
-	_inline_detail = PanelContainer.new()
-	_inline_detail.name = "InlineDetail"
-	var style = StyleBoxFlat.new()
-	style.bg_color = Color(0.1, 0.1, 0.15, 0.95)
-	style.border_color = Color(0.9, 0.75, 0.3, 0.6)
-	style.set_border_width_all(1)
-	style.set_corner_radius_all(6)
-	style.set_content_margin_all(pad)
-	_inline_detail.add_theme_stylebox_override("panel", style)
-	_inline_detail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-
-	var lbl = Label.new()
-	lbl.text = text
-	lbl.add_theme_font_size_override("font_size", fs)
-	lbl.add_theme_color_override("font_color", Color(0.9, 0.87, 0.78))
-	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_inline_detail.add_child(lbl)
-
-	content_vbox.add_child(_inline_detail)
-
-func _dismiss_inline_detail() -> void:
-	if _inline_detail and is_instance_valid(_inline_detail):
-		_inline_detail.queue_free()
-	_inline_detail = null
-
-# Legacy popup dismiss (called from toggle)
-func _dismiss_detail_popup() -> void:
-	if _detail_popup and is_instance_valid(_detail_popup):
-		_detail_popup.queue_free()
-	_detail_popup = null
-	_dismiss_inline_detail()
+		detail_label.text = _get_item_detail_text(_selected_item)
 
 func _refresh_stats() -> void:
 	if not _player:
+		return
+	if not stats_label.visible:
 		return
 	var s = _player.stats
 	var text = "HP:%d/%d  MP:%d/%d  ATK:%d  ARM:%d\nSTR:%d(+%d) AGI:%d(+%d) INT:%d(+%d) SPD:%.0f" % [
@@ -466,18 +418,6 @@ func _refresh_stats() -> void:
 		text += "\nFX: " + ", ".join(buff_parts)
 	stats_label.text = text
 
-const SLOT_NAMES = {
-	ItemData.Slot.WEAPON: "weapon",
-	ItemData.Slot.ARMOR: "armor",
-	ItemData.Slot.HELM: "helm",
-	ItemData.Slot.BOOTS: "boots",
-	ItemData.Slot.RING: "ring",
-	ItemData.Slot.AMULET: "amulet",
-}
-
-func _slot_name_for_item(item: Dictionary) -> String:
-	return SLOT_NAMES.get(item.get("slot", -1), "")
-
 func _on_bag_item_pressed(idx: int, item: Dictionary) -> void:
 	AudioManager.play_sfx("ui_tap", -4.0)
 	var now = Time.get_ticks_msec() / 1000.0
@@ -488,7 +428,7 @@ func _on_bag_item_pressed(idx: int, item: Dictionary) -> void:
 		_player.inventory.equip_from_bag(idx)
 		_refresh()
 		return
-	# Single tap — select and show comparison
+	# Single tap — select and show comparison in the fixed detail panel
 	_last_tap_index = idx
 	_last_tap_time = now
 	_selected_item = item

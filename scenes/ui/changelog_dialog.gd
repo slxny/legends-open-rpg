@@ -9,9 +9,21 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.69.2"
+const GAME_VERSION := "v0.69.3"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.69.3",
+		"title": "Inventory: fixed detail panel at bottom, no more overlay",
+		"date": "2026-02-25",
+		"entries": [
+			"Item detail now shows in a fixed panel at the bottom of the inventory — never covers the item list",
+			"Bag items: single tap to preview stats + comparison, double-tap to equip",
+			"Compact text format: item name, stats, and equipped comparison all fit in 2-3 lines",
+			"Mobile: smaller button sizes and fonts so more items fit on screen",
+			"Removed popup overlay completely — detail panel is always visible and never blocks interaction",
+		]
+	},
 	{
 		"version": "v0.69.2",
 		"title": "Bag item detail shows inline, not as overlay",

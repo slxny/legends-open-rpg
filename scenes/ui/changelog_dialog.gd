@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.70.4"
+const GAME_VERSION := "v0.70.5"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.70.5",
+		"title": "Tutorial hints spaced out to 30s minimum",
+		"date": "2026-02-25",
+		"entries": [
+			"Hints now appear at least 30 seconds apart — less spammy, more breathing room",
+			"First ability tip still appears early (15s) since it's critical for new players",
+			"Dismissing a hint no longer causes the next one to pop up in 2 seconds",
+		]
+	},
 	{
 		"version": "v0.70.4",
 		"title": "NPC panels auto-close when you walk away",

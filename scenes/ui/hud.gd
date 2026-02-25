@@ -698,7 +698,7 @@ func _dismiss_hint() -> void:
 	_hint_panel.visible = false
 	_hint_tween = null
 	if not _hint_queue.is_empty():
-		_hint_timer.wait_time = min(_hint_queue[0]["delay"], 2.0)
+		_hint_timer.wait_time = max(_hint_queue[0]["delay"], 30.0)
 		_hint_timer.start()
 
 func _start_tutorial_hints(hero_data: Dictionary) -> void:
@@ -713,38 +713,38 @@ func _start_tutorial_hints(hero_data: Dictionary) -> void:
 	if is_ranged:
 		_hint_queue.append_array([
 			{
-				"delay": 18.0,
+				"delay": 15.0,
 				"text": "[color=#f0d866]TIP:[/color]  [color=#ff9966][b]Double-tap %s[/b][/color] while moving → [color=#ffcc44]Piercing Shot[/color] — arrow passes through all enemies!" % ("ATK" if _is_mobile else "SPACE"),
 			},
 			{
-				"delay": 18.0,
+				"delay": 30.0,
 				"text": "[color=#f0d866]TIP:[/color]  [color=#6699ff][b]Triple-tap %s[/b][/color] → [color=#6699ff]Arrow Rain[/color] — 6 arrows rain down on a target area!" % ("ATK" if _is_mobile else "SPACE"),
 			},
 			{
-				"delay": 18.0,
+				"delay": 30.0,
 				"text": "[color=#f0d866]TIP:[/color]  [color=#ffdd55][b]Hold %s for 1.5s[/b][/color] then release → [color=#ffcc44]Sniper Shot[/color] — massive long-range precision hit!" % ("ATK" if _is_mobile else "SPACE"),
 			},
 			{
-				"delay": 18.0,
+				"delay": 30.0,
 				"text": "[color=#f0d866]TIP:[/color]  %s → [color=#66eebb]Shadow Step[/color] — dodge backward and fire a 3-arrow spread!" % DIAG,
 			},
 		])
 	else:
 		_hint_queue.append_array([
 			{
-				"delay": 18.0,
+				"delay": 15.0,
 				"text": "[color=#f0d866]TIP:[/color]  [color=#ff9966][b]Double-tap %s[/b][/color] while moving → [color=#ffcc44]Power Strike[/color] — 1.4x heavy single-target hit!" % ("ATK" if _is_mobile else "SPACE"),
 			},
 			{
-				"delay": 18.0,
+				"delay": 30.0,
 				"text": "[color=#f0d866]TIP:[/color]  [color=#cc88ff][b]Triple-tap %s[/b][/color] → [color=#cc88ff]Whirlwind[/color] — 720° spin hitting every enemy around you!" % ("ATK" if _is_mobile else "SPACE"),
 			},
 			{
-				"delay": 18.0,
+				"delay": 30.0,
 				"text": "[color=#f0d866]TIP:[/color]  [color=#ffdd55][b]Hold %s for 1.5s[/b][/color] then release → [color=#ffcc44]Charged Slash[/color] — dash through enemies for 1.6x damage!" % ("ATK" if _is_mobile else "SPACE"),
 			},
 			{
-				"delay": 18.0,
+				"delay": 30.0,
 				"text": "[color=#f0d866]TIP:[/color]  %s → [color=#66eeff]Dash Strike[/color] — quick spin-dash through foes!" % DIAG,
 			},
 		])
@@ -759,54 +759,54 @@ func _start_tutorial_hints(hero_data: Dictionary) -> void:
 	# --- 3. Controls (platform-specific) ---
 	if _is_mobile:
 		_hint_queue.append({
-			"delay": 18.0,
+			"delay": 30.0,
 			"text": "[color=#f0d866]TIP:[/color]  [color=#aaaaaa][b]Tap[/b][/color] enemies to auto-attack  |  [color=#aaaaaa][b]Pinch[/b][/color] to zoom in/out",
 		})
 		_hint_queue.append({
-			"delay": 15.0,
+			"delay": 30.0,
 			"text": "[color=#f0d866]TIP:[/color]  [color=#aaddff][b]Touch and hold your hero for 2s[/b][/color] to view detailed stats — HP, Mana, STR, buffs, and more",
 		})
 		_hint_queue.append({
-			"delay": 20.0,
+			"delay": 30.0,
 			"text": "[color=#f0d866]TIP:[/color]  Tap [color=#88ddff][b]Items[/b][/color] to open your inventory  |  Tap [color=#66ff88][b]potion slots[/b][/color] to use consumables in battle",
 		})
 	else:
 		_hint_queue.append({
-			"delay": 18.0,
+			"delay": 30.0,
 			"text": "[color=#f0d866]TIP:[/color]  [color=#aaaaaa][b]Left-click[/b][/color] enemies to auto-attack  |  [color=#aaaaaa][b]Right-click[/b][/color] your hero for stats panel",
 		})
 		_hint_queue.append({
-			"delay": 20.0,
+			"delay": 30.0,
 			"text": "[color=#f0d866]TIP:[/color]  [color=#88ddff][b]I[/b][/color] for inventory  |  [color=#66ff88][b]1, 2, 3[/b][/color] to use potions",
 		})
 
 	# --- 4. Healing & beacons ---
 	_hint_queue.append({
-		"delay": 25.0,
+		"delay": 30.0,
 		"text": "[color=#f0d866]TIP:[/color]  Step onto a [color=#66ff88][b]green beacon[/b][/color] to fully restore HP and Mana — you're also [color=#66ff88]immune to all damage[/color] while standing on it",
 	})
 
 	# --- 5. Shops & town ---
 	_hint_queue.append({
-		"delay": 25.0,
+		"delay": 30.0,
 		"text": "[color=#f0d866]TIP:[/color]  Walk onto [color=#ffdd55][b]yellow beacons[/b][/color] near buildings for Shops, Armory, and Tavern  |  Buy gear, potions, and upgrade your equipment",
 	})
 
 	# --- 6. Trees & wood ---
 	_hint_queue.append({
-		"delay": 25.0,
+		"delay": 30.0,
 		"text": "[color=#f0d866]TIP:[/color]  Attack [color=#88cc66][b]trees[/b][/color] to chop wood — small trees drop ~15, medium ~30, large ~60  |  Wood is used for building and upgrades",
 	})
 
 	# --- 7. Item drops & equipment ---
 	_hint_queue.append({
-		"delay": 25.0,
+		"delay": 30.0,
 		"text": "[color=#f0d866]TIP:[/color]  Enemies drop [color=#ddaaff][b]equipment[/b][/color] and [color=#ffdd55][b]gold[/b][/color] when killed  |  Walk over drops to pick them up  |  Equip gear from your inventory for stat boosts",
 	})
 
 	# --- 8. Leveling & sprite upgrades ---
 	_hint_queue.append({
-		"delay": 25.0,
+		"delay": 30.0,
 		"text": "[color=#f0d866]TIP:[/color]  Your %s [color=#ffcc44][b]upgrades visually[/b][/color] every 5 levels — stronger armor and new details appear as you grow!" % hero_name,
 	})
 
@@ -869,7 +869,7 @@ func _on_hint_finished() -> void:
 	_hint_panel.visible = false
 	_hint_tween = null
 	if not _hint_queue.is_empty():
-		_hint_timer.wait_time = _hint_queue[0]["delay"]
+		_hint_timer.wait_time = max(_hint_queue[0]["delay"], 30.0)
 		_hint_timer.start()
 
 func _on_hint_tapped(event: InputEvent) -> void:
@@ -879,7 +879,7 @@ func _on_hint_tapped(event: InputEvent) -> void:
 			_hint_tween.kill()
 		_hint_panel.visible = false
 		_hint_tween = null
-		# Schedule next hint sooner (2s instead of full delay)
+		# Schedule next hint with at least 30s gap
 		if not _hint_queue.is_empty():
-			_hint_timer.wait_time = min(_hint_queue[0]["delay"], 2.0)
+			_hint_timer.wait_time = max(_hint_queue[0]["delay"], 30.0)
 			_hint_timer.start()

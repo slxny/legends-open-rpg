@@ -9,9 +9,17 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.68.1"
+const GAME_VERSION := "v0.68.2"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.68.2",
+		"title": "Minibosses are bigger",
+		"date": "2026-02-25",
+		"entries": [
+			"All minibosses now use a uniform 2.2x sprite scale (up from 1.5x) — unmistakably large",
+		]
+	},
 	{
 		"version": "v0.68.1",
 		"title": "Endless miniboss respawns + time played saved",

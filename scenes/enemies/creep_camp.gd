@@ -568,13 +568,13 @@ func _instantiate_enemy(pending: Dictionary) -> void:
 			enemy_bounds.size
 		)
 	if is_mini_boss:
-		# Mini-bosses get 3x HP, 1.5x damage, larger sprite
+		# Mini-bosses get 3x HP, 1.5x damage, big uniform sprite so they're unmistakable
 		enemy.stats.max_hp = int(enemy.stats.max_hp * 3.0)
 		enemy.stats.current_hp = enemy.stats.max_hp
 		enemy.stats.attack_damage = int(enemy.stats.attack_damage * 1.5)
-		enemy.sprite.scale = Vector2(1.5, 1.5)
+		enemy.sprite.scale = Vector2(2.2, 2.2)
 		enemy.sprite.modulate = Color(1.2, 0.8, 0.8)  # Reddish tint
-		enemy._base_scale = Vector2(1.5, 1.5)
+		enemy._base_scale = Vector2(2.2, 2.2)
 		enemy._base_modulate = Color(1.2, 0.8, 0.8)
 		enemy.start_boss_pulse()
 	if is_respawn and weakness_factor < 1.0:

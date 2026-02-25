@@ -9,9 +9,18 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.70.3"
+const GAME_VERSION := "v0.70.4"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.70.4",
+		"title": "NPC panels auto-close when you walk away",
+		"date": "2026-02-25",
+		"entries": [
+			"Shop, armory, tavern, and woodworker panels now auto-close when you walk ~150px away from the NPC",
+			"No more having to manually close panels after walking off",
+		]
+	},
 	{
 		"version": "v0.70.2",
 		"title": "Inventory text scales with screen size",

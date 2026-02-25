@@ -54,9 +54,9 @@ func _on_beacon_activated(_b: Area2D) -> void:
 	# Find the shop dialog in the scene tree and open it
 	var shop_dialogs = get_tree().get_nodes_in_group("shop_dialog")
 	if shop_dialogs.size() > 0:
-		shop_dialogs[0].open(shop_items)
+		shop_dialogs[0].open(shop_items, global_position)
 	else:
 		# Fallback: find via UI layer
 		var ui = get_tree().current_scene.get_node_or_null("UI/ShopDialog")
 		if ui:
-			ui.open(shop_items)
+			ui.open(shop_items, global_position)

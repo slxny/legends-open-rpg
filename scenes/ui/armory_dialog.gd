@@ -8,6 +8,8 @@ var _player: Node2D = null
 var _is_visible: bool = false
 var _is_mobile: bool = false
 var _selected_key: String = ""
+var _npc_position: Vector2 = Vector2.ZERO
+const AUTO_CLOSE_DIST_SQ: float = 22500.0  # 150px
 
 # Double-click/tap quick-upgrade
 var _last_click_key: String = ""
@@ -51,7 +53,8 @@ func setup(player: Node2D) -> void:
 	_player = player
 	_apply_armory_bonuses()
 
-func open() -> void:
+func open(npc_pos: Vector2 = Vector2.ZERO) -> void:
+	_npc_position = npc_pos
 	_is_visible = true
 	panel.visible = true
 	_detect_mobile()
@@ -74,6 +77,11 @@ func _detect_mobile() -> void:
 		panel.offset_right = 280.0
 		panel.offset_top = -220.0
 		panel.offset_bottom = 220.0
+
+func _process(_delta: float) -> void:
+	if _is_visible and _player and _npc_position != Vector2.ZERO:
+		if _player.global_position.distance_squared_to(_npc_position) > AUTO_CLOSE_DIST_SQ:
+			close()
 
 func close() -> void:
 	_is_visible = false

@@ -7,6 +7,8 @@ signal closed
 var _player: Node2D = null
 var _shop_items: Array[String] = []
 var _is_visible: bool = false
+var _npc_position: Vector2 = Vector2.ZERO
+const AUTO_CLOSE_DIST_SQ: float = 22500.0  # 150px
 var _is_mobile: bool = false
 var _current_tab: int = 0  # 0 = Buy, 1 = Sell
 var _selected_item: Dictionary = {}
@@ -44,8 +46,9 @@ func _ready() -> void:
 func setup(player: Node2D) -> void:
 	_player = player
 
-func open(shop_items: Array[String]) -> void:
+func open(shop_items: Array[String], npc_pos: Vector2 = Vector2.ZERO) -> void:
 	_shop_items = shop_items
+	_npc_position = npc_pos
 	_is_visible = true
 	panel.visible = true
 	_detect_mobile()
@@ -69,6 +72,11 @@ func _detect_mobile() -> void:
 		panel.offset_right = 340.0
 		panel.offset_top = -280.0
 		panel.offset_bottom = 280.0
+
+func _process(_delta: float) -> void:
+	if _is_visible and _player and _npc_position != Vector2.ZERO:
+		if _player.global_position.distance_squared_to(_npc_position) > AUTO_CLOSE_DIST_SQ:
+			close()
 
 func close() -> void:
 	_is_visible = false

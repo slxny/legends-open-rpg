@@ -48,4 +48,4 @@ func _process(delta: float) -> void:
 func _on_beacon_activated(_b: Area2D) -> void:
 	var dialogs = get_tree().get_nodes_in_group("tavern_dialog")
 	if dialogs.size() > 0:
-		dialogs[0].open()
+		dialogs[0].open(global_position)

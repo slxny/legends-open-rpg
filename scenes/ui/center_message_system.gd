@@ -61,7 +61,7 @@ func _process_queue() -> void:
 func _display_message(text: String, color: Color, duration: float) -> void:
 	# SC-style: instant appear, no fade in
 	var vp_size = get_viewport().get_visible_rect().size
-	var is_mobile = DisplayServer.is_touchscreen_available()
+	var is_mobile = GameManager.is_mobile_device()
 	var settings = LabelSettings.new()
 	settings.font_size = 72 if is_mobile else 32
 	settings.font_color = color

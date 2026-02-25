@@ -46,6 +46,27 @@ var woodwork_shield_level: int = 0   # Wooden Bulwark: +armor, +HP
 var woodwork_totem_level: int = 0    # Totem of Vigor: +regen, +stats
 var woodwork_watchtower_level: int = 0  # Watchtower: +XP gain
 
+var _cached_is_mobile: int = -1  # -1 = not yet checked, 0 = false, 1 = true
+
+func is_mobile_device() -> bool:
+	if _cached_is_mobile >= 0:
+		return _cached_is_mobile == 1
+	# Primary check: Godot's built-in touchscreen detection
+	if DisplayServer.is_touchscreen_available():
+		_cached_is_mobile = 1
+		return true
+	# Fallback for web: JavaScript user-agent and touch detection
+	if OS.has_feature("web"):
+		var js_result = JavaScriptBridge.eval(
+			"(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|Tablet/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1))",
+			true
+		)
+		if js_result:
+			_cached_is_mobile = 1
+			return true
+	_cached_is_mobile = 0
+	return false
+
 func get_upgrade_cost(current_level: int) -> int:
 	return int(10 * pow(current_level + 1, 1.5))
 
@@ -54,7 +75,7 @@ func _ready() -> void:
 	get_viewport().size_changed.connect(_setup_custom_cursor)
 
 func _setup_custom_cursor() -> void:
-	var is_mobile = DisplayServer.is_touchscreen_available()
+	var is_mobile = is_mobile_device()
 	# Scale cursor relative to viewport — ~2.5% of the shorter dimension
 	# Desktop baseline: 24px at 960px height. Mobile gets 15% extra.
 	var vp = get_viewport().get_visible_rect().size

@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.65.9"
+const GAME_VERSION := "v0.66.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.66.0",
+		"title": "Robust mobile detection with JavaScript fallback",
+		"date": "2026-02-24",
+		"entries": [
+			"Fix landscape on phones showing desktop layout instead of mobile",
+			"Centralized mobile detection via GameManager.is_mobile_device()",
+			"JavaScript user-agent fallback for web exports where Godot API is unreliable",
+			"All 20+ files now use the unified detection for consistent mobile layouts",
+		]
+	},
 	{
 		"version": "v0.65.9",
 		"title": "Bigger close buttons, tap-outside-to-close, custom cursor",
@@ -1445,7 +1456,7 @@ func open() -> void:
 	_is_visible = true
 	panel.visible = true
 	var vp_size = get_viewport().get_visible_rect().size
-	_is_mobile = DisplayServer.is_touchscreen_available()
+	_is_mobile = GameManager.is_mobile_device()
 	_resize_panel(vp_size)
 	_build_entries()
 	scroll.scroll_vertical = 0

@@ -524,7 +524,7 @@ func _add_building_label(parent: Node2D, pos: Vector2, text: String) -> void:
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.custom_minimum_size = Vector2(100, 0)
 	var vp_size = get_viewport().get_visible_rect().size
-	if DisplayServer.is_touchscreen_available():
+	if GameManager.is_mobile_device():
 		label.add_theme_font_size_override("font_size", 16)
 	parent.add_child(label)
 

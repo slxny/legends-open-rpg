@@ -17,7 +17,7 @@ func _ready() -> void:
 	name_label.text = tavern_name
 	name_label.visible = false
 	var vp_size = get_viewport().get_visible_rect().size
-	if DisplayServer.is_touchscreen_available():
+	if GameManager.is_mobile_device():
 		name_label.add_theme_font_size_override("font_size", 18)
 	name_label.pivot_offset = name_label.size / 2.0
 	beacon.activated.connect(_on_beacon_activated)

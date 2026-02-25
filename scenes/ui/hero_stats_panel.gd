@@ -91,7 +91,7 @@ func _style_panel() -> void:
 
 func _detect_mobile() -> void:
 	var vp_size = get_viewport().get_visible_rect().size
-	_is_mobile = DisplayServer.is_touchscreen_available()
+	_is_mobile = GameManager.is_mobile_device()
 	if _is_mobile:
 		var margin = 16.0
 		panel.offset_left = -vp_size.x / 2.0 + margin

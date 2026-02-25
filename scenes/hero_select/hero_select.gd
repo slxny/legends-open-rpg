@@ -34,7 +34,7 @@ func _ready() -> void:
 
 func _detect_mobile() -> void:
 	var vp_size = get_viewport().get_visible_rect().size
-	_is_mobile = DisplayServer.is_touchscreen_available()
+	_is_mobile = GameManager.is_mobile_device()
 
 func _on_viewport_resized() -> void:
 	var was_mobile = _is_mobile

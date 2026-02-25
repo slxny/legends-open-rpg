@@ -285,7 +285,7 @@ func _ready() -> void:
 
 	# Mobile detection and attack button setup
 	var vp_size = get_viewport().get_visible_rect().size
-	_is_mobile = DisplayServer.is_touchscreen_available()
+	_is_mobile = GameManager.is_mobile_device()
 	if _is_mobile:
 		_click_circle.radius = CLICK_RADIUS_MOBILE
 		_create_mobile_attack_button()
@@ -1159,7 +1159,7 @@ func _start_immunity_vfx() -> void:
 	_immunity_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_immunity_label.position = Vector2(-28, -48)
 	var settings = LabelSettings.new()
-	var is_mobile = DisplayServer.is_touchscreen_available()
+	var is_mobile = GameManager.is_mobile_device()
 	settings.font_size = 22 if is_mobile else 11
 	settings.font_color = Color(0.3, 1.0, 0.5)
 	settings.outline_size = 4 if is_mobile else 2

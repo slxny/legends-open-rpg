@@ -50,7 +50,7 @@ func _ready() -> void:
 
 	if not beacon_label.is_empty():
 		label.text = beacon_label
-		if DisplayServer.is_touchscreen_available():
+		if GameManager.is_mobile_device():
 			label.add_theme_font_size_override("font_size", 18)
 		label.pivot_offset = label.size / 2.0
 		label.visible = false  # Start hidden; shown by proximity check

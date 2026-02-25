@@ -213,6 +213,10 @@ func initialize(config: Dictionary) -> void:
 
 	# Scale patrol radius with move speed — faster enemies roam much further
 	_patrol_radius = 300.0 + stats.move_speed * 3.0
+	if is_mini_boss:
+		# Minibosses roam much wider — aggressive territorial patrol
+		_patrol_radius = 1200.0 + stats.move_speed * 5.0
+		_patrol_speed_factor = 0.85  # Minibosses patrol faster (85% vs 65%)
 	chase_range = _patrol_radius + 350.0
 
 	# Pre-compute squared distances (avoids sqrt every frame in hot path)
@@ -390,6 +394,15 @@ func _pick_patrol_target() -> void:
 	var angle = randf() * TAU
 	var dist = randf_range(_patrol_radius * 0.3, _patrol_radius)
 	_patrol_target = home_position + Vector2(cos(angle), sin(angle)) * dist
+	# Minibosses avoid town center — re-roll if target is too close to origin
+	if is_mini_boss:
+		for _i in range(3):
+			if _patrol_target.length() < 900.0:
+				angle = randf() * TAU
+				dist = randf_range(_patrol_radius * 0.3, _patrol_radius)
+				_patrol_target = home_position + Vector2(cos(angle), sin(angle)) * dist
+			else:
+				break
 
 func _try_alert_aggro(delta: float, player: Node2D, dist_sq: float) -> bool:
 	# Periodic random chance to detect the player at extended range (2x aggro range).
@@ -425,7 +438,8 @@ func _process_patrol(delta: float) -> void:
 		velocity = Vector2.ZERO
 		move_and_slide()
 		current_state = State.IDLE
-		_patrol_wait_timer = randf_range(0.5, 2.0)
+		# Minibosses idle briefly — restless, always on the move
+		_patrol_wait_timer = randf_range(0.2, 0.8) if is_mini_boss else randf_range(0.5, 2.0)
 		return
 
 	var dir = (_patrol_target - global_position).normalized()
@@ -930,6 +944,12 @@ func _do_attack_lunge(is_special: bool = false) -> void:
 				_anim_boss_fire_breath(dir, base_pos)
 			"infernal":
 				_anim_boss_doom_strike(dir, base_pos)
+			"wolf":
+				_anim_boss_savage_pounce(dir, base_pos)
+			"spider":
+				_anim_boss_venom_barrage(dir, base_pos)
+			"skeleton":
+				_anim_boss_death_cleave(dir, base_pos)
 			_:
 				_anim_boss_ground_slam(dir, base_pos)
 		return
@@ -1775,6 +1795,77 @@ func _anim_boss_doom_strike(dir: Vector2, base_pos: Vector2) -> void:
 	tween.parallel().tween_property(sprite, "scale", _base_scale, 0.14)
 	tween.parallel().tween_property(sprite, "rotation", 0.0, 0.14)
 	tween.parallel().tween_property(sprite, "modulate", _base_modulate, 0.14)
+
+func _anim_boss_savage_pounce(dir: Vector2, base_pos: Vector2) -> void:
+	# Shadow Fang: crouch low, explosive leap, snap bite, land heavy
+	var sx = _base_scale.x
+	var sy = _base_scale.y
+	var tween = create_tween()
+	# Crouch low — compress and widen
+	tween.tween_property(sprite, "position", base_pos + Vector2(0, 4), 0.08)
+	tween.parallel().tween_property(sprite, "scale", Vector2(sx * 1.3, sy * 0.6), 0.08)
+	# Explosive leap forward
+	tween.tween_property(sprite, "position", base_pos + dir * 22.0, 0.05).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
+	tween.parallel().tween_property(sprite, "scale", Vector2(sx * 0.7, sy * 1.4), 0.05)
+	# Snap bite flash
+	tween.tween_property(sprite, "modulate", Color(2.0, 2.0, 2.0), 0.04)
+	# Land heavy with jitter
+	tween.tween_property(sprite, "position", base_pos + dir * 18.0 + Vector2(0, 3), 0.06)
+	tween.parallel().tween_property(sprite, "scale", Vector2(sx * 1.3, sy * 0.75), 0.06)
+	for i in range(2):
+		tween.tween_property(sprite, "position", base_pos + dir * 18.0 + Vector2(randf_range(-3, 3), randf_range(-2, 2)), 0.02)
+	# Recover
+	tween.tween_property(sprite, "position", base_pos, 0.12)
+	tween.parallel().tween_property(sprite, "scale", _base_scale, 0.12)
+	tween.parallel().tween_property(sprite, "modulate", _base_modulate, 0.12)
+
+func _anim_boss_venom_barrage(dir: Vector2, base_pos: Vector2) -> void:
+	# War Spider: rear up with green tint, 3 rapid jabs, toxic burst
+	var sx = _base_scale.x
+	var sy = _base_scale.y
+	var tween = create_tween()
+	# Rear up — green venom tint
+	tween.tween_property(sprite, "position", base_pos + Vector2(0, -6), 0.1)
+	tween.parallel().tween_property(sprite, "scale", Vector2(sx * 0.9, sy * 1.3), 0.1)
+	tween.parallel().tween_property(sprite, "modulate", Color(0.6, 1.4, 0.5), 0.1)
+	# 3 rapid forward jabs with alternating rotation
+	for i in range(3):
+		var rot = 0.15 if i % 2 == 0 else -0.15
+		tween.tween_property(sprite, "position", base_pos + dir * (10.0 + i * 4.0), 0.04)
+		tween.parallel().tween_property(sprite, "rotation", rot, 0.04)
+	# Toxic burst — green flash
+	tween.tween_property(sprite, "modulate", Color(0.3, 2.0, 0.3), 0.06)
+	tween.parallel().tween_property(sprite, "scale", Vector2(sx * 1.3, sy * 1.3), 0.06)
+	# Settle
+	tween.tween_property(sprite, "position", base_pos, 0.12)
+	tween.parallel().tween_property(sprite, "scale", _base_scale, 0.12)
+	tween.parallel().tween_property(sprite, "rotation", 0.0, 0.12)
+	tween.parallel().tween_property(sprite, "modulate", _base_modulate, 0.12)
+
+func _anim_boss_death_cleave(dir: Vector2, base_pos: Vector2) -> void:
+	# Bone Lord: rise tall, spinning cleave with forward dash, slam down
+	var sx = _base_scale.x
+	var sy = _base_scale.y
+	var tween = create_tween()
+	# Rise tall — pale blue tint
+	tween.tween_property(sprite, "position", base_pos + Vector2(0, -8), 0.1)
+	tween.parallel().tween_property(sprite, "scale", Vector2(sx * 0.85, sy * 1.3), 0.1)
+	tween.parallel().tween_property(sprite, "modulate", Color(0.7, 0.8, 1.4), 0.1)
+	# Spinning cleave — full rotation + forward dash
+	tween.tween_property(sprite, "position", base_pos + dir * 16.0, 0.1).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
+	tween.parallel().tween_property(sprite, "rotation", TAU, 0.1)
+	# Slam down — wide and flat
+	tween.tween_property(sprite, "scale", Vector2(sx * 1.4, sy * 0.7), 0.05)
+	tween.parallel().tween_property(sprite, "position", base_pos + dir * 16.0 + Vector2(0, 4), 0.05)
+	# Impact jitter with dark purple flash
+	tween.tween_property(sprite, "modulate", Color(0.8, 0.3, 1.2), 0.06)
+	for i in range(3):
+		tween.tween_property(sprite, "position", base_pos + dir * 16.0 + Vector2(randf_range(-4, 4), randf_range(-2, 2)), 0.02)
+	# Recover
+	tween.tween_property(sprite, "position", base_pos, 0.12)
+	tween.parallel().tween_property(sprite, "scale", _base_scale, 0.12)
+	tween.parallel().tween_property(sprite, "rotation", 0.0, 0.12)
+	tween.parallel().tween_property(sprite, "modulate", _base_modulate, 0.12)
 
 func _spawn_blood_splatter() -> void:
 	var blood_tex = SpriteGenerator.get_texture("blood_splatter")

@@ -9,9 +9,24 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.67.4"
+const GAME_VERSION := "v0.68.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.68.0",
+		"title": "More minibosses + aggressive roaming + special attacks",
+		"date": "2026-02-25",
+		"entries": [
+			"4 new minibosses: Shadow Fang (Lv5-7), War Spider (Lv12-14), Bone Lord (Lv18-22), Inferno Wyrm (Lv34-40)",
+			"8 total minibosses now spawn on a schedule from 5 to 40 minutes",
+			"Minibosses roam much wider (~1500px vs ~400px) and avoid town center",
+			"Minibosses patrol faster (85% speed) with shorter idle pauses — restless and threatening",
+			"Shadow Fang: savage pounce attack with crouch-leap-bite animation",
+			"War Spider: venom barrage with rapid jabs and toxic green burst",
+			"Bone Lord: death cleave with spinning slash and purple impact",
+			"Inferno Wyrm: uses fire breath like Elder Drake — ultimate late-game boss",
+		]
+	},
 	{
 		"version": "v0.67.4",
 		"title": "Rats slightly less aggressive",

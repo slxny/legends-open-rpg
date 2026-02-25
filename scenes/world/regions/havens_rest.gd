@@ -36,10 +36,14 @@ const WAVE_SCHEDULE = [
 
 # Mini-boss spawn schedule: [time, boss_type, distance_from_town]
 const BOSS_SCHEDULE = [
+	{"time": 300.0, "type": "mini_boss_shadow_fang", "dist": 2200.0, "count": 1, "msg": "A SHADOW FANG prowls the darkness!"},
 	{"time": 450.0, "type": "mini_boss_ravager", "dist": 2800.0, "count": 1, "msg": "A RAVAGER stalks the outer wilds!"},
+	{"time": 600.0, "type": "mini_boss_war_spider", "dist": 3200.0, "count": 1, "msg": "A WAR SPIDER skitters from its lair!"},
 	{"time": 720.0, "type": "mini_boss_dread_knight", "dist": 3500.0, "count": 1, "msg": "A DREAD KNIGHT has appeared!"},
+	{"time": 960.0, "type": "mini_boss_bone_lord", "dist": 3800.0, "count": 1, "msg": "A BONE LORD rises from the graves!"},
 	{"time": 1200.0, "type": "mini_boss_elder_drake", "dist": 4200.0, "count": 1, "msg": "An ELDER DRAKE circles above!"},
 	{"time": 1800.0, "type": "mini_boss_abyssal_lord", "dist": 5000.0, "count": 1, "msg": "THE ABYSSAL LORD HAS ARRIVED!"},
+	{"time": 2400.0, "type": "mini_boss_inferno_wyrm", "dist": 5500.0, "count": 1, "msg": "AN INFERNO WYRM DESCENDS FROM THE SKY!"},
 ]
 
 var _elapsed_time: float = 0.0

@@ -3,72 +3,64 @@ extends CanvasLayer
 signal closed
 
 @onready var panel: PanelContainer = $Panel
-@onready var gold_label: Label = $Panel/MarginContainer/VBox/TopBar/GoldLabel
-@onready var close_button: Button = $Panel/MarginContainer/VBox/TopBar/CloseButton
-@onready var content: VBoxContainer = $Panel/MarginContainer/VBox/Content
 
 var _player: Node2D = null
 var _is_visible: bool = false
 var _is_mobile: bool = false
+var _selected_key: String = ""
 
-func _make_btn_normal_style() -> StyleBoxFlat:
-	var s = StyleBoxFlat.new()
-	s.bg_color = Color(0.18, 0.17, 0.24, 0.9)
-	s.set_corner_radius_all(8)
-	s.set_content_margin_all(8 if _is_mobile else 4)
-	s.border_color = Color(0.45, 0.4, 0.3, 0.6)
-	s.set_border_width_all(1)
-	return s
+# Double-click quick-upgrade tracking
+var _last_click_key: String = ""
+var _last_click_time: int = 0
+const DOUBLE_CLICK_MS: int = 400
+var _pending_detail_timer: SceneTreeTimer = null
+var _pending_detail_key: String = ""
 
-func _make_btn_hover_style() -> StyleBoxFlat:
-	var s = StyleBoxFlat.new()
-	s.bg_color = Color(0.26, 0.24, 0.32, 0.95)
-	s.set_corner_radius_all(8)
-	s.set_content_margin_all(8 if _is_mobile else 4)
-	s.border_color = Color(0.9, 0.75, 0.3, 0.8)
-	s.set_border_width_all(2)
-	return s
+# UI refs built in code
+var _title_label: Label
+var _gold_label: Label
+var _close_btn: Button
+var _item_scroll: ScrollContainer
+var _item_list: VBoxContainer
+var _detail_panel: PanelContainer
+var _detail_name: Label
+var _detail_desc: Label
+var _detail_current: Label
+var _detail_next: Label
+var _detail_cost: Label
+var _detail_action_btn: Button
+var _detail_close_btn: Button
 
-func _make_btn_pressed_style() -> StyleBoxFlat:
-	var s = StyleBoxFlat.new()
-	s.bg_color = Color(0.32, 0.30, 0.20, 0.95)
-	s.set_corner_radius_all(8)
-	s.set_content_margin_all(8 if _is_mobile else 4)
-	s.border_color = Color(1.0, 0.85, 0.4, 0.95)
-	s.set_border_width_all(2)
-	return s
-
-func _make_btn_disabled_style() -> StyleBoxFlat:
-	var s = StyleBoxFlat.new()
-	s.bg_color = Color(0.12, 0.12, 0.14, 0.6)
-	s.set_corner_radius_all(8)
-	s.set_content_margin_all(8 if _is_mobile else 4)
-	s.border_color = Color(0.25, 0.25, 0.25, 0.4)
-	s.set_border_width_all(1)
-	return s
-
-func _style_action_btn(btn: Button) -> void:
-	btn.add_theme_stylebox_override("normal", _make_btn_normal_style())
-	btn.add_theme_stylebox_override("hover", _make_btn_hover_style())
-	btn.add_theme_stylebox_override("pressed", _make_btn_pressed_style())
-	btn.add_theme_stylebox_override("disabled", _make_btn_disabled_style())
-	btn.add_theme_stylebox_override("focus", _make_btn_hover_style())
-	btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+const UPGRADES = {
+	"weapon": {
+		"title": "Weapon Forge",
+		"desc": "Tempered steel and sharpened edges. Increases base attack damage for all attacks.",
+		"max_level": 100,
+		"color": Color(1.0, 0.7, 0.3),
+	},
+	"armor": {
+		"title": "Armor Forge",
+		"desc": "Reinforced plating and chain links. Grants bonus armor and max HP.",
+		"max_level": 100,
+		"color": Color(0.5, 0.7, 1.0),
+	},
+}
 
 func _ready() -> void:
 	panel.visible = false
-	close_button.pressed.connect(close)
 
 func setup(player: Node2D) -> void:
 	_player = player
-	# Apply any existing armory upgrades on game start
 	_apply_armory_bonuses()
 
 func open() -> void:
 	_is_visible = true
 	panel.visible = true
 	_detect_mobile()
+	_build_ui()
+	_selected_key = ""
 	_refresh()
+	AudioManager.play_sfx("enter_shop")
 
 func _detect_mobile() -> void:
 	var vp_size = get_viewport().get_visible_rect().size
@@ -79,136 +71,380 @@ func _detect_mobile() -> void:
 		panel.offset_right = vp_size.x / 2.0 - margin
 		panel.offset_top = -vp_size.y / 2.0 + margin
 		panel.offset_bottom = vp_size.y / 2.0 - margin
-		$Panel/MarginContainer/VBox/TopBar/Title.add_theme_font_size_override("font_size", 56)
-		gold_label.add_theme_font_size_override("font_size", 44)
-		close_button.text = "X"
-		close_button.add_theme_font_size_override("font_size", 60)
-		close_button.custom_minimum_size = Vector2(160, 130)
+	else:
+		panel.offset_left = -280.0
+		panel.offset_right = 280.0
+		panel.offset_top = -220.0
+		panel.offset_bottom = 220.0
 
 func close() -> void:
 	_is_visible = false
 	panel.visible = false
+	_cancel_pending_detail()
 	closed.emit()
 
-func _refresh() -> void:
-	gold_label.text = "Gold: %d" % GameManager.gold
+func _get_level(key: String) -> int:
+	match key:
+		"weapon": return GameManager.weapon_upgrade_level
+		"armor": return GameManager.armor_upgrade_level
+	return 0
 
-	for child in content.get_children():
+func _get_cost(key: String) -> int:
+	return GameManager.get_upgrade_cost(_get_level(key))
+
+func _get_bonus_text(key: String, level: int) -> String:
+	if level == 0:
+		return "No bonus yet"
+	match key:
+		"weapon": return "+%d Attack Damage" % (level * 2)
+		"armor": return "+%d Armor, +%d Max HP" % [level, level * 3]
+	return ""
+
+func _get_short_bonus(key: String, level: int) -> String:
+	if level == 0:
+		return ""
+	match key:
+		"weapon": return "+%d ATK" % (level * 2)
+		"armor": return "+%d ARM +%d HP" % [level, level * 3]
+	return ""
+
+func _build_ui() -> void:
+	for child in panel.get_children():
 		child.queue_free()
 
-	_add_upgrade_section("Weapon", GameManager.weapon_upgrade_level, "weapon")
-	_add_upgrade_section("Armor", GameManager.armor_upgrade_level, "armor")
+	var fs_title = 52 if _is_mobile else 20
+	var fs_normal = 40 if _is_mobile else 14
+	var fs_small = 34 if _is_mobile else 12
+	var fs_btn = 44 if _is_mobile else 14
+	var btn_h = 100 if _is_mobile else 32
+	var margin_px = 16 if _is_mobile else 12
 
-func _add_upgrade_section(title: String, current_level: int, upgrade_type: String) -> void:
-	var section = VBoxContainer.new()
-	section.add_theme_constant_override("separation", 8 if _is_mobile else 4)
+	var margin = MarginContainer.new()
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	margin.add_theme_constant_override("margin_left", margin_px)
+	margin.add_theme_constant_override("margin_top", margin_px)
+	margin.add_theme_constant_override("margin_right", margin_px)
+	margin.add_theme_constant_override("margin_bottom", margin_px)
+	panel.add_child(margin)
 
-	# Header
-	var header = Label.new()
-	header.text = "%s Forge" % title
-	header.add_theme_font_size_override("font_size", 50 if _is_mobile else 16)
-	header.add_theme_color_override("font_color", Color(1, 0.85, 0.5))
-	section.add_child(header)
+	var root_vbox = VBoxContainer.new()
+	root_vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	root_vbox.add_theme_constant_override("separation", 8 if _is_mobile else 6)
+	margin.add_child(root_vbox)
 
-	# Level display
-	var level_label = Label.new()
-	level_label.text = "Level: %d / 100" % current_level
-	level_label.add_theme_font_size_override("font_size", 44 if _is_mobile else 14)
-	section.add_child(level_label)
+	# Top bar
+	var top_bar = HBoxContainer.new()
+	top_bar.add_theme_constant_override("separation", 8)
+	root_vbox.add_child(top_bar)
 
-	# Current bonus
-	var bonus_label = Label.new()
-	if upgrade_type == "weapon":
-		bonus_label.text = "Current: +%d Attack Damage" % (current_level * 2)
+	_title_label = Label.new()
+	_title_label.text = "Armory"
+	_title_label.add_theme_font_size_override("font_size", fs_title)
+	_title_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.5))
+	top_bar.add_child(_title_label)
+
+	var spacer = Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top_bar.add_child(spacer)
+
+	_gold_label = Label.new()
+	_gold_label.add_theme_font_size_override("font_size", fs_normal)
+	_gold_label.add_theme_color_override("font_color", Color(1, 0.85, 0.2))
+	top_bar.add_child(_gold_label)
+
+	_close_btn = Button.new()
+	if _is_mobile:
+		_close_btn.text = "X"
+		_close_btn.custom_minimum_size = Vector2(160, 130)
+		_close_btn.add_theme_font_size_override("font_size", 60)
 	else:
-		bonus_label.text = "Current: +%d Armor, +%d Max HP" % [current_level, current_level * 3]
-	bonus_label.add_theme_font_size_override("font_size", 38 if _is_mobile else 12)
-	bonus_label.add_theme_color_override("font_color", Color(0.6, 0.8, 0.6))
-	section.add_child(bonus_label)
-
-	if current_level < 100:
-		var cost = GameManager.get_upgrade_cost(current_level)
-
-		# Next level preview
-		var next_label = Label.new()
-		if upgrade_type == "weapon":
-			next_label.text = "Next (Lv%d): +%d Attack Damage" % [current_level + 1, (current_level + 1) * 2]
-		else:
-			next_label.text = "Next (Lv%d): +%d Armor, +%d Max HP" % [current_level + 1, current_level + 1, (current_level + 1) * 3]
-		next_label.add_theme_font_size_override("font_size", 38 if _is_mobile else 12)
-		next_label.add_theme_color_override("font_color", Color(0.5, 0.7, 1.0))
-		section.add_child(next_label)
-
-		# Cost + upgrade button row
-		var hbox = HBoxContainer.new()
-		hbox.alignment = BoxContainer.ALIGNMENT_CENTER
-
-		var cost_label = Label.new()
-		cost_label.text = "%dg" % cost
-		cost_label.add_theme_font_size_override("font_size", 44 if _is_mobile else 14)
-		cost_label.add_theme_color_override("font_color", Color(1, 0.85, 0.2))
-		cost_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		hbox.add_child(cost_label)
-
-		var spacer = Control.new()
-		spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		hbox.add_child(spacer)
-
-		var upgrade_btn = Button.new()
-		upgrade_btn.text = "Upgrade"
-		upgrade_btn.custom_minimum_size = Vector2(320, 110) if _is_mobile else Vector2(100, 36)
-		upgrade_btn.add_theme_font_size_override("font_size", 42 if _is_mobile else 14)
-		_style_action_btn(upgrade_btn)
-		var type = upgrade_type
-		upgrade_btn.pressed.connect(func():
-			AudioManager.play_sfx("ui_tap", -4.0)
-			_do_upgrade(type)
-		)
-		if GameManager.gold < cost:
-			upgrade_btn.disabled = true
-		hbox.add_child(upgrade_btn)
-
-		section.add_child(hbox)
-	else:
-		var max_label = Label.new()
-		max_label.text = "MAX LEVEL"
-		max_label.add_theme_font_size_override("font_size", 40 if _is_mobile else 14)
-		max_label.add_theme_color_override("font_color", Color(1.0, 0.6, 0.1))
-		section.add_child(max_label)
+		_close_btn.text = "Close [Q]"
+		_close_btn.custom_minimum_size = Vector2(90, 30)
+		_close_btn.add_theme_font_size_override("font_size", fs_btn)
+	_style_btn(_close_btn, Color(1.0, 0.4, 0.3))
+	_close_btn.pressed.connect(close)
+	top_bar.add_child(_close_btn)
 
 	var sep = HSeparator.new()
-	sep.add_theme_constant_override("separation", 8)
-	section.add_child(sep)
+	sep.add_theme_constant_override("separation", 4)
+	root_vbox.add_child(sep)
 
-	content.add_child(section)
+	# Hint
+	var hint = Label.new()
+	hint.text = "Double-click to quick-upgrade"
+	hint.add_theme_font_size_override("font_size", 30 if _is_mobile else 11)
+	hint.add_theme_color_override("font_color", Color(0.6, 0.55, 0.4, 0.7))
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	root_vbox.add_child(hint)
 
-func _do_upgrade(upgrade_type: String) -> void:
-	var current_level: int
-	if upgrade_type == "weapon":
-		current_level = GameManager.weapon_upgrade_level
+	# Upgrade list
+	_item_scroll = ScrollContainer.new()
+	_item_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_item_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	root_vbox.add_child(_item_scroll)
+
+	_item_list = VBoxContainer.new()
+	_item_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_item_list.add_theme_constant_override("separation", 10 if _is_mobile else 2)
+	_item_scroll.add_child(_item_list)
+
+	# Detail panel
+	_detail_panel = PanelContainer.new()
+	_detail_panel.visible = false
+	var detail_style = StyleBoxFlat.new()
+	detail_style.bg_color = Color(0.12, 0.12, 0.16, 0.95)
+	detail_style.border_color = Color(0.5, 0.4, 0.25)
+	detail_style.set_border_width_all(2)
+	detail_style.set_corner_radius_all(6)
+	detail_style.set_content_margin_all(margin_px)
+	_detail_panel.add_theme_stylebox_override("panel", detail_style)
+	root_vbox.add_child(_detail_panel)
+
+	var detail_vbox = VBoxContainer.new()
+	detail_vbox.add_theme_constant_override("separation", 4 if _is_mobile else 2)
+	_detail_panel.add_child(detail_vbox)
+
+	_detail_name = Label.new()
+	_detail_name.add_theme_font_size_override("font_size", fs_title - 4)
+	detail_vbox.add_child(_detail_name)
+
+	_detail_desc = Label.new()
+	_detail_desc.add_theme_font_size_override("font_size", fs_small)
+	_detail_desc.add_theme_color_override("font_color", Color(0.75, 0.72, 0.65))
+	_detail_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	detail_vbox.add_child(_detail_desc)
+
+	_detail_current = Label.new()
+	_detail_current.add_theme_font_size_override("font_size", fs_normal)
+	_detail_current.add_theme_color_override("font_color", Color(0.6, 0.85, 0.6))
+	detail_vbox.add_child(_detail_current)
+
+	_detail_next = Label.new()
+	_detail_next.add_theme_font_size_override("font_size", fs_small)
+	detail_vbox.add_child(_detail_next)
+
+	_detail_cost = Label.new()
+	_detail_cost.add_theme_font_size_override("font_size", fs_normal)
+	_detail_cost.add_theme_color_override("font_color", Color(1, 0.85, 0.2))
+	detail_vbox.add_child(_detail_cost)
+
+	var action_row = HBoxContainer.new()
+	action_row.add_theme_constant_override("separation", 8)
+	detail_vbox.add_child(action_row)
+
+	_detail_action_btn = Button.new()
+	_detail_action_btn.custom_minimum_size = Vector2(280 if _is_mobile else 120, btn_h + 10 if _is_mobile else btn_h + 4)
+	_detail_action_btn.add_theme_font_size_override("font_size", fs_btn)
+	_style_btn(_detail_action_btn, Color(0.3, 0.8, 0.4))
+	action_row.add_child(_detail_action_btn)
+
+	_detail_close_btn = Button.new()
+	_detail_close_btn.text = "Back"
+	_detail_close_btn.custom_minimum_size = Vector2(220 if _is_mobile else 80, btn_h + 10 if _is_mobile else btn_h + 4)
+	_detail_close_btn.add_theme_font_size_override("font_size", fs_btn)
+	_style_btn(_detail_close_btn, Color(0.7, 0.7, 0.7))
+	_detail_close_btn.pressed.connect(func():
+		AudioManager.play_sfx("ui_tap", -4.0)
+		_hide_detail()
+	)
+	action_row.add_child(_detail_close_btn)
+
+func _refresh() -> void:
+	_gold_label.text = "Gold: %d" % GameManager.gold
+
+	for child in _item_list.get_children():
+		child.queue_free()
+
+	for key in UPGRADES:
+		_add_upgrade_row(key)
+
+	if _selected_key != "" and _detail_panel.visible:
+		_show_detail(_selected_key)
+
+func _add_upgrade_row(key: String) -> void:
+	var info = UPGRADES[key]
+	var level = _get_level(key)
+	var max_lvl = info["max_level"]
+	var fs = 40 if _is_mobile else 14
+	var row_h = 100 if _is_mobile else 30
+
+	var row_style = StyleBoxFlat.new()
+	row_style.bg_color = Color(0.16, 0.16, 0.20, 0.7)
+	row_style.set_corner_radius_all(6)
+	row_style.set_content_margin_all(10 if _is_mobile else 4)
+	row_style.border_color = Color(0.3, 0.28, 0.22, 0.4)
+	row_style.set_border_width_all(1)
+
+	var hover_style = StyleBoxFlat.new()
+	hover_style.bg_color = Color(0.24, 0.22, 0.28, 0.85)
+	hover_style.set_corner_radius_all(6)
+	hover_style.set_content_margin_all(10 if _is_mobile else 4)
+	hover_style.border_color = Color(0.9, 0.75, 0.3, 0.7)
+	hover_style.set_border_width_all(2)
+
+	var row_panel = PanelContainer.new()
+	row_panel.add_theme_stylebox_override("panel", row_style)
+	row_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row_panel.custom_minimum_size = Vector2(0, row_h)
+
+	var hbox = HBoxContainer.new()
+	hbox.add_theme_constant_override("separation", 8)
+	row_panel.add_child(hbox)
+
+	var name_label = Label.new()
+	name_label.text = info["title"]
+	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	name_label.add_theme_color_override("font_color", info["color"])
+	name_label.add_theme_font_size_override("font_size", fs)
+	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	hbox.add_child(name_label)
+
+	var short = _get_short_bonus(key, level)
+	if short != "":
+		var bonus_lbl = Label.new()
+		bonus_lbl.text = short
+		bonus_lbl.add_theme_color_override("font_color", Color(0.6, 0.85, 0.6))
+		bonus_lbl.add_theme_font_size_override("font_size", 34 if _is_mobile else 12)
+		bonus_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		hbox.add_child(bonus_lbl)
+
+	var right_label = Label.new()
+	right_label.add_theme_font_size_override("font_size", 34 if _is_mobile else 12)
+	right_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	if level >= max_lvl:
+		right_label.text = "Lv %d MAX" % level
+		right_label.add_theme_color_override("font_color", Color(1.0, 0.6, 0.1))
 	else:
-		current_level = GameManager.armor_upgrade_level
+		var cost = _get_cost(key)
+		right_label.text = "Lv %d  %dg" % [level, cost]
+		right_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
+	hbox.add_child(right_label)
 
-	if current_level >= 100:
+	# Clickable overlay with double-click support
+	var btn_overlay = Button.new()
+	btn_overlay.flat = true
+	btn_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	btn_overlay.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	var btn_normal = StyleBoxFlat.new()
+	btn_normal.bg_color = Color(0, 0, 0, 0)
+	btn_normal.set_corner_radius_all(6)
+	var btn_hover = StyleBoxFlat.new()
+	btn_hover.bg_color = Color(0.9, 0.75, 0.3, 0.08)
+	btn_hover.set_corner_radius_all(6)
+	btn_hover.border_color = Color(0.9, 0.75, 0.3, 0.5)
+	btn_hover.set_border_width_all(1)
+	var btn_pressed = StyleBoxFlat.new()
+	btn_pressed.bg_color = Color(0.9, 0.75, 0.3, 0.15)
+	btn_pressed.set_corner_radius_all(6)
+	btn_pressed.border_color = Color(1.0, 0.85, 0.4, 0.7)
+	btn_pressed.set_border_width_all(2)
+	btn_overlay.add_theme_stylebox_override("normal", btn_normal)
+	btn_overlay.add_theme_stylebox_override("hover", btn_hover)
+	btn_overlay.add_theme_stylebox_override("pressed", btn_pressed)
+	btn_overlay.add_theme_stylebox_override("focus", btn_hover)
+	var k = key
+	btn_overlay.pressed.connect(func():
+		AudioManager.play_sfx("ui_tap", -4.0)
+		var now = Time.get_ticks_msec()
+		if _last_click_key == k and (now - _last_click_time) <= DOUBLE_CLICK_MS:
+			_cancel_pending_detail()
+			_last_click_key = ""
+			_last_click_time = 0
+			_do_upgrade(k)
+			return
+		_last_click_key = k
+		_last_click_time = now
+		_pending_detail_key = k
+		_cancel_pending_detail()
+		_pending_detail_timer = get_tree().create_timer(DOUBLE_CLICK_MS / 1000.0)
+		_pending_detail_timer.timeout.connect(func():
+			_pending_detail_timer = null
+			if _pending_detail_key != "":
+				_show_detail(_pending_detail_key)
+				_pending_detail_key = ""
+		)
+	)
+	btn_overlay.mouse_entered.connect(func():
+		AudioManager.play_sfx("ui_hover", -8.0)
+		row_panel.add_theme_stylebox_override("panel", hover_style)
+	)
+	btn_overlay.mouse_exited.connect(func():
+		row_panel.add_theme_stylebox_override("panel", row_style)
+	)
+	row_panel.add_child(btn_overlay)
+
+	_item_list.add_child(row_panel)
+
+func _show_detail(key: String) -> void:
+	_selected_key = key
+	var info = UPGRADES[key]
+	var level = _get_level(key)
+	var max_lvl = info["max_level"]
+
+	_detail_panel.visible = true
+	_detail_name.text = info["title"]
+	_detail_name.add_theme_color_override("font_color", info["color"])
+	_detail_desc.text = info["desc"]
+	_detail_current.text = "Current (Lv %d): %s" % [level, _get_bonus_text(key, level)]
+
+	if level >= max_lvl:
+		_detail_next.text = "MAX LEVEL"
+		_detail_next.add_theme_color_override("font_color", Color(1.0, 0.6, 0.1))
+		_detail_cost.text = ""
+		_detail_action_btn.visible = false
+	else:
+		var cost = _get_cost(key)
+		_detail_next.text = "Next (Lv %d): %s" % [level + 1, _get_bonus_text(key, level + 1)]
+		_detail_next.add_theme_color_override("font_color", Color(0.5, 0.7, 1.0))
+		_detail_cost.text = "Cost: %dg" % cost
+		_detail_action_btn.visible = true
+		_detail_action_btn.text = "Upgrade (%dg)" % cost
+		_detail_action_btn.disabled = GameManager.gold < cost
+		for conn in _detail_action_btn.pressed.get_connections():
+			_detail_action_btn.pressed.disconnect(conn["callable"])
+		var k = key
+		_detail_action_btn.pressed.connect(func():
+			AudioManager.play_sfx("ui_tap", -4.0)
+			_do_upgrade(k)
+		)
+
+func _hide_detail() -> void:
+	_detail_panel.visible = false
+	_selected_key = ""
+	_last_click_key = ""
+
+func _cancel_pending_detail() -> void:
+	if _pending_detail_timer != null:
+		if _pending_detail_timer.timeout.get_connections().size() > 0:
+			for conn in _pending_detail_timer.timeout.get_connections():
+				_pending_detail_timer.timeout.disconnect(conn["callable"])
+		_pending_detail_timer = null
+	_pending_detail_key = ""
+
+func _do_upgrade(key: String) -> void:
+	var level = _get_level(key)
+	var max_lvl = UPGRADES[key]["max_level"]
+	if level >= max_lvl:
 		return
-
-	var cost = GameManager.get_upgrade_cost(current_level)
+	var cost = _get_cost(key)
 	if not GameManager.spend_gold(cost):
 		GameManager.game_message.emit("Not enough gold!", Color(1, 0.3, 0.3))
 		return
 
-	if upgrade_type == "weapon":
-		GameManager.weapon_upgrade_level += 1
-	else:
-		GameManager.armor_upgrade_level += 1
+	match key:
+		"weapon": GameManager.weapon_upgrade_level += 1
+		"armor": GameManager.armor_upgrade_level += 1
 
 	_apply_armory_bonuses()
 	_refresh()
 
-	var new_level = GameManager.weapon_upgrade_level if upgrade_type == "weapon" else GameManager.armor_upgrade_level
-	GameManager.game_message.emit("%s upgraded to level %d!" % [upgrade_type.capitalize(), new_level], Color(1, 0.85, 0.5))
-	AudioManager.play_sfx("forge_weapon" if upgrade_type == "weapon" else "forge_armor", -8.0)
-	# Brief gold flash on the panel to confirm the upgrade visually
+	var new_level = _get_level(key)
+	GameManager.game_message.emit(
+		"%s upgraded to level %d!" % [UPGRADES[key]["title"], new_level],
+		UPGRADES[key]["color"]
+	)
+	AudioManager.play_sfx("forge_weapon" if key == "weapon" else "forge_armor", -8.0)
 	var tw = create_tween()
 	tw.tween_property(panel, "modulate", Color(1.3, 1.15, 0.8), 0.1)
 	tw.tween_property(panel, "modulate", Color(1, 1, 1), 0.25)
@@ -221,11 +457,36 @@ func _apply_armory_bonuses() -> void:
 	_player.stats.armory_hp_bonus = GameManager.armor_upgrade_level * 3
 	_player.stats._emit_all()
 
+func _style_btn(btn: Button, accent: Color = Color(0.9, 0.75, 0.3)) -> void:
+	var normal = StyleBoxFlat.new()
+	normal.bg_color = Color(0.12, 0.11, 0.08, 0.95)
+	normal.border_color = accent * Color(0.5, 0.5, 0.5, 0.6)
+	normal.set_border_width_all(2)
+	normal.set_corner_radius_all(6)
+	normal.set_content_margin_all(4)
+	var hover = normal.duplicate()
+	hover.bg_color = Color(0.18, 0.16, 0.12, 0.95)
+	hover.border_color = accent * Color(0.8, 0.8, 0.8, 0.8)
+	var pressed = normal.duplicate()
+	pressed.bg_color = Color(0.25, 0.22, 0.14, 0.95)
+	pressed.border_color = accent
+	var disabled = normal.duplicate()
+	disabled.bg_color = Color(0.08, 0.08, 0.06, 0.7)
+	disabled.border_color = Color(0.3, 0.3, 0.3, 0.4)
+	btn.add_theme_stylebox_override("normal", normal)
+	btn.add_theme_stylebox_override("hover", hover)
+	btn.add_theme_stylebox_override("pressed", pressed)
+	btn.add_theme_stylebox_override("disabled", disabled)
+	btn.add_theme_stylebox_override("focus", hover)
+
 func _unhandled_input(event: InputEvent) -> void:
 	if not _is_visible:
 		return
 	if event.is_action_pressed("ui_cancel") or event.is_action_pressed("ability_1"):
-		close()
+		if _detail_panel.visible:
+			_hide_detail()
+		else:
+			close()
 		get_viewport().set_input_as_handled()
 		return
 	var pos := Vector2(-1, -1)

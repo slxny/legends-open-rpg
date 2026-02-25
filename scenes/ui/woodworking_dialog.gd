@@ -24,6 +24,13 @@ var _detail_cost: Label
 var _detail_action_btn: Button
 var _detail_close_btn: Button
 
+# Double-click quick-build support
+var _last_click_key: String = ""
+var _last_click_time: int = 0
+const DOUBLE_CLICK_MS: int = 400
+var _pending_detail_timer: SceneTreeTimer = null
+var _pending_detail_key: String = ""
+
 # Four upgrade tracks — each costs wood and improves a different axis
 const UPGRADES = {
 	"bow": {
@@ -199,6 +206,14 @@ func _build_ui() -> void:
 	var sep = HSeparator.new()
 	sep.add_theme_constant_override("separation", 4)
 	root_vbox.add_child(sep)
+
+	# ---- Hint ----
+	var hint = Label.new()
+	hint.text = "Double-click to quick-build"
+	hint.add_theme_font_size_override("font_size", 30 if _is_mobile else 11)
+	hint.add_theme_color_override("font_color", Color(0.5, 0.45, 0.35, 0.6))
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	root_vbox.add_child(hint)
 
 	# ---- Upgrade list (scrollable) ----
 	_item_scroll = ScrollContainer.new()
@@ -379,8 +394,25 @@ func _add_upgrade_row(key: String) -> void:
 	btn_overlay.add_theme_stylebox_override("focus", btn_hover)
 	var k = key
 	btn_overlay.pressed.connect(func():
-		AudioManager.play_sfx("ui_tap", -4.0)
-		_show_detail(k)
+		var now = Time.get_ticks_msec()
+		if _last_click_key == k and (now - _last_click_time) < DOUBLE_CLICK_MS:
+			_cancel_pending_detail()
+			_last_click_key = ""
+			_last_click_time = 0
+			AudioManager.play_sfx("ui_tap", -4.0)
+			_do_upgrade(k)
+			return
+		_last_click_key = k
+		_last_click_time = now
+		_cancel_pending_detail()
+		_pending_detail_key = k
+		_pending_detail_timer = get_tree().create_timer(DOUBLE_CLICK_MS / 1000.0)
+		_pending_detail_timer.timeout.connect(func():
+			if _pending_detail_key == k:
+				AudioManager.play_sfx("ui_tap", -4.0)
+				_show_detail(k)
+				_pending_detail_key = ""
+		)
 	)
 	btn_overlay.mouse_entered.connect(func():
 		AudioManager.play_sfx("ui_hover", -8.0)
@@ -392,6 +424,10 @@ func _add_upgrade_row(key: String) -> void:
 	row_panel.add_child(btn_overlay)
 
 	_item_list.add_child(row_panel)
+
+func _cancel_pending_detail() -> void:
+	_pending_detail_key = ""
+	_pending_detail_timer = null
 
 func _show_detail(key: String) -> void:
 	_selected_key = key

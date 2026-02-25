@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.66.5"
+const GAME_VERSION := "v0.66.6"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.66.6",
+		"title": "Armory & Tavern UI redesign + double-click quick-build",
+		"date": "2026-02-24",
+		"entries": [
+			"Armory redesigned with sleek upgrade list + detail panel (matches woodworker/shop)",
+			"Tavern redesigned with browsable buff list + detail panel",
+			"Double-click to quick-upgrade in armory, tavern, and woodworker",
+			"All NPC dialogs now share consistent UI pattern: compact list → detail on click",
+		]
+	},
 	{
 		"version": "v0.66.5",
 		"title": "Fix Shadow Ranger attack breaking permanently",

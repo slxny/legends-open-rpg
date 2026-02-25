@@ -85,8 +85,8 @@ func _build_menu() -> void:
 
 	var close_btn = Button.new()
 	close_btn.text = "X"
-	close_btn.custom_minimum_size = Vector2(160, 130) if _is_mobile else Vector2(40, 32)
-	close_btn.add_theme_font_size_override("font_size", 60 if _is_mobile else 16)
+	close_btn.custom_minimum_size = Vector2(160, 130) if _is_mobile else Vector2(120, 40)
+	close_btn.add_theme_font_size_override("font_size", 60 if _is_mobile else 20)
 	close_btn.add_theme_color_override("font_color", Color(1.0, 0.4, 0.3))
 	_style_btn(close_btn, Color(1.0, 0.4, 0.3))
 	close_btn.pressed.connect(func(): close())
@@ -214,10 +214,9 @@ func _show_help_dialog() -> void:
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(spacer)
 	var close_btn = Button.new()
-	close_btn.text = "X" if _is_mobile else "Close"
-	close_btn.custom_minimum_size = Vector2(160, 130) if _is_mobile else Vector2(80, 32)
-	if _is_mobile:
-		close_btn.add_theme_font_size_override("font_size", 60)
+	close_btn.text = "X" if _is_mobile else "X  Close"
+	close_btn.custom_minimum_size = Vector2(160, 130) if _is_mobile else Vector2(120, 40)
+	close_btn.add_theme_font_size_override("font_size", 60 if _is_mobile else 20)
 	_style_btn(close_btn, Color(1.0, 0.4, 0.3))
 	close_btn.pressed.connect(func(): help_layer.queue_free())
 	top.add_child(close_btn)

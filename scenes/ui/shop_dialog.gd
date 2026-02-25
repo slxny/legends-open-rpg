@@ -128,9 +128,9 @@ func _build_ui() -> void:
 		_close_btn.custom_minimum_size = Vector2(160, 130)
 		_close_btn.add_theme_font_size_override("font_size", 60)
 	else:
-		_close_btn.text = "Close [Q]"
-		_close_btn.custom_minimum_size = Vector2(90, 30)
-		_close_btn.add_theme_font_size_override("font_size", fs_btn)
+		_close_btn.text = "X  [Q]"
+		_close_btn.custom_minimum_size = Vector2(120, 40)
+		_close_btn.add_theme_font_size_override("font_size", 20)
 	_style_btn(_close_btn, Color(1.0, 0.4, 0.3))
 	_close_btn.pressed.connect(close)
 	top_bar.add_child(_close_btn)

@@ -228,8 +228,8 @@ func _build_cmd_overlay() -> void:
 	title_row.add_child(title)
 	var close_btn = Button.new()
 	close_btn.text = "X"
-	close_btn.custom_minimum_size = Vector2(160, 130)
-	close_btn.add_theme_font_size_override("font_size", 60)
+	close_btn.custom_minimum_size = Vector2(160, 130) if _is_mobile else Vector2(120, 40)
+	close_btn.add_theme_font_size_override("font_size", 60 if _is_mobile else 20)
 	_style_btn(close_btn, Color(1.0, 0.4, 0.3))
 	close_btn.pressed.connect(_toggle_cmd_overlay)
 	title_row.add_child(close_btn)
@@ -396,8 +396,8 @@ func _build_map_overlay() -> void:
 	title_row.add_child(title)
 	var close_btn = Button.new()
 	close_btn.text = "X"
-	close_btn.custom_minimum_size = Vector2(160, 130)
-	close_btn.add_theme_font_size_override("font_size", 60)
+	close_btn.custom_minimum_size = Vector2(160, 130) if _is_mobile else Vector2(120, 40)
+	close_btn.add_theme_font_size_override("font_size", 60 if _is_mobile else 20)
 	_style_btn(close_btn, Color(1.0, 0.4, 0.3))
 	close_btn.pressed.connect(_toggle_map_overlay)
 	title_row.add_child(close_btn)
@@ -675,11 +675,11 @@ func _create_hint_panel() -> void:
 	close_btn.add_theme_color_override("font_hover_color", Color(1.0, 0.85, 0.3))
 	close_btn.add_theme_color_override("font_pressed_color", Color(1.0, 1.0, 1.0))
 	if _is_mobile:
-		close_btn.custom_minimum_size = Vector2(60, 60)
-		close_btn.add_theme_font_size_override("font_size", 44)
+		close_btn.custom_minimum_size = Vector2(80, 80)
+		close_btn.add_theme_font_size_override("font_size", 48)
 	else:
-		close_btn.custom_minimum_size = Vector2(28, 28)
-		close_btn.add_theme_font_size_override("font_size", 16)
+		close_btn.custom_minimum_size = Vector2(36, 36)
+		close_btn.add_theme_font_size_override("font_size", 20)
 	close_btn.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	close_btn.pressed.connect(_dismiss_hint)
 	hbox.add_child(close_btn)

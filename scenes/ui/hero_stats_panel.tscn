@@ -53,8 +53,9 @@ size_flags_horizontal = 3
 
 [node name="CloseButton" type="Button" parent="Panel/MarginContainer/VBox/TopBar"]
 layout_mode = 2
-text = "Close [Q]"
-custom_minimum_size = Vector2(90, 30)
+text = "X  [Q]"
+custom_minimum_size = Vector2(120, 40)
+theme_override_font_sizes/font_size = 20
 
 [node name="Scroll" type="ScrollContainer" parent="Panel/MarginContainer/VBox"]
 layout_mode = 2

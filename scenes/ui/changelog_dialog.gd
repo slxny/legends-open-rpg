@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.68.2"
+const GAME_VERSION := "v0.68.3"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.68.3",
+		"title": "Bigger, consistent close buttons everywhere",
+		"date": "2026-02-25",
+		"entries": [
+			"All close/X buttons are now the same size across every panel and dialog",
+			"Desktop: 120x40 with font size 20 (up from 90x30 / 40x32 inconsistent sizes)",
+			"Mobile: consistent 160x130 with font size 60 across all panels",
+			"Hint dismiss X button also enlarged for easier tapping",
+		]
+	},
 	{
 		"version": "v0.68.2",
 		"title": "Minibosses are bigger",

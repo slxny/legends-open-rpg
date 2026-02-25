@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.66.3"
+const GAME_VERSION := "v0.66.4"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.66.4",
+		"title": "Woodworker UI redesign + enemy stuck fix",
+		"date": "2026-02-24",
+		"entries": [
+			"Woodworker menu redesigned to match shop layout — concise upgrade list",
+			"Click/tap an upgrade to see full details, bonuses, and build button",
+			"Enemies no longer get stuck on the hero while moving",
+			"Enemy attack state closing speed greatly reduced",
+		]
+	},
 	{
 		"version": "v0.66.3",
 		"title": "Fix enemies getting stuck on the hero",

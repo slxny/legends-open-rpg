@@ -55,16 +55,16 @@ func is_mobile_device() -> bool:
 	if DisplayServer.is_touchscreen_available():
 		_cached_is_mobile = 1
 		return true
-	# Fallback for web: JS user-agent, touch detection, and pointer media query
-	# The (pointer: coarse) media query reliably detects touch-primary devices
-	# (phones/tablets) even in PWA/standalone mode where user-agent may differ,
-	# without false-positiving on desktop touchscreen laptops (which report fine).
+	# Fallback for web: JS checks for PWA/standalone mode
 	if OS.has_feature("web"):
+		# pointer:coarse = touch-primary device (won't false-positive on desktop touchscreen laptops)
+		# user-agent regex = covers mobile browsers even if pointer query fails
+		# iPad-as-Mac = iPadOS reports as MacIntel but has touch
 		var js_result = JavaScriptBridge.eval(
-			"(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|Tablet/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) || (navigator.maxTouchPoints > 0 && window.matchMedia('(pointer: coarse)').matches))",
+			"(window.matchMedia('(pointer: coarse)').matches || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|Tablet/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1))",
 			true
 		)
-		if js_result:
+		if js_result == true:
 			_cached_is_mobile = 1
 			return true
 	_cached_is_mobile = 0

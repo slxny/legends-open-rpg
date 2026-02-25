@@ -7,11 +7,21 @@ extends Node2D
 var _camera: Camera2D = null
 const _FOG_DIM := Color(0.0, 0.0, 0.0, 0.5)
 const _FOG_BLACK := Color(0.0, 0.0, 0.0, 0.95)
+var _fog_redraw_pending: bool = false
+var _fog_redraw_timer: float = 0.0
+const FOG_REDRAW_INTERVAL: float = 0.3
 
 func _ready() -> void:
 	z_index = 100  # Render on top of everything
 	FogOfWarManager.fog_updated.connect(_on_fog_updated)
 	call_deferred("_cache_camera")
+
+func _process(delta: float) -> void:
+	if _fog_redraw_pending:
+		_fog_redraw_timer -= delta
+		if _fog_redraw_timer <= 0.0:
+			_fog_redraw_pending = false
+			queue_redraw()
 
 func _cache_camera() -> void:
 	var players = get_tree().get_nodes_in_group("player")
@@ -19,7 +29,9 @@ func _cache_camera() -> void:
 		_camera = players[0].get_node_or_null("Camera2D")
 
 func _on_fog_updated() -> void:
-	queue_redraw()
+	if not _fog_redraw_pending:
+		_fog_redraw_pending = true
+		_fog_redraw_timer = FOG_REDRAW_INTERVAL
 
 func _draw() -> void:
 	if not _camera or not is_instance_valid(_camera):

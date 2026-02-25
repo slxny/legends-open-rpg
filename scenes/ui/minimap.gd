@@ -37,7 +37,7 @@ var click_to_move_enabled: bool = true:  # When false, clicks pass through to pa
 	set(v):
 		click_to_move_enabled = v
 		mouse_filter = Control.MOUSE_FILTER_STOP if v else Control.MOUSE_FILTER_PASS
-const REDRAW_INTERVAL: float = 0.25  # Redraw 4 times per second, not 60
+const REDRAW_INTERVAL: float = 0.5  # Redraw 2 times per second for performance
 var _cached_enemies: Array = []  # Cached enemy positions for minimap dots
 var _cached_bosses: Array = []  # Cached miniboss positions for pulsing diamond indicators
 var _cached_explored_rects: Array = []  # Pre-built fog overlay rects

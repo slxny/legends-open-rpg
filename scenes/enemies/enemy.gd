@@ -167,12 +167,7 @@ void fragment() {
 		_info_label_settings.font_color = Color(1.0, 0.6, 0.6)
 		_info_label_settings.outline_size = 4 if is_mobile else 2
 		_info_label_settings.outline_color = Color.BLACK
-	# Apply outline material to sprite
-	var outline_mat = ShaderMaterial.new()
-	outline_mat.shader = _outline_shader
-	outline_mat.set_shader_parameter("enabled", false)
-	outline_mat.set_shader_parameter("line_color", Color(1.0, 0.3, 0.3, 0.85))
-	sprite.material = outline_mat
+	# Outline shader is applied on-demand (hover only) to avoid per-frame shader cost
 	# Connect mouse hover signals for outline
 	mouse_entered.connect(_on_mouse_entered)
 	mouse_exited.connect(_on_mouse_exited)
@@ -263,12 +258,17 @@ func hide_selection() -> void:
 		name_label.visible = false
 
 func _on_mouse_entered() -> void:
-	if not _is_dead and sprite and sprite.material:
+	if not _is_dead and sprite and _outline_shader:
+		if not sprite.material:
+			var mat = ShaderMaterial.new()
+			mat.shader = _outline_shader
+			mat.set_shader_parameter("line_color", Color(1.0, 0.3, 0.3, 0.85))
+			sprite.material = mat
 		sprite.material.set_shader_parameter("enabled", true)
 
 func _on_mouse_exited() -> void:
-	if sprite and sprite.material:
-		sprite.material.set_shader_parameter("enabled", false)
+	if sprite:
+		sprite.material = null
 
 func show_info() -> void:
 	if _is_dead:
@@ -668,8 +668,8 @@ func _die() -> void:
 	collision_layer = 0
 	collision_mask = 0
 	input_pickable = false
-	if sprite and sprite.material:
-		sprite.material.set_shader_parameter("enabled", false)
+	if sprite:
+		sprite.material = null
 	var death_sfx = "death_" + sprite_type
 	if AudioManager.get_sfx(death_sfx):
 		AudioManager.play_sfx(death_sfx, -3.0)

@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.68.5"
+const GAME_VERSION := "v0.68.6"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.68.6",
+		"title": "Performance optimizations",
+		"date": "2026-02-25",
+		"entries": [
+			"Outline shaders now applied on-demand (hover only) instead of always running on every enemy and tree",
+			"Fog of war overlay redraws throttled to max 3x/sec instead of every movement tick",
+			"Minimap refresh rate reduced from 4x/sec to 2x/sec",
+			"Ambient particle count reduced from 15 to 6",
+		]
+	},
 	{
 		"version": "v0.68.5",
 		"title": "All panels fully opaque and dark",

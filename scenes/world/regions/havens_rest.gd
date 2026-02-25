@@ -1213,8 +1213,8 @@ func _spawn_ambient_particles() -> void:
 	# Floating dust/pollen particles
 	var particles = CPUParticles2D.new()
 	particles.z_index = 5
-	particles.amount = 15
-	particles.lifetime = 8.0
+	particles.amount = 6
+	particles.lifetime = 10.0
 	particles.emitting = true
 	particles.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
 	particles.emission_rect_extents = Vector2(800, 600)

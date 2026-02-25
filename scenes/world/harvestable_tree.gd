@@ -117,12 +117,7 @@ func _ready() -> void:
 	var v = randf_range(-0.04, 0.04)
 	_sprite.modulate = Color(1.0 + v, 1.0 + v * 0.5, 1.0 + v)
 
-	# Outline shader material
-	var mat = ShaderMaterial.new()
-	mat.shader = _outline_shader
-	mat.set_shader_parameter("enabled", false)
-	mat.set_shader_parameter("line_color", Color(0.3, 1.0, 0.4, 0.85))
-	_sprite.material = mat
+	# Outline shader applied on-demand (hover only) for performance
 
 	add_child(_sprite)
 
@@ -157,12 +152,17 @@ func _ready() -> void:
 	mouse_exited.connect(_on_mouse_exited)
 
 func _on_mouse_entered() -> void:
-	if not _is_chopped and _sprite and _sprite.material:
+	if not _is_chopped and _sprite and _outline_shader:
+		if not _sprite.material:
+			var mat = ShaderMaterial.new()
+			mat.shader = _outline_shader
+			mat.set_shader_parameter("line_color", Color(0.3, 1.0, 0.4, 0.85))
+			_sprite.material = mat
 		_sprite.material.set_shader_parameter("enabled", true)
 
 func _on_mouse_exited() -> void:
-	if _sprite and _sprite.material:
-		_sprite.material.set_shader_parameter("enabled", false)
+	if _sprite:
+		_sprite.material = null
 
 func _get_zoom_compensation() -> float:
 	var cam = get_viewport().get_camera_2d()
@@ -227,9 +227,9 @@ func _chop_down() -> void:
 	collision_layer = 0
 	input_pickable = false
 	_hp_bar.visible = false
-	# Disable outline
-	if _sprite and _sprite.material:
-		_sprite.material.set_shader_parameter("enabled", false)
+	# Remove outline material
+	if _sprite:
+		_sprite.material = null
 	chopped_down.emit(self)
 
 	# Spawn wood drops

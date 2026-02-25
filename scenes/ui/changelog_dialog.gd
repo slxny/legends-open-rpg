@@ -9,11 +9,11 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.69.3"
+const GAME_VERSION := "v0.70.1"
 
 const CHANGELOG: Array[Dictionary] = [
 	{
-		"version": "v0.69.3",
+		"version": "v0.70.1",
 		"title": "Inventory: fixed detail panel at bottom, no more overlay",
 		"date": "2026-02-25",
 		"entries": [

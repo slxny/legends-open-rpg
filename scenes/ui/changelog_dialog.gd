@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.70.7"
+const GAME_VERSION := "v0.70.8"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.70.8",
+		"title": "Messages moved below resource bar, level up shows transition",
+		"date": "2026-02-25",
+		"entries": [
+			"Gold, wood, pickup, and upgrade messages now appear below the resource bar instead of overlapping it",
+			"Mobile: message position scales with screen size (8% from top)",
+			"Level up now shows LVL 4 → LVL 5 format instead of just the new level number",
+		]
+	},
 	{
 		"version": "v0.70.7",
 		"title": "Woodworker upgrades max level raised to 100",

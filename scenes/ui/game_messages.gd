@@ -6,6 +6,13 @@ extends CanvasLayer
 
 func _ready() -> void:
 	GameManager.game_message.connect(_on_game_message)
+	# Push messages below the resource bar
+	var is_mobile = GameManager.is_mobile_device()
+	if is_mobile:
+		var vp = get_viewport().get_visible_rect().size
+		var top_offset = vp.y * 0.08  # 8% from top, below resource bar
+		message_container.offset_top = top_offset
+		message_container.offset_bottom = top_offset + 300
 
 func _on_game_message(text: String, color: Color = Color.WHITE) -> void:
 	# Cap cleanup to avoid unbounded loop

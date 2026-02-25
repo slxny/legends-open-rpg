@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.66.4"
+const GAME_VERSION := "v0.66.5"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.66.5",
+		"title": "Fix Shadow Ranger attack breaking permanently",
+		"date": "2026-02-24",
+		"entries": [
+			"Fix critical bug: hit-freeze await could leave Engine.time_scale at 0.1 permanently",
+			"Attacks now properly reset on death/respawn — no more stuck attack state",
+			"Projectile tweens now owned by projectile node — prevents double-free errors",
+			"Added safety resets for attack flags and time_scale on death and respawn",
+		]
+	},
 	{
 		"version": "v0.66.4",
 		"title": "Woodworker UI redesign + enemy stuck fix",

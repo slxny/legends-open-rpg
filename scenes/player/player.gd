@@ -2375,13 +2375,16 @@ func _spawn_projectile(direction: Vector2, speed: float, max_range: float, dmg_m
 	projectile.rotation = direction.angle()
 	_get_world_node().add_child(projectile)
 
-	var tween = create_tween()
+	# Tween owned by projectile so it auto-dies if projectile is freed on hit
+	var tween = projectile.create_tween()
 	var end_pos = global_position + direction * max_range
 	var travel_time = max_range / speed
 	tween.tween_property(projectile, "position", end_pos, travel_time)
 	tween.tween_callback(projectile.queue_free)
 
 	projectile.body_entered.connect(func(body: Node2D):
+		if not is_instance_valid(projectile):
+			return
 		if body.is_in_group("enemies") and body.has_method("take_damage"):
 			var result = CombatManager.calculate_damage(stats.get_stats_dict(), body.get_stats_dict(), dmg_mult)
 			body.take_damage(result["damage"], result["is_crit"])
@@ -2731,11 +2734,11 @@ func _do_hit_freeze(is_crit: bool) -> void:
 	# Brief time-scale dip — 1-2 real frames, not seconds
 	Engine.time_scale = 0.1
 	var freeze_dur = 0.03 if not is_crit else 0.05
-	# process_always so the timer isn't dilated by the time_scale we just set
-	var timer = get_tree().create_timer(freeze_dur, true, false, true)
-	await timer.timeout
-	Engine.time_scale = 1.0
-	_hit_freeze_active = false
+	# Callback-based (no await) so death/scene disruption can't leave time_scale stuck
+	get_tree().create_timer(freeze_dur, true, false, true).timeout.connect(func():
+		Engine.time_scale = 1.0
+		_hit_freeze_active = false
+	)
 
 func _do_screen_shake(intensity: float) -> void:
 	# Procedural shake — driven by _physics_process, no tween allocation
@@ -2997,6 +3000,11 @@ func _register_fog_trigger() -> void:
 func _on_death_animation(_player_id: int) -> void:
 	_is_dead = true
 	velocity = Vector2.ZERO
+	# Reset attack state so it can't get stuck across death/respawn
+	_is_attack_animating = false
+	_attack_cooldown = 0.0
+	Engine.time_scale = 1.0
+	_hit_freeze_active = false
 	# Cancel any ongoing animations
 	if _death_tween and _death_tween.is_valid():
 		_death_tween.kill()
@@ -3022,6 +3030,11 @@ func _on_respawn_animation(_player_id: int) -> void:
 	# Kill death tween if still running
 	if _death_tween and _death_tween.is_valid():
 		_death_tween.kill()
+	# Safety: ensure attack state is clean on respawn
+	_is_attack_animating = false
+	_attack_cooldown = 0.0
+	Engine.time_scale = 1.0
+	_hit_freeze_active = false
 	# Reset sprite to invisible for regen build-up
 	sprite.modulate = Color(1.0, 1.0, 1.0, 0.0)
 	sprite.scale = Vector2(0.3, 0.3)

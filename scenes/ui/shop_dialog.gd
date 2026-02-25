@@ -128,8 +128,8 @@ func _build_ui() -> void:
 	_close_btn = Button.new()
 	if _is_mobile:
 		_close_btn.text = "X"
-		_close_btn.custom_minimum_size = Vector2(120, 100)
-		_close_btn.add_theme_font_size_override("font_size", 50)
+		_close_btn.custom_minimum_size = Vector2(160, 130)
+		_close_btn.add_theme_font_size_override("font_size", 60)
 	else:
 		_close_btn.text = "Close [Q]"
 		_close_btn.custom_minimum_size = Vector2(90, 30)
@@ -580,4 +580,14 @@ func _unhandled_input(event: InputEvent) -> void:
 			_hide_detail()
 		else:
 			close()
+		get_viewport().set_input_as_handled()
+		return
+	# Tap outside panel to close
+	var pos := Vector2(-1, -1)
+	if event is InputEventMouseButton and event.pressed:
+		pos = event.position
+	elif event is InputEventScreenTouch and event.pressed:
+		pos = event.position
+	if pos.x >= 0 and not panel.get_global_rect().has_point(pos):
+		close()
 		get_viewport().set_input_as_handled()

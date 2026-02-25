@@ -71,6 +71,15 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif _is_visible and (event.is_action_pressed("ui_cancel") or event.is_action_pressed("ability_1")):
 		toggle()
 		get_viewport().set_input_as_handled()
+	elif _is_visible:
+		var pos := Vector2(-1, -1)
+		if event is InputEventMouseButton and event.pressed:
+			pos = event.position
+		elif event is InputEventScreenTouch and event.pressed:
+			pos = event.position
+		if pos.x >= 0 and not panel.get_global_rect().has_point(pos):
+			toggle()
+			get_viewport().set_input_as_handled()
 
 func toggle() -> void:
 	_is_visible = !_is_visible
@@ -108,8 +117,8 @@ func _detect_mobile() -> void:
 			var close_btn = Button.new()
 			close_btn.name = "MobileCloseBtn"
 			close_btn.text = "X"
-			close_btn.custom_minimum_size = Vector2(120, 100)
-			close_btn.add_theme_font_size_override("font_size", 50)
+			close_btn.custom_minimum_size = Vector2(160, 130)
+			close_btn.add_theme_font_size_override("font_size", 60)
 			close_btn.pressed.connect(toggle)
 			$Panel/MarginContainer/VBox/TopBar.add_child(close_btn)
 	else:

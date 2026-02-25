@@ -85,8 +85,8 @@ func _build_menu() -> void:
 
 	var close_btn = Button.new()
 	close_btn.text = "X"
-	close_btn.custom_minimum_size = Vector2(120, 100) if _is_mobile else Vector2(40, 32)
-	close_btn.add_theme_font_size_override("font_size", 50 if _is_mobile else 16)
+	close_btn.custom_minimum_size = Vector2(160, 130) if _is_mobile else Vector2(40, 32)
+	close_btn.add_theme_font_size_override("font_size", 60 if _is_mobile else 16)
 	close_btn.add_theme_color_override("font_color", Color(1.0, 0.4, 0.3))
 	_style_btn(close_btn, Color(1.0, 0.4, 0.3))
 	close_btn.pressed.connect(func(): close())
@@ -215,9 +215,9 @@ func _show_help_dialog() -> void:
 	top.add_child(spacer)
 	var close_btn = Button.new()
 	close_btn.text = "X" if _is_mobile else "Close"
-	close_btn.custom_minimum_size = Vector2(120, 100) if _is_mobile else Vector2(80, 32)
+	close_btn.custom_minimum_size = Vector2(160, 130) if _is_mobile else Vector2(80, 32)
 	if _is_mobile:
-		close_btn.add_theme_font_size_override("font_size", 50)
+		close_btn.add_theme_font_size_override("font_size", 60)
 	_style_btn(close_btn, Color(1.0, 0.4, 0.3))
 	close_btn.pressed.connect(func(): help_layer.queue_free())
 	top.add_child(close_btn)
@@ -271,6 +271,17 @@ Tips:
 	# Instead, connect close_btn and let user tap/click Close
 
 func _unhandled_input(event: InputEvent) -> void:
-	if _is_visible and event.is_action_pressed("ui_cancel"):
+	if not _is_visible:
+		return
+	if event.is_action_pressed("ui_cancel"):
+		close()
+		get_viewport().set_input_as_handled()
+		return
+	var pos := Vector2(-1, -1)
+	if event is InputEventMouseButton and event.pressed:
+		pos = event.position
+	elif event is InputEventScreenTouch and event.pressed:
+		pos = event.position
+	if pos.x >= 0 and not panel.get_global_rect().has_point(pos):
 		close()
 		get_viewport().set_input_as_handled()

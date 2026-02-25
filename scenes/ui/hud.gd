@@ -228,8 +228,8 @@ func _build_cmd_overlay() -> void:
 	title_row.add_child(title)
 	var close_btn = Button.new()
 	close_btn.text = "X"
-	close_btn.custom_minimum_size = Vector2(120, 100)
-	close_btn.add_theme_font_size_override("font_size", 50)
+	close_btn.custom_minimum_size = Vector2(160, 130)
+	close_btn.add_theme_font_size_override("font_size", 60)
 	_style_btn(close_btn, Color(1.0, 0.4, 0.3))
 	close_btn.pressed.connect(_toggle_cmd_overlay)
 	title_row.add_child(close_btn)
@@ -396,8 +396,8 @@ func _build_map_overlay() -> void:
 	title_row.add_child(title)
 	var close_btn = Button.new()
 	close_btn.text = "X"
-	close_btn.custom_minimum_size = Vector2(120, 100)
-	close_btn.add_theme_font_size_override("font_size", 50)
+	close_btn.custom_minimum_size = Vector2(160, 130)
+	close_btn.add_theme_font_size_override("font_size", 60)
 	_style_btn(close_btn, Color(1.0, 0.4, 0.3))
 	close_btn.pressed.connect(_toggle_map_overlay)
 	title_row.add_child(close_btn)
@@ -745,6 +745,13 @@ func _start_tutorial_hints(hero_data: Dictionary) -> void:
 				"text": "[color=#f0d866]TIP:[/color]  %s → [color=#66eeff]Dash Strike[/color] — quick spin-dash through foes!" % DIAG,
 			},
 		])
+
+	# --- 2b. Cursor hint (mobile, early game, rare) ---
+	if _is_mobile:
+		_hint_queue.append({
+			"delay": 35.0,
+			"text": "[color=#f0d866]TIP:[/color]  The [color=#f0cc4a][b]gold cursor[/b][/color] shows where you're pointing — tap enemies, beacons, or trees to interact with them",
+		})
 
 	# --- 3. Controls (platform-specific) ---
 	if _is_mobile:

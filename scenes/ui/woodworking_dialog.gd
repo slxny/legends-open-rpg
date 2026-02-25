@@ -116,8 +116,8 @@ func _detect_mobile() -> void:
 		$Panel/MarginContainer/VBox/TopBar/Title.add_theme_font_size_override("font_size", 56)
 		wood_label.add_theme_font_size_override("font_size", 44)
 		close_button.text = "X"
-		close_button.add_theme_font_size_override("font_size", 50)
-		close_button.custom_minimum_size = Vector2(120, 100)
+		close_button.add_theme_font_size_override("font_size", 60)
+		close_button.custom_minimum_size = Vector2(160, 130)
 
 func close() -> void:
 	_is_visible = false
@@ -294,6 +294,17 @@ func _apply_woodwork_bonuses() -> void:
 	s._emit_all()
 
 func _unhandled_input(event: InputEvent) -> void:
-	if _is_visible and (event.is_action_pressed("ui_cancel") or event.is_action_pressed("ability_1")):
+	if not _is_visible:
+		return
+	if event.is_action_pressed("ui_cancel") or event.is_action_pressed("ability_1"):
+		close()
+		get_viewport().set_input_as_handled()
+		return
+	var pos := Vector2(-1, -1)
+	if event is InputEventMouseButton and event.pressed:
+		pos = event.position
+	elif event is InputEventScreenTouch and event.pressed:
+		pos = event.position
+	if pos.x >= 0 and not panel.get_global_rect().has_point(pos):
 		close()
 		get_viewport().set_input_as_handled()

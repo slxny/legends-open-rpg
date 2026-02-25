@@ -49,6 +49,57 @@ var woodwork_watchtower_level: int = 0  # Watchtower: +XP gain
 func get_upgrade_cost(current_level: int) -> int:
 	return int(10 * pow(current_level + 1, 1.5))
 
+func _ready() -> void:
+	_setup_custom_cursor()
+
+func _setup_custom_cursor() -> void:
+	var is_mobile = DisplayServer.is_touchscreen_available()
+	var sz = 28 if is_mobile else 24  # 15% larger on mobile
+	var img = Image.create(sz, sz, false, Image.FORMAT_RGBA8)
+	var gold = Color(0.94, 0.8, 0.28)
+	var outline = Color(0.12, 0.1, 0.06)
+	# Draw a simple arrow pointer: outline then fill
+	# Arrow shape points: tip at (1,1), body goes down-right
+	var arrow_outline: Array[Vector2i] = []
+	var arrow_fill: Array[Vector2i] = []
+	# Build arrow pixel rows (scaled to sz)
+	var s = sz / 24.0  # scale factor
+	# Outline pixels (border of the arrow)
+	for row_data in [
+		[0, [0]], [1, [0,1]], [2, [0,2]], [3, [0,3]], [4, [0,4]],
+		[5, [0,5]], [6, [0,6]], [7, [0,7]], [8, [0,8]], [9, [0,9]],
+		[10, [0,10]], [11, [0,11]], [12, [0,6,7,12]], [13, [0,7,8,13]],
+		[14, [0,8,9,14]], [15, [0,9,10,15]], [16, [10,11,16]],
+		[17, [11,12,17]], [18, [12,13,18]], [19, [13,14]], [20, [14]],
+	]:
+		var y = int(row_data[0] * s)
+		for px in row_data[1]:
+			var x = int(px * s)
+			if x < sz and y < sz:
+				arrow_outline.append(Vector2i(x, y))
+	# Fill pixels (interior of the arrow)
+	for row_data in [
+		[1, [1]], [2, [1]], [3, [1,2]], [4, [1,2,3]], [5, [1,2,3,4]],
+		[6, [1,2,3,4,5]], [7, [1,2,3,4,5,6]], [8, [1,2,3,4,5,6,7]],
+		[9, [1,2,3,4,5,6,7,8]], [10, [1,2,3,4,5,6,7,8,9]],
+		[11, [1,2,3,4,5,6,7,8,9,10]], [12, [1,2,3,4,5]],
+		[13, [1,2,3,4,5,6]], [14, [1,2,3,4,5,6,7]],
+		[15, [1,2,3,4,5,6,7,8]], [16, [11,12,13,14,15]],
+		[17, [12,13,14,15,16]], [18, [13,14,15,16,17]],
+		[19, [14,15,16,17,18]], [20, [15,16,17,18,19]],
+	]:
+		var y = int(row_data[0] * s)
+		for px in row_data[1]:
+			var x = int(px * s)
+			if x < sz and y < sz:
+				arrow_fill.append(Vector2i(x, y))
+	for p in arrow_outline:
+		img.set_pixelv(p, outline)
+	for p in arrow_fill:
+		img.set_pixelv(p, gold)
+	var tex = ImageTexture.create_from_image(img)
+	Input.set_custom_mouse_cursor(tex, Input.CURSOR_ARROW, Vector2(0, 0))
+
 func select_hero(hero_class: String) -> void:
 	current_hero_class = hero_class
 	hero_selected.emit(hero_class)

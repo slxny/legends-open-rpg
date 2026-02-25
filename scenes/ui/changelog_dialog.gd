@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.65.8"
+const GAME_VERSION := "v0.65.9"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.65.9",
+		"title": "Bigger close buttons, tap-outside-to-close, custom cursor",
+		"date": "2026-02-24",
+		"entries": [
+			"Custom gold cursor — 15% larger on mobile for better visibility",
+			"All panel X/close buttons enlarged on mobile for easier tapping",
+			"Tap outside any open panel to close it (shop, inventory, tavern, etc.)",
+			"Early-game tooltip explaining the cursor for new players",
+		]
+	},
 	{
 		"version": "v0.65.8",
 		"title": "Custom branded loading screen and cinematic title intro",
@@ -1448,8 +1459,8 @@ func _resize_panel(vp_size: Vector2) -> void:
 		panel.offset_top = -vp_size.y / 2.0 + margin
 		panel.offset_bottom = vp_size.y / 2.0 - margin
 		close_button.text = "X"
-		close_button.custom_minimum_size = Vector2(120, 100)
-		close_button.add_theme_font_size_override("font_size", 50)
+		close_button.custom_minimum_size = Vector2(160, 130)
+		close_button.add_theme_font_size_override("font_size", 60)
 		version_label.add_theme_font_size_override("font_size", 40)
 		$Panel/MarginContainer/VBox/TopBar/Title.add_theme_font_size_override("font_size", 56)
 	else:
@@ -1516,6 +1527,17 @@ func _style_btn(btn: Button, accent: Color = Color(0.9, 0.75, 0.3)) -> void:
 	btn.add_theme_stylebox_override("focus", hover)
 
 func _unhandled_input(event: InputEvent) -> void:
-	if _is_visible and (event.is_action_pressed("ui_cancel") or event.is_action_pressed("ability_1")):
+	if not _is_visible:
+		return
+	if event.is_action_pressed("ui_cancel") or event.is_action_pressed("ability_1"):
+		close()
+		get_viewport().set_input_as_handled()
+		return
+	var pos := Vector2(-1, -1)
+	if event is InputEventMouseButton and event.pressed:
+		pos = event.position
+	elif event is InputEventScreenTouch and event.pressed:
+		pos = event.position
+	if pos.x >= 0 and not panel.get_global_rect().has_point(pos):
 		close()
 		get_viewport().set_input_as_handled()

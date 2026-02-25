@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.66.8"
+const GAME_VERSION := "v0.66.9"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.66.9",
+		"title": "Armory double-click upgrade + scaling bonuses",
+		"date": "2026-02-24",
+		"entries": [
+			"Armory: single click shows detail panel, double-click/tap quick-upgrades",
+			"Weapon Forge bonuses now scale slightly with level (accelerating at higher levels)",
+			"Armor Forge bonuses now scale slightly with level (armor and HP accelerate)",
+		]
+	},
 	{
 		"version": "v0.66.8",
 		"title": "Consistent single-click detail across all shops",

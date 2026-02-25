@@ -9,6 +9,11 @@ var _is_visible: bool = false
 var _is_mobile: bool = false
 var _selected_key: String = ""
 
+# Double-click/tap quick-upgrade
+var _last_click_key: String = ""
+var _last_click_time: int = 0
+const DOUBLE_CLICK_MS: int = 400
+
 # UI refs built in code
 var _title_label: Label
 var _gold_label: Label
@@ -84,20 +89,30 @@ func _get_level(key: String) -> int:
 func _get_cost(key: String) -> int:
 	return GameManager.get_upgrade_cost(_get_level(key))
 
+func _get_weapon_bonus(level: int) -> int:
+	# Slightly accelerating: +2 per level base, +0.03 per level squared
+	return int(level * 2 + level * level * 0.03)
+
+func _get_armor_bonus(level: int) -> int:
+	return int(level + level * level * 0.01)
+
+func _get_hp_bonus(level: int) -> int:
+	return int(level * 3 + level * level * 0.05)
+
 func _get_bonus_text(key: String, level: int) -> String:
 	if level == 0:
 		return "No bonus yet"
 	match key:
-		"weapon": return "+%d Attack Damage" % (level * 2)
-		"armor": return "+%d Armor, +%d Max HP" % [level, level * 3]
+		"weapon": return "+%d Attack Damage" % _get_weapon_bonus(level)
+		"armor": return "+%d Armor, +%d Max HP" % [_get_armor_bonus(level), _get_hp_bonus(level)]
 	return ""
 
 func _get_short_bonus(key: String, level: int) -> String:
 	if level == 0:
 		return ""
 	match key:
-		"weapon": return "+%d ATK" % (level * 2)
-		"armor": return "+%d ARM +%d HP" % [level, level * 3]
+		"weapon": return "+%d ATK" % _get_weapon_bonus(level)
+		"armor": return "+%d ARM +%d HP" % [_get_armor_bonus(level), _get_hp_bonus(level)]
 	return ""
 
 func _build_ui() -> void:
@@ -160,6 +175,14 @@ func _build_ui() -> void:
 	var sep = HSeparator.new()
 	sep.add_theme_constant_override("separation", 4)
 	root_vbox.add_child(sep)
+
+	# Hint
+	var hint = Label.new()
+	hint.text = "Double-click to quick-upgrade"
+	hint.add_theme_font_size_override("font_size", 30 if _is_mobile else 11)
+	hint.add_theme_color_override("font_color", Color(0.6, 0.55, 0.4, 0.5))
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	root_vbox.add_child(hint)
 
 	# Upgrade list
 	_item_scroll = ScrollContainer.new()
@@ -330,6 +353,14 @@ func _add_upgrade_row(key: String) -> void:
 	var k = key
 	btn_overlay.pressed.connect(func():
 		AudioManager.play_sfx("ui_tap", -4.0)
+		var now = Time.get_ticks_msec()
+		if _last_click_key == k and (now - _last_click_time) <= DOUBLE_CLICK_MS:
+			_last_click_key = ""
+			_last_click_time = 0
+			_do_upgrade(k)
+			return
+		_last_click_key = k
+		_last_click_time = now
 		_show_detail(k)
 	)
 	btn_overlay.mouse_entered.connect(func():
@@ -410,9 +441,9 @@ func _do_upgrade(key: String) -> void:
 func _apply_armory_bonuses() -> void:
 	if not _player:
 		return
-	_player.stats.armory_weapon_bonus = GameManager.weapon_upgrade_level * 2
-	_player.stats.armory_armor_bonus = GameManager.armor_upgrade_level
-	_player.stats.armory_hp_bonus = GameManager.armor_upgrade_level * 3
+	_player.stats.armory_weapon_bonus = _get_weapon_bonus(GameManager.weapon_upgrade_level)
+	_player.stats.armory_armor_bonus = _get_armor_bonus(GameManager.armor_upgrade_level)
+	_player.stats.armory_hp_bonus = _get_hp_bonus(GameManager.armor_upgrade_level)
 	_player.stats._emit_all()
 
 func _style_btn(btn: Button, accent: Color = Color(0.9, 0.75, 0.3)) -> void:

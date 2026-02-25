@@ -13,7 +13,7 @@ const CAMP_TYPES = {
 		"sprite_type": "rat",
 		"move_speed": 100.0,
 		"attack_range": 28.0,
-		"aggro_range": 120.0,
+		"aggro_range": 90.0,
 		"attack_damage": 4,
 		"xp_reward": 2,
 		"gold_reward": 1,

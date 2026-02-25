@@ -9,9 +9,17 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.67.3"
+const GAME_VERSION := "v0.67.4"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.67.4",
+		"title": "Rats slightly less aggressive",
+		"date": "2026-02-25",
+		"entries": [
+			"Rat aggro range reduced from 120 to 90 — they won't chase you from as far away",
+		]
+	},
 	{
 		"version": "v0.67.3",
 		"title": "Minibosses always visible on minimap",

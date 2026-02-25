@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.68.6"
+const GAME_VERSION := "v0.69.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.69.1",
+		"title": "Bag items: tap to preview, double-tap to equip",
+		"date": "2026-02-25",
+		"entries": [
+			"Single tap/click on a bag item now shows its stats and a comparison with your equipped item",
+			"Stat differences shown (e.g. +5 Strength, -2 Agility) so you can decide before equipping",
+			"Double-tap/click to actually equip the item",
+			"Mobile detail popup no longer takes over the screen — limited to bottom 45% with an X to dismiss",
+		]
+	},
 	{
 		"version": "v0.68.6",
 		"title": "Performance optimizations",

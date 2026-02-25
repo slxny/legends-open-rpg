@@ -14,6 +14,10 @@ var _is_mobile: bool = false
 var _is_landscape: bool = false
 var _current_tab: int = 0  # 0 = Equipment, 1 = Bag
 var _selected_item: Dictionary = {}
+var _selected_bag_index: int = -1  # Track which bag slot is selected for double-tap equip
+var _last_tap_index: int = -1  # Last tapped bag index for double-tap detection
+var _last_tap_time: float = 0.0  # Timestamp of last tap
+const DOUBLE_TAP_WINDOW: float = 0.4  # Seconds to register a double-tap
 var _detail_popup: PanelContainer = null  # Floating detail overlay for mobile
 
 const TAB_ACTIVE_COLOR := Color(1.0, 0.85, 0.4)
@@ -88,6 +92,8 @@ func toggle() -> void:
 	panel.visible = _is_visible
 	if _is_visible:
 		_selected_item = {}
+		_selected_bag_index = -1
+		_last_tap_index = -1
 		_detect_mobile()
 		_refresh()
 	else:
@@ -162,6 +168,8 @@ func _switch_tab(tab: int) -> void:
 	AudioManager.play_sfx("ui_tap", -4.0)
 	_current_tab = tab
 	_selected_item = {}
+	_selected_bag_index = -1
+	_last_tap_index = -1
 	_dismiss_detail_popup()
 	_refresh()
 
@@ -230,11 +238,13 @@ func _refresh_equipment() -> void:
 			btn.pressed.connect(func():
 				AudioManager.play_sfx("ui_tap", -4.0)
 				_selected_item = bound_item
+				_selected_bag_index = -1
 				_refresh_detail()
 			)
 			btn.mouse_entered.connect(func():
 				AudioManager.play_sfx("ui_hover", -8.0)
 				_selected_item = bound_item
+				_selected_bag_index = -1
 				_refresh_detail()
 			)
 
@@ -295,13 +305,11 @@ func _refresh_bag() -> void:
 
 		var idx = i
 		var bound_item = item
-		btn.pressed.connect(func():
-			AudioManager.play_sfx("ui_tap", -4.0)
-			_player.inventory.equip_from_bag(idx); _refresh()
-		)
+		btn.pressed.connect(_on_bag_item_pressed.bind(idx, bound_item))
 		btn.mouse_entered.connect(func():
 			AudioManager.play_sfx("ui_hover", -8.0)
 			_selected_item = bound_item
+			_selected_bag_index = idx
 			_refresh_detail()
 		)
 
@@ -319,45 +327,87 @@ func _refresh_bag() -> void:
 
 	content_vbox.add_child(grid)
 
+func _get_item_stat_line(item: Dictionary) -> String:
+	var stats = item.get("stats", {})
+	var parts: Array[String] = []
+	for stat_name in stats:
+		parts.append("+%s %s" % [str(stats[stat_name]), stat_name.replace("_", " ").capitalize()])
+	return ", ".join(parts)
+
 func _get_item_detail_text(item: Dictionary) -> String:
 	var rarity_name = ItemData.RARITY_NAMES.get(item.get("rarity", 0), "")
 	var text = "%s  (%s)\n" % [item.get("name", ""), rarity_name]
 	var desc = item.get("description", "")
 	if desc != "":
 		text += desc + "\n"
-	var stats = item.get("stats", {})
-	var stat_parts: Array[String] = []
-	for stat_name in stats:
-		stat_parts.append("+%s %s" % [str(stats[stat_name]), stat_name.replace("_", " ").capitalize()])
-	if stat_parts.size() > 0:
-		text += ", ".join(stat_parts)
+	var stat_line = _get_item_stat_line(item)
+	if stat_line != "":
+		text += stat_line
 	if item.has("buy_price"):
 		text += "\nValue: %dg" % item["buy_price"]
 	return text.strip_edges()
 
+func _get_comparison_text(bag_item: Dictionary, equipped_item: Dictionary) -> String:
+	var text = _get_item_detail_text(bag_item)
+	text += "\n\n--- Equipped ---\n"
+	if equipped_item.is_empty():
+		text += "(empty slot)"
+	else:
+		text += _get_item_detail_text(equipped_item)
+	# Stat diff summary
+	var bag_stats = bag_item.get("stats", {})
+	var eq_stats = equipped_item.get("stats", {})
+	var all_keys: Dictionary = {}
+	for k in bag_stats:
+		all_keys[k] = true
+	for k in eq_stats:
+		all_keys[k] = true
+	var diffs: Array[String] = []
+	for k in all_keys:
+		var bag_val = bag_stats.get(k, 0)
+		var eq_val = eq_stats.get(k, 0)
+		var diff = bag_val - eq_val
+		if diff != 0:
+			var sign = "+" if diff > 0 else ""
+			var color = "green" if diff > 0 else "red"
+			diffs.append("%s%d %s" % [sign, diff, k.replace("_", " ").capitalize()])
+	if diffs.size() > 0:
+		text += "\n" + ", ".join(diffs)
+	text += "\n\nDouble-tap to equip"
+	return text
+
 func _refresh_detail() -> void:
+	# Build detail text with comparison if a bag item is selected
+	var detail_text: String
+	if _selected_item.is_empty():
+		detail_text = "Tap an item to see stats"
+	elif _selected_bag_index >= 0 and _player:
+		# Bag item selected — show comparison with equipped
+		var inv = _player.inventory
+		var slot_name = _slot_name_for_item(_selected_item)
+		var equipped = inv.equipment.get(slot_name, {}) if not slot_name.is_empty() else {}
+		detail_text = _get_comparison_text(_selected_item, equipped)
+	else:
+		detail_text = _get_item_detail_text(_selected_item)
+
 	if not _is_mobile:
-		# Desktop: use fixed detail label
-		if _selected_item.is_empty():
-			detail_label.text = "Hover or tap an item to see stats"
-		else:
-			detail_label.text = _get_item_detail_text(_selected_item)
+		detail_label.text = detail_text
 		return
 
-	# Mobile: show floating popup that auto-dismisses
+	# Mobile: show floating popup at bottom with dismiss X
 	_dismiss_detail_popup()
 	if _selected_item.is_empty():
 		return
-	_show_detail_popup(_selected_item)
+	_show_detail_popup(detail_text)
 
-func _show_detail_popup(item: Dictionary) -> void:
+func _show_detail_popup(text: String) -> void:
 	_dismiss_detail_popup()
 	var fs = 18 if _is_landscape else 30
 	var pad = 10 if _is_landscape else 14
 
 	_detail_popup = PanelContainer.new()
 	var style = StyleBoxFlat.new()
-	style.bg_color = Color(0.08, 0.08, 0.12, 0.95)
+	style.bg_color = Color(0.08, 0.08, 0.12, 0.97)
 	style.border_color = Color(0.9, 0.75, 0.3, 0.8)
 	style.set_border_width_all(2)
 	style.set_corner_radius_all(8)
@@ -368,27 +418,38 @@ func _show_detail_popup(item: Dictionary) -> void:
 	vbox.add_theme_constant_override("separation", 2)
 	_detail_popup.add_child(vbox)
 
+	# Top bar with close button
+	var top = HBoxContainer.new()
+	vbox.add_child(top)
+	var spacer = Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top.add_child(spacer)
+	var close_btn = Button.new()
+	close_btn.text = "X"
+	var close_sz = Vector2(50, 36) if _is_landscape else Vector2(100, 80)
+	close_btn.custom_minimum_size = close_sz
+	close_btn.add_theme_font_size_override("font_size", 16 if _is_landscape else 32)
+	close_btn.pressed.connect(_dismiss_detail_popup)
+	top.add_child(close_btn)
+
 	var lbl = Label.new()
-	lbl.text = _get_item_detail_text(item)
+	lbl.text = text
 	lbl.add_theme_font_size_override("font_size", fs)
 	lbl.add_theme_color_override("font_color", Color(0.9, 0.87, 0.78))
 	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	vbox.add_child(lbl)
 
-	# Position as overlay centered near bottom of the panel
+	# Position as overlay at the bottom of the panel, not fullscreen
 	panel.add_child(_detail_popup)
 	_detail_popup.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
-	_detail_popup.offset_left = 20
-	_detail_popup.offset_right = -20
-	_detail_popup.offset_bottom = -8
-	_detail_popup.offset_top = -(_detail_popup.get_combined_minimum_size().y + 8)
-
-	# Auto-dismiss after a few seconds
-	var popup_ref = _detail_popup
-	get_tree().create_timer(4.0).timeout.connect(func():
-		if is_instance_valid(popup_ref) and popup_ref == _detail_popup:
-			_dismiss_detail_popup()
-	)
+	_detail_popup.offset_left = 10
+	_detail_popup.offset_right = -10
+	_detail_popup.offset_bottom = -4
+	# Limit max height to 45% of the panel so it doesn't take over
+	var max_h = panel.size.y * 0.45
+	var desired_h = _detail_popup.get_combined_minimum_size().y + 8
+	var h = min(desired_h, max_h)
+	_detail_popup.offset_top = -h
 
 func _dismiss_detail_popup() -> void:
 	if _detail_popup and is_instance_valid(_detail_popup):
@@ -417,3 +478,32 @@ func _refresh_stats() -> void:
 			buff_parts.append("%s%s %s" % [sign, str(b["amount"]), b["stat"].capitalize()])
 		text += "\nFX: " + ", ".join(buff_parts)
 	stats_label.text = text
+
+const SLOT_NAMES = {
+	ItemData.Slot.WEAPON: "weapon",
+	ItemData.Slot.ARMOR: "armor",
+	ItemData.Slot.HELM: "helm",
+	ItemData.Slot.BOOTS: "boots",
+	ItemData.Slot.RING: "ring",
+	ItemData.Slot.AMULET: "amulet",
+}
+
+func _slot_name_for_item(item: Dictionary) -> String:
+	return SLOT_NAMES.get(item.get("slot", -1), "")
+
+func _on_bag_item_pressed(idx: int, item: Dictionary) -> void:
+	AudioManager.play_sfx("ui_tap", -4.0)
+	var now = Time.get_ticks_msec() / 1000.0
+	if _last_tap_index == idx and (now - _last_tap_time) < DOUBLE_TAP_WINDOW:
+		# Double-tap — equip the item
+		_last_tap_index = -1
+		_last_tap_time = 0.0
+		_player.inventory.equip_from_bag(idx)
+		_refresh()
+		return
+	# Single tap — select and show comparison
+	_last_tap_index = idx
+	_last_tap_time = now
+	_selected_item = item
+	_selected_bag_index = idx
+	_refresh_detail()

@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.68.0"
+const GAME_VERSION := "v0.68.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.68.1",
+		"title": "Endless miniboss respawns + time played saved",
+		"date": "2026-02-25",
+		"entries": [
+			"After all 8 scheduled bosses spawn, new bosses keep coming indefinitely",
+			"Every 5 minutes, if no minibosses are alive, 2 random bosses spawn scaled to your level",
+			"Time played is now saved — wave/boss timers resume where you left off after loading",
+			"Boss spawn schedule and wave progress persist correctly across save/load",
+		]
+	},
 	{
 		"version": "v0.68.0",
 		"title": "More minibosses + aggressive roaming + special attacks",

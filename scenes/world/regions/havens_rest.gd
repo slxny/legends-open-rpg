@@ -52,6 +52,29 @@ var _next_boss_index: int = 0
 var _wave_rng := RandomNumberGenerator.new()
 var _spawned_camps: Array[Node2D] = []  # Track dynamically spawned camps
 
+# Endless boss respawn system — after schedule is exhausted
+var _endless_boss_active: bool = false
+var _endless_boss_timer: float = 0.0
+const ENDLESS_BOSS_INTERVAL: float = 300.0  # Check every 5 minutes for respawn
+var _active_boss_camps: Array[Node2D] = []  # Track living boss camps separately
+
+# Boss pool for endless respawns (cycles through these)
+const ENDLESS_BOSS_POOL = [
+	"mini_boss_shadow_fang", "mini_boss_ravager", "mini_boss_war_spider",
+	"mini_boss_dread_knight", "mini_boss_bone_lord", "mini_boss_elder_drake",
+	"mini_boss_abyssal_lord", "mini_boss_inferno_wyrm",
+]
+const ENDLESS_BOSS_MESSAGES = {
+	"mini_boss_shadow_fang": "A SHADOW FANG prowls the darkness!",
+	"mini_boss_ravager": "A RAVAGER stalks the outer wilds!",
+	"mini_boss_war_spider": "A WAR SPIDER skitters from its lair!",
+	"mini_boss_dread_knight": "A DREAD KNIGHT has appeared!",
+	"mini_boss_bone_lord": "A BONE LORD rises from the graves!",
+	"mini_boss_elder_drake": "An ELDER DRAKE circles above!",
+	"mini_boss_abyssal_lord": "THE ABYSSAL LORD HAS ARRIVED!",
+	"mini_boss_inferno_wyrm": "AN INFERNO WYRM DESCENDS FROM THE SKY!",
+}
+
 # Creep camp positions for ground darkening (matches .tscn camp positions)
 var _camp_positions := [
 	# Goblins (close to town)
@@ -115,6 +138,15 @@ func _ready() -> void:
 
 	_wave_rng.seed = 42
 
+	# Restore elapsed time from save (if any) and fast-forward schedule indices
+	_elapsed_time = GameManager.region_elapsed_time
+	while _next_wave_index < WAVE_SCHEDULE.size() and _elapsed_time >= WAVE_SCHEDULE[_next_wave_index]["time"]:
+		_spawn_wave(WAVE_SCHEDULE[_next_wave_index])
+		_next_wave_index += 1
+	while _next_boss_index < BOSS_SCHEDULE.size() and _elapsed_time >= BOSS_SCHEDULE[_next_boss_index]["time"]:
+		_spawn_mini_boss(BOSS_SCHEDULE[_next_boss_index])
+		_next_boss_index += 1
+
 	_generate_terrain_async()
 	_generate_town_async()
 	_generate_decorations_async()
@@ -122,6 +154,7 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	_elapsed_time += delta
+	GameManager.region_elapsed_time = _elapsed_time
 
 	# Check for wave spawns
 	if _next_wave_index < WAVE_SCHEDULE.size():
@@ -137,9 +170,12 @@ func _process(delta: float) -> void:
 			_spawn_mini_boss(boss)
 			_next_boss_index += 1
 
-	# All waves and bosses done — stop processing
+	# All scheduled waves and bosses done — switch to endless boss respawn mode
 	if _next_wave_index >= WAVE_SCHEDULE.size() and _next_boss_index >= BOSS_SCHEDULE.size():
-		set_process(false)
+		if not _endless_boss_active:
+			_endless_boss_active = true
+			_endless_boss_timer = ENDLESS_BOSS_INTERVAL
+		_process_endless_bosses(delta)
 
 # ============================================================
 # WAVE SPAWNING
@@ -197,12 +233,74 @@ func _spawn_mini_boss(boss_info: Dictionary) -> void:
 
 	# Connect boss death for announcements
 	camp.mini_boss_died.connect(_on_mini_boss_died)
+	_active_boss_camps.append(camp)
 
 	# Add visuals
 	_add_creep_ground(pos, 220)
 	var type_data = camp.CAMP_TYPES.get(boss_info["type"], {})
 	var boss_name = type_data.get("name", boss_info["type"])
 	_add_camp_marker($Decorations, pos + Vector2(0, -50), "BOSS: %s" % boss_name)
+
+func _process_endless_bosses(delta: float) -> void:
+	_endless_boss_timer -= delta
+	if _endless_boss_timer > 0.0:
+		return
+	_endless_boss_timer = ENDLESS_BOSS_INTERVAL
+
+	# Clean up dead/freed boss camp references
+	_active_boss_camps = _active_boss_camps.filter(func(c): return is_instance_valid(c) and c._alive_count > 0)
+
+	# Only spawn new bosses if all current ones are dead
+	if _active_boss_camps.size() > 0:
+		return
+
+	# Get player level for scaling
+	var player_level: int = 1
+	var players = get_tree().get_nodes_in_group("player")
+	if players.size() > 0 and players[0].stats:
+		player_level = players[0].stats.level
+
+	# Spawn 2 bosses from the pool, scaled to player level
+	var boss_indices: Array = []
+	for _i in range(2):
+		var idx = _wave_rng.randi() % ENDLESS_BOSS_POOL.size()
+		# Avoid duplicates
+		while idx in boss_indices:
+			idx = _wave_rng.randi() % ENDLESS_BOSS_POOL.size()
+		boss_indices.append(idx)
+
+	for idx in boss_indices:
+		var boss_type = ENDLESS_BOSS_POOL[idx]
+		var msg = ENDLESS_BOSS_MESSAGES.get(boss_type, "A powerful creature appears!")
+		var dist = _wave_rng.randf_range(2500.0, 5500.0)
+		_spawn_mini_boss_scaled(boss_type, dist, msg, player_level)
+
+func _spawn_mini_boss_scaled(boss_type: String, dist: float, msg: String, player_level: int) -> void:
+	AudioManager.play_music_direct("wave_warning")
+	GameManager.game_message.emit("", Color(1, 1, 1))
+	GameManager.game_message.emit("!! MINI-BOSS INCOMING !!", Color(1.0, 0.2, 0.2))
+	GameManager.game_message.emit(msg, Color(1.0, 0.6, 0.2))
+
+	var pos = _random_position_in_ring(dist - 300.0, dist + 300.0)
+	var camp = CreepCampScene.instantiate()
+	camp.camp_type = boss_type
+	camp.enemy_count = 1
+	camp.respawn_time = 180.0
+	camp.position = pos
+	add_child(camp)
+	_spawned_camps.append(camp)
+	camp.mini_boss_died.connect(_on_mini_boss_died)
+	_active_boss_camps.append(camp)
+
+	# Override enemy level to match player after camp spawns its enemy
+	# The camp's _instantiate_enemy will use CAMP_TYPES level_range, but
+	# creep_camp.gd already scales enemies to player level via scaled_level
+	# so the boss will auto-scale to at least the player's level.
+
+	_add_creep_ground(pos, 220)
+	var type_data = camp.CAMP_TYPES.get(boss_type, {})
+	var boss_name = type_data.get("name", boss_type)
+	_add_camp_marker($Decorations, pos + Vector2(0, -50), "BOSS: %s Lv%d+" % [boss_name, player_level])
 
 func _on_mini_boss_died(boss_name: String, pos: Vector2) -> void:
 	GameManager.game_message.emit("", Color(1, 1, 1))

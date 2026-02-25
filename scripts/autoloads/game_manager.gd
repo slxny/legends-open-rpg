@@ -46,6 +46,9 @@ var woodwork_shield_level: int = 0   # Wooden Bulwark: +armor, +HP
 var woodwork_totem_level: int = 0    # Totem of Vigor: +regen, +stats
 var woodwork_watchtower_level: int = 0  # Watchtower: +XP gain
 
+# Time played in the current region (persisted across save/load for wave timers)
+var region_elapsed_time: float = 0.0
+
 var _cached_is_mobile: int = -1  # -1 = not yet checked, 0 = false, 1 = true
 
 func is_mobile_device() -> bool:

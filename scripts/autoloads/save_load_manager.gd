@@ -72,6 +72,9 @@ func save_game() -> void:
 	data["woodwork_totem_level"] = GameManager.woodwork_totem_level
 	data["woodwork_watchtower_level"] = GameManager.woodwork_watchtower_level
 
+	# Region time played (for wave/boss spawn timers)
+	data["region_elapsed_time"] = GameManager.region_elapsed_time
+
 	# Write to file
 	var json_string = JSON.stringify(data, "\t")
 	var file = FileAccess.open(SAVE_PATH, FileAccess.WRITE)
@@ -130,6 +133,9 @@ func load_game() -> bool:
 	GameManager.woodwork_shield_level = data.get("woodwork_shield_level", 0)
 	GameManager.woodwork_totem_level = data.get("woodwork_totem_level", 0)
 	GameManager.woodwork_watchtower_level = data.get("woodwork_watchtower_level", 0)
+
+	# Restore region elapsed time (wave/boss spawn timers)
+	GameManager.region_elapsed_time = data.get("region_elapsed_time", 0.0)
 
 	# Restore explored tiles
 	if data.has("explored_tiles"):

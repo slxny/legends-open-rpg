@@ -9,9 +9,17 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.70.6"
+const GAME_VERSION := "v0.70.7"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.70.7",
+		"title": "Woodworker upgrades max level raised to 100",
+		"date": "2026-02-25",
+		"entries": [
+			"All four woodworker upgrades (Bow, Shield, Totem, Watchtower) now go up to level 100",
+		]
+	},
 	{
 		"version": "v0.70.6",
 		"title": "Dungeon unlock message at level 10",

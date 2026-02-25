@@ -111,23 +111,28 @@ func _generate_decorations() -> void:
 		deco.add_child(spr)
 
 func _spawn_camps() -> void:
-	# 12 camps spread across the 2000x2000 dungeon with increasing difficulty
+	# 16 camps spread across the 2000x2000 dungeon with increasing difficulty
 	var camps = [
-		# Outer ring — easier enemies
-		{"type": "dungeon_bat", "pos": Vector2(-600, -600), "count": 8},
-		{"type": "cave_snake", "pos": Vector2(600, -500), "count": 5},
-		{"type": "dungeon_bat", "pos": Vector2(-500, 560), "count": 6},
-		{"type": "flan", "pos": Vector2(560, 600), "count": 4},
-		# Mid ring — medium enemies
-		{"type": "vampire_bat", "pos": Vector2(-300, -200), "count": 4},
-		{"type": "ghoul", "pos": Vector2(300, -300), "count": 3},
-		{"type": "cave_snake", "pos": Vector2(-700, 0), "count": 6},
-		{"type": "flan", "pos": Vector2(700, 0), "count": 5},
-		# Inner ring — hardest enemies
-		{"type": "mimic", "pos": Vector2(-200, 400), "count": 2},
-		{"type": "crypt_knight", "pos": Vector2(100, 100), "count": 3},
-		{"type": "ghoul", "pos": Vector2(-400, 800), "count": 4},
-		{"type": "crypt_knight", "pos": Vector2(400, -750), "count": 2},
+		# Outer ring — swarming enemies
+		{"type": "dungeon_bat", "pos": Vector2(-600, -600), "count": 10},
+		{"type": "cave_snake", "pos": Vector2(600, -500), "count": 7},
+		{"type": "dungeon_bat", "pos": Vector2(-500, 560), "count": 8},
+		{"type": "flan", "pos": Vector2(560, 600), "count": 6},
+		{"type": "cave_snake", "pos": Vector2(-800, -200), "count": 6},
+		# Mid ring — dangerous enemies
+		{"type": "vampire_bat", "pos": Vector2(-300, -200), "count": 6},
+		{"type": "ghoul", "pos": Vector2(300, -300), "count": 5},
+		{"type": "cave_snake", "pos": Vector2(-700, 0), "count": 7},
+		{"type": "flan", "pos": Vector2(700, 0), "count": 6},
+		{"type": "vampire_bat", "pos": Vector2(750, -700), "count": 5},
+		# Inner ring — elite enemies
+		{"type": "mimic", "pos": Vector2(-200, 400), "count": 3},
+		{"type": "crypt_knight", "pos": Vector2(100, 100), "count": 5},
+		{"type": "ghoul", "pos": Vector2(-400, 800), "count": 6},
+		{"type": "crypt_knight", "pos": Vector2(400, -750), "count": 4},
+		# Core — lich and crypt knight elite guard
+		{"type": "lich", "pos": Vector2(-100, -50), "count": 3},
+		{"type": "lich", "pos": Vector2(300, 500), "count": 2},
 	]
 
 	# Compute world bounds for enemy clamping (20px margin from walls)
@@ -137,7 +142,7 @@ func _spawn_camps() -> void:
 		var camp = CreepCampScene.instantiate()
 		camp.camp_type = camp_def["type"]
 		camp.enemy_count = camp_def["count"]
-		camp.respawn_time = 60.0
+		camp.respawn_time = 90.0
 		camp.position = camp_def["pos"]
 		camp.enemy_bounds = bounds
 		add_child(camp)

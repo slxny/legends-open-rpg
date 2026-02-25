@@ -9,9 +9,28 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.68.3"
+const GAME_VERSION := "v0.69.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.69.0",
+		"title": "Dungeon difficulty overhaul",
+		"date": "2026-02-25",
+		"entries": [
+			"All dungeon enemies significantly buffed — higher damage, faster attacks, wider aggro",
+			"Dungeon Bat: +50% damage (15), faster cooldown (0.6s), 130 aggro range",
+			"Cave Snake: +43% damage (20), 0.8s cooldown, 130 aggro",
+			"Vampire Bat: +50% damage (24), 1.0s cooldown, 150 aggro, level 13-16",
+			"Flan: +83% damage (22), faster cooldown (1.8s), 110 aggro",
+			"Mimic: +46% damage (35), faster attacks (1.6s), level 14-17",
+			"Ghoul: +44% damage (26), 1.2s cooldown, 140 aggro, faster movement",
+			"Crypt Knight: +45% damage (32), 1.4s cooldown, 150 aggro, level 16-20",
+			"Lich: +50% damage (30), 180 aggro, level 18-22",
+			"16 camps now (up from 12) — more enemies per camp across the board",
+			"Liches now spawn in the dungeon core — dangerous ranged attackers",
+			"Respawn time increased to 90s (up from 60s) — less mindless farming",
+		]
+	},
 	{
 		"version": "v0.68.3",
 		"title": "Bigger, consistent close buttons everywhere",

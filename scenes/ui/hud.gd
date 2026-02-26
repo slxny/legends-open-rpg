@@ -168,38 +168,76 @@ func _apply_mobile_layout() -> void:
 		_build_map_overlay()
 		return
 
-	# ── LANDSCAPE: compact strip with doubled bar height ──
+	# ── LANDSCAPE: compact strip with MAP and OPT buttons ──
 	var bar_h_ls = 40
 	var panel_h_ls = bar_h_ls * 3 + 10  # 3 bars + spacing = ~130px
 	bottom_panel.offset_top = -panel_h_ls
 	bottom_hbox.add_theme_constant_override("separation", 2)
 
-	minimap.visible = false
 	level_label.visible = false
 	hp_bar.custom_minimum_size.y = bar_h_ls
 	mana_bar.custom_minimum_size.y = bar_h_ls
 	xp_bar.custom_minimum_size.y = bar_h_ls
 	unit_info.add_theme_constant_override("separation", 1)
 
-	command_card.custom_minimum_size.x = 160
-	command_label.visible = false
-	log_btn.visible = false
-	save_btn.visible = false
-	load_btn.visible = false
-	# Add Menu button to landscape command grid
-	var ls_menu_btn = Button.new()
-	ls_menu_btn.text = "Menu"
-	_style_btn(ls_menu_btn, Color(0.9, 0.75, 0.3))
-	ls_menu_btn.pressed.connect(_open_pause_menu)
-	command_grid.add_child(ls_menu_btn)
-	command_grid.add_theme_constant_override("h_separation", 1)
-	command_grid.add_theme_constant_override("v_separation", 1)
-	for child in command_grid.get_children():
-		if child is Button and child.visible:
-			child.custom_minimum_size = Vector2(52, 14)
-			child.add_theme_font_size_override("font_size", 8)
+	# Hide the default command card — we use MAP + OPT overlays instead
+	command_card.visible = false
+
+	# Shared button style for landscape
+	var btn_style_normal = StyleBoxFlat.new()
+	btn_style_normal.bg_color = Color(0.12, 0.11, 0.08, 0.95)
+	btn_style_normal.border_color = Color(0.5, 0.4, 0.18, 0.8)
+	btn_style_normal.set_border_width_all(2)
+	btn_style_normal.set_corner_radius_all(6)
+	btn_style_normal.set_content_margin_all(0)
+
+	var btn_style_pressed = btn_style_normal.duplicate()
+	btn_style_pressed.bg_color = Color(0.25, 0.2, 0.08, 0.95)
+	btn_style_pressed.border_color = Color(0.9, 0.75, 0.3, 1.0)
+
+	# MAP panel — shows live minimap, tap to expand
+	var btn_w = panel_h_ls
+	_minimap_home = PanelContainer.new()
+	_minimap_home.custom_minimum_size = Vector2(btn_w, 0)
+	_minimap_home.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_minimap_home.add_theme_stylebox_override("panel", btn_style_normal.duplicate())
+	minimap.get_parent().remove_child(minimap)
+	minimap.custom_minimum_size = Vector2(0, 0)
+	minimap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	minimap.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	minimap.visible = true
+	minimap.click_to_move_enabled = false
+	_minimap_home.add_child(minimap)
+	_minimap_home.mouse_filter = Control.MOUSE_FILTER_STOP
+	_minimap_home.gui_input.connect(func(event: InputEvent):
+		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			_toggle_map_overlay()
+			_minimap_home.get_viewport().set_input_as_handled()
+	)
+	bottom_hbox.add_child(_minimap_home)
+	bottom_hbox.move_child(_minimap_home, 0)
+
+	# OPT button — right of bars
+	var opt_btn = Button.new()
+	opt_btn.text = "OPT"
+	opt_btn.custom_minimum_size = Vector2(btn_w, 0)
+	opt_btn.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	opt_btn.add_theme_font_size_override("font_size", 16)
+	opt_btn.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
+	opt_btn.add_theme_stylebox_override("normal", btn_style_normal.duplicate())
+	opt_btn.add_theme_stylebox_override("pressed", btn_style_pressed.duplicate())
+	opt_btn.add_theme_stylebox_override("hover", btn_style_normal.duplicate())
+	opt_btn.pressed.connect(_toggle_cmd_overlay)
+	bottom_hbox.add_child(opt_btn)
+
+	# Build overlays (hidden by default)
+	_build_cmd_overlay()
+	_build_map_overlay()
 
 func _build_cmd_overlay() -> void:
+	var vp_size = get_viewport().get_visible_rect().size
+	var is_landscape = _is_mobile and vp_size.x > vp_size.y
+
 	_cmd_overlay = PanelContainer.new()
 	_cmd_overlay.visible = false
 	_cmd_overlay.z_index = 90
@@ -209,11 +247,11 @@ func _build_cmd_overlay() -> void:
 	style.border_color = Color(0.4, 0.35, 0.2, 0.8)
 	style.set_border_width_all(2)
 	style.set_corner_radius_all(10)
-	style.set_content_margin_all(16)
+	style.set_content_margin_all(8 if is_landscape else 16)
 	_cmd_overlay.add_theme_stylebox_override("panel", style)
 
 	var vbox = VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 8)
+	vbox.add_theme_constant_override("separation", 4 if is_landscape else 8)
 	_cmd_overlay.add_child(vbox)
 
 	# Title row with close button
@@ -222,14 +260,16 @@ func _build_cmd_overlay() -> void:
 	vbox.add_child(title_row)
 	var title = Label.new()
 	title.text = "Commands"
-	title.add_theme_font_size_override("font_size", 36)
+	title.add_theme_font_size_override("font_size", 18 if is_landscape else 36)
 	title.add_theme_color_override("font_color", Color(0.9, 0.85, 0.7))
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title_row.add_child(title)
 	var close_btn = Button.new()
 	close_btn.text = "X"
-	close_btn.custom_minimum_size = Vector2(160, 130) if _is_mobile else Vector2(120, 40)
-	close_btn.add_theme_font_size_override("font_size", 60 if _is_mobile else 20)
+	var close_size = Vector2(60, 40) if is_landscape else (Vector2(160, 130) if _is_mobile else Vector2(120, 40))
+	var close_fs = 22 if is_landscape else (60 if _is_mobile else 20)
+	close_btn.custom_minimum_size = close_size
+	close_btn.add_theme_font_size_override("font_size", close_fs)
 	_style_btn(close_btn, Color(1.0, 0.4, 0.3))
 	close_btn.pressed.connect(_toggle_cmd_overlay)
 	title_row.add_child(close_btn)
@@ -237,12 +277,12 @@ func _build_cmd_overlay() -> void:
 	# 3x3 grid of command buttons
 	var grid = GridContainer.new()
 	grid.columns = 3
-	grid.add_theme_constant_override("h_separation", 6)
-	grid.add_theme_constant_override("v_separation", 6)
+	grid.add_theme_constant_override("h_separation", 4 if is_landscape else 6)
+	grid.add_theme_constant_override("v_separation", 4 if is_landscape else 6)
 	vbox.add_child(grid)
 
-	var btn_size = Vector2(0, 90)
-	var fs = 26
+	var btn_size = Vector2(0, 40) if is_landscape else Vector2(0, 90)
+	var fs = 14 if is_landscape else 26
 
 	# Row 1: Log (first slot)
 	var log_b = Button.new()
@@ -368,6 +408,9 @@ func _update_overlay_potions() -> void:
 			btn.modulate = Color.WHITE
 
 func _build_map_overlay() -> void:
+	var vp_size = get_viewport().get_visible_rect().size
+	var is_landscape = _is_mobile and vp_size.x > vp_size.y
+
 	_map_overlay = PanelContainer.new()
 	_map_overlay.visible = false
 	_map_overlay.z_index = 90
@@ -377,11 +420,11 @@ func _build_map_overlay() -> void:
 	style.border_color = Color(0.3, 0.4, 0.55, 0.8)
 	style.set_border_width_all(2)
 	style.set_corner_radius_all(10)
-	style.set_content_margin_all(12)
+	style.set_content_margin_all(6 if is_landscape else 12)
 	_map_overlay.add_theme_stylebox_override("panel", style)
 
 	_map_overlay_vbox = VBoxContainer.new()
-	_map_overlay_vbox.add_theme_constant_override("separation", 6)
+	_map_overlay_vbox.add_theme_constant_override("separation", 4 if is_landscape else 6)
 	_map_overlay.add_child(_map_overlay_vbox)
 
 	# Title row with close button
@@ -390,14 +433,16 @@ func _build_map_overlay() -> void:
 	_map_overlay_vbox.add_child(title_row)
 	var title = Label.new()
 	title.text = "Map"
-	title.add_theme_font_size_override("font_size", 36)
+	title.add_theme_font_size_override("font_size", 16 if is_landscape else 36)
 	title.add_theme_color_override("font_color", Color(0.7, 0.85, 1.0))
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title_row.add_child(title)
 	var close_btn = Button.new()
 	close_btn.text = "X"
-	close_btn.custom_minimum_size = Vector2(160, 130) if _is_mobile else Vector2(120, 40)
-	close_btn.add_theme_font_size_override("font_size", 60 if _is_mobile else 20)
+	var close_size = Vector2(50, 36) if is_landscape else (Vector2(160, 130) if _is_mobile else Vector2(120, 40))
+	var close_fs = 20 if is_landscape else (60 if _is_mobile else 20)
+	close_btn.custom_minimum_size = close_size
+	close_btn.add_theme_font_size_override("font_size", close_fs)
 	_style_btn(close_btn, Color(1.0, 0.4, 0.3))
 	close_btn.pressed.connect(_toggle_map_overlay)
 	title_row.add_child(close_btn)

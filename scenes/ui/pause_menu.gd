@@ -48,12 +48,13 @@ func _build_menu() -> void:
 		child.queue_free()
 
 	var vp_size = get_viewport().get_visible_rect().size
+	var is_landscape = _is_mobile and vp_size.x > vp_size.y
 	if _is_mobile:
-		var margin = 40.0
-		panel.offset_left = -vp_size.x / 2.0 + margin
-		panel.offset_right = vp_size.x / 2.0 - margin
-		panel.offset_top = -vp_size.y / 2.0 + margin
-		panel.offset_bottom = vp_size.y / 2.0 - margin
+		var m = 20.0 if is_landscape else 40.0
+		panel.offset_left = -vp_size.x / 2.0 + m
+		panel.offset_right = vp_size.x / 2.0 - m
+		panel.offset_top = -vp_size.y / 2.0 + m
+		panel.offset_bottom = vp_size.y / 2.0 - m
 	else:
 		panel.offset_left = -200.0
 		panel.offset_right = 200.0
@@ -61,21 +62,29 @@ func _build_menu() -> void:
 		panel.offset_bottom = 220.0
 
 	var margin_container = MarginContainer.new()
-	margin_container.add_theme_constant_override("margin_left", 20)
-	margin_container.add_theme_constant_override("margin_top", 20)
-	margin_container.add_theme_constant_override("margin_right", 20)
-	margin_container.add_theme_constant_override("margin_bottom", 20)
+	var mc_pad = 10 if is_landscape else 20
+	margin_container.add_theme_constant_override("margin_left", mc_pad)
+	margin_container.add_theme_constant_override("margin_top", mc_pad)
+	margin_container.add_theme_constant_override("margin_right", mc_pad)
+	margin_container.add_theme_constant_override("margin_bottom", mc_pad)
+
+	var scroll = ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 
 	var vbox = VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 16 if _is_mobile else 12)
+	var vbox_sep = 6 if is_landscape else (16 if _is_mobile else 12)
+	vbox.add_theme_constant_override("separation", vbox_sep)
 	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 	# Top bar with title and close button
 	var top_bar = HBoxContainer.new()
 
 	var title = Label.new()
 	title.text = "PAUSED"
-	title.add_theme_font_size_override("font_size", 64 if _is_mobile else 28)
+	var title_fs = 28 if is_landscape else (64 if _is_mobile else 28)
+	title.add_theme_font_size_override("font_size", title_fs)
 	title.add_theme_color_override("font_color", Color(0.95, 0.8, 0.3))
 	top_bar.add_child(title)
 
@@ -85,8 +94,10 @@ func _build_menu() -> void:
 
 	var close_btn = Button.new()
 	close_btn.text = "X"
-	close_btn.custom_minimum_size = Vector2(160, 130) if _is_mobile else Vector2(120, 40)
-	close_btn.add_theme_font_size_override("font_size", 60 if _is_mobile else 20)
+	var close_size = Vector2(80, 50) if is_landscape else (Vector2(160, 130) if _is_mobile else Vector2(120, 40))
+	var close_fs = 28 if is_landscape else (60 if _is_mobile else 20)
+	close_btn.custom_minimum_size = close_size
+	close_btn.add_theme_font_size_override("font_size", close_fs)
 	close_btn.add_theme_color_override("font_color", Color(1.0, 0.4, 0.3))
 	_style_btn(close_btn, Color(1.0, 0.4, 0.3))
 	close_btn.pressed.connect(func(): close())
@@ -95,12 +106,12 @@ func _build_menu() -> void:
 	vbox.add_child(top_bar)
 
 	var sep = HSeparator.new()
-	sep.add_theme_constant_override("separation", 8)
+	sep.add_theme_constant_override("separation", 4 if is_landscape else 8)
 	vbox.add_child(sep)
 
-	# Menu buttons
-	var btn_size = Vector2(0, 90) if _is_mobile else Vector2(0, 44)
-	var btn_font = 40 if _is_mobile else 16
+	# Menu buttons — smaller in landscape to fit the short viewport
+	var btn_size = Vector2(0, 44) if is_landscape else (Vector2(0, 90) if _is_mobile else Vector2(0, 44))
+	var btn_font = 18 if is_landscape else (40 if _is_mobile else 16)
 
 	_add_menu_button(vbox, "Resume", btn_size, btn_font, Color(0.3, 0.8, 0.4), func(): close())
 	_add_menu_button(vbox, "Save Game", btn_size, btn_font, Color(0.4, 0.7, 1.0), _on_save)
@@ -109,7 +120,8 @@ func _build_menu() -> void:
 	_add_menu_button(vbox, "Help", btn_size, btn_font, Color(0.7, 0.7, 0.8), _on_help)
 	_add_menu_button(vbox, "Quit Game", btn_size, btn_font, Color(1.0, 0.4, 0.3), _on_quit)
 
-	margin_container.add_child(vbox)
+	scroll.add_child(vbox)
+	margin_container.add_child(scroll)
 	panel.add_child(margin_container)
 
 func _add_menu_button(parent: VBoxContainer, text: String, min_size: Vector2, font_size: int, color: Color, callback: Callable) -> void:
@@ -181,6 +193,7 @@ func _show_help_dialog() -> void:
 	help_panel.grow_vertical = Control.GROW_DIRECTION_BOTH
 
 	var vp_size = get_viewport().get_visible_rect().size
+	var is_landscape = _is_mobile and vp_size.x > vp_size.y
 	if _is_mobile:
 		var m = 10.0
 		help_panel.offset_left = -vp_size.x / 2.0 + m
@@ -195,19 +208,21 @@ func _show_help_dialog() -> void:
 	help_layer.add_child(help_panel)
 
 	var mc = MarginContainer.new()
-	mc.add_theme_constant_override("margin_left", 16)
-	mc.add_theme_constant_override("margin_top", 16)
-	mc.add_theme_constant_override("margin_right", 16)
-	mc.add_theme_constant_override("margin_bottom", 16)
+	var mc_pad = 8 if is_landscape else 16
+	mc.add_theme_constant_override("margin_left", mc_pad)
+	mc.add_theme_constant_override("margin_top", mc_pad)
+	mc.add_theme_constant_override("margin_right", mc_pad)
+	mc.add_theme_constant_override("margin_bottom", mc_pad)
 
 	var vbox = VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 8)
+	vbox.add_theme_constant_override("separation", 4 if is_landscape else 8)
 
 	# Top bar with title and close
 	var top = HBoxContainer.new()
 	var htitle = Label.new()
 	htitle.text = "Controls & Help"
-	htitle.add_theme_font_size_override("font_size", 48 if _is_mobile else 20)
+	var help_title_fs = 20 if is_landscape else (48 if _is_mobile else 20)
+	htitle.add_theme_font_size_override("font_size", help_title_fs)
 	htitle.add_theme_color_override("font_color", Color(0.95, 0.8, 0.3))
 	top.add_child(htitle)
 	var spacer = Control.new()
@@ -215,8 +230,10 @@ func _show_help_dialog() -> void:
 	top.add_child(spacer)
 	var close_btn = Button.new()
 	close_btn.text = "X" if _is_mobile else "X  Close"
-	close_btn.custom_minimum_size = Vector2(160, 130) if _is_mobile else Vector2(120, 40)
-	close_btn.add_theme_font_size_override("font_size", 60 if _is_mobile else 20)
+	var help_close_size = Vector2(60, 40) if is_landscape else (Vector2(160, 130) if _is_mobile else Vector2(120, 40))
+	var help_close_fs = 22 if is_landscape else (60 if _is_mobile else 20)
+	close_btn.custom_minimum_size = help_close_size
+	close_btn.add_theme_font_size_override("font_size", help_close_fs)
 	_style_btn(close_btn, Color(1.0, 0.4, 0.3))
 	close_btn.pressed.connect(func(): help_layer.queue_free())
 	top.add_child(close_btn)
@@ -232,7 +249,7 @@ func _show_help_dialog() -> void:
 
 	var content = Label.new()
 	content.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	var fs = 34 if _is_mobile else 13
+	var fs = 13 if is_landscape else (34 if _is_mobile else 13)
 	content.add_theme_font_size_override("font_size", fs)
 	content.add_theme_color_override("font_color", Color(0.85, 0.85, 0.85))
 	content.text = """Movement: WASD or right-click to move

@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.70.9"
+const GAME_VERSION := "v0.71.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.71.0",
+		"title": "Landscape mobile: MAP/OPT buttons and proper close buttons",
+		"date": "2026-02-25",
+		"entries": [
+			"Landscape mobile now has MAP and OPT buttons like portrait mode",
+			"Minimap overlay with close button works in landscape",
+			"Pause menu, help dialog, and command overlay all fit landscape viewports",
+			"All close buttons and fonts properly scaled for short landscape screens",
+		]
+	},
 	{
 		"version": "v0.70.9",
 		"title": "Messenger browser fix, hero select matches loading screen",

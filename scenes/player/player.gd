@@ -655,6 +655,12 @@ func _get_zoom_min() -> Vector2:
 func _get_zoom_max() -> Vector2:
 	return ZOOM_MAX_MOBILE if _is_mobile else ZOOM_MAX
 
+func _is_touch_on_hud_panel(pos: Vector2) -> bool:
+	## Returns true if the touch position is in the bottom HUD panel area.
+	var vp_size = get_viewport().get_visible_rect().size
+	var panel_h = 140.0  # Approximate bottom panel height (3 bars + spacing)
+	return pos.y > vp_size.y - panel_h
+
 func _input(event: InputEvent) -> void:
 	if _is_dead:
 		return
@@ -668,6 +674,11 @@ func _input(event: InputEvent) -> void:
 	elif event is InputEventScreenDrag:
 		if event.index in _screen_touches:
 			_screen_touches[event.index] = event.position
+
+	# Skip all player input for touches on the HUD bottom panel (MAP, bars, OPT)
+	if _is_mobile and event is InputEventScreenTouch and event.pressed:
+		if _is_touch_on_hud_panel(event.position):
+			return
 
 	# Virtual joystick (left side of screen) — claim touch before ATK button
 	if _is_mobile:

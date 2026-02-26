@@ -58,6 +58,7 @@ var _map_overlay_vbox: VBoxContainer = null  # Overlay content container for rep
 var _minimap_home: PanelContainer = null  # Bottom-bar container that holds minimap when overlay is closed
 var _opt_btn: Button = null  # OPT button ref for multitouch
 var _map_tap_btn: Button = null  # MAP tap button ref for multitouch
+var _overlay_open_touch_index: int = -1  # Finger that opened an overlay (ignore its release)
 
 func _ready() -> void:
 	_detect_mobile()
@@ -570,37 +571,49 @@ func _input(event: InputEvent) -> void:
 	# Godot's Button only responds to the first finger (mouse emulation).
 	# We manually detect all InputEventScreenTouch so a second finger can
 	# tap HUD buttons while another finger controls the joystick / aim.
-	if _is_mobile and event is InputEventScreenTouch and event.pressed:
-		var pos = event.position
-
-		# 1) Bottom-bar buttons: OPT and MAP (always visible when mobile)
-		if _opt_btn and _opt_btn.is_visible_in_tree() and _opt_btn.get_global_rect().has_point(pos):
-			_toggle_cmd_overlay()
-			get_viewport().set_input_as_handled()
-			return
-		if _map_tap_btn and _map_tap_btn.is_visible_in_tree() and _map_tap_btn.get_global_rect().has_point(pos):
-			_toggle_map_overlay()
+	if _is_mobile and event is InputEventScreenTouch:
+		# When the finger that OPENED an overlay lifts, consume the release
+		# so Godot's Button mouse-emulation doesn't toggle it back closed.
+		if not event.pressed and event.index == _overlay_open_touch_index:
+			_overlay_open_touch_index = -1
 			get_viewport().set_input_as_handled()
 			return
 
-		# 2) Open overlay: press buttons inside via multitouch, or close if outside
-		if _cmd_overlay_visible and _cmd_overlay:
-			if _cmd_overlay.get_global_rect().has_point(pos):
-				_press_button_at(_cmd_overlay, pos)
-			else:
+		if event.pressed:
+			var pos = event.position
+
+			# 1) Bottom-bar buttons: OPT and MAP (always visible when mobile)
+			if _opt_btn and _opt_btn.is_visible_in_tree() and _opt_btn.get_global_rect().has_point(pos):
 				_toggle_cmd_overlay()
-			get_viewport().set_input_as_handled()
-			return
-		if _map_overlay_visible and _map_overlay:
-			if _map_overlay.get_global_rect().has_point(pos):
-				_press_button_at(_map_overlay, pos)
-			else:
+				if _cmd_overlay_visible:
+					_overlay_open_touch_index = event.index
+				get_viewport().set_input_as_handled()
+				return
+			if _map_tap_btn and _map_tap_btn.is_visible_in_tree() and _map_tap_btn.get_global_rect().has_point(pos):
 				_toggle_map_overlay()
-			get_viewport().set_input_as_handled()
-			return
+				if _map_overlay_visible:
+					_overlay_open_touch_index = event.index
+				get_viewport().set_input_as_handled()
+				return
 
-		# No overlay open and tap not on MAP/OPT — let event pass to game world
-		return
+			# 2) Open overlay: press buttons inside via multitouch, or close if outside
+			if _cmd_overlay_visible and _cmd_overlay:
+				if _cmd_overlay.get_global_rect().has_point(pos):
+					_press_button_at(_cmd_overlay, pos)
+				else:
+					_toggle_cmd_overlay()
+				get_viewport().set_input_as_handled()
+				return
+			if _map_overlay_visible and _map_overlay:
+				if _map_overlay.get_global_rect().has_point(pos):
+					_press_button_at(_map_overlay, pos)
+				else:
+					_toggle_map_overlay()
+				get_viewport().set_input_as_handled()
+				return
+
+			# No overlay open and tap not on MAP/OPT — let event pass to game world
+			return
 
 	# ── Desktop / first-finger fallback: close overlay on outside click ──
 	if not _cmd_overlay_visible and not _map_overlay_visible:

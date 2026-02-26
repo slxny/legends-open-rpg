@@ -9,17 +9,17 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.72.7"
+const GAME_VERSION := "v0.72.8"
 
 const CHANGELOG: Array[Dictionary] = [
 	{
-		"version": "v0.72.7",
-		"title": "Multitouch support for all HUD buttons",
+		"version": "v0.72.8",
+		"title": "Overlays stay open until explicitly closed",
 		"date": "2026-02-26",
 		"entries": [
-			"MAP and OPT buttons now respond to second-finger taps while walking with joystick",
-			"All overlay buttons (potions, inventory, save, close) work with multitouch",
-			"Tapping outside an overlay with any finger closes it correctly",
+			"OPT and MAP overlays now stay open on tap (no longer close on finger lift)",
+			"Close via X button, tapping the OPT/MAP button again, or tapping outside",
+			"All overlay and bottom-bar buttons support multitouch with joystick",
 		]
 	},
 	{

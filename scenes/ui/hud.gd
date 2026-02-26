@@ -47,13 +47,15 @@ var _hint_timer: Timer = null
 var _hint_showing: bool = false
 var _hint_tween: Tween = null
 
-# Command overlay (mobile portrait)
+# Command overlay (mobile)
 var _cmd_overlay: PanelContainer = null
 var _cmd_overlay_visible: bool = false
+var _cmd_dimmer: ColorRect = null
 
-# Minimap overlay (mobile portrait)
+# Minimap overlay (mobile)
 var _map_overlay: PanelContainer = null
 var _map_overlay_visible: bool = false
+var _map_dimmer: ColorRect = null
 var _map_overlay_vbox: VBoxContainer = null  # Overlay content container for reparenting minimap
 var _minimap_home: PanelContainer = null  # Bottom-bar container that holds minimap when overlay is closed
 
@@ -363,7 +365,17 @@ func _build_cmd_overlay() -> void:
 	)
 	grid.add_child(menu_b)
 
-	# Position the overlay above the bottom panel
+	# Dimmer backdrop — tap to close
+	_cmd_dimmer = ColorRect.new()
+	_cmd_dimmer.color = Color(0.0, 0.0, 0.0, 0.4)
+	_cmd_dimmer.visible = false
+	_cmd_dimmer.z_index = 89
+	_cmd_dimmer.mouse_filter = Control.MOUSE_FILTER_STOP
+	_cmd_dimmer.gui_input.connect(func(event: InputEvent):
+		if (event is InputEventMouseButton and event.pressed) or (event is InputEventScreenTouch and event.pressed):
+			_toggle_cmd_overlay()
+	)
+	add_child(_cmd_dimmer)
 	add_child(_cmd_overlay)
 
 func _toggle_cmd_overlay() -> void:
@@ -371,20 +383,30 @@ func _toggle_cmd_overlay() -> void:
 	if _map_overlay and _map_overlay_visible:
 		_map_overlay_visible = false
 		_map_overlay.visible = false
+		if _map_dimmer:
+			_map_dimmer.visible = false
 
 	_cmd_overlay_visible = !_cmd_overlay_visible
 	_cmd_overlay.visible = _cmd_overlay_visible
+	if _cmd_dimmer:
+		_cmd_dimmer.visible = _cmd_overlay_visible
 	_update_atk_button_visibility()
 	if _cmd_overlay_visible:
 		AudioManager.play_sfx("ui_tap", -4.0)
-		# Update potion labels in overlay
 		_update_overlay_potions()
 		# Position: centered, above bottom bar
 		await get_tree().process_frame
 		var vp_size = get_viewport().get_visible_rect().size
+		# Size dimmer to full screen
+		if _cmd_dimmer:
+			_cmd_dimmer.position = Vector2.ZERO
+			_cmd_dimmer.size = vp_size
 		var overlay_w = vp_size.x - 32
 		_cmd_overlay.size = Vector2(overlay_w, 0)
-		_cmd_overlay.position = Vector2(16, vp_size.y - bottom_panel.size.y - _cmd_overlay.size.y - 8)
+		# Wait another frame so layout recalculates actual height
+		await get_tree().process_frame
+		var actual_h = _cmd_overlay.size.y
+		_cmd_overlay.position = Vector2(16, vp_size.y - bottom_panel.size.y - actual_h - 8)
 
 func _update_atk_button_visibility() -> void:
 	if _player and is_instance_valid(_player) and _player.has_method("set_atk_button_visible"):
@@ -447,7 +469,17 @@ func _build_map_overlay() -> void:
 	close_btn.pressed.connect(_toggle_map_overlay)
 	title_row.add_child(close_btn)
 
-	# Minimap will be reparented here when overlay opens (stays in bottom bar normally)
+	# Dimmer backdrop — tap to close
+	_map_dimmer = ColorRect.new()
+	_map_dimmer.color = Color(0.0, 0.0, 0.0, 0.4)
+	_map_dimmer.visible = false
+	_map_dimmer.z_index = 89
+	_map_dimmer.mouse_filter = Control.MOUSE_FILTER_STOP
+	_map_dimmer.gui_input.connect(func(event: InputEvent):
+		if (event is InputEventMouseButton and event.pressed) or (event is InputEventScreenTouch and event.pressed):
+			_toggle_map_overlay()
+	)
+	add_child(_map_dimmer)
 	add_child(_map_overlay)
 
 func _toggle_map_overlay() -> void:
@@ -455,9 +487,13 @@ func _toggle_map_overlay() -> void:
 	if _cmd_overlay_visible:
 		_cmd_overlay_visible = false
 		_cmd_overlay.visible = false
+		if _cmd_dimmer:
+			_cmd_dimmer.visible = false
 
 	_map_overlay_visible = !_map_overlay_visible
 	_map_overlay.visible = _map_overlay_visible
+	if _map_dimmer:
+		_map_dimmer.visible = _map_overlay_visible
 	_update_atk_button_visibility()
 	if _map_overlay_visible:
 		AudioManager.play_sfx("ui_tap", -4.0)
@@ -468,12 +504,16 @@ func _toggle_map_overlay() -> void:
 			minimap.click_to_move_enabled = true
 		await get_tree().process_frame
 		var vp_size = get_viewport().get_visible_rect().size
+		# Size dimmer to full screen
+		if _map_dimmer:
+			_map_dimmer.position = Vector2.ZERO
+			_map_dimmer.size = vp_size
 		var is_ls = vp_size.x > vp_size.y
 		var overlay_w: float
 		var map_h: float
 		if is_ls:
-			map_h = vp_size.y * 0.5
-			overlay_w = min(vp_size.x * 0.45, map_h * 1.3)
+			map_h = vp_size.y * 0.55
+			overlay_w = min(vp_size.x * 0.5, map_h * 1.4)
 		else:
 			overlay_w = vp_size.x - 32
 			map_h = vp_size.x * 0.65

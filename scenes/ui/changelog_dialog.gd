@@ -9,18 +9,17 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.72.1"
+const GAME_VERSION := "v0.72.2"
 
 const CHANGELOG: Array[Dictionary] = [
 	{
-		"version": "v0.72.1",
-		"title": "Fix overlay close on landscape mobile",
+		"version": "v0.72.2",
+		"title": "Fix overlay close on landscape mobile — blocks hero movement",
 		"date": "2026-02-25",
 		"entries": [
-			"Rebuilt MAP and OPT overlays with full-screen wrapper to capture all touch input",
-			"Tap anywhere outside the panel to close (dimmer backdrop)",
-			"X close buttons now properly receive touch events on all orientations",
-			"Fixed CMD overlay height calculation that caused it to overflow off-screen",
+			"Overlays now block ALL touch from reaching the game world when open",
+			"Tapping outside the overlay panel closes it without moving the hero",
+			"X close button and all overlay buttons work on both portrait and landscape",
 		]
 	},
 	{

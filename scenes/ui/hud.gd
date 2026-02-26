@@ -48,12 +48,10 @@ var _hint_showing: bool = false
 var _hint_tween: Tween = null
 
 # Command overlay (mobile)
-var _cmd_wrapper: Control = null  # Full-screen wrapper for input capture
 var _cmd_overlay: PanelContainer = null
 var _cmd_overlay_visible: bool = false
 
 # Minimap overlay (mobile)
-var _map_wrapper: Control = null  # Full-screen wrapper for input capture
 var _map_overlay: PanelContainer = null
 var _map_overlay_visible: bool = false
 var _map_overlay_vbox: VBoxContainer = null  # Overlay content container for reparenting minimap
@@ -240,25 +238,9 @@ func _build_cmd_overlay() -> void:
 	var vp_size = get_viewport().get_visible_rect().size
 	var is_landscape = _is_mobile and vp_size.x > vp_size.y
 
-	# Full-screen wrapper — captures ALL input so nothing leaks to HUD behind
-	_cmd_wrapper = Control.new()
-	_cmd_wrapper.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_cmd_wrapper.mouse_filter = Control.MOUSE_FILTER_STOP
-	_cmd_wrapper.visible = false
-
-	# Dimmer background — tap to close
-	var dimmer = ColorRect.new()
-	dimmer.set_anchors_preset(Control.PRESET_FULL_RECT)
-	dimmer.color = Color(0.0, 0.0, 0.0, 0.4)
-	dimmer.mouse_filter = Control.MOUSE_FILTER_STOP
-	dimmer.gui_input.connect(func(event: InputEvent):
-		if (event is InputEventMouseButton and event.pressed) or (event is InputEventScreenTouch and event.pressed):
-			_toggle_cmd_overlay()
-	)
-	_cmd_wrapper.add_child(dimmer)
-
-	# Panel overlay
 	_cmd_overlay = PanelContainer.new()
+	_cmd_overlay.visible = false
+	_cmd_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 	var style = StyleBoxFlat.new()
 	style.bg_color = Color(0.06, 0.06, 0.1, 0.96)
 	style.border_color = Color(0.4, 0.35, 0.2, 0.8)
@@ -376,22 +358,20 @@ func _build_cmd_overlay() -> void:
 	)
 	grid.add_child(menu_b)
 
-	_cmd_wrapper.add_child(_cmd_overlay)
-	add_child(_cmd_wrapper)
+	add_child(_cmd_overlay)
 
 func _toggle_cmd_overlay() -> void:
 	# Close MAP overlay if open
-	if _map_wrapper and _map_overlay_visible:
+	if _map_overlay and _map_overlay_visible:
 		_map_overlay_visible = false
-		_map_wrapper.visible = false
+		_map_overlay.visible = false
 
 	_cmd_overlay_visible = !_cmd_overlay_visible
-	_cmd_wrapper.visible = _cmd_overlay_visible
+	_cmd_overlay.visible = _cmd_overlay_visible
 	_update_atk_button_visibility()
 	if _cmd_overlay_visible:
 		AudioManager.play_sfx("ui_tap", -4.0)
 		_update_overlay_potions()
-		# Position: centered, above bottom bar
 		await get_tree().process_frame
 		await get_tree().process_frame
 		var vp_size = get_viewport().get_visible_rect().size
@@ -425,25 +405,9 @@ func _build_map_overlay() -> void:
 	var vp_size = get_viewport().get_visible_rect().size
 	var is_landscape = _is_mobile and vp_size.x > vp_size.y
 
-	# Full-screen wrapper — captures ALL input so nothing leaks to HUD behind
-	_map_wrapper = Control.new()
-	_map_wrapper.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_map_wrapper.mouse_filter = Control.MOUSE_FILTER_STOP
-	_map_wrapper.visible = false
-
-	# Dimmer background — tap to close
-	var dimmer = ColorRect.new()
-	dimmer.set_anchors_preset(Control.PRESET_FULL_RECT)
-	dimmer.color = Color(0.0, 0.0, 0.0, 0.4)
-	dimmer.mouse_filter = Control.MOUSE_FILTER_STOP
-	dimmer.gui_input.connect(func(event: InputEvent):
-		if (event is InputEventMouseButton and event.pressed) or (event is InputEventScreenTouch and event.pressed):
-			_toggle_map_overlay()
-	)
-	_map_wrapper.add_child(dimmer)
-
-	# Panel overlay
 	_map_overlay = PanelContainer.new()
+	_map_overlay.visible = false
+	_map_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 	var style = StyleBoxFlat.new()
 	style.bg_color = Color(0.04, 0.04, 0.06, 0.96)
 	style.border_color = Color(0.3, 0.4, 0.55, 0.8)
@@ -476,17 +440,16 @@ func _build_map_overlay() -> void:
 	close_btn.pressed.connect(_toggle_map_overlay)
 	title_row.add_child(close_btn)
 
-	_map_wrapper.add_child(_map_overlay)
-	add_child(_map_wrapper)
+	add_child(_map_overlay)
 
 func _toggle_map_overlay() -> void:
 	# Close CMD overlay if open
-	if _cmd_wrapper and _cmd_overlay_visible:
+	if _cmd_overlay and _cmd_overlay_visible:
 		_cmd_overlay_visible = false
-		_cmd_wrapper.visible = false
+		_cmd_overlay.visible = false
 
 	_map_overlay_visible = !_map_overlay_visible
-	_map_wrapper.visible = _map_overlay_visible
+	_map_overlay.visible = _map_overlay_visible
 	_update_atk_button_visibility()
 	if _map_overlay_visible:
 		AudioManager.play_sfx("ui_tap", -4.0)
@@ -592,7 +555,36 @@ func setup(player: Node2D) -> void:
 	# Start tutorial hints after a short delay
 	_start_tutorial_hints(hero_data)
 
+func _input(event: InputEvent) -> void:
+	# When an overlay is open, block ALL touch/click from reaching the game world
+	if not _cmd_overlay_visible and not _map_overlay_visible:
+		return
+	var is_touch = (event is InputEventMouseButton and event.pressed) or (event is InputEventScreenTouch and event.pressed)
+	if not is_touch:
+		return
+	var pos = event.position
+	# If tap is inside the overlay panel, let the buttons handle it
+	if _cmd_overlay_visible and _cmd_overlay and _cmd_overlay.get_global_rect().has_point(pos):
+		return
+	if _map_overlay_visible and _map_overlay and _map_overlay.get_global_rect().has_point(pos):
+		return
+	# Tap is outside the panel — close the overlay and consume the event
+	if _cmd_overlay_visible:
+		_toggle_cmd_overlay()
+	elif _map_overlay_visible:
+		_toggle_map_overlay()
+	get_viewport().set_input_as_handled()
+
 func _unhandled_input(event: InputEvent) -> void:
+	# Also catch any unhandled touch while overlay is open (belt and suspenders)
+	if _cmd_overlay_visible or _map_overlay_visible:
+		if (event is InputEventMouseButton and event.pressed) or (event is InputEventScreenTouch and event.pressed):
+			if _cmd_overlay_visible:
+				_toggle_cmd_overlay()
+			elif _map_overlay_visible:
+				_toggle_map_overlay()
+			get_viewport().set_input_as_handled()
+			return
 	if event is InputEventKey and event.pressed:
 		if event.keycode == KEY_F1:
 			_on_changelog_pressed()

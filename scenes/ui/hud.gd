@@ -139,17 +139,17 @@ func _apply_mobile_layout() -> void:
 		minimap.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		minimap.visible = true
 		minimap.click_to_move_enabled = false  # Small preview: tap opens overlay instead
+		minimap.mouse_filter = Control.MOUSE_FILTER_IGNORE  # Let taps pass through to parent
 		_minimap_home.add_child(minimap)
-		# Make the panel clickable via gui_input
-		_minimap_home.mouse_filter = Control.MOUSE_FILTER_STOP
-		_minimap_home.gui_input.connect(func(event: InputEvent):
-			if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-				_toggle_map_overlay()
-				_minimap_home.get_viewport().set_input_as_handled()
-			elif event is InputEventScreenTouch and event.pressed:
-				_toggle_map_overlay()
-				_minimap_home.get_viewport().set_input_as_handled()
-		)
+		# Make the panel clickable — use a transparent Button overlay for reliable touch
+		var map_tap_btn = Button.new()
+		map_tap_btn.flat = true
+		map_tap_btn.mouse_filter = Control.MOUSE_FILTER_STOP
+		map_tap_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		map_tap_btn.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		map_tap_btn.self_modulate = Color(1, 1, 1, 0)  # Invisible
+		map_tap_btn.pressed.connect(_toggle_map_overlay)
+		_minimap_home.add_child(map_tap_btn)
 		bottom_hbox.add_child(_minimap_home)
 		bottom_hbox.move_child(_minimap_home, 0)  # Move to leftmost position
 
@@ -210,16 +210,17 @@ func _apply_mobile_layout() -> void:
 	minimap.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	minimap.visible = true
 	minimap.click_to_move_enabled = false
+	minimap.mouse_filter = Control.MOUSE_FILTER_IGNORE  # Let taps pass through to button
 	_minimap_home.add_child(minimap)
-	_minimap_home.mouse_filter = Control.MOUSE_FILTER_STOP
-	_minimap_home.gui_input.connect(func(event: InputEvent):
-		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-			_toggle_map_overlay()
-			_minimap_home.get_viewport().set_input_as_handled()
-		elif event is InputEventScreenTouch and event.pressed:
-			_toggle_map_overlay()
-			_minimap_home.get_viewport().set_input_as_handled()
-	)
+	# Use a transparent Button overlay for reliable touch on mobile
+	var map_tap_btn = Button.new()
+	map_tap_btn.flat = true
+	map_tap_btn.mouse_filter = Control.MOUSE_FILTER_STOP
+	map_tap_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	map_tap_btn.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	map_tap_btn.self_modulate = Color(1, 1, 1, 0)
+	map_tap_btn.pressed.connect(_toggle_map_overlay)
+	_minimap_home.add_child(map_tap_btn)
 	bottom_hbox.add_child(_minimap_home)
 	bottom_hbox.move_child(_minimap_home, 0)
 

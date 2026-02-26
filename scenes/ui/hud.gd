@@ -484,6 +484,7 @@ func _toggle_map_overlay() -> void:
 			minimap.get_parent().remove_child(minimap)
 			_minimap_home.add_child(minimap)
 			minimap.click_to_move_enabled = false
+			minimap.mouse_filter = Control.MOUSE_FILTER_IGNORE  # Let tap button receive input
 
 func _open_pause_menu() -> void:
 	var menus = get_tree().get_nodes_in_group("pause_menu")

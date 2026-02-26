@@ -58,9 +58,7 @@ var _map_overlay_vbox: VBoxContainer = null  # Overlay content container for rep
 var _minimap_home: PanelContainer = null  # Bottom-bar container that holds minimap when overlay is closed
 var _opt_btn: Button = null  # OPT button ref for multitouch
 var _map_tap_btn: Button = null  # MAP tap button ref for multitouch
-var _overlay_open_touch_index: int = -1  # Finger that opened an overlay (ignore its release)
-var _last_cmd_toggle_frame: int = -1  # Dedup: prevent double-toggle in same frame
-var _last_map_toggle_frame: int = -1
+var _active_touch_count: int = 0  # Track fingers on screen for multitouch logic
 
 func _ready() -> void:
 	_detect_mobile()
@@ -153,7 +151,7 @@ func _apply_mobile_layout() -> void:
 		_map_tap_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		_map_tap_btn.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		_map_tap_btn.self_modulate = Color(1, 1, 1, 0)  # Invisible
-		_map_tap_btn.pressed.connect(_toggle_map_overlay)
+		# No pressed.connect — handled exclusively by _input() to prevent double-toggle
 		_minimap_home.add_child(_map_tap_btn)
 		bottom_hbox.add_child(_minimap_home)
 		bottom_hbox.move_child(_minimap_home, 0)  # Move to leftmost position
@@ -168,7 +166,7 @@ func _apply_mobile_layout() -> void:
 		_opt_btn.add_theme_stylebox_override("normal", btn_style_normal.duplicate())
 		_opt_btn.add_theme_stylebox_override("pressed", btn_style_pressed.duplicate())
 		_opt_btn.add_theme_stylebox_override("hover", btn_style_normal.duplicate())
-		_opt_btn.pressed.connect(_toggle_cmd_overlay)
+		# No pressed.connect — handled exclusively by _input() to prevent double-toggle
 		bottom_hbox.add_child(_opt_btn)
 
 		# Build overlays (hidden by default)
@@ -224,7 +222,7 @@ func _apply_mobile_layout() -> void:
 	_map_tap_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_map_tap_btn.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_map_tap_btn.self_modulate = Color(1, 1, 1, 0)
-	_map_tap_btn.pressed.connect(_toggle_map_overlay)
+	# No pressed.connect — handled exclusively by _input() to prevent double-toggle
 	_minimap_home.add_child(_map_tap_btn)
 	bottom_hbox.add_child(_minimap_home)
 	bottom_hbox.move_child(_minimap_home, 0)
@@ -239,7 +237,7 @@ func _apply_mobile_layout() -> void:
 	_opt_btn.add_theme_stylebox_override("normal", btn_style_normal.duplicate())
 	_opt_btn.add_theme_stylebox_override("pressed", btn_style_pressed.duplicate())
 	_opt_btn.add_theme_stylebox_override("hover", btn_style_normal.duplicate())
-	_opt_btn.pressed.connect(_toggle_cmd_overlay)
+	# No pressed.connect — handled exclusively by _input() to prevent double-toggle
 	bottom_hbox.add_child(_opt_btn)
 
 	# Build overlays (hidden by default)
@@ -374,11 +372,6 @@ func _build_cmd_overlay() -> void:
 
 func _toggle_cmd_overlay() -> void:
 	# Dedup: GUI pressed signal + _input() can both fire in the same frame
-	var frame = Engine.get_process_frames()
-	if frame == _last_cmd_toggle_frame:
-		return
-	_last_cmd_toggle_frame = frame
-
 	# Close MAP overlay if open
 	if _map_overlay and _map_overlay_visible:
 		_map_overlay_visible = false
@@ -461,12 +454,6 @@ func _build_map_overlay() -> void:
 	add_child(_map_overlay)
 
 func _toggle_map_overlay() -> void:
-	# Dedup: GUI pressed signal + _input() can both fire in the same frame
-	var frame = Engine.get_process_frames()
-	if frame == _last_map_toggle_frame:
-		return
-	_last_map_toggle_frame = frame
-
 	# Close CMD overlay if open
 	if _cmd_overlay and _cmd_overlay_visible:
 		_cmd_overlay_visible = false
@@ -581,59 +568,55 @@ func setup(player: Node2D) -> void:
 	_start_tutorial_hints(hero_data)
 
 func _input(event: InputEvent) -> void:
-	# ── Mobile multitouch handling ──
-	# Godot's Button only responds to the first finger (mouse emulation).
-	# We manually detect all InputEventScreenTouch so a second finger can
-	# tap HUD buttons while another finger controls the joystick / aim.
-	if _is_mobile and event is InputEventScreenTouch:
-		# When the finger that OPENED an overlay lifts, consume the release
-		# so Godot's Button mouse-emulation doesn't toggle it back closed.
-		if not event.pressed and event.index == _overlay_open_touch_index:
-			_overlay_open_touch_index = -1
+	# ── Track active touch count (for multitouch detection) ──
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			_active_touch_count += 1
+		else:
+			_active_touch_count = max(0, _active_touch_count - 1)
+
+	# ── Mobile: OPT and MAP have no pressed.connect (to avoid double-toggle) ──
+	# We handle them here exclusively via raw InputEventScreenTouch.
+	if _is_mobile and event is InputEventScreenTouch and event.pressed:
+		var pos = event.position
+
+		# 1) Bottom-bar buttons: OPT and MAP
+		if _opt_btn and _opt_btn.is_visible_in_tree() and _opt_btn.get_global_rect().has_point(pos):
+			_toggle_cmd_overlay()
+			get_viewport().set_input_as_handled()
+			return
+		if _map_tap_btn and _map_tap_btn.is_visible_in_tree() and _map_tap_btn.get_global_rect().has_point(pos):
+			_toggle_map_overlay()
 			get_viewport().set_input_as_handled()
 			return
 
-		if event.pressed:
-			var pos = event.position
-
-			# 1) Bottom-bar buttons: OPT and MAP (always visible when mobile)
-			if _opt_btn and _opt_btn.is_visible_in_tree() and _opt_btn.get_global_rect().has_point(pos):
-				_toggle_cmd_overlay()
-				if _cmd_overlay_visible:
-					_overlay_open_touch_index = event.index
-				get_viewport().set_input_as_handled()
-				return
-			if _map_tap_btn and _map_tap_btn.is_visible_in_tree() and _map_tap_btn.get_global_rect().has_point(pos):
-				_toggle_map_overlay()
-				if _map_overlay_visible:
-					_overlay_open_touch_index = event.index
-				get_viewport().set_input_as_handled()
-				return
-
-			# 2) Open overlay: press buttons inside via multitouch, or close if outside
-			if _cmd_overlay_visible and _cmd_overlay:
-				if _cmd_overlay.get_global_rect().has_point(pos):
+		# 2) Open overlay: handle buttons for multitouch, or close if outside
+		if _cmd_overlay_visible and _cmd_overlay:
+			if _cmd_overlay.get_global_rect().has_point(pos):
+				# Only manually press buttons when multitouch (2+ fingers).
+				# Single finger is mouse-emulated so GUI handles it already.
+				if _active_touch_count > 1:
 					_press_button_at(_cmd_overlay, pos)
-				else:
-					_toggle_cmd_overlay()
-				get_viewport().set_input_as_handled()
-				return
-			if _map_overlay_visible and _map_overlay:
-				if _map_overlay.get_global_rect().has_point(pos):
+			else:
+				_toggle_cmd_overlay()
+			get_viewport().set_input_as_handled()
+			return
+		if _map_overlay_visible and _map_overlay:
+			if _map_overlay.get_global_rect().has_point(pos):
+				if _active_touch_count > 1:
 					_press_button_at(_map_overlay, pos)
-				else:
-					_toggle_map_overlay()
-				get_viewport().set_input_as_handled()
-				return
-
-			# No overlay open and tap not on MAP/OPT — let event pass to game world
+			else:
+				_toggle_map_overlay()
+			get_viewport().set_input_as_handled()
 			return
 
-	# ── Desktop / first-finger fallback: close overlay on outside click ──
+		# No overlay open and tap not on MAP/OPT — let event pass to game world
+		return
+
+	# ── Desktop: close overlay on outside click ──
 	if not _cmd_overlay_visible and not _map_overlay_visible:
 		return
-	var is_touch = (event is InputEventMouseButton and event.pressed) or (event is InputEventScreenTouch and event.pressed)
-	if not is_touch:
+	if not (event is InputEventMouseButton and event.pressed):
 		return
 	var pos = event.position
 	if _cmd_overlay_visible and _cmd_overlay and _cmd_overlay.get_global_rect().has_point(pos):
@@ -647,14 +630,10 @@ func _input(event: InputEvent) -> void:
 	get_viewport().set_input_as_handled()
 
 ## Recursively find and press the Button under a touch position (for multitouch).
-## Uses meta to dedup so first-finger GUI press + our manual emit don't double-fire.
 func _press_button_at(container: Control, pos: Vector2) -> bool:
-	var frame = Engine.get_process_frames()
 	for child in container.get_children():
 		if child is Button and child.is_visible_in_tree() and child.get_global_rect().has_point(pos):
-			if child.get_meta("_last_press_frame", -1) != frame:
-				child.set_meta("_last_press_frame", frame)
-				child.pressed.emit()
+			child.pressed.emit()
 			return true
 		if child is Control and _press_button_at(child, pos):
 			return true

@@ -9,17 +9,17 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.73.1"
+const GAME_VERSION := "v0.73.2"
 
 const CHANGELOG: Array[Dictionary] = [
 	{
-		"version": "v0.73.1",
-		"title": "Fix overlays closing immediately on finger lift",
+		"version": "v0.73.2",
+		"title": "Fix OPT/MAP closing on finger lift — tap to toggle",
 		"date": "2026-02-26",
 		"entries": [
-			"OPT and MAP overlays now stay open after tap — no longer close when finger lifts",
-			"Frame dedup prevents GUI + manual touch handler from double-toggling overlays",
-			"All overlay buttons (X, potions, save, etc.) fire exactly once per tap",
+			"OPT and MAP buttons no longer use Godot's pressed signal (caused double-toggle)",
+			"Overlays open on tap and stay open — close via X, button, or tap outside",
+			"Multitouch: overlay buttons work with second finger while joystick is held",
 		]
 	},
 	{

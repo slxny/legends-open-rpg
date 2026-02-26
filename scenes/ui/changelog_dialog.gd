@@ -9,7 +9,7 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.72.2"
+const GAME_VERSION := "v0.72.3"
 
 const CHANGELOG: Array[Dictionary] = [
 	{

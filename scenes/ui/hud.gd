@@ -146,6 +146,9 @@ func _apply_mobile_layout() -> void:
 			if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 				_toggle_map_overlay()
 				_minimap_home.get_viewport().set_input_as_handled()
+			elif event is InputEventScreenTouch and event.pressed:
+				_toggle_map_overlay()
+				_minimap_home.get_viewport().set_input_as_handled()
 		)
 		bottom_hbox.add_child(_minimap_home)
 		bottom_hbox.move_child(_minimap_home, 0)  # Move to leftmost position
@@ -211,6 +214,9 @@ func _apply_mobile_layout() -> void:
 	_minimap_home.mouse_filter = Control.MOUSE_FILTER_STOP
 	_minimap_home.gui_input.connect(func(event: InputEvent):
 		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			_toggle_map_overlay()
+			_minimap_home.get_viewport().set_input_as_handled()
+		elif event is InputEventScreenTouch and event.pressed:
 			_toggle_map_overlay()
 			_minimap_home.get_viewport().set_input_as_handled()
 	)

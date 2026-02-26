@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.73.0"
+const GAME_VERSION := "v0.73.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.73.1",
+		"title": "Fix overlays closing immediately on finger lift",
+		"date": "2026-02-26",
+		"entries": [
+			"OPT and MAP overlays now stay open after tap — no longer close when finger lifts",
+			"Frame dedup prevents GUI + manual touch handler from double-toggling overlays",
+			"All overlay buttons (X, potions, save, etc.) fire exactly once per tap",
+		]
+	},
 	{
 		"version": "v0.72.8",
 		"title": "Overlays stay open until explicitly closed",

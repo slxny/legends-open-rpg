@@ -59,6 +59,8 @@ var _minimap_home: PanelContainer = null  # Bottom-bar container that holds mini
 var _opt_btn: Button = null  # OPT button ref for multitouch
 var _map_tap_btn: Button = null  # MAP tap button ref for multitouch
 var _overlay_open_touch_index: int = -1  # Finger that opened an overlay (ignore its release)
+var _last_cmd_toggle_frame: int = -1  # Dedup: prevent double-toggle in same frame
+var _last_map_toggle_frame: int = -1
 
 func _ready() -> void:
 	_detect_mobile()
@@ -371,6 +373,12 @@ func _build_cmd_overlay() -> void:
 	add_child(_cmd_overlay)
 
 func _toggle_cmd_overlay() -> void:
+	# Dedup: GUI pressed signal + _input() can both fire in the same frame
+	var frame = Engine.get_process_frames()
+	if frame == _last_cmd_toggle_frame:
+		return
+	_last_cmd_toggle_frame = frame
+
 	# Close MAP overlay if open
 	if _map_overlay and _map_overlay_visible:
 		_map_overlay_visible = false
@@ -453,6 +461,12 @@ func _build_map_overlay() -> void:
 	add_child(_map_overlay)
 
 func _toggle_map_overlay() -> void:
+	# Dedup: GUI pressed signal + _input() can both fire in the same frame
+	var frame = Engine.get_process_frames()
+	if frame == _last_map_toggle_frame:
+		return
+	_last_map_toggle_frame = frame
+
 	# Close CMD overlay if open
 	if _cmd_overlay and _cmd_overlay_visible:
 		_cmd_overlay_visible = false
@@ -633,10 +647,14 @@ func _input(event: InputEvent) -> void:
 	get_viewport().set_input_as_handled()
 
 ## Recursively find and press the Button under a touch position (for multitouch).
+## Uses meta to dedup so first-finger GUI press + our manual emit don't double-fire.
 func _press_button_at(container: Control, pos: Vector2) -> bool:
+	var frame = Engine.get_process_frames()
 	for child in container.get_children():
 		if child is Button and child.is_visible_in_tree() and child.get_global_rect().has_point(pos):
-			child.pressed.emit()
+			if child.get_meta("_last_press_frame", -1) != frame:
+				child.set_meta("_last_press_frame", frame)
+				child.pressed.emit()
 			return true
 		if child is Control and _press_button_at(child, pos):
 			return true

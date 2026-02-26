@@ -9,9 +9,18 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.73.2"
+const GAME_VERSION := "v0.73.3"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.73.3",
+		"title": "Fix movement and attack stuck after respawn",
+		"date": "2026-02-26",
+		"entries": [
+			"Reset all movement, joystick, attack, and target state on respawn",
+			"Fixes player walking in one direction and unable to attack after dying",
+		]
+	},
 	{
 		"version": "v0.73.2",
 		"title": "Fix OPT/MAP closing on finger lift — tap to toggle",

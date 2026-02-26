@@ -3052,11 +3052,33 @@ func _on_respawn_animation(_player_id: int) -> void:
 	# Kill death tween if still running
 	if _death_tween and _death_tween.is_valid():
 		_death_tween.kill()
-	# Safety: ensure attack state is clean on respawn
+	# Reset ALL input and combat state so nothing is stale after respawn
 	_is_attack_animating = false
 	_attack_cooldown = 0.0
 	Engine.time_scale = 1.0
 	_hit_freeze_active = false
+	_is_moving_to_target = false
+	_move_target = Vector2.ZERO
+	_stuck_time = 0.0
+	_target_tree = null
+	_target_enemy = null
+	_is_chopping_tree = false
+	_joystick_touch_index = -1
+	_joystick_input = Vector2.ZERO
+	_joystick_active = false
+	_hide_joystick()
+	_mobile_atk_touch_index = -1
+	_mobile_attack_held = false
+	_mobile_charge_aim_dir = Vector2.ZERO
+	_tap_count = 0
+	_tap_resolve_timer = 0.0
+	_tap_resolved = true
+	_charge_time = 0.0
+	_is_charging = false
+	_combo_index = 0
+	_combo_timer = 0.0
+	_tap_aim_dir = Vector2.ZERO
+	_tap_aim_timer = 0.0
 	# Reset sprite to invisible for regen build-up
 	sprite.modulate = Color(1.0, 1.0, 1.0, 0.0)
 	sprite.scale = Vector2(0.3, 0.3)

@@ -56,6 +56,8 @@ var _map_overlay: PanelContainer = null
 var _map_overlay_visible: bool = false
 var _map_overlay_vbox: VBoxContainer = null  # Overlay content container for reparenting minimap
 var _minimap_home: PanelContainer = null  # Bottom-bar container that holds minimap when overlay is closed
+var _opt_btn: Button = null  # OPT button ref for multitouch
+var _map_tap_btn: Button = null  # MAP tap button ref for multitouch
 
 func _ready() -> void:
 	_detect_mobile()
@@ -142,29 +144,29 @@ func _apply_mobile_layout() -> void:
 		minimap.mouse_filter = Control.MOUSE_FILTER_IGNORE  # Let taps pass through to parent
 		_minimap_home.add_child(minimap)
 		# Make the panel clickable — use a transparent Button overlay for reliable touch
-		var map_tap_btn = Button.new()
-		map_tap_btn.flat = true
-		map_tap_btn.mouse_filter = Control.MOUSE_FILTER_STOP
-		map_tap_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		map_tap_btn.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		map_tap_btn.self_modulate = Color(1, 1, 1, 0)  # Invisible
-		map_tap_btn.pressed.connect(_toggle_map_overlay)
-		_minimap_home.add_child(map_tap_btn)
+		_map_tap_btn = Button.new()
+		_map_tap_btn.flat = true
+		_map_tap_btn.mouse_filter = Control.MOUSE_FILTER_STOP
+		_map_tap_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_map_tap_btn.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		_map_tap_btn.self_modulate = Color(1, 1, 1, 0)  # Invisible
+		_map_tap_btn.pressed.connect(_toggle_map_overlay)
+		_minimap_home.add_child(_map_tap_btn)
 		bottom_hbox.add_child(_minimap_home)
 		bottom_hbox.move_child(_minimap_home, 0)  # Move to leftmost position
 
 		# OPT button — wide, right of bars
-		var opt_btn = Button.new()
-		opt_btn.text = "OPT"
-		opt_btn.custom_minimum_size = Vector2(btn_w, 0)
-		opt_btn.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		opt_btn.add_theme_font_size_override("font_size", 28)
-		opt_btn.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
-		opt_btn.add_theme_stylebox_override("normal", btn_style_normal.duplicate())
-		opt_btn.add_theme_stylebox_override("pressed", btn_style_pressed.duplicate())
-		opt_btn.add_theme_stylebox_override("hover", btn_style_normal.duplicate())
-		opt_btn.pressed.connect(_toggle_cmd_overlay)
-		bottom_hbox.add_child(opt_btn)
+		_opt_btn = Button.new()
+		_opt_btn.text = "OPT"
+		_opt_btn.custom_minimum_size = Vector2(btn_w, 0)
+		_opt_btn.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		_opt_btn.add_theme_font_size_override("font_size", 28)
+		_opt_btn.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
+		_opt_btn.add_theme_stylebox_override("normal", btn_style_normal.duplicate())
+		_opt_btn.add_theme_stylebox_override("pressed", btn_style_pressed.duplicate())
+		_opt_btn.add_theme_stylebox_override("hover", btn_style_normal.duplicate())
+		_opt_btn.pressed.connect(_toggle_cmd_overlay)
+		bottom_hbox.add_child(_opt_btn)
 
 		# Build overlays (hidden by default)
 		_build_cmd_overlay()
@@ -213,29 +215,29 @@ func _apply_mobile_layout() -> void:
 	minimap.mouse_filter = Control.MOUSE_FILTER_IGNORE  # Let taps pass through to button
 	_minimap_home.add_child(minimap)
 	# Use a transparent Button overlay for reliable touch on mobile
-	var map_tap_btn = Button.new()
-	map_tap_btn.flat = true
-	map_tap_btn.mouse_filter = Control.MOUSE_FILTER_STOP
-	map_tap_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	map_tap_btn.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	map_tap_btn.self_modulate = Color(1, 1, 1, 0)
-	map_tap_btn.pressed.connect(_toggle_map_overlay)
-	_minimap_home.add_child(map_tap_btn)
+	_map_tap_btn = Button.new()
+	_map_tap_btn.flat = true
+	_map_tap_btn.mouse_filter = Control.MOUSE_FILTER_STOP
+	_map_tap_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_map_tap_btn.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_map_tap_btn.self_modulate = Color(1, 1, 1, 0)
+	_map_tap_btn.pressed.connect(_toggle_map_overlay)
+	_minimap_home.add_child(_map_tap_btn)
 	bottom_hbox.add_child(_minimap_home)
 	bottom_hbox.move_child(_minimap_home, 0)
 
 	# OPT button — right of bars
-	var opt_btn = Button.new()
-	opt_btn.text = "OPT"
-	opt_btn.custom_minimum_size = Vector2(btn_w, 0)
-	opt_btn.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	opt_btn.add_theme_font_size_override("font_size", 16)
-	opt_btn.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
-	opt_btn.add_theme_stylebox_override("normal", btn_style_normal.duplicate())
-	opt_btn.add_theme_stylebox_override("pressed", btn_style_pressed.duplicate())
-	opt_btn.add_theme_stylebox_override("hover", btn_style_normal.duplicate())
-	opt_btn.pressed.connect(_toggle_cmd_overlay)
-	bottom_hbox.add_child(opt_btn)
+	_opt_btn = Button.new()
+	_opt_btn.text = "OPT"
+	_opt_btn.custom_minimum_size = Vector2(btn_w, 0)
+	_opt_btn.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_opt_btn.add_theme_font_size_override("font_size", 16)
+	_opt_btn.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
+	_opt_btn.add_theme_stylebox_override("normal", btn_style_normal.duplicate())
+	_opt_btn.add_theme_stylebox_override("pressed", btn_style_pressed.duplicate())
+	_opt_btn.add_theme_stylebox_override("hover", btn_style_normal.duplicate())
+	_opt_btn.pressed.connect(_toggle_cmd_overlay)
+	bottom_hbox.add_child(_opt_btn)
 
 	# Build overlays (hidden by default)
 	_build_cmd_overlay()
@@ -564,24 +566,68 @@ func setup(player: Node2D) -> void:
 	_start_tutorial_hints(hero_data)
 
 func _input(event: InputEvent) -> void:
-	# When an overlay is open, block ALL touch/click from reaching the game world
+	# ── Mobile multitouch handling ──
+	# Godot's Button only responds to the first finger (mouse emulation).
+	# We manually detect all InputEventScreenTouch so a second finger can
+	# tap HUD buttons while another finger controls the joystick / aim.
+	if _is_mobile and event is InputEventScreenTouch and event.pressed:
+		var pos = event.position
+
+		# 1) Bottom-bar buttons: OPT and MAP (always visible when mobile)
+		if _opt_btn and _opt_btn.is_visible_in_tree() and _opt_btn.get_global_rect().has_point(pos):
+			_toggle_cmd_overlay()
+			get_viewport().set_input_as_handled()
+			return
+		if _map_tap_btn and _map_tap_btn.is_visible_in_tree() and _map_tap_btn.get_global_rect().has_point(pos):
+			_toggle_map_overlay()
+			get_viewport().set_input_as_handled()
+			return
+
+		# 2) Open overlay: press buttons inside via multitouch, or close if outside
+		if _cmd_overlay_visible and _cmd_overlay:
+			if _cmd_overlay.get_global_rect().has_point(pos):
+				_press_button_at(_cmd_overlay, pos)
+			else:
+				_toggle_cmd_overlay()
+			get_viewport().set_input_as_handled()
+			return
+		if _map_overlay_visible and _map_overlay:
+			if _map_overlay.get_global_rect().has_point(pos):
+				_press_button_at(_map_overlay, pos)
+			else:
+				_toggle_map_overlay()
+			get_viewport().set_input_as_handled()
+			return
+
+		# No overlay open and tap not on MAP/OPT — let event pass to game world
+		return
+
+	# ── Desktop / first-finger fallback: close overlay on outside click ──
 	if not _cmd_overlay_visible and not _map_overlay_visible:
 		return
 	var is_touch = (event is InputEventMouseButton and event.pressed) or (event is InputEventScreenTouch and event.pressed)
 	if not is_touch:
 		return
 	var pos = event.position
-	# If tap is inside the overlay panel, let the buttons handle it
 	if _cmd_overlay_visible and _cmd_overlay and _cmd_overlay.get_global_rect().has_point(pos):
 		return
 	if _map_overlay_visible and _map_overlay and _map_overlay.get_global_rect().has_point(pos):
 		return
-	# Tap is outside the panel — close the overlay and consume the event
 	if _cmd_overlay_visible:
 		_toggle_cmd_overlay()
 	elif _map_overlay_visible:
 		_toggle_map_overlay()
 	get_viewport().set_input_as_handled()
+
+## Recursively find and press the Button under a touch position (for multitouch).
+func _press_button_at(container: Control, pos: Vector2) -> bool:
+	for child in container.get_children():
+		if child is Button and child.is_visible_in_tree() and child.get_global_rect().has_point(pos):
+			child.pressed.emit()
+			return true
+		if child is Control and _press_button_at(child, pos):
+			return true
+	return false
 
 func _unhandled_input(event: InputEvent) -> void:
 	# Also catch any unhandled touch while overlay is open (belt and suspenders)

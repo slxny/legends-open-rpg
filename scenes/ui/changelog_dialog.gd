@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.72.6"
+const GAME_VERSION := "v0.72.7"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.72.7",
+		"title": "Multitouch support for all HUD buttons",
+		"date": "2026-02-26",
+		"entries": [
+			"MAP and OPT buttons now respond to second-finger taps while walking with joystick",
+			"All overlay buttons (potions, inventory, save, close) work with multitouch",
+			"Tapping outside an overlay with any finger closes it correctly",
+		]
+	},
 	{
 		"version": "v0.72.2",
 		"title": "Fix overlay close on landscape mobile — blocks hero movement",

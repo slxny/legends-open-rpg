@@ -218,7 +218,7 @@ func initialize(config: Dictionary) -> void:
 	_aggro_range_sq = aggro_range * aggro_range
 	_chase_range_sq = chase_range * chase_range
 	_attack_range_sq = stats.attack_range * stats.attack_range
-	var disengage = stats.attack_range * 1.3
+	var disengage = stats.attack_range * 1.8
 	_attack_disengage_sq = disengage * disengage
 	var alert_range = aggro_range * ALERT_RANGE_MULTIPLIER
 	_alert_range_sq = alert_range * alert_range
@@ -477,7 +477,7 @@ func _get_separation_push(in_attack: bool = false) -> Vector2:
 	if is_instance_valid(target):
 		var player_diff = pos - target.global_position
 		var player_dist_sq = player_diff.length_squared()
-		var player_push_radius: float = 20.0
+		var player_push_radius: float = 30.0
 		var player_push_radius_sq = player_push_radius * player_push_radius
 		if player_dist_sq < player_push_radius_sq and player_dist_sq > 0.1:
 			var player_dist = sqrt(player_dist_sq)
@@ -557,7 +557,7 @@ func _process_attack(delta: float) -> void:
 		var perp = Vector2(-dir_to_target.y, dir_to_target.x)
 		sep = perp * sep.dot(perp)
 
-	velocity = move_toward + sep * 0.3
+	velocity = move_toward + sep
 	move_and_slide()
 
 	_attack_timer -= delta
@@ -665,6 +665,7 @@ func take_damage(amount: int, is_crit: bool = false) -> void:
 
 func _die() -> void:
 	_is_dead = true
+	velocity = Vector2.ZERO
 	collision_layer = 0
 	collision_mask = 0
 	input_pickable = false

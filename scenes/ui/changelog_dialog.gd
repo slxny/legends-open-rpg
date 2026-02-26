@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.73.3"
+const GAME_VERSION := "v0.73.4"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.73.4",
+		"title": "Fix enemies sticking to player during combat",
+		"date": "2026-02-26",
+		"entries": [
+			"Enemies back off faster when too close (0.4x speed vs 0.15x)",
+			"Wider disengage range prevents chase/attack oscillation",
+			"Full separation push strength — enemies properly fan out around player",
+			"Wider player push radius prevents enemies overlapping the hero",
+		]
+	},
 	{
 		"version": "v0.73.3",
 		"title": "Fix movement and attack stuck after respawn",

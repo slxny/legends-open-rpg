@@ -85,6 +85,12 @@ const DROP_POOL_MAX: int = 20
 # Global rat squeal cooldown — prevents overlapping squeals from swarms
 static var _rat_squeal_cooldown: float = 0.0
 const RAT_SQUEAL_INTERVAL: float = 0.8
+# Multi-kill stagger — desynchronize simultaneous deaths
+static var _last_global_death_msec: int = 0
+
+# Killing blow info for death animation selection
+var _last_hit_was_crit: bool = false
+var _overkill_ratio: float = 0.0
 
 func _ready() -> void:
 	add_to_group("enemies")
@@ -644,6 +650,8 @@ func take_damage(amount: int, is_crit: bool = false) -> void:
 	if _is_sleeping:
 		_is_sleeping = false
 		visible = true
+	_last_hit_was_crit = is_crit
+	var hp_before = stats.current_hp
 	stats.take_damage(amount)
 	_update_hp_bar()
 	hp_bar.visible = true
@@ -656,6 +664,7 @@ func take_damage(amount: int, is_crit: bool = false) -> void:
 		AudioManager.play_sfx("hit_impact", -2.0)
 
 	if stats.current_hp <= 0:
+		_overkill_ratio = float(amount - hp_before) / float(max(stats.max_hp, 1))
 		_die()
 	elif current_state == State.IDLE or current_state == State.PATROL or current_state == State.RETURN:
 		var player = _get_player()
@@ -687,33 +696,123 @@ func _die() -> void:
 	if _shadow:
 		_shadow.visible = false
 
+	# Multi-kill stagger: if another enemy died within 150ms, delay this death anim
+	var now_msec = Time.get_ticks_msec()
+	var stagger_delay = 0.0
+	if now_msec - _last_global_death_msec < 150:
+		stagger_delay = randf_range(0.03, 0.1)
+	_last_global_death_msec = now_msec
+
+	if stagger_delay > 0.0:
+		get_tree().create_timer(stagger_delay).timeout.connect(_play_death_animation)
+	else:
+		_play_death_animation()
+
+func _play_death_animation() -> void:
 	if sprite_type == "skeleton":
 		_die_crumble()
 	elif sprite_type == "rat":
-		_die_rat_explode()
+		_die_rat_select_variant()
 	elif sprite_type == "tree_god_elk":
 		_die_elk_collapse()
 	elif is_mini_boss:
 		_spawn_blood_splatter()
 		_die_boss()
 	else:
-		_spawn_blood_splatter()
+		_die_default_select_variant()
+
+func _die_default_select_variant() -> void:
+	_spawn_blood_splatter()
+	if _last_hit_was_crit or _overkill_ratio > 0.5:
+		_die_default_crit()
+	elif randf() < 0.3:
+		_die_default_knockback()
+	else:
 		_die_default()
 
 func _die_default() -> void:
-	# Death animation: pop, fall, fade
+	# Normal: pop, fall & rotate 85°, fade
+	var base_pos = sprite.position
 	var tween = create_tween()
-	# Brief upward pop
-	tween.tween_property(sprite, "position", sprite.position + Vector2(0, -6), 0.05)
+	tween.tween_property(sprite, "position", base_pos + Vector2(0, -6), 0.05)
 	tween.tween_property(sprite, "scale", Vector2(1.2, 1.2), 0.05)
-	# Fall and fade simultaneously
 	tween.set_parallel(true)
 	tween.tween_property(sprite, "modulate:a", 0.0, 0.35)
 	tween.tween_property(sprite, "rotation", deg_to_rad(85), 0.28).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	tween.tween_property(sprite, "position", sprite.position + Vector2(0, 10), 0.28).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tween.tween_property(sprite, "position", base_pos + Vector2(0, 10), 0.28).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	tween.tween_property(sprite, "scale", Vector2(0.8, 0.8), 0.35)
 	tween.set_parallel(false)
 	tween.tween_callback(queue_free)
+
+func _die_default_crit() -> void:
+	# Critical: bright white flash, bigger rotation (120°), faster fall, scatter fragments
+	_spawn_death_fragments()
+	var base_pos = sprite.position
+	var tween = create_tween()
+	# Bright white flash
+	tween.tween_property(sprite, "modulate", Color(2.5, 2.5, 2.5), 0.05)
+	tween.tween_property(sprite, "scale", Vector2(1.3, 1.3), 0.05)
+	# Fast fall with big rotation
+	tween.set_parallel(true)
+	tween.tween_property(sprite, "modulate:a", 0.0, 0.25)
+	tween.tween_property(sprite, "rotation", deg_to_rad(120), 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tween.tween_property(sprite, "position", base_pos + Vector2(0, 12), 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tween.tween_property(sprite, "scale", Vector2(0.6, 0.6), 0.25)
+	tween.set_parallel(false)
+	tween.tween_callback(queue_free)
+
+func _die_default_knockback() -> void:
+	# Knockback: slide backward 15-25px from player before falling
+	var player = _get_player()
+	var slide_dir = Vector2.RIGHT
+	if player and is_instance_valid(player):
+		slide_dir = (global_position - player.global_position).normalized()
+	var slide_dist = randf_range(15, 25)
+	var base_pos = sprite.position
+	var slide_dest = base_pos + slide_dir * slide_dist
+	var tween = create_tween()
+	# Slide backward
+	tween.tween_property(sprite, "position", slide_dest, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	# Then fall and fade (same as normal but from slid position)
+	tween.set_parallel(true)
+	tween.tween_property(sprite, "modulate:a", 0.0, 0.35)
+	tween.tween_property(sprite, "rotation", deg_to_rad(85), 0.28).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tween.tween_property(sprite, "position", slide_dest + Vector2(0, 10), 0.28).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tween.tween_property(sprite, "scale", Vector2(0.8, 0.8), 0.35)
+	tween.set_parallel(false)
+	tween.tween_callback(queue_free)
+
+func _spawn_death_fragments() -> void:
+	# Small fragments that scatter on critical kills
+	var gib_tex = SpriteGenerator.get_texture("rat_gib")  # Reuse gib texture as generic fragment
+	if not gib_tex:
+		return
+	var world = _get_world_node()
+	for _i in range(randi_range(3, 5)):
+		var frag = Sprite2D.new()
+		frag.texture = gib_tex
+		frag.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		frag.global_position = global_position + Vector2(randf_range(-4, 4), randf_range(-4, 4))
+		frag.rotation = randf() * TAU
+		frag.scale = Vector2(randf_range(0.4, 0.8), randf_range(0.4, 0.8))
+		frag.z_index = -1
+		frag.modulate = Color(
+			randf_range(0.7, 1.0),
+			randf_range(0.5, 0.8),
+			randf_range(0.5, 0.8),
+			randf_range(0.7, 1.0)
+		)
+		world.add_child(frag)
+		var dir = Vector2(randf_range(-1, 1), randf_range(-1, 1)).normalized()
+		var dest = frag.global_position + dir * randf_range(12, 30)
+		var t = frag.create_tween()
+		t.set_parallel(true)
+		t.tween_property(frag, "global_position", dest, randf_range(0.2, 0.35)).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		t.tween_property(frag, "rotation", frag.rotation + randf_range(-4.0, 4.0), 0.35)
+		t.set_parallel(false)
+		t.tween_interval(randf_range(0.8, 1.5))
+		t.tween_property(frag, "modulate:a", 0.0, 0.5)
+		t.tween_callback(frag.queue_free)
 
 func _die_crumble() -> void:
 	# Skeleton crumble: shake, squash down, scatter bone fragments
@@ -731,22 +830,74 @@ func _die_crumble() -> void:
 	tween.tween_property(sprite, "modulate:a", 0.0, 0.3)
 	tween.tween_callback(queue_free)
 
+func _die_rat_select_variant() -> void:
+	if _last_hit_was_crit or _overkill_ratio > 0.5:
+		_die_rat_crit_explode()
+	else:
+		var roll = randf()
+		if roll < 0.5:
+			_die_rat_explode()
+		elif roll < 0.75:
+			_die_rat_fling()
+		else:
+			_die_rat_squish()
+
 func _die_rat_explode() -> void:
-	# Rats explode into bloody chunks — quick violent pop with gibs flying everywhere
+	# Normal pop: quick swell, pop flash, gibs scatter
 	_spawn_rat_gibs()
-	# Multiple blood splatters for the gore
 	for _i in range(randi_range(2, 4)):
 		_spawn_blood_splatter()
-	var base_pos = sprite.position
 	var tween = create_tween()
-	# Quick swell — rat puffs up
-	tween.tween_property(sprite, "scale", Vector2(1.4, 1.4), 0.04)
+	tween.tween_property(sprite, "scale", _base_scale * 1.4, 0.04)
 	tween.parallel().tween_property(sprite, "modulate", Color(1.5, 0.7, 0.7), 0.04)
-	# POP — flash red-white and vanish instantly
 	tween.tween_property(sprite, "modulate", Color(2.0, 1.0, 0.8), 0.02)
-	tween.parallel().tween_property(sprite, "scale", Vector2(1.8, 0.3), 0.02)
-	# Gone
+	tween.parallel().tween_property(sprite, "scale", Vector2(_base_scale.x * 1.8, _base_scale.y * 0.3), 0.02)
 	tween.tween_property(sprite, "modulate:a", 0.0, 0.03)
+	tween.tween_callback(queue_free)
+
+func _die_rat_crit_explode() -> void:
+	# Critical/overkill: more gibs, wider scatter, bright white flash, bigger pop
+	_spawn_rat_gibs_crit()
+	for _i in range(randi_range(4, 6)):
+		_spawn_blood_splatter()
+	var tween = create_tween()
+	# Bright white flash
+	tween.tween_property(sprite, "modulate", Color(2.5, 2.5, 2.5), 0.05)
+	tween.parallel().tween_property(sprite, "scale", _base_scale * 2.2, 0.05)
+	# POP — explode outward
+	tween.tween_property(sprite, "modulate", Color(2.0, 1.0, 0.8), 0.02)
+	tween.parallel().tween_property(sprite, "scale", Vector2(_base_scale.x * 2.5, _base_scale.y * 0.2), 0.02)
+	tween.tween_property(sprite, "modulate:a", 0.0, 0.03)
+	tween.tween_callback(queue_free)
+
+func _die_rat_fling() -> void:
+	# Fling: rat launches sideways, spins, shrinks, fades
+	_spawn_blood_splatter()
+	var player = _get_player()
+	var fling_dir = Vector2.RIGHT
+	if player and is_instance_valid(player):
+		fling_dir = (global_position - player.global_position).normalized()
+	var fling_dist = randf_range(30, 50)
+	var dest = sprite.position + fling_dir * fling_dist
+	var tween = create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(sprite, "position", dest, 0.35).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.tween_property(sprite, "rotation", TAU * 2.0 * sign(fling_dir.x + 0.01), 0.35)
+	tween.tween_property(sprite, "scale", _base_scale * 0.2, 0.35).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tween.tween_property(sprite, "modulate:a", 0.0, 0.35)
+	tween.set_parallel(false)
+	tween.tween_callback(queue_free)
+
+func _die_rat_squish() -> void:
+	# Squish: rat flattens with a comic pop, then fades
+	_spawn_blood_splatter()
+	var tween = create_tween()
+	# Squash flat
+	tween.tween_property(sprite, "scale", Vector2(_base_scale.x * 1.8, _base_scale.y * 0.1), 0.08).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+	tween.parallel().tween_property(sprite, "position", sprite.position + Vector2(0, 4), 0.08)
+	# Brief hold, then fade
+	tween.tween_interval(0.15)
+	tween.tween_property(sprite, "modulate:a", 0.0, 0.3)
 	tween.tween_callback(queue_free)
 
 func _spawn_rat_gibs() -> void:
@@ -780,6 +931,38 @@ func _spawn_rat_gibs() -> void:
 		t.tween_property(gib, "rotation", gib.rotation + randf_range(-6.0, 6.0), 0.3)
 		t.set_parallel(false)
 		# Linger briefly then fade
+		t.tween_interval(randf_range(1.0, 2.5))
+		t.tween_property(gib, "modulate:a", 0.0, 0.6)
+		t.tween_callback(gib.queue_free)
+
+func _spawn_rat_gibs_crit() -> void:
+	var gib_tex = SpriteGenerator.get_texture("rat_gib")
+	if not gib_tex:
+		return
+	var world = _get_world_node()
+	for _i in range(randi_range(10, 16)):
+		var gib = Sprite2D.new()
+		gib.texture = gib_tex
+		gib.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		gib.global_position = global_position + Vector2(randf_range(-4, 4), randf_range(-6, 2))
+		gib.rotation = randf() * TAU
+		gib.scale = Vector2(randf_range(0.6, 1.2), randf_range(0.6, 1.2))
+		gib.z_index = -1
+		gib.modulate = Color(
+			randf_range(0.8, 1.2),
+			randf_range(0.6, 0.9),
+			randf_range(0.6, 0.9),
+			randf_range(0.7, 1.0)
+		)
+		world.add_child(gib)
+		var dir = Vector2(randf_range(-1, 1), randf_range(-1, 1)).normalized()
+		var force = randf_range(25, 55)
+		var dest = gib.global_position + dir * force + Vector2(0, randf_range(4, 12))
+		var t = gib.create_tween()
+		t.set_parallel(true)
+		t.tween_property(gib, "global_position", dest, randf_range(0.15, 0.3)).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		t.tween_property(gib, "rotation", gib.rotation + randf_range(-6.0, 6.0), 0.3)
+		t.set_parallel(false)
 		t.tween_interval(randf_range(1.0, 2.5))
 		t.tween_property(gib, "modulate:a", 0.0, 0.6)
 		t.tween_callback(gib.queue_free)

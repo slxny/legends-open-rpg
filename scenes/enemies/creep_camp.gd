@@ -578,6 +578,12 @@ func _instantiate_enemy(pending: Dictionary) -> void:
 		enemy._base_scale = Vector2(2.2, 2.2)
 		enemy._base_modulate = Color(1.2, 0.8, 0.8)
 		enemy.start_boss_pulse()
+	# Level-based rat scaling: 4% bigger per level, capped at 1.5x
+	if camp_type == "rat" and not is_mini_boss:
+		var level_scale = 1.0 + (level - 1) * 0.04
+		level_scale = clampf(level_scale, 1.0, 1.5)
+		enemy.sprite.scale = Vector2(level_scale, level_scale)
+		enemy._base_scale = Vector2(level_scale, level_scale)
 	if is_respawn and weakness_factor < 1.0:
 		enemy.stats.max_hp = int(enemy.stats.max_hp * weakness_factor)
 		enemy.stats.current_hp = enemy.stats.max_hp

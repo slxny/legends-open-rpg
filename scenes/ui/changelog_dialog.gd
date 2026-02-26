@@ -9,9 +9,21 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.73.4"
+const GAME_VERSION := "v0.74.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.74.0",
+		"title": "Death animation variety + level-based rat scaling",
+		"date": "2026-02-26",
+		"entries": [
+			"Rat deaths: 4 variants — normal pop, critical explosion, fling, and squish",
+			"Critical/overkill kills trigger dramatic death animations with extra gibs and flash",
+			"Default enemy deaths: 3 variants — normal fall, critical flash+fragments, knockback slide",
+			"Multi-kill stagger: simultaneous deaths are slightly desynchronized for variety",
+			"Rats scale up 4% per level (capped at 1.5x) — higher-level rats are visibly bigger",
+		]
+	},
 	{
 		"version": "v0.73.4",
 		"title": "Fix enemies sticking to player during combat",
@@ -19,7 +31,7 @@ const CHANGELOG: Array[Dictionary] = [
 		"entries": [
 			"Enemies back off faster when too close (0.4x speed vs 0.15x)",
 			"Wider disengage range prevents chase/attack oscillation",
-			"Full separation push strength � enemies properly fan out around player",
+			"Full separation push strength � enemies properly fan out around player",
 			"Wider player push radius prevents enemies overlapping the hero",
 		]
 	},

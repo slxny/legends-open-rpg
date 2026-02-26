@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.72.0"
+const GAME_VERSION := "v0.72.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.72.1",
+		"title": "Fix overlay close on landscape mobile",
+		"date": "2026-02-25",
+		"entries": [
+			"Rebuilt MAP and OPT overlays with full-screen wrapper to capture all touch input",
+			"Tap anywhere outside the panel to close (dimmer backdrop)",
+			"X close buttons now properly receive touch events on all orientations",
+			"Fixed CMD overlay height calculation that caused it to overflow off-screen",
+		]
+	},
 	{
 		"version": "v0.71.1",
 		"title": "Fix overlay close buttons on landscape mobile",

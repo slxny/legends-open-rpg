@@ -9,9 +9,17 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.74.0"
+const GAME_VERSION := "v0.74.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.74.1",
+		"title": "Add sponsor links to README",
+		"date": "2026-03-01",
+		"entries": [
+			"Added Open Class Actions sponsor section with dofollow links to README",
+		]
+	},
 	{
 		"version": "v0.74.0",
 		"title": "Death animation variety + level-based rat scaling",

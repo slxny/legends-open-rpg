@@ -26,6 +26,10 @@ The **source code only** (`.gd`, `.tscn`, `.tres`, `.cfg`, `.yml`, and similar f
 
 See [ASSETS_LICENSE.txt](ASSETS_LICENSE.txt) for the full proprietary assets terms.
 
+## Sponsored By
+
+This project is sponsored by [Open Class Actions](https://openclassactions.com) — a free platform helping people find and join [class action lawsuits](https://openclassactions.com/class-action-lawsuits). Check if you're eligible for a [class action settlement](https://openclassactions.com/settlements).
+
 ## Contributing
 
 By contributing to this project, you agree that your contributions become the property of Steven Levine and do not grant you any ownership or IP rights. See [CONTRIBUTING.md](CONTRIBUTING.md) for full terms.

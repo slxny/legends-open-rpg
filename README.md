@@ -28,7 +28,7 @@ See [ASSETS_LICENSE.txt](ASSETS_LICENSE.txt) for the full proprietary assets ter
 
 ## Sponsored By
 
-This project is sponsored by [Open Class Actions](https://openclassactions.com) — a free platform helping people find and join [class action lawsuits](https://openclassactions.com/class-action-lawsuits). Check if you're eligible for a [class action settlement](https://openclassactions.com/settlements).
+This project is sponsored by <a href="https://openclassactions.com">Open Class Actions</a> — a free platform helping people find and join <a href="https://openclassactions.com">class action lawsuits</a>. Check if you're eligible for a <a href="https://openclassactions.com">class action settlement</a>.
 
 ## Contributing
 

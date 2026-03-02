@@ -9,9 +9,17 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.74.1"
+const GAME_VERSION := "v0.74.2"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.74.2",
+		"title": "Fix sponsor links in README",
+		"date": "2026-03-02",
+		"entries": [
+			"Fixed sponsor links to all point to openclassactions.com and use dofollow HTML anchors",
+		]
+	},
 	{
 		"version": "v0.74.1",
 		"title": "Add sponsor links to README",

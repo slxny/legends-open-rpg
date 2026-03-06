@@ -62,6 +62,7 @@ var _is_bleeding: bool = false
 var _bleed_timer: float = 0.0
 var _bleed_tick_timer: float = 0.0
 var _bleed_damage: float = 2.0
+var _bleed_particles: CPUParticles2D = null  # Pooled bleed particle emitter
 const BLEED_TICK_INTERVAL: float = 1.0
 var _effect_vfx: Sprite2D = null  # Visual indicator for active status effect
 # Heal beacon immunity visual feedback

@@ -22,27 +22,36 @@ func setup(stats: StatsComponent, hero_class_key: String) -> void:
 		abilities = data["abilities"]
 
 func _process(delta: float) -> void:
-	# Tick cooldowns
-	for key in cooldowns:
-		if cooldowns[key] > 0:
-			cooldowns[key] = max(0, cooldowns[key] - delta)
-			var total = 0.0
-			if abilities.has(key):
-				total = abilities[key].get("cooldown", 0)
-			var idx = 0 if key == "ability_1" else 1
-			ability_cooldown_updated.emit(idx, cooldowns[key], total)
+	var has_active_cooldowns := cooldowns["ability_1"] > 0 or cooldowns["ability_2"] > 0
+	var has_active_buffs := _active_buffs.size() > 0
+
+	# Early-out: nothing to tick
+	if not has_active_cooldowns and not has_active_buffs:
+		return
+
+	# Tick cooldowns — only iterate keys with remaining time
+	if has_active_cooldowns:
+		for key in cooldowns:
+			if cooldowns[key] > 0:
+				cooldowns[key] = max(0, cooldowns[key] - delta)
+				var total = 0.0
+				if abilities.has(key):
+					total = abilities[key].get("cooldown", 0)
+				var idx = 0 if key == "ability_1" else 1
+				ability_cooldown_updated.emit(idx, cooldowns[key], total)
 
 	# Tick buffs
-	var expired: Array[int] = []
-	for i in range(_active_buffs.size()):
-		_active_buffs[i]["remaining"] -= delta
-		if _active_buffs[i]["remaining"] <= 0:
-			expired.append(i)
-	# Remove expired buffs (reverse order)
-	expired.reverse()
-	for i in expired:
-		_remove_buff(_active_buffs[i])
-		_active_buffs.remove_at(i)
+	if has_active_buffs:
+		var expired: Array[int] = []
+		for i in range(_active_buffs.size()):
+			_active_buffs[i]["remaining"] -= delta
+			if _active_buffs[i]["remaining"] <= 0:
+				expired.append(i)
+		# Remove expired buffs (reverse order)
+		expired.reverse()
+		for i in expired:
+			_remove_buff(_active_buffs[i])
+			_active_buffs.remove_at(i)
 
 func can_use_ability(ability_key: String) -> bool:
 	if not abilities.has(ability_key):

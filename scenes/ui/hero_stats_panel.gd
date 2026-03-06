@@ -11,6 +11,8 @@ extends CanvasLayer
 var _player: Node2D = null
 var _is_visible: bool = false
 var _is_mobile: bool = false
+var _buff_refresh_timer: float = 0.0
+const BUFF_REFRESH_INTERVAL: float = 1.0  # Refresh buff display once per second, not every frame
 
 # ── Colours ──
 const COL_BG        = Color(0.06, 0.06, 0.08, 1.0)
@@ -42,6 +44,7 @@ func toggle() -> void:
 	panel.visible = _is_visible
 	_dim.visible = _is_visible
 	if _is_visible:
+		_buff_refresh_timer = 0.0
 		_detect_mobile()
 		_refresh()
 
@@ -49,6 +52,7 @@ func open() -> void:
 	_is_visible = true
 	panel.visible = true
 	_dim.visible = true
+	_buff_refresh_timer = 0.0
 	_detect_mobile()
 	_refresh()
 
@@ -107,6 +111,7 @@ func _detect_mobile() -> void:
 
 var _buff_refresh_timer: float = 0.0
 const BUFF_REFRESH_INTERVAL: float = 0.5  # Refresh buffs twice per second, not every frame
+
 
 func _process(delta: float) -> void:
 	if _is_visible and _player:

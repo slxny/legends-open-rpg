@@ -52,6 +52,10 @@ const WAKE_DISTANCE_SQ: float = 490000.0   # 700^2 — wake when player is <700p
 const SLEEP_CHECK_INTERVAL: float = 0.4    # Check sleep/wake ~2.5x per second
 const LABEL_VISIBLE_DISTANCE_SQ: float = 22500.0  # 150^2 — show name when player is close
 const ZOOM_REF := 3.0  # Reference zoom level where font sizes are calibrated
+var _cached_camera: Camera2D = null
+var _cached_zoom_comp: float = 1.0
+var _zoom_check_timer: float = 0.0
+const ZOOM_CHECK_INTERVAL: float = 0.25  # Update zoom compensation 4x/sec, not every frame
 
 # Patrol state
 var _patrol_target: Vector2 = Vector2.ZERO

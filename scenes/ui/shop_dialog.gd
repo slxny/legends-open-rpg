@@ -42,6 +42,7 @@ var _no_items_label: Label
 
 func _ready() -> void:
 	panel.visible = false
+	set_process(false)
 
 func setup(player: Node2D) -> void:
 	_player = player
@@ -50,6 +51,7 @@ func open(shop_items: Array[String], npc_pos: Vector2 = Vector2.ZERO) -> void:
 	_shop_items = shop_items
 	_npc_position = npc_pos
 	_is_visible = true
+	set_process(true)
 	panel.visible = true
 	_detect_mobile()
 	_build_ui()
@@ -74,13 +76,14 @@ func _detect_mobile() -> void:
 		panel.offset_bottom = 280.0
 
 func _process(_delta: float) -> void:
-	if _is_visible and _player and _npc_position != Vector2.ZERO:
+	if _player and _npc_position != Vector2.ZERO:
 		if _player.global_position.distance_squared_to(_npc_position) > AUTO_CLOSE_DIST_SQ:
 			close()
 
 func close() -> void:
 	_is_visible = false
 	panel.visible = false
+	set_process(false)
 	closed.emit()
 
 func _build_ui() -> void:

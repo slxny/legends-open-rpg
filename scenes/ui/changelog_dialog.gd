@@ -9,9 +9,21 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.74.2"
+const GAME_VERSION := "v0.75.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.75.0",
+		"title": "Desktop browser performance fix",
+		"date": "2026-03-06",
+		"entries": [
+			"Halved physics tick rate (120 -> 60 Hz) — biggest single perf win for browser/WebGL",
+			"Beacons: disabled _physics_process on non-heal beacons, cached player ref on heal beacons",
+			"Beacons: disabled _process on beacons without labels",
+			"Fog overlay: batched adjacent cells into row spans to reduce draw calls",
+			"UI dialogs (shop, armory, tavern, woodworking): disabled _process when not visible",
+		]
+	},
 	{
 		"version": "v0.74.2",
 		"title": "Fix sponsor links in README",

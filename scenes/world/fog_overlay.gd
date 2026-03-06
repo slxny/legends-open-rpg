@@ -53,20 +53,36 @@ func _draw() -> void:
 	var max_cx = int(ceil(max_world.x / cell_size_f))
 	var max_cy = int(ceil(max_world.y / cell_size_f))
 
-	var cell_vec = Vector2(cell_size_f, cell_size_f)
 	var visible = FogOfWarManager.visible_tiles
 	var explored = FogOfWarManager.explored_tiles
 	var cell = Vector2i()
 
-	for cx in range(min_cx, max_cx + 1):
-		cell.x = cx
-		var wx = cx * cell_size_f
-		for cy in range(min_cy, max_cy + 1):
-			cell.y = cy
-			if visible.has(cell):
-				continue
-			var rect = Rect2(wx, cy * cell_size_f, cell_size_f, cell_size_f)
-			if explored.has(cell):
-				draw_rect(rect, _FOG_DIM)
+	# Batch adjacent cells in each row into spans to reduce draw calls.
+	# Instead of one draw_rect per cell, merge consecutive same-state cells.
+	for cy in range(min_cy, max_cy + 1):
+		cell.y = cy
+		var wy = cy * cell_size_f
+		var span_start_x: int = min_cx
+		var span_state: int = -1  # -1=none, 0=visible(skip), 1=dim, 2=black
+
+		for cx in range(min_cx, max_cx + 2):  # +2 to flush final span
+			var cur_state: int
+			if cx <= max_cx:
+				cell.x = cx
+				if visible.has(cell):
+					cur_state = 0
+				elif explored.has(cell):
+					cur_state = 1
+				else:
+					cur_state = 2
 			else:
-				draw_rect(rect, _FOG_BLACK)
+				cur_state = -1  # End-of-row sentinel
+
+			if cur_state != span_state:
+				# Flush previous span
+				if span_state == 1:
+					draw_rect(Rect2(span_start_x * cell_size_f, wy, (cx - span_start_x) * cell_size_f, cell_size_f), _FOG_DIM)
+				elif span_state == 2:
+					draw_rect(Rect2(span_start_x * cell_size_f, wy, (cx - span_start_x) * cell_size_f, cell_size_f), _FOG_BLACK)
+				span_start_x = cx
+				span_state = cur_state

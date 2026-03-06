@@ -58,6 +58,13 @@ func _ready() -> void:
 		label.visible = false
 	_label_check_timer = randf_range(0.0, LABEL_CHECK_INTERVAL)
 
+	# Only heal beacons need _physics_process; disable for all others to save CPU
+	if beacon_type != "heal":
+		set_physics_process(false)
+	# Beacons without labels don't need _process either
+	if beacon_label.is_empty():
+		set_process(false)
+
 	# Set collision shape — make unique so instances don't share the sub-resource
 	var shape = $CollisionShape2D
 	if shape and shape.shape is CircleShape2D:
@@ -96,20 +103,23 @@ func _physics_process(_delta: float) -> void:
 	# Must run in _physics_process (not _process) because enemy attacks also
 	# run in _physics_process — using _process left a timing gap where enemies
 	# could damage the player before the immunity flag was set each frame.
-	if beacon_type != "heal":
-		return
-	var players = get_tree().get_nodes_in_group("player")
-	for player in players:
-		if not is_instance_valid(player) or not player.has_node("StatsComponent"):
-			continue
-		var dist_sq = global_position.distance_squared_to(player.global_position)
-		if dist_sq <= _heal_range_sq:
-			player.is_on_heal_beacon = true
-			_do_heal(player)
+	if not _cached_player or not is_instance_valid(_cached_player):
+		var players = get_tree().get_nodes_in_group("player")
+		if players.size() > 0:
+			_cached_player = players[0]
 		else:
-			if player.get("is_on_heal_beacon"):
-				player.is_on_heal_beacon = false
-			_played_heal_sfx = false
+			return
+	var player = _cached_player
+	if not player.has_node("StatsComponent"):
+		return
+	var dist_sq = global_position.distance_squared_to(player.global_position)
+	if dist_sq <= _heal_range_sq:
+		player.is_on_heal_beacon = true
+		_do_heal(player)
+	else:
+		if player.get("is_on_heal_beacon"):
+			player.is_on_heal_beacon = false
+		_played_heal_sfx = false
 
 func _do_heal(player: Node2D) -> void:
 	var stats = player.get_node("StatsComponent")

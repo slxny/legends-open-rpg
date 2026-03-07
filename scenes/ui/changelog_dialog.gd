@@ -9,9 +9,22 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.75.2"
+const GAME_VERSION := "v0.76.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.76.0",
+		"title": "Q key closes panels + smoother gameplay with pooling & vsync",
+		"date": "2026-03-07",
+		"entries": [
+			"Fixed Q key not closing panels — ability_1 and ability_2 input actions were missing from project settings",
+			"Added vsync to eliminate uncapped frame rate and reduce CPU waste",
+			"Pooled effect labels (status text like BLEED, STUN, KNOCKBACK) — avoids Label.new() per proc",
+			"Cached LabelSettings per color — avoids LabelSettings.new() per effect label",
+			"Pooled bleed CPUParticles2D instances — reuses particles instead of allocating per tick",
+			"Tripled player damage label pool (10 → 30) to handle burst damage without allocations",
+		]
+	},
 	{
 		"version": "v0.75.2",
 		"title": "Per-frame overhead reduction for smoother gameplay",

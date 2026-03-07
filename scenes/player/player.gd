@@ -131,7 +131,15 @@ const CLICK_RADIUS: float = 30.0  # Desktop click detection radius
 const CLICK_RADIUS_MOBILE: float = 55.0  # Larger touch target on mobile
 # Damage label pool (avoids Label.new() per hit on player)
 var _player_dmg_pool: Array[Label] = []
-const PLAYER_DMG_POOL_MAX: int = 10
+const PLAYER_DMG_POOL_MAX: int = 30
+# Effect label pool (avoids Label.new() per status effect)
+var _effect_label_pool: Array[Label] = []
+const EFFECT_LABEL_POOL_MAX: int = 10
+# Cached LabelSettings for effect labels (keyed by color hex)
+var _effect_label_settings_cache: Dictionary = {}
+# Bleed particle pool (avoids CPUParticles2D.new() per bleed tick)
+var _bleed_particle_pool: Array[CPUParticles2D] = []
+const BLEED_PARTICLE_POOL_MAX: int = 5
 const CHARGE_GRACE: float = 0.15  # Hold this long before suppressing basic attacks
 const TAP_RESOLVE_TIME: float = 0.18  # 180ms buffer — more forgiving for multi-tap specials
 const CHARGE_THRESHOLD: float = 1.5   # Hold 1.5s for charged slash
@@ -1112,41 +1120,69 @@ func _spawn_effect_vfx(color: Color, duration: float, label_text: String) -> voi
 	_spawn_effect_label(label_text, color)
 
 func _spawn_effect_label(text: String, color: Color) -> void:
-	var label = Label.new()
+	var label: Label
+	if _effect_label_pool.size() > 0:
+		label = _effect_label_pool.pop_back()
+	else:
+		label = Label.new()
 	label.text = text
 	label.position = Vector2(-30, -50)
-	var settings = LabelSettings.new()
-	settings.font_size = 16
-	settings.font_color = color
-	settings.outline_size = 2
-	settings.outline_color = Color.BLACK
-	label.label_settings = settings
+	label.modulate.a = 1.0
+	var color_key = color.to_html()
+	if not _effect_label_settings_cache.has(color_key):
+		var settings = LabelSettings.new()
+		settings.font_size = 16
+		settings.font_color = color
+		settings.outline_size = 2
+		settings.outline_color = Color.BLACK
+		_effect_label_settings_cache[color_key] = settings
+	label.label_settings = _effect_label_settings_cache[color_key]
 	add_child(label)
 	var tween = create_tween()
 	tween.tween_property(label, "position:y", label.position.y - 25, 0.8)
 	tween.parallel().tween_property(label, "modulate:a", 0.0, 0.8)
-	tween.tween_callback(label.queue_free)
+	tween.tween_callback(_recycle_effect_label.bind(label))
+
+func _recycle_effect_label(label: Label) -> void:
+	if is_instance_valid(label):
+		label.get_parent().remove_child(label)
+		if _effect_label_pool.size() < EFFECT_LABEL_POOL_MAX:
+			_effect_label_pool.append(label)
+		else:
+			label.queue_free()
 
 func _spawn_bleed_particles() -> void:
-	var particles = CPUParticles2D.new()
+	var particles: CPUParticles2D
+	if _bleed_particle_pool.size() > 0:
+		particles = _bleed_particle_pool.pop_back()
+	else:
+		particles = CPUParticles2D.new()
+		particles.one_shot = true
+		particles.amount = 6
+		particles.lifetime = 0.6
+		particles.explosiveness = 0.8
+		particles.direction = Vector2(0, 1)
+		particles.spread = 30.0
+		particles.gravity = Vector2(0, 80)
+		particles.initial_velocity_min = 15.0
+		particles.initial_velocity_max = 35.0
+		particles.scale_amount_min = 1.5
+		particles.scale_amount_max = 3.0
+		particles.color = Color(0.7, 0.05, 0.05, 0.9)
 	particles.emitting = true
-	particles.one_shot = true
-	particles.amount = 6
-	particles.lifetime = 0.6
-	particles.explosiveness = 0.8
-	particles.direction = Vector2(0, 1)  # Drip downward
-	particles.spread = 30.0
-	particles.gravity = Vector2(0, 80)
-	particles.initial_velocity_min = 15.0
-	particles.initial_velocity_max = 35.0
-	particles.scale_amount_min = 1.5
-	particles.scale_amount_max = 3.0
-	particles.color = Color(0.7, 0.05, 0.05, 0.9)
 	add_child(particles)
-	# Auto-free after particles finish
 	var cleanup = create_tween()
 	cleanup.tween_interval(1.0)
-	cleanup.tween_callback(particles.queue_free)
+	cleanup.tween_callback(_recycle_bleed_particles.bind(particles))
+
+func _recycle_bleed_particles(particles: CPUParticles2D) -> void:
+	if is_instance_valid(particles):
+		particles.emitting = false
+		particles.get_parent().remove_child(particles)
+		if _bleed_particle_pool.size() < BLEED_PARTICLE_POOL_MAX:
+			_bleed_particle_pool.append(particles)
+		else:
+			particles.queue_free()
 
 func _clear_effect_vfx() -> void:
 	if _effect_vfx_tween and _effect_vfx_tween.is_valid():
@@ -1185,13 +1221,16 @@ func _start_immunity_vfx() -> void:
 	_immunity_label.text = "IMMUNE"
 	_immunity_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_immunity_label.position = Vector2(-28, -48)
-	var settings = LabelSettings.new()
-	var is_mobile = GameManager.is_mobile_device()
-	settings.font_size = 22 if is_mobile else 11
-	settings.font_color = Color(0.3, 1.0, 0.5)
-	settings.outline_size = 4 if is_mobile else 2
-	settings.outline_color = Color(0.0, 0.2, 0.05)
-	_immunity_label.label_settings = settings
+	var color_key = Color(0.3, 1.0, 0.5).to_html()
+	if not _effect_label_settings_cache.has(color_key + "_imm"):
+		var settings = LabelSettings.new()
+		var is_mobile = GameManager.is_mobile_device()
+		settings.font_size = 22 if is_mobile else 11
+		settings.font_color = Color(0.3, 1.0, 0.5)
+		settings.outline_size = 4 if is_mobile else 2
+		settings.outline_color = Color(0.0, 0.2, 0.05)
+		_effect_label_settings_cache[color_key + "_imm"] = settings
+	_immunity_label.label_settings = _effect_label_settings_cache[color_key + "_imm"]
 	add_child(_immunity_label)
 	# Gentle bob animation
 	var label_tween = _immunity_label.create_tween().set_loops()

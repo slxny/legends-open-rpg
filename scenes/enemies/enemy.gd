@@ -42,6 +42,7 @@ static var _info_label_settings: LabelSettings = null
 static var _zoom_comp_frame: int = -1
 static var _zoom_comp_value: float = 1.0
 var _info_label: Label = null
+var _last_zoom_comp: float = -1.0  # Last applied zoom compensation (skip redundant updates)
 
 # Distance-based sleep/wake — enemies far from the player disable physics processing
 var _is_sleeping: bool = false
@@ -368,15 +369,18 @@ func _physics_process(delta: float) -> void:
 		global_position = global_position.clamp(movement_bounds.position, movement_bounds.end)
 
 	# Zoom-compensate in-world labels so text stays readable at all zoom levels
+	# Only update when zoom actually changed (avoids redundant property sets)
 	if name_label.visible or hp_bar.visible:
 		var _zc = _get_zoom_compensation()
-		var _zs = Vector2(_zc, _zc)
-		if name_label.visible:
-			name_label.scale = _zs
-		if hp_bar.visible:
-			hp_bar.scale = _zs
-		if _info_label and is_instance_valid(_info_label):
-			_info_label.scale = _zs
+		if absf(_zc - _last_zoom_comp) > 0.001:
+			_last_zoom_comp = _zc
+			var _zs = Vector2(_zc, _zc)
+			if name_label.visible:
+				name_label.scale = _zs
+			if hp_bar.visible:
+				hp_bar.scale = _zs
+			if _info_label and is_instance_valid(_info_label):
+				_info_label.scale = _zs
 
 func _process_idle(delta: float) -> void:
 	velocity = Vector2.ZERO
@@ -487,24 +491,30 @@ func _get_separation_push(in_attack: bool = false) -> Vector2:
 		var diff = pos - other.global_position
 		var dist_sq = diff.length_squared()
 		if dist_sq < check_radius_sq and dist_sq > 0.1:
-			var dist = sqrt(dist_sq)
-			# Inverse-linear falloff: stronger push when closer
-			var strength = (1.0 - dist / check_radius) * 150.0
-			push += diff.normalized() * strength
+			# Approximate inverse-linear falloff without sqrt/normalized:
+			# strength ~ (1 - dist/radius) * 150, direction ~ diff/dist
+			# Combined: diff * (150 / dist) * (1 - dist/radius)
+			#         = diff * 150 * (1/dist - 1/radius)
+			#         ≈ diff * 150 * (1/dist_sq^0.5 - inv_radius)
+			# Use dist_sq ratio for cheaper approximation:
+			var ratio = dist_sq / check_radius_sq  # 0..1 (closer = smaller)
+			var strength = (1.0 - ratio) * 150.0  # quadratic falloff (close enough)
+			push += diff * (strength / dist_sq)  # diff/dist_sq approximates normalized/dist
 	# Push away from the player to prevent piling on top of them
 	if is_instance_valid(target):
 		var player_diff = pos - target.global_position
 		var player_dist_sq = player_diff.length_squared()
-		var player_push_radius: float = 30.0
-		var player_push_radius_sq = player_push_radius * player_push_radius
+		var player_push_radius_sq: float = 900.0  # 30.0 * 30.0
 		if player_dist_sq < player_push_radius_sq and player_dist_sq > 0.1:
-			var player_dist = sqrt(player_dist_sq)
-			var player_strength = (1.0 - player_dist / player_push_radius) * 200.0
-			push += player_diff.normalized() * player_strength
+			var ratio = player_dist_sq / player_push_radius_sq
+			var player_strength = (1.0 - ratio) * 200.0
+			push += player_diff * (player_strength / player_dist_sq)
 	# Softer cap during attack so combat positioning isn't disrupted
 	var max_push = 70.0 if in_attack else 120.0
-	if push.length_squared() > max_push * max_push:
-		push = push.normalized() * max_push
+	var max_push_sq = max_push * max_push
+	var push_len_sq = push.length_squared()
+	if push_len_sq > max_push_sq:
+		push *= max_push / sqrt(push_len_sq)  # Only sqrt when actually clamping
 	_cached_sep_push = push
 	return push
 
@@ -558,23 +568,29 @@ func _process_attack(delta: float) -> void:
 
 	# Keep enemies spread apart and maintain comfortable combat distance
 	var sep = _get_separation_push(true)
-	var dist = to_target.length()
+	var dist_sq = to_target.length_squared()
 	var ideal_dist = stats.attack_range * 0.85
+	var ideal_dist_sq = ideal_dist * ideal_dist
 	var move_toward = Vector2.ZERO
-	if dist > 0.1:
-		var dir_to_target = to_target.normalized()
-		if dist < ideal_dist:
-			# Back off slowly if too close
-			move_toward = -dir_to_target * stats.move_speed * 0.15
-		elif dist > ideal_dist + 5.0:
-			# Close in gently — don't chase the player at full speed
-			var urgency = clampf((dist - ideal_dist) / (stats.attack_range * 0.5), 0.1, 0.3)
-			move_toward = dir_to_target * stats.move_speed * urgency
-
-		# Project separation perpendicular to target direction so enemies
-		# fan out around the player instead of being pushed away from them
-		var perp = Vector2(-dir_to_target.y, dir_to_target.x)
-		sep = perp * sep.dot(perp)
+	if dist_sq > 0.01:
+		var ideal_plus_5_sq = (ideal_dist + 5.0) * (ideal_dist + 5.0)
+		# Only compute sqrt when we actually need to adjust position
+		if dist_sq < ideal_dist_sq or dist_sq > ideal_plus_5_sq:
+			var dist = sqrt(dist_sq)
+			var dir_to_target = to_target / dist  # normalized without second sqrt
+			if dist < ideal_dist:
+				move_toward = -dir_to_target * stats.move_speed * 0.15
+			else:
+				var urgency = clampf((dist - ideal_dist) / (stats.attack_range * 0.5), 0.1, 0.3)
+				move_toward = dir_to_target * stats.move_speed * urgency
+			var perp = Vector2(-dir_to_target.y, dir_to_target.x)
+			sep = perp * sep.dot(perp)
+		else:
+			# In ideal range — just project separation perpendicular
+			var inv_dist = 1.0 / sqrt(dist_sq)
+			var dir_to_target = to_target * inv_dist
+			var perp = Vector2(-dir_to_target.y, dir_to_target.x)
+			sep = perp * sep.dot(perp)
 
 	velocity = move_toward + sep
 	move_and_slide()

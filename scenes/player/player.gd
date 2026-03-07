@@ -16,6 +16,11 @@ var _is_dead: bool = false  # True while dead and awaiting respawn — blocks al
 var is_on_heal_beacon: bool = false  # True while standing on a heal beacon — blocks all damage
 var _death_tween: Tween = null  # Active death/respawn animation tween
 var _enemies_in_range: Array[Node2D] = []
+# Cached list of nearby enemies for special attacks (updated every 0.2s, avoids full group scan)
+var _nearby_enemies: Array[Node2D] = []
+var _nearby_enemies_timer: float = 0.0
+const NEARBY_ENEMIES_RADIUS_SQ: float = 250000.0  # 500px radius squared
+const NEARBY_ENEMIES_INTERVAL: float = 0.2
 var _trees_in_range: Array[Node2D] = []
 var _target_tree: Node2D = null  # Tree targeted by click-to-harvest
 var _target_enemy: Node2D = null  # Enemy targeted by left-click-to-attack
@@ -27,6 +32,10 @@ var _is_moving_to_target: bool = false
 var _stuck_time: float = 0.0  # Tracks how long we've been colliding while moving
 
 var _shadow: Sprite2D = null
+
+# Smooth zoom interpolation
+var _target_zoom: Vector2 = Vector2.ZERO  # Zero = uninitialized, will be set on first use
+const ZOOM_LERP_SPEED: float = 10.0
 
 # Smooth movement
 const ACCEL: float = 900.0  # Pixels/sec² — how fast we reach top speed
@@ -398,6 +407,17 @@ func _physics_process(delta: float) -> void:
 	_update_walk_anim(delta)
 	stats.process_regen(delta)
 
+	# Periodically cache nearby enemies for special attacks (avoids full group scan)
+	_nearby_enemies_timer -= delta
+	if _nearby_enemies_timer <= 0.0:
+		_nearby_enemies_timer = NEARBY_ENEMIES_INTERVAL
+		_nearby_enemies.clear()
+		var pos = global_position
+		for enemy in _nearby_enemies:
+			if is_instance_valid(enemy) and not enemy.get("_is_dead") and enemy.has_method("take_damage"):
+				if pos.distance_squared_to(enemy.global_position) < NEARBY_ENEMIES_RADIUS_SQ:
+					_nearby_enemies.append(enemy)
+
 	if _attack_cooldown > 0.0:
 		_attack_cooldown -= delta
 	if _tap_aim_timer > 0.0:
@@ -540,6 +560,10 @@ func _physics_process(delta: float) -> void:
 		else:
 			var decay = _shake_time_left / SHAKE_DURATION
 			camera.offset = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * _shake_intensity * decay
+
+	# Smooth zoom interpolation
+	if _target_zoom != Vector2.ZERO and camera.zoom.distance_squared_to(_target_zoom) > 0.0001:
+		camera.zoom = camera.zoom.lerp(_target_zoom, clampf(ZOOM_LERP_SPEED * delta, 0.0, 1.0))
 
 	# Update facing direction from movement (skip during charge — aim takes priority)
 	if velocity.length_squared() > 25.0 and not _is_attack_animating and not _is_charging:
@@ -836,8 +860,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 	if event is InputEventMagnifyGesture:
 		# Trackpad pinch: factor > 1 = pinch out (zoom in), < 1 = pinch in (zoom out)
-		var new_zoom = (camera.zoom * event.factor).clamp(z_min, z_max)
-		camera.zoom = new_zoom
+		_target_zoom = (camera.zoom * event.factor).clamp(z_min, z_max)
 		return
 
 	# While charging, clicks set aim direction instead of moving
@@ -852,10 +875,12 @@ func _unhandled_input(event: InputEvent) -> void:
 
 	if event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
-			camera.zoom = (camera.zoom + Vector2(ZOOM_STEP, ZOOM_STEP)).clamp(z_min, z_max)
+			var base = _target_zoom if _target_zoom != Vector2.ZERO else camera.zoom
+			_target_zoom = (base + Vector2(ZOOM_STEP, ZOOM_STEP)).clamp(z_min, z_max)
 			return
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-			camera.zoom = (camera.zoom - Vector2(ZOOM_STEP, ZOOM_STEP)).clamp(z_min, z_max)
+			var base = _target_zoom if _target_zoom != Vector2.ZERO else camera.zoom
+			_target_zoom = (base - Vector2(ZOOM_STEP, ZOOM_STEP)).clamp(z_min, z_max)
 			return
 
 		if event.button_index == MOUSE_BUTTON_LEFT or event.button_index == MOUSE_BUTTON_RIGHT:
@@ -1299,7 +1324,7 @@ func _execute_power_strike(attack_dir: Vector2) -> void:
 	# Snapshot targets in a cone in front of the player (up to 5)
 	var start_pos = global_position
 	var cone_targets: Array[Node2D] = []
-	for enemy in get_tree().get_nodes_in_group("enemies"):
+	for enemy in _nearby_enemies:
 		if not is_instance_valid(enemy) or enemy.get("_is_dead") or not enemy.has_method("take_damage"):
 			continue
 		var to_enemy = enemy.global_position - start_pos
@@ -1465,7 +1490,7 @@ func _execute_charged_slash(attack_dir: Vector2) -> void:
 	var start_pos = global_position
 	var end_pos = start_pos + dir * slash_range
 	var slash_targets: Array[Node2D] = []
-	for enemy in get_tree().get_nodes_in_group("enemies"):
+	for enemy in _nearby_enemies:
 		if not is_instance_valid(enemy) or enemy.get("_is_dead") or not enemy.has_method("take_damage"):
 			continue
 		var dist_to_path = _point_to_segment_dist(enemy.global_position, start_pos, end_pos)
@@ -1764,9 +1789,10 @@ func _execute_arrow_rain(attack_dir: Vector2) -> void:
 
 	# Snapshot enemies in range BEFORE animation (they might move)
 	var rain_targets: Array[Node2D] = []
-	for enemy in get_tree().get_nodes_in_group("enemies"):
+	var rain_radius_sq = rain_radius * rain_radius
+	for enemy in _nearby_enemies:
 		if is_instance_valid(enemy) and not enemy.get("_is_dead") and enemy.has_method("take_damage"):
-			if enemy.global_position.distance_to(rain_center) <= rain_radius:
+			if enemy.global_position.distance_squared_to(rain_center) <= rain_radius_sq:
 				rain_targets.append(enemy)
 
 	# Dramatic bow raise animation
@@ -1782,20 +1808,22 @@ func _execute_arrow_rain(attack_dir: Vector2) -> void:
 		_spawn_effect_label("ARROW RAIN!", Color(0.6, 0.8, 1.0))
 
 		# Spawn arrows raining down with staggered timing (visual only)
+		# Use a single tween with intervals instead of 12 separate create_timer calls
 		var world = _get_world_node()
+		var arrow_tex = SpriteGenerator.get_texture("arrow_projectile")
+		var rain_tween = create_tween()
 		for i in range(arrow_count):
-			var delay = i * 0.04
-			get_tree().create_timer(delay).timeout.connect(func():
-				# Random position within radius
+			if i > 0:
+				rain_tween.tween_interval(0.04)
+			rain_tween.tween_callback(func():
 				var angle_r = randf() * TAU
 				var dist_r = randf() * rain_radius
 				var offset = Vector2(cos(angle_r), sin(angle_r)) * dist_r
 				var land_pos = rain_center + offset
 				var start_pos_arrow = land_pos + Vector2(randf_range(-20, 20), -90)
 
-				# Arrow visual
 				var arrow = _get_pooled_vfx()
-				arrow.texture = SpriteGenerator.get_texture("arrow_projectile")
+				arrow.texture = arrow_tex
 				arrow.global_position = start_pos_arrow
 				arrow.rotation = (land_pos - start_pos_arrow).angle()
 				arrow.modulate = Color(0.8, 0.9, 1.0, 0.9)
@@ -1803,9 +1831,7 @@ func _execute_arrow_rain(attack_dir: Vector2) -> void:
 
 				var atween = arrow.create_tween()
 				atween.tween_property(arrow, "global_position", land_pos, 0.1)
-				atween.tween_callback(func():
-					_spawn_impact_vfx(land_pos, false)
-				)
+				atween.tween_callback(_spawn_impact_vfx.bind(land_pos, false))
 				atween.tween_property(arrow, "modulate:a", 0.0, 0.15)
 				atween.tween_callback(_recycle_vfx.bind(arrow))
 			)
@@ -1846,7 +1872,7 @@ func _execute_sniper_shot(attack_dir: Vector2) -> void:
 	var end_pos_world = start_pos_world + dir * snipe_range
 	var best_target: Node2D = null
 	var best_dist := INF
-	for enemy in get_tree().get_nodes_in_group("enemies"):
+	for enemy in _nearby_enemies:
 		if not is_instance_valid(enemy) or enemy.get("_is_dead") or not enemy.has_method("take_damage"):
 			continue
 		var dist_to_path = _point_to_segment_dist(enemy.global_position, start_pos_world, end_pos_world)

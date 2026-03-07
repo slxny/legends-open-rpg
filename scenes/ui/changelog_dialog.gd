@@ -9,9 +9,22 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.76.0"
+const GAME_VERSION := "v0.77.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.77.0",
+		"title": "Combat & camera performance — fewer sqrt, cached queries, smooth zoom",
+		"date": "2026-03-07",
+		"entries": [
+			"Eliminated sqrt/normalized calls in enemy separation push — uses squared-distance approximation",
+			"Optimized enemy attack-state movement — avoids sqrt when at ideal combat distance",
+			"Cached nearby enemies list (updated 5x/sec) — special attacks no longer scan every enemy in the world",
+			"Smooth camera zoom — scroll wheel and trackpad zoom now interpolates instead of jumping",
+			"Arrow rain uses single staggered tween instead of 12 separate timers",
+			"Enemy label zoom compensation skips redundant scale updates when zoom hasn't changed",
+		]
+	},
 	{
 		"version": "v0.76.0",
 		"title": "Q key closes panels + smoother gameplay with pooling & vsync",

@@ -38,6 +38,9 @@ var _base_modulate: Color = Color.WHITE  # Resting sprite tint (reddish for mini
 # Outline shader for hover highlighting (shared across all enemies)
 static var _outline_shader: Shader = null
 static var _info_label_settings: LabelSettings = null
+# Shared zoom compensation cache — computed once per frame, reused by all enemies
+static var _zoom_comp_frame: int = -1
+static var _zoom_comp_value: float = 1.0
 var _info_label: Label = null
 
 # Distance-based sleep/wake — enemies far from the player disable physics processing
@@ -83,7 +86,7 @@ const DMG_LABEL_POOL_MAX: int = 30
 static var _drop_pool: Array[Area2D] = []
 const DROP_POOL_MAX: int = 20
 # Global rat squeal cooldown — prevents overlapping squeals from swarms
-static var _rat_squeal_cooldown: float = 0.0
+static var _last_rat_squeal_msec: int = 0
 const RAT_SQUEAL_INTERVAL: float = 0.8
 # Multi-kill stagger — desynchronize simultaneous deaths
 static var _last_global_death_msec: int = 0
@@ -309,18 +312,20 @@ func show_info() -> void:
 	)
 
 func _get_zoom_compensation() -> float:
+	var frame = Engine.get_process_frames()
+	if _zoom_comp_frame == frame:
+		return _zoom_comp_value
+	_zoom_comp_frame = frame
 	var cam = get_viewport().get_camera_2d()
 	if cam:
-		return ZOOM_REF / cam.zoom.x
-	return 1.0
+		_zoom_comp_value = ZOOM_REF / cam.zoom.x
+	else:
+		_zoom_comp_value = 1.0
+	return _zoom_comp_value
 
 func _physics_process(delta: float) -> void:
 	if _is_dead:
 		return
-
-	# Tick rat squeal cooldown (static, shared across all enemies)
-	if _rat_squeal_cooldown > 0.0:
-		_rat_squeal_cooldown -= delta
 
 	# Distance-based sleep/wake check (throttled)
 	_sleep_check_timer -= delta
@@ -375,7 +380,6 @@ func _physics_process(delta: float) -> void:
 
 func _process_idle(delta: float) -> void:
 	velocity = Vector2.ZERO
-	move_and_slide()
 	# Check for player aggro (squared distance avoids sqrt)
 	var player = _get_player()
 	if player:
@@ -442,14 +446,13 @@ func _process_patrol(delta: float) -> void:
 	if dist_sq_to_target < 64.0:  # 8^2
 		# Reached patrol waypoint — short pause then go idle
 		velocity = Vector2.ZERO
-		move_and_slide()
 		current_state = State.IDLE
 		# Minibosses idle briefly — restless, always on the move
 		_patrol_wait_timer = randf_range(0.2, 0.8) if is_mini_boss else randf_range(0.5, 2.0)
 		return
 
 	var dir = (_patrol_target - global_position).normalized()
-	velocity = dir * stats.move_speed * _patrol_speed_factor + _get_separation_push()
+	velocity = dir * stats.move_speed * _patrol_speed_factor
 	# Flip sprite based on movement direction
 	if dir.x < -0.1:
 		sprite.flip_h = true
@@ -457,7 +460,15 @@ func _process_patrol(delta: float) -> void:
 		sprite.flip_h = false
 	move_and_slide()
 
+var _cached_sep_push: Vector2 = Vector2.ZERO
+var _sep_push_skip: int = 0  # Skip counter — recompute every 3rd frame
+
 func _get_separation_push(in_attack: bool = false) -> Vector2:
+	# Throttle: recompute every 3 physics frames, reuse cache otherwise
+	_sep_push_skip += 1
+	if _sep_push_skip < 3:
+		return _cached_sep_push
+	_sep_push_skip = 0
 	# Proximity-based soft separation — enemies repel each other without hard collisions
 	# Optimized: only check camp-mates (parent's children) instead of all enemies globally
 	var push = Vector2.ZERO
@@ -466,6 +477,7 @@ func _get_separation_push(in_attack: bool = false) -> Vector2:
 	var check_radius_sq: float = check_radius * check_radius
 	var parent = get_parent()
 	if not parent:
+		_cached_sep_push = push
 		return push
 	for other in parent.get_children():
 		if other == self:
@@ -493,6 +505,7 @@ func _get_separation_push(in_attack: bool = false) -> Vector2:
 	var max_push = 70.0 if in_attack else 120.0
 	if push.length_squared() > max_push * max_push:
 		push = push.normalized() * max_push
+	_cached_sep_push = push
 	return push
 
 func _process_chase(delta: float) -> void:
@@ -588,9 +601,10 @@ func _process_attack(delta: float) -> void:
 				_apply_effect_to_target(target)
 
 func _try_rat_squeal() -> void:
-	if _rat_squeal_cooldown > 0.0:
+	var now_msec = Time.get_ticks_msec()
+	if now_msec - _last_rat_squeal_msec < int(RAT_SQUEAL_INTERVAL * 1000.0):
 		return
-	_rat_squeal_cooldown = RAT_SQUEAL_INTERVAL
+	_last_rat_squeal_msec = now_msec
 	var variant = randi_range(1, 3)
 	AudioManager.play_sfx("rat_squeal_%d" % variant, -8.0)
 
@@ -598,7 +612,6 @@ func _process_return(delta: float) -> void:
 	var dist_sq = global_position.distance_squared_to(home_position)
 	if dist_sq < 25.0:  # 5^2
 		velocity = Vector2.ZERO
-		move_and_slide()
 		current_state = State.IDLE
 		stats.current_hp = stats.max_hp
 		_update_hp_bar()

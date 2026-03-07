@@ -9,9 +9,22 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.75.1"
+const GAME_VERSION := "v0.75.2"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.75.2",
+		"title": "Per-frame overhead reduction for smoother gameplay",
+		"date": "2026-03-07",
+		"entries": [
+			"Cached zoom compensation across all enemies — computed once per frame instead of per-enemy",
+			"Throttled enemy separation push to every 3rd physics frame with cached result",
+			"Removed move_and_slide() calls from idle and stopped enemies",
+			"Removed per-enemy tick of shared rat squeal cooldown — use msec timestamps instead",
+			"Removed separation push from patrolling enemies (only needed in combat)",
+			"Throttled hero stats panel buff refresh from every frame to 2x/second",
+		]
+	},
 	{
 		"version": "v0.75.1",
 		"title": "Smooth combat — eliminate attack stutter",

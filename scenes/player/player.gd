@@ -460,7 +460,12 @@ func _physics_process(delta: float) -> void:
 
 	# --- Update chopping state: active when trees are in range and we recently chopped one ---
 	if _is_chopping_tree:
-		_trees_in_range = _trees_in_range.filter(func(t): return is_instance_valid(t) and not t.get("_is_chopped"))
+		var i := _trees_in_range.size() - 1
+		while i >= 0:
+			var t = _trees_in_range[i]
+			if not is_instance_valid(t) or t.get("_is_chopped"):
+				_trees_in_range.remove_at(i)
+			i -= 1
 		if _trees_in_range.is_empty() and (_target_tree == null or not is_instance_valid(_target_tree) or _target_tree.get("_is_chopped")):
 			_is_chopping_tree = false
 

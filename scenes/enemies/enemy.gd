@@ -491,24 +491,18 @@ func _get_separation_push(in_attack: bool = false) -> Vector2:
 		var diff = pos - other.global_position
 		var dist_sq = diff.length_squared()
 		if dist_sq < check_radius_sq and dist_sq > 0.1:
-			# Approximate inverse-linear falloff without sqrt/normalized:
-			# strength ~ (1 - dist/radius) * 150, direction ~ diff/dist
-			# Combined: diff * (150 / dist) * (1 - dist/radius)
-			#         = diff * 150 * (1/dist - 1/radius)
-			#         ≈ diff * 150 * (1/dist_sq^0.5 - inv_radius)
-			# Use dist_sq ratio for cheaper approximation:
-			var ratio = dist_sq / check_radius_sq  # 0..1 (closer = smaller)
-			var strength = (1.0 - ratio) * 150.0  # quadratic falloff (close enough)
-			push += diff * (strength / dist_sq)  # diff/dist_sq approximates normalized/dist
+			# Push strength falls off with distance; direction from diff/dist_sq
+			# is slightly biased toward closer enemies (intentional — stronger repel)
+			var strength = (1.0 - dist_sq / check_radius_sq) * 150.0
+			push += diff * (strength / check_radius)
 	# Push away from the player to prevent piling on top of them
 	if is_instance_valid(target):
 		var player_diff = pos - target.global_position
 		var player_dist_sq = player_diff.length_squared()
 		var player_push_radius_sq: float = 900.0  # 30.0 * 30.0
 		if player_dist_sq < player_push_radius_sq and player_dist_sq > 0.1:
-			var ratio = player_dist_sq / player_push_radius_sq
-			var player_strength = (1.0 - ratio) * 200.0
-			push += player_diff * (player_strength / player_dist_sq)
+			var strength = (1.0 - player_dist_sq / player_push_radius_sq) * 200.0
+			push += player_diff * (strength / 30.0)
 	# Softer cap during attack so combat positioning isn't disrupted
 	var max_push = 70.0 if in_attack else 120.0
 	var max_push_sq = max_push * max_push
@@ -568,15 +562,15 @@ func _process_attack(delta: float) -> void:
 
 	# Keep enemies spread apart and maintain comfortable combat distance
 	var sep = _get_separation_push(true)
-	var dist_sq = to_target.length_squared()
+	var to_target_dist_sq = to_target.length_squared()
 	var ideal_dist = stats.attack_range * 0.85
 	var ideal_dist_sq = ideal_dist * ideal_dist
 	var move_toward = Vector2.ZERO
-	if dist_sq > 0.01:
+	if to_target_dist_sq > 0.01:
 		var ideal_plus_5_sq = (ideal_dist + 5.0) * (ideal_dist + 5.0)
 		# Only compute sqrt when we actually need to adjust position
-		if dist_sq < ideal_dist_sq or dist_sq > ideal_plus_5_sq:
-			var dist = sqrt(dist_sq)
+		if to_target_dist_sq < ideal_dist_sq or to_target_dist_sq > ideal_plus_5_sq:
+			var dist = sqrt(to_target_dist_sq)
 			var dir_to_target = to_target / dist  # normalized without second sqrt
 			if dist < ideal_dist:
 				move_toward = -dir_to_target * stats.move_speed * 0.15
@@ -587,7 +581,7 @@ func _process_attack(delta: float) -> void:
 			sep = perp * sep.dot(perp)
 		else:
 			# In ideal range — just project separation perpendicular
-			var inv_dist = 1.0 / sqrt(dist_sq)
+			var inv_dist = 1.0 / sqrt(to_target_dist_sq)
 			var dir_to_target = to_target * inv_dist
 			var perp = Vector2(-dir_to_target.y, dir_to_target.x)
 			sep = perp * sep.dot(perp)

@@ -413,7 +413,7 @@ func _physics_process(delta: float) -> void:
 		_nearby_enemies_timer = NEARBY_ENEMIES_INTERVAL
 		_nearby_enemies.clear()
 		var pos = global_position
-		for enemy in _nearby_enemies:
+		for enemy in get_tree().get_nodes_in_group("enemies"):
 			if is_instance_valid(enemy) and not enemy.get("_is_dead") and enemy.has_method("take_damage"):
 				if pos.distance_squared_to(enemy.global_position) < NEARBY_ENEMIES_RADIUS_SQ:
 					_nearby_enemies.append(enemy)

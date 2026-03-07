@@ -328,15 +328,12 @@ func _physics_process(delta: float) -> void:
 	if _is_dead:
 		return
 
-	# Distance-based sleep/wake check (throttled)
+	# Distance-based sleep/wake check (throttled) — only for awake enemies.
+	# Sleeping enemies have physics_process disabled; creep_camp handles their wake check.
 	_sleep_check_timer -= delta
 	if _sleep_check_timer <= 0.0:
 		_sleep_check_timer = SLEEP_CHECK_INTERVAL
 		_update_sleep_state()
-		if _is_sleeping:
-			return
-	elif _is_sleeping:
-		return
 
 	# Apply knockback impulse — overrides state machine until it decays
 	if _knockback_velocity.length_squared() > 4.0:
@@ -2231,12 +2228,14 @@ func _update_sleep_state() -> void:
 		if dist_sq < WAKE_DISTANCE_SQ:
 			_is_sleeping = false
 			visible = true
+			set_physics_process(true)
 	else:
 		# Fall asleep when player is far away (only if not in combat)
 		if dist_sq > SLEEP_DISTANCE_SQ and current_state != State.CHASE and current_state != State.ATTACK and current_state != State.RETURN:
 			_is_sleeping = true
 			visible = false
 			velocity = Vector2.ZERO
+			set_physics_process(false)
 	# Proximity-based label visibility for non-combat states
 	if not _is_selected and current_state != State.CHASE and current_state != State.ATTACK:
 		name_label.visible = dist_sq < LABEL_VISIBLE_DISTANCE_SQ

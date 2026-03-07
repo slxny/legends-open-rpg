@@ -409,7 +409,9 @@ var _cached_player: Node2D = null
 var _player_check_timer: float = 0.0
 var _spawn_queue: Array = []  # Pending enemies to spawn across frames
 var _is_stagger_spawning: bool = false
+var _sleep_wake_timer: float = 0.0  # Timer for checking if sleeping children should wake
 const PLAYER_CHECK_INTERVAL: float = 0.5  # Only check player proximity twice per second
+const SLEEP_WAKE_CHECK_INTERVAL: float = 0.5  # Check sleeping children for wake-up
 const ACTIVATION_DISTANCE_SQ: float = 2250000.0  # 1500^2 — camps within this activate immediately
 const ENEMIES_PER_FRAME: int = 3  # Max enemies to instantiate per frame during staggered spawn
 
@@ -443,6 +445,14 @@ func _process(delta: float) -> void:
 			if _is_player_in_activation_range():
 				_spawn_enemies_staggered(false)
 		return
+
+	# Wake-check sleeping children (their _physics_process is disabled)
+	_sleep_wake_timer -= delta
+	if _sleep_wake_timer <= 0.0:
+		_sleep_wake_timer = SLEEP_WAKE_CHECK_INTERVAL
+		for child in get_children():
+			if child is CharacterBody2D and child.get("_is_sleeping") and not child.get("_is_dead"):
+				child._update_sleep_state()
 
 	if not _waiting_respawn:
 		return

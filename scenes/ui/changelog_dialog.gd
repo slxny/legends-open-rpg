@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.77.0"
+const GAME_VERSION := "v0.78.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.78.0",
+		"title": "Major frame budget reduction — sleeping enemies fully disabled",
+		"date": "2026-03-07",
+		"entries": [
+			"Sleeping enemies now fully disable _physics_process — eliminates ~100 idle virtual calls/frame",
+			"Creep camps handle wake-checking for their sleeping children (0.5s interval)",
+			"Fog overlay disables _process when no redraw is pending — zero cost when player is stationary",
+			"Minimap skips dead and sleeping enemies during scan — reduces iteration cost",
+		]
+	},
 	{
 		"version": "v0.77.0",
 		"title": "Combat & camera performance — fewer sqrt, cached queries, smooth zoom",

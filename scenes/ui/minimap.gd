@@ -95,14 +95,13 @@ func _process(delta: float) -> void:
 		_redraw_timer = REDRAW_INTERVAL
 		_cached_enemies.clear()
 		_cached_bosses.clear()
-		var enemies = get_tree().get_nodes_in_group("enemies")
-		for enemy in enemies:
-			if not is_instance_valid(enemy):
+		# Only scan visible + boss enemies (sleeping enemies are invisible & irrelevant)
+		for enemy in get_tree().get_nodes_in_group("enemies"):
+			if not is_instance_valid(enemy) or enemy.get("_is_dead"):
 				continue
-			if enemy.is_mini_boss:
-				# Minibosses always show on minimap once alive
+			if enemy.get("is_mini_boss"):
 				_cached_bosses.append(enemy.global_position)
-			elif FogOfWarManager.is_visible(enemy.global_position):
+			elif not enemy.get("_is_sleeping") and FogOfWarManager.is_visible(enemy.global_position):
 				_cached_enemies.append(enemy.global_position)
 		queue_redraw()
 

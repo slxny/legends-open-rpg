@@ -15,13 +15,14 @@ func _ready() -> void:
 	z_index = 100  # Render on top of everything
 	FogOfWarManager.fog_updated.connect(_on_fog_updated)
 	call_deferred("_cache_camera")
+	set_process(false)  # Only run _process when a redraw is pending
 
 func _process(delta: float) -> void:
-	if _fog_redraw_pending:
-		_fog_redraw_timer -= delta
-		if _fog_redraw_timer <= 0.0:
-			_fog_redraw_pending = false
-			queue_redraw()
+	_fog_redraw_timer -= delta
+	if _fog_redraw_timer <= 0.0:
+		_fog_redraw_pending = false
+		set_process(false)
+		queue_redraw()
 
 func _cache_camera() -> void:
 	var players = get_tree().get_nodes_in_group("player")
@@ -32,6 +33,7 @@ func _on_fog_updated() -> void:
 	if not _fog_redraw_pending:
 		_fog_redraw_pending = true
 		_fog_redraw_timer = FOG_REDRAW_INTERVAL
+		set_process(true)
 
 func _draw() -> void:
 	if not _camera or not is_instance_valid(_camera):

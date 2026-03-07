@@ -9,9 +9,18 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.78.0"
+const GAME_VERSION := "v0.78.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.78.1",
+		"title": "Fix Hero Stats panel stuck open on load",
+		"date": "2026-03-07",
+		"entries": [
+			"Remove duplicate variable declarations in hero_stats_panel.gd that caused a GDScript parse error",
+			"Panel now correctly initializes as hidden and responds to close actions (X button, Q key, clicking outside)",
+		]
+	},
 	{
 		"version": "v0.78.0",
 		"title": "Major frame budget reduction — sleeping enemies fully disabled",

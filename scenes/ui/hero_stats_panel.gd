@@ -109,9 +109,6 @@ func _detect_mobile() -> void:
 		stats_label.add_theme_font_size_override("normal_font_size", 34)
 		$Panel/MarginContainer/VBox/Scroll/ScrollContent/BuffsTitle.add_theme_font_size_override("font_size", 40)
 
-var _buff_refresh_timer: float = 0.0
-const BUFF_REFRESH_INTERVAL: float = 0.5  # Refresh buffs twice per second, not every frame
-
 
 func _process(delta: float) -> void:
 	if _is_visible and _player:

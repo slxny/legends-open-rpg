@@ -2549,8 +2549,9 @@ func _anim_swing_horizontal(tween: Tween, frames: Array, base_pos: Vector2,
 			target.apply_knockback(dir, 40.0)
 			_spawn_slash_vfx(dir.rotated(side * 0.3), 35.0, 1.0)
 			_spawn_impact_vfx(target.global_position, result["is_crit"])
-			_do_screen_shake(2.5 if not result["is_crit"] else 5.0)
-			_do_hit_freeze(result["is_crit"])
+			if result["is_crit"]:
+				_do_screen_shake(4.0)
+				_do_hit_freeze(true)
 	)
 	# Return to idle
 	tween.tween_interval(0.05)
@@ -2579,8 +2580,9 @@ func _anim_overhead_chop(tween: Tween, frames: Array, base_pos: Vector2,
 			target.apply_knockback(dir, 55.0)
 			_spawn_slash_vfx(dir, 40.0, 1.4)
 			_spawn_impact_vfx(target.global_position, result["is_crit"])
-			_do_screen_shake(4.0 if not result["is_crit"] else 7.0)
-			_do_hit_freeze(result["is_crit"])
+			if result["is_crit"]:
+				_do_screen_shake(5.0)
+				_do_hit_freeze(true)
 	)
 	tween.tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.06)
 	tween.tween_interval(0.04)
@@ -2608,8 +2610,9 @@ func _anim_upward_thrust(tween: Tween, frames: Array, base_pos: Vector2,
 			target.apply_knockback(dir, 30.0)
 			_spawn_slash_vfx(dir.rotated(-0.4), 30.0, 1.0)
 			_spawn_impact_vfx(target.global_position, result["is_crit"])
-			_do_screen_shake(3.0 if not result["is_crit"] else 6.0)
-			_do_hit_freeze(result["is_crit"])
+			if result["is_crit"]:
+				_do_screen_shake(5.0)
+				_do_hit_freeze(true)
 	)
 	tween.tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.06)
 	tween.tween_interval(0.04)
@@ -2639,8 +2642,11 @@ func _anim_spin_slash(tween: Tween, frames: Array, base_pos: Vector2,
 			_spawn_slash_vfx(dir.rotated(PI * 0.5), 35.0, 1.2)
 			_spawn_slash_vfx(dir.rotated(-PI * 0.5), 35.0, 1.2)
 			_spawn_impact_vfx(target.global_position, result["is_crit"])
-			_do_screen_shake(5.0 if not result["is_crit"] else 8.0)
-			_do_hit_freeze(result["is_crit"])
+			if result["is_crit"]:
+				_do_screen_shake(6.0)
+				_do_hit_freeze(true)
+			else:
+				_do_screen_shake(2.0)
 	)
 	# Unwind rotation
 	tween.tween_property(sprite, "rotation", 0.0, 0.08)
@@ -2684,8 +2690,9 @@ func _do_ranged_attack(target: Node2D, result: Dictionary) -> void:
 				target.take_damage(result["damage"], result["is_crit"])
 				target.apply_knockback(arrow_dir, 20.0)
 				_spawn_impact_vfx(target.global_position, result["is_crit"])
-				_do_screen_shake(1.5 if not result["is_crit"] else 3.5)
-				_do_hit_freeze(result["is_crit"])
+				if result["is_crit"]:
+					_do_screen_shake(3.0)
+					_do_hit_freeze(true)
 			arrow.queue_free()
 		)
 	)
@@ -2753,12 +2760,11 @@ func _do_hit_freeze(is_crit: bool) -> void:
 	if _hit_freeze_active:
 		return  # Don't stack freezes
 	_hit_freeze_active = true
-	# Brief time-scale dip — 1-2 real frames, not seconds
-	Engine.time_scale = 0.1
-	var freeze_dur = 0.03 if not is_crit else 0.05
-	# Callback-based (no await) so death/scene disruption can't leave time_scale stuck
+	# Sprite-only hit flash — no Engine.time_scale to avoid whole-game stutter
+	sprite.modulate = Color(2.5, 2.5, 2.5) if is_crit else Color(1.8, 1.8, 1.8)
+	var freeze_dur = 0.04 if not is_crit else 0.06
 	get_tree().create_timer(freeze_dur, true, false, true).timeout.connect(func():
-		Engine.time_scale = 1.0
+		sprite.modulate = Color.WHITE
 		_hit_freeze_active = false
 	)
 
@@ -3025,8 +3031,8 @@ func _on_death_animation(_player_id: int) -> void:
 	# Reset attack state so it can't get stuck across death/respawn
 	_is_attack_animating = false
 	_attack_cooldown = 0.0
-	Engine.time_scale = 1.0
 	_hit_freeze_active = false
+	sprite.modulate = Color.WHITE
 	# Cancel any ongoing animations
 	if _death_tween and _death_tween.is_valid():
 		_death_tween.kill()
@@ -3055,8 +3061,8 @@ func _on_respawn_animation(_player_id: int) -> void:
 	# Reset ALL input and combat state so nothing is stale after respawn
 	_is_attack_animating = false
 	_attack_cooldown = 0.0
-	Engine.time_scale = 1.0
 	_hit_freeze_active = false
+	sprite.modulate = Color.WHITE
 	_is_moving_to_target = false
 	_move_target = Vector2.ZERO
 	_stuck_time = 0.0

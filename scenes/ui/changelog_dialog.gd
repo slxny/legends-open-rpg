@@ -9,9 +9,21 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.75.0"
+const GAME_VERSION := "v0.75.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.75.1",
+		"title": "Smooth combat — eliminate attack stutter",
+		"date": "2026-03-07",
+		"entries": [
+			"Replaced Engine.time_scale hit-freeze with sprite-only flash — no more whole-game stutter on every hit",
+			"Basic attacks no longer trigger screen shake or hit freeze — reserved for crits and special abilities only",
+			"Reduced gib count on rat deaths (5-9 → 3-5 normal, 10-16 → 5-8 crit) to cut node/tween allocations",
+			"Reduced blood splatter spawns on enemy deaths",
+			"Reduced bone fragment and root tendril counts on skeleton/elk deaths",
+		]
+	},
 	{
 		"version": "v0.75.0",
 		"title": "Desktop browser performance fix",

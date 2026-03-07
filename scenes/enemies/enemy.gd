@@ -845,8 +845,7 @@ func _die_rat_select_variant() -> void:
 func _die_rat_explode() -> void:
 	# Normal pop: quick swell, pop flash, gibs scatter
 	_spawn_rat_gibs()
-	for _i in range(randi_range(2, 4)):
-		_spawn_blood_splatter()
+	_spawn_blood_splatter()
 	var tween = create_tween()
 	tween.tween_property(sprite, "scale", _base_scale * 1.4, 0.04)
 	tween.parallel().tween_property(sprite, "modulate", Color(1.5, 0.7, 0.7), 0.04)
@@ -858,7 +857,7 @@ func _die_rat_explode() -> void:
 func _die_rat_crit_explode() -> void:
 	# Critical/overkill: more gibs, wider scatter, bright white flash, bigger pop
 	_spawn_rat_gibs_crit()
-	for _i in range(randi_range(4, 6)):
+	for _i in range(randi_range(2, 3)):
 		_spawn_blood_splatter()
 	var tween = create_tween()
 	# Bright white flash
@@ -905,7 +904,7 @@ func _spawn_rat_gibs() -> void:
 	if not gib_tex:
 		return
 	var world = _get_world_node()
-	for _i in range(randi_range(5, 9)):
+	for _i in range(randi_range(3, 5)):
 		var gib = Sprite2D.new()
 		gib.texture = gib_tex
 		gib.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -913,7 +912,6 @@ func _spawn_rat_gibs() -> void:
 		gib.rotation = randf() * TAU
 		gib.scale = Vector2(randf_range(0.6, 1.2), randf_range(0.6, 1.2))
 		gib.z_index = -1
-		# Random red tint variation for each chunk
 		gib.modulate = Color(
 			randf_range(0.8, 1.2),
 			randf_range(0.6, 0.9),
@@ -921,7 +919,6 @@ func _spawn_rat_gibs() -> void:
 			randf_range(0.7, 1.0)
 		)
 		world.add_child(gib)
-		# Scatter outward explosively — faster and further than bone fragments
 		var dir = Vector2(randf_range(-1, 1), randf_range(-1, 1)).normalized()
 		var force = randf_range(18, 40)
 		var dest = gib.global_position + dir * force + Vector2(0, randf_range(4, 12))
@@ -930,7 +927,6 @@ func _spawn_rat_gibs() -> void:
 		t.tween_property(gib, "global_position", dest, randf_range(0.15, 0.3)).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 		t.tween_property(gib, "rotation", gib.rotation + randf_range(-6.0, 6.0), 0.3)
 		t.set_parallel(false)
-		# Linger briefly then fade
 		t.tween_interval(randf_range(1.0, 2.5))
 		t.tween_property(gib, "modulate:a", 0.0, 0.6)
 		t.tween_callback(gib.queue_free)
@@ -940,7 +936,7 @@ func _spawn_rat_gibs_crit() -> void:
 	if not gib_tex:
 		return
 	var world = _get_world_node()
-	for _i in range(randi_range(10, 16)):
+	for _i in range(randi_range(5, 8)):
 		var gib = Sprite2D.new()
 		gib.texture = gib_tex
 		gib.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -989,7 +985,7 @@ func _die_elk_collapse() -> void:
 
 func _spawn_elk_root_tendrils() -> void:
 	var world = _get_world_node()
-	for _i in range(randi_range(4, 6)):
+	for _i in range(randi_range(3, 4)):
 		var tendril = Sprite2D.new()
 		# Use vines texture as root tendril
 		var tex = SpriteGenerator.get_texture("vines")
@@ -1052,7 +1048,7 @@ func _spawn_bone_fragments() -> void:
 	if not bone_tex:
 		return
 	var world = _get_world_node()
-	for i in range(randi_range(4, 7)):
+	for i in range(randi_range(3, 5)):
 		var bone = Sprite2D.new()
 		bone.texture = bone_tex
 		bone.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST

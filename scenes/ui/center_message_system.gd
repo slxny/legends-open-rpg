@@ -10,6 +10,9 @@ var _message_queue: Array[Dictionary] = []
 var _showing: bool = false
 var _current_tween: Tween = null
 var _current_timer: SceneTreeTimer = null
+# Cached LabelSettings to avoid allocations per message
+var _cached_settings: LabelSettings = null
+var _cached_settings_mobile: LabelSettings = null
 
 func _ready() -> void:
 	message_label.visible = false
@@ -60,13 +63,23 @@ func _process_queue() -> void:
 
 func _display_message(text: String, color: Color, duration: float) -> void:
 	# SC-style: instant appear, no fade in
-	var vp_size = get_viewport().get_visible_rect().size
 	var is_mobile = GameManager.is_mobile_device()
-	var settings = LabelSettings.new()
-	settings.font_size = 72 if is_mobile else 32
+	var settings: LabelSettings
+	if is_mobile:
+		if not _cached_settings_mobile:
+			_cached_settings_mobile = LabelSettings.new()
+			_cached_settings_mobile.font_size = 72
+			_cached_settings_mobile.outline_size = 8
+			_cached_settings_mobile.outline_color = Color.BLACK
+		settings = _cached_settings_mobile
+	else:
+		if not _cached_settings:
+			_cached_settings = LabelSettings.new()
+			_cached_settings.font_size = 32
+			_cached_settings.outline_size = 4
+			_cached_settings.outline_color = Color.BLACK
+		settings = _cached_settings
 	settings.font_color = color
-	settings.outline_size = 8 if is_mobile else 4
-	settings.outline_color = Color.BLACK
 	message_label.label_settings = settings
 	message_label.text = text
 	message_label.visible = true

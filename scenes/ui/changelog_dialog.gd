@@ -23,6 +23,7 @@ const CHANGELOG: Array[Dictionary] = [
 			"Cached LabelSettings per color — avoids LabelSettings.new() per effect label",
 			"Pooled bleed CPUParticles2D instances — reuses particles instead of allocating per tick",
 			"Tripled player damage label pool (10 → 30) to handle burst damage without allocations",
+			"Cached center message LabelSettings — avoids LabelSettings.new() per dramatic message",
 		]
 	},
 	{

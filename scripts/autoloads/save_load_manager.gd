@@ -72,6 +72,12 @@ func save_game() -> void:
 	data["woodwork_totem_level"] = GameManager.woodwork_totem_level
 	data["woodwork_watchtower_level"] = GameManager.woodwork_watchtower_level
 
+	# Watchtower building state
+	data["watchtower_built"] = GameManager.watchtower_built
+	data["watchtower_pos_x"] = GameManager.watchtower_pos_x
+	data["watchtower_pos_y"] = GameManager.watchtower_pos_y
+	data["watchtower_hp"] = GameManager.watchtower_hp
+
 	# Region time played (for wave/boss spawn timers)
 	data["region_elapsed_time"] = GameManager.region_elapsed_time
 
@@ -134,6 +140,12 @@ func load_game() -> bool:
 	GameManager.woodwork_totem_level = data.get("woodwork_totem_level", 0)
 	GameManager.woodwork_watchtower_level = data.get("woodwork_watchtower_level", 0)
 
+	# Restore watchtower building state
+	GameManager.watchtower_built = data.get("watchtower_built", false)
+	GameManager.watchtower_pos_x = data.get("watchtower_pos_x", 0.0)
+	GameManager.watchtower_pos_y = data.get("watchtower_pos_y", 0.0)
+	GameManager.watchtower_hp = data.get("watchtower_hp", 200)
+
 	# Restore region elapsed time (wave/boss spawn timers)
 	GameManager.region_elapsed_time = data.get("region_elapsed_time", 0.0)
 
@@ -190,7 +202,7 @@ func apply_to_player(player: Node2D) -> void:
 		player.stats.woodwork_attack_bonus = GameManager.woodwork_bow_level * 2
 		player.stats.woodwork_armor_bonus = GameManager.woodwork_shield_level
 		player.stats.woodwork_hp_bonus = GameManager.woodwork_shield_level * 4
-		player.stats.woodwork_xp_mult = GameManager.woodwork_watchtower_level * 0.08
+		# Watchtower is now a physical building — no passive XP bonus
 
 		# Set current HP/mana AFTER stats are fully recalculated
 		# (clamped to actual max so old saves don't exceed the cap)

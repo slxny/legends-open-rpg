@@ -383,6 +383,20 @@ func _physics_process(delta: float) -> void:
 			if _info_label and is_instance_valid(_info_label):
 				_info_label.scale = _zs
 
+func _check_watchtower_aggro() -> bool:
+	# Enemies also aggro on nearby watchtower
+	var towers = get_tree().get_nodes_in_group("watchtower")
+	for tower in towers:
+		if not is_instance_valid(tower) or tower._is_destroyed:
+			continue
+		var dist_sq = global_position.distance_squared_to(tower.global_position)
+		if dist_sq < _aggro_range_sq:
+			target = tower
+			current_state = State.CHASE
+			name_label.visible = true
+			return true
+	return false
+
 func _process_idle(delta: float) -> void:
 	velocity = Vector2.ZERO
 	# Check for player aggro (squared distance avoids sqrt)
@@ -397,6 +411,9 @@ func _process_idle(delta: float) -> void:
 		# Random alert: chance to notice the player at extended range
 		if _try_alert_aggro(delta, player, dist_sq):
 			return
+	# Check watchtower aggro
+	if _check_watchtower_aggro():
+		return
 
 	# Count down idle pause, then pick a patrol waypoint
 	_patrol_wait_timer -= delta
@@ -446,6 +463,9 @@ func _process_patrol(delta: float) -> void:
 		# Random alert: chance to notice the player at extended range
 		if _try_alert_aggro(delta, player, dist_sq):
 			return
+	# Check watchtower aggro
+	if _check_watchtower_aggro():
+		return
 
 	var dist_sq_to_target = global_position.distance_squared_to(_patrol_target)
 	if dist_sq_to_target < 64.0:  # 8^2

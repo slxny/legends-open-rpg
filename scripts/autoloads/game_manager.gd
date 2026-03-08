@@ -44,7 +44,13 @@ var armor_upgrade_level: int = 0
 var woodwork_bow_level: int = 0      # Reinforced Bow: +attack damage
 var woodwork_shield_level: int = 0   # Wooden Bulwark: +armor, +HP
 var woodwork_totem_level: int = 0    # Totem of Vigor: +regen, +stats
-var woodwork_watchtower_level: int = 0  # Watchtower: +XP gain
+var woodwork_watchtower_level: int = 0  # Watchtower: building level
+
+# Watchtower state
+var watchtower_built: bool = false
+var watchtower_pos_x: float = 0.0
+var watchtower_pos_y: float = 0.0
+var watchtower_hp: int = 200
 
 # Time played in the current region (persisted across save/load for wave timers)
 var region_elapsed_time: float = 0.0

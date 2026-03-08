@@ -56,12 +56,17 @@ const UPGRADES = {
 	},
 	"watchtower": {
 		"title": "Watchtower",
-		"desc": "Tall lookout that sharpens your awareness. Increases XP gained from all sources.",
-		"max_level": 100,
-		"base_cost": 12,
+		"desc": "Build a defensive tower with archers. Attacks nearby enemies and earns XP from kills. Click it to repair with wood.",
+		"max_level": 50,
+		"base_cost": 15,
 		"color": Color(1.0, 0.9, 0.4),
 	},
 }
+
+# Placement mode state
+var _placing_tower: bool = false
+var _placement_ghost: Sprite2D = null
+var _watchtower_scene: PackedScene = preload("res://scenes/world/watchtower.tscn")
 
 func _ready() -> void:
 	panel.visible = false
@@ -139,7 +144,9 @@ func _get_bonus_text(upgrade_key: String, level: int) -> String:
 		"totem":
 			return "+%d STR, +%d AGI, +%d INT" % [level, level, level]
 		"watchtower":
-			return "+%d%% XP Gain" % (level * 8)
+			var hp = 200 + (level - 1) * 30
+			var atk = 8 + (level - 1) * 3
+			return "%d HP, %d ATK" % [hp, atk]
 	return ""
 
 func _get_short_bonus(upgrade_key: String, level: int) -> String:
@@ -149,7 +156,10 @@ func _get_short_bonus(upgrade_key: String, level: int) -> String:
 		"bow": return "+%d ATK" % (level * 2)
 		"shield": return "+%d ARM +%d HP" % [level, level * 4]
 		"totem": return "+%d All Stats" % level
-		"watchtower": return "+%d%% XP" % (level * 8)
+		"watchtower":
+			if not GameManager.watchtower_built:
+				return "Not placed"
+			return "Lv%d Tower" % level
 	return ""
 
 func _build_ui() -> void:
@@ -451,7 +461,13 @@ func _show_detail(key: String) -> void:
 		_detail_next.add_theme_color_override("font_color", Color(0.5, 0.7, 1.0))
 		_detail_cost.text = "Cost: %d wood" % cost
 		_detail_action_btn.visible = true
-		_detail_action_btn.text = "Build (%d wood)" % cost
+		# Watchtower: first build says "Build & Place", upgrades say "Upgrade"
+		if key == "watchtower" and level == 0:
+			_detail_action_btn.text = "Build & Place (%d wood)" % cost
+		elif key == "watchtower":
+			_detail_action_btn.text = "Upgrade (%d wood)" % cost
+		else:
+			_detail_action_btn.text = "Build (%d wood)" % cost
 		_detail_action_btn.disabled = GameManager.wood < cost
 		# Reconnect
 		for conn in _detail_action_btn.pressed.get_connections():
@@ -472,13 +488,32 @@ func _do_upgrade(key: String) -> void:
 	if level >= max_lvl:
 		return
 	var cost = _get_cost(key)
-	if not GameManager.spend_wood(cost):
+	if GameManager.wood < cost:
 		GameManager.game_message.emit("Not enough wood!", Color(1, 0.3, 0.3))
 		return
 
+	# Watchtower: first build enters placement mode
+	if key == "watchtower" and level == 0:
+		GameManager.spend_wood(cost)
+		_set_level(key, 1)
+		_apply_woodwork_bonuses()
+		close()
+		_start_placement_mode()
+		return
+
+	# Watchtower upgrade: must be placed first
+	if key == "watchtower" and not GameManager.watchtower_built:
+		GameManager.game_message.emit("Place your watchtower first!", Color(1.0, 0.5, 0.3))
+		return
+
+	GameManager.spend_wood(cost)
 	_set_level(key, level + 1)
 	_apply_woodwork_bonuses()
 	_refresh()
+
+	# If watchtower upgrade, update existing tower stats
+	if key == "watchtower":
+		_upgrade_existing_tower()
 
 	var new_lvl = _get_level(key)
 	GameManager.game_message.emit(
@@ -510,8 +545,7 @@ func _apply_woodwork_bonuses() -> void:
 		s.bonus_agility += diff
 		s.bonus_intelligence += diff
 		_player.set_meta("_woodwork_totem_applied", totem_lvl)
-	# Watchtower: +8% XP per level
-	s.woodwork_xp_mult = GameManager.woodwork_watchtower_level * 0.08
+	# Watchtower is a physical building now — no passive XP bonus
 	s._emit_all()
 
 func _style_btn(btn: Button, accent: Color = Color(0.9, 0.75, 0.3)) -> void:
@@ -536,7 +570,96 @@ func _style_btn(btn: Button, accent: Color = Color(0.9, 0.75, 0.3)) -> void:
 	btn.add_theme_stylebox_override("disabled", disabled)
 	btn.add_theme_stylebox_override("focus", hover)
 
+func _upgrade_existing_tower() -> void:
+	var towers = get_tree().get_nodes_in_group("watchtower")
+	if towers.size() > 0:
+		towers[0].setup(GameManager.woodwork_watchtower_level, towers[0].current_hp)
+
+func _start_placement_mode() -> void:
+	_placing_tower = true
+	# Create ghost preview
+	_placement_ghost = Sprite2D.new()
+	_placement_ghost.texture = SpriteGenerator.get_texture("watch_tower")
+	_placement_ghost.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_placement_ghost.modulate = Color(0.5, 1.0, 0.5, 0.5)
+	_placement_ghost.z_index = 100
+	_placement_ghost.position = Vector2(0, -16)  # Match tower sprite offset
+	var world_nodes = get_tree().get_nodes_in_group("world")
+	var world = world_nodes[0] if world_nodes.size() > 0 else get_tree().current_scene
+	# Wrap in a Node2D so we can move the container
+	var ghost_container = Node2D.new()
+	ghost_container.name = "PlacementGhost"
+	ghost_container.add_child(_placement_ghost)
+	world.add_child(ghost_container)
+	_placement_ghost = ghost_container
+	GameManager.game_message.emit("Click to place your Watchtower!", Color(1.0, 0.9, 0.4))
+
+func _cancel_placement() -> void:
+	_placing_tower = false
+	if _placement_ghost and is_instance_valid(_placement_ghost):
+		_placement_ghost.queue_free()
+		_placement_ghost = null
+	# Refund: reset level back to 0 and refund the wood
+	var cost = int(UPGRADES["watchtower"]["base_cost"] * pow(1, 1.3))
+	GameManager.add_wood(cost)
+	_set_level("watchtower", 0)
+	GameManager.game_message.emit("Watchtower placement cancelled. Wood refunded.", Color(0.7, 0.7, 0.7))
+
+func _place_tower(world_pos: Vector2) -> void:
+	_placing_tower = false
+	if _placement_ghost and is_instance_valid(_placement_ghost):
+		_placement_ghost.queue_free()
+		_placement_ghost = null
+
+	# Spawn the actual watchtower
+	var tower = _watchtower_scene.instantiate()
+	tower.global_position = world_pos
+	var world_nodes = get_tree().get_nodes_in_group("world")
+	var world = world_nodes[0] if world_nodes.size() > 0 else get_tree().current_scene
+	world.add_child(tower)
+	tower.setup(GameManager.woodwork_watchtower_level)
+
+	# Save state
+	GameManager.watchtower_built = true
+	GameManager.watchtower_pos_x = world_pos.x
+	GameManager.watchtower_pos_y = world_pos.y
+	GameManager.watchtower_hp = tower.current_hp
+
+	# Connect destroyed signal
+	tower.destroyed.connect(func():
+		GameManager.watchtower_built = false
+	)
+
+	GameManager.game_message.emit("Watchtower built! It will defend the area.", Color(1.0, 0.9, 0.4))
+	AudioManager.play_sfx("woodwork_watchtower", -6.0)
+
 func _unhandled_input(event: InputEvent) -> void:
+	# Placement mode input handling
+	if _placing_tower:
+		if event.is_action_pressed("ui_cancel"):
+			_cancel_placement()
+			get_viewport().set_input_as_handled()
+			return
+		# Update ghost position
+		var world_pos := Vector2.ZERO
+		var got_pos := false
+		if event is InputEventMouseMotion:
+			world_pos = _screen_to_world(event.position)
+			got_pos = true
+		elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			world_pos = _screen_to_world(event.position)
+			_place_tower(world_pos)
+			get_viewport().set_input_as_handled()
+			return
+		elif event is InputEventScreenTouch and event.pressed:
+			world_pos = _screen_to_world(event.position)
+			_place_tower(world_pos)
+			get_viewport().set_input_as_handled()
+			return
+		if got_pos and _placement_ghost and is_instance_valid(_placement_ghost):
+			_placement_ghost.global_position = world_pos
+		return
+
 	if not _is_visible:
 		return
 	if event.is_action_pressed("ui_cancel") or event.is_action_pressed("ability_1"):
@@ -554,3 +677,11 @@ func _unhandled_input(event: InputEvent) -> void:
 	if pos.x >= 0 and not panel.get_global_rect().has_point(pos):
 		close()
 		get_viewport().set_input_as_handled()
+
+func _screen_to_world(screen_pos: Vector2) -> Vector2:
+	var cam = get_viewport().get_camera_2d()
+	if cam:
+		var vp_size = get_viewport().get_visible_rect().size
+		var offset = screen_pos - vp_size / 2.0
+		return cam.global_position + offset / cam.zoom
+	return screen_pos

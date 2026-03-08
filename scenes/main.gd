@@ -13,6 +13,7 @@ var _messages_scene: PackedScene = preload("res://scenes/ui/game_messages.tscn")
 var _center_msg_scene: PackedScene = preload("res://scenes/ui/center_message_system.tscn")
 var _changelog_scene: PackedScene = preload("res://scenes/ui/changelog_dialog.tscn")
 var _pause_menu_scene: PackedScene = preload("res://scenes/ui/pause_menu.tscn")
+var _watchtower_scene: PackedScene = preload("res://scenes/world/watchtower.tscn")
 
 @onready var hero_select: Control = $HeroSelect
 
@@ -166,8 +167,22 @@ func _on_hero_chosen(hero_class: String) -> void:
 	RespawnManager.countdown_tick.connect(_on_respawn_countdown)
 	RespawnManager.player_respawned.connect(_on_player_respawned)
 
+	# Restore watchtower if it was built
+	_restore_watchtower()
+
 	# Register game-wide triggers
 	_register_triggers()
+
+func _restore_watchtower() -> void:
+	if not GameManager.watchtower_built or GameManager.woodwork_watchtower_level <= 0:
+		return
+	var tower = _watchtower_scene.instantiate()
+	tower.global_position = Vector2(GameManager.watchtower_pos_x, GameManager.watchtower_pos_y)
+	_world.add_child(tower)
+	tower.setup(GameManager.woodwork_watchtower_level, GameManager.watchtower_hp)
+	tower.destroyed.connect(func():
+		GameManager.watchtower_built = false
+	)
 
 func _on_player_leveled_up(new_level: int) -> void:
 	var gold_color = Color(1.0, 0.9, 0.2)

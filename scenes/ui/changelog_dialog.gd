@@ -9,9 +9,22 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.78.1"
+const GAME_VERSION := "v0.79.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.79.0",
+		"title": "Watchtower — build, place, and upgrade a defensive tower",
+		"date": "2026-03-08",
+		"entries": [
+			"New watchtower building via the Woodworker — purchase and place anywhere on the map",
+			"Watchtower has archers that auto-attack nearby enemies and grant XP from kills",
+			"Click the watchtower to repair it with wood when damaged",
+			"Upgrade the watchtower at the Woodworker for more HP, damage, and attack range",
+			"Enemies will aggro and attack the watchtower if they get close",
+			"Watchtower state (position, HP, level) is fully saved and loaded",
+		]
+	},
 	{
 		"version": "v0.78.1",
 		"title": "Fix character stats dialog not closing on desktop",

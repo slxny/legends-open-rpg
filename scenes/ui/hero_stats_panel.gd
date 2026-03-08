@@ -12,7 +12,7 @@ var _player: Node2D = null
 var _is_visible: bool = false
 var _is_mobile: bool = false
 var _buff_refresh_timer: float = 0.0
-const BUFF_REFRESH_INTERVAL: float = 1.0  # Refresh buff display once per second, not every frame
+const BUFF_REFRESH_INTERVAL: float = 0.5  # Refresh buffs twice per second, not every frame
 
 # ── Colours ──
 const COL_BG        = Color(0.06, 0.06, 0.08, 1.0)
@@ -108,10 +108,6 @@ func _detect_mobile() -> void:
 		close_button.custom_minimum_size = Vector2(160, 130)
 		stats_label.add_theme_font_size_override("normal_font_size", 34)
 		$Panel/MarginContainer/VBox/Scroll/ScrollContent/BuffsTitle.add_theme_font_size_override("font_size", 40)
-
-var _buff_refresh_timer: float = 0.0
-const BUFF_REFRESH_INTERVAL: float = 0.5  # Refresh buffs twice per second, not every frame
-
 
 func _process(delta: float) -> void:
 	if _is_visible and _player:

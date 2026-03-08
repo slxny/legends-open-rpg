@@ -9,9 +9,18 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.78.0"
+const GAME_VERSION := "v0.78.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.78.1",
+		"title": "Fix character stats dialog not closing on desktop",
+		"date": "2026-03-08",
+		"entries": [
+			"Fixed duplicate variable declarations in hero_stats_panel.gd that caused a parse error",
+			"Stats dialog close button, keyboard shortcut (Q/Esc), and click-outside now work correctly",
+		]
+	},
 	{
 		"version": "v0.78.0",
 		"title": "Major frame budget reduction — sleeping enemies fully disabled",

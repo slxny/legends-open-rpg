@@ -3872,24 +3872,40 @@ func _gen_inn_building() -> void:
 	textures["inn_building"] = ImageTexture.create_from_image(img)
 
 func _gen_watch_tower() -> void:
-	var img = Image.create(24, 44, false, Image.FORMAT_RGBA8)
+	var img = Image.create(48, 88, false, Image.FORMAT_RGBA8)
 	img.fill(Color(0, 0, 0, 0))
-	_fill_rect(img, 4, 40, 16, 3, Color(0, 0, 0, 0.2))
-	# Base — stone
-	_fill_rect(img, 6, 12, 12, 30, Color(0.42, 0.4, 0.36))
-	_fill_rect(img, 7, 13, 10, 28, Color(0.5, 0.47, 0.42))
+	# Ground shadow
+	_fill_rect(img, 8, 80, 32, 6, Color(0, 0, 0, 0.2))
+	# Base — stone foundation
+	_fill_rect(img, 10, 60, 28, 8, Color(0.35, 0.33, 0.30))
+	_fill_rect(img, 11, 61, 26, 6, Color(0.40, 0.37, 0.33))
+	# Tower body — stone
+	_fill_rect(img, 12, 24, 24, 40, Color(0.42, 0.4, 0.36))
+	_fill_rect(img, 14, 26, 20, 36, Color(0.5, 0.47, 0.42))
+	# Stone brick lines
+	_fill_rect(img, 12, 36, 24, 1, Color(0.38, 0.36, 0.32))
+	_fill_rect(img, 12, 48, 24, 1, Color(0.38, 0.36, 0.32))
 	# Top platform (wider than tower)
-	_fill_rect(img, 3, 6, 18, 8, Color(0.38, 0.36, 0.32))
-	_fill_rect(img, 4, 7, 16, 6, Color(0.45, 0.42, 0.38))
-	# Crenellations
-	_fill_rect(img, 3, 4, 3, 3, Color(0.42, 0.4, 0.36))
-	_fill_rect(img, 9, 4, 3, 3, Color(0.42, 0.4, 0.36))
-	_fill_rect(img, 15, 4, 3, 3, Color(0.42, 0.4, 0.36))
-	# Window slit
-	_fill_rect(img, 10, 20, 2, 5, Color(0.2, 0.15, 0.12))
+	_fill_rect(img, 6, 12, 36, 14, Color(0.38, 0.36, 0.32))
+	_fill_rect(img, 8, 14, 32, 10, Color(0.45, 0.42, 0.38))
+	# Crenellations (battlements)
+	_fill_rect(img, 6, 8, 6, 6, Color(0.42, 0.4, 0.36))
+	_fill_rect(img, 15, 8, 6, 6, Color(0.42, 0.4, 0.36))
+	_fill_rect(img, 24, 8, 6, 6, Color(0.42, 0.4, 0.36))
+	_fill_rect(img, 33, 8, 6, 6, Color(0.42, 0.4, 0.36))
+	# Window slits
+	_fill_rect(img, 20, 30, 4, 8, Color(0.2, 0.15, 0.12))
+	_fill_rect(img, 20, 44, 4, 6, Color(0.2, 0.15, 0.12))
+	# Door at base
+	_fill_rect(img, 19, 56, 8, 12, Color(0.3, 0.2, 0.12))
+	_fill_rect(img, 20, 57, 6, 10, Color(0.35, 0.24, 0.14))
 	# Torch glow at top
-	_fill_rect(img, 11, 2, 2, 3, Color(1.0, 0.7, 0.2, 0.8))
-	_fill_rect(img, 10, 1, 4, 2, Color(1.0, 0.6, 0.1, 0.4))
+	_fill_rect(img, 22, 4, 4, 5, Color(1.0, 0.7, 0.2, 0.8))
+	_fill_rect(img, 20, 2, 8, 3, Color(1.0, 0.6, 0.1, 0.4))
+	# Flag pole
+	_fill_rect(img, 38, 4, 2, 14, Color(0.4, 0.28, 0.14))
+	_fill_rect(img, 40, 4, 6, 4, Color(0.8, 0.2, 0.15))
+	_fill_rect(img, 40, 8, 4, 3, Color(0.8, 0.2, 0.15))
 	textures["watch_tower"] = ImageTexture.create_from_image(img)
 
 func _gen_town_fountain() -> void:

@@ -2,7 +2,7 @@ extends StaticBody2D
 
 ## Watchtower — player-built defensive structure with archers.
 ## Attacks nearby enemies, grants XP to the player for kills.
-## Can be healed with wood by clicking on it. Upgraded via woodworker.
+## Walk near and click (or press E) to repair with wood. Upgraded via woodworker.
 
 signal destroyed
 
@@ -10,6 +10,7 @@ signal destroyed
 @onready var hp_bar: ProgressBar = $HPBar
 
 var tower_level: int = 1
+var tower_index: int = 0  # Which slot (0-3) this tower occupies
 var max_hp: int = 200
 var current_hp: int = 200
 var attack_damage: int = 8
@@ -21,11 +22,15 @@ var _cached_player: Node2D = null
 var _target_scan_timer: float = 0.0
 var _current_target: Node2D = null
 var _is_mobile: bool = false
+var _repair_prompt_visible: bool = false
+var _repair_label: Label = null
 
-# Heal cost: wood per heal tick
-const HEAL_WOOD_COST: int = 3
-const HEAL_AMOUNT: int = 25
-const HEAL_RANGE_SQ: float = 8100.0  # 90px
+# Heal cost: wood per repair
+const HEAL_WOOD_COST: int = 2
+const HEAL_AMOUNT: int = 40
+const HEAL_RANGE_SQ: float = 14400.0  # 120px
+const REPAIR_COOLDOWN: float = 0.4
+var _repair_timer: float = 0.0
 
 # Scan for enemies every 0.5s (not every frame)
 const TARGET_SCAN_INTERVAL: float = 0.5
@@ -43,8 +48,8 @@ func _ready() -> void:
 	# HP bar setup
 	hp_bar.max_value = max_hp
 	hp_bar.value = current_hp
-	hp_bar.size = Vector2(40, 4)
-	hp_bar.position = Vector2(-20, -36)
+	hp_bar.size = Vector2(56, 6)
+	hp_bar.position = Vector2(-28, -72)
 	var bar_style = StyleBoxFlat.new()
 	bar_style.bg_color = Color(0.1, 0.7, 0.2)
 	bar_style.set_corner_radius_all(1)
@@ -65,6 +70,16 @@ func _ready() -> void:
 	# Clickable for healing
 	input_pickable = true
 	input_event.connect(_on_input_event)
+
+	# Repair prompt label (shows when player is near and tower is damaged)
+	_repair_label = Label.new()
+	_repair_label.text = "[E] Repair (2 wood)" if not _is_mobile else "Tap to Repair"
+	_repair_label.add_theme_font_size_override("font_size", 28 if _is_mobile else 11)
+	_repair_label.add_theme_color_override("font_color", Color(0.5, 1.0, 0.5, 0.9))
+	_repair_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_repair_label.position = Vector2(-50, -84)
+	_repair_label.visible = false
+	add_child(_repair_label)
 
 func setup(level: int, hp: int = -1) -> void:
 	tower_level = level
@@ -88,11 +103,14 @@ func _process(delta: float) -> void:
 
 	_attack_timer -= delta
 	_target_scan_timer -= delta
+	if _repair_timer > 0.0:
+		_repair_timer -= delta
 
 	# Scan for targets periodically
 	if _target_scan_timer <= 0.0:
 		_target_scan_timer = TARGET_SCAN_INTERVAL
 		_find_target()
+		_update_repair_prompt()
 
 	# Attack current target
 	if _current_target and is_instance_valid(_current_target) and _attack_timer <= 0.0:
@@ -103,6 +121,21 @@ func _process(delta: float) -> void:
 			_attack_timer = attack_cooldown
 		else:
 			_current_target = null
+
+func _update_repair_prompt() -> void:
+	if current_hp >= max_hp:
+		if _repair_prompt_visible:
+			_repair_label.visible = false
+			_repair_prompt_visible = false
+		return
+	var player = _get_player()
+	if not player:
+		return
+	var dist_sq = global_position.distance_squared_to(player.global_position)
+	var should_show = dist_sq <= HEAL_RANGE_SQ
+	if should_show != _repair_prompt_visible:
+		_repair_prompt_visible = should_show
+		_repair_label.visible = should_show
 
 func _find_target() -> void:
 	_current_target = null
@@ -132,7 +165,7 @@ func _shoot_arrow(target: Node2D) -> void:
 		arrow.texture = ImageTexture.create_from_image(img)
 	arrow.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	arrow.z_index = 10
-	arrow.global_position = global_position + Vector2(0, -24)  # Fire from top of tower
+	arrow.global_position = global_position + Vector2(0, -48)  # Fire from top of tower
 
 	# Rotate arrow toward target
 	var dir = (target.global_position - arrow.global_position).normalized()
@@ -191,15 +224,27 @@ func take_damage(amount: int, _is_crit: bool = false) -> void:
 	current_hp = max(0, current_hp - amount)
 	_update_hp_bar()
 	_do_hit_flash()
-	GameManager.watchtower_hp = current_hp
+	_save_hp()
 
 	if current_hp <= 0:
 		_destroy()
 
+func _save_hp() -> void:
+	# Update the multi-tower array
+	if tower_index >= 0 and tower_index < GameManager.watchtowers.size():
+		GameManager.watchtowers[tower_index]["hp"] = current_hp
+	# Legacy single-tower field
+	GameManager.watchtower_hp = current_hp
+
 func _destroy() -> void:
 	_is_destroyed = true
-	GameManager.watchtower_built = false
-	GameManager.game_message.emit("Your Watchtower has been destroyed!", Color(1.0, 0.3, 0.3))
+	# Mark slot as not built
+	if tower_index >= 0 and tower_index < GameManager.watchtowers.size():
+		GameManager.watchtowers[tower_index]["built"] = false
+	# Legacy: if no towers remain, clear the flag
+	if GameManager.get_watchtower_count() == 0:
+		GameManager.watchtower_built = false
+	GameManager.game_message.emit("A Watchtower has been destroyed!", Color(1.0, 0.3, 0.3))
 	destroyed.emit()
 
 	# Death animation
@@ -213,7 +258,7 @@ func heal(amount: int) -> void:
 		return
 	current_hp = min(current_hp + amount, max_hp)
 	_update_hp_bar()
-	GameManager.watchtower_hp = current_hp
+	_save_hp()
 
 	# Green flash
 	var tween = create_tween()
@@ -252,7 +297,17 @@ func _on_input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> voi
 	if clicked:
 		_try_heal()
 
+func _unhandled_input(event: InputEvent) -> void:
+	if _is_destroyed or not _repair_prompt_visible:
+		return
+	# E key to repair when near
+	if event is InputEventKey and event.pressed and event.keycode == KEY_E:
+		_try_heal()
+		get_viewport().set_input_as_handled()
+
 func _try_heal() -> void:
+	if _repair_timer > 0.0:
+		return
 	if current_hp >= max_hp:
 		GameManager.game_message.emit("Watchtower is at full health!", Color(0.7, 0.7, 0.7))
 		return
@@ -267,6 +322,7 @@ func _try_heal() -> void:
 		GameManager.game_message.emit("Need %d wood to repair!" % HEAL_WOOD_COST, Color(1.0, 0.3, 0.3))
 		return
 	heal(HEAL_AMOUNT)
+	_repair_timer = REPAIR_COOLDOWN
 	AudioManager.play_sfx("woodwork_bow", -6.0)
 	GameManager.game_message.emit("Watchtower repaired! (+%d HP, -%d wood)" % [HEAL_AMOUNT, HEAL_WOOD_COST], Color(0.5, 1.0, 0.5))
 

@@ -56,7 +56,7 @@ const UPGRADES = {
 	},
 	"watchtower": {
 		"title": "Watchtower",
-		"desc": "Build a defensive tower with archers. Attacks nearby enemies and earns XP from kills. Click it to repair with wood.",
+		"desc": "Build defensive towers with archers. Up to 4 towers, each costs much more. Walk near and press E (or tap) to repair with wood.",
 		"max_level": 50,
 		"base_cost": 15,
 		"color": Color(1.0, 0.9, 0.4),
@@ -157,9 +157,10 @@ func _get_short_bonus(upgrade_key: String, level: int) -> String:
 		"shield": return "+%d ARM +%d HP" % [level, level * 4]
 		"totem": return "+%d All Stats" % level
 		"watchtower":
-			if not GameManager.watchtower_built:
-				return "Not placed"
-			return "Lv%d Tower" % level
+			var count = GameManager.get_watchtower_count()
+			if count == 0:
+				return "No towers"
+			return "%d tower%s Lv%d" % [count, "s" if count > 1 else "", level]
 	return ""
 
 func _build_ui() -> void:
@@ -457,18 +458,30 @@ func _show_detail(key: String) -> void:
 		_detail_action_btn.visible = false
 	else:
 		var cost = _get_cost(key)
-		_detail_next.text = "Next (Lv %d): %s" % [level + 1, _get_bonus_text(key, level + 1)]
 		_detail_next.add_theme_color_override("font_color", Color(0.5, 0.7, 1.0))
-		_detail_cost.text = "Cost: %d wood" % cost
 		_detail_action_btn.visible = true
-		# Watchtower: first build says "Build & Place", upgrades say "Upgrade"
-		if key == "watchtower" and level == 0:
-			_detail_action_btn.text = "Build & Place (%d wood)" % cost
-		elif key == "watchtower":
-			_detail_action_btn.text = "Upgrade (%d wood)" % cost
+
+		if key == "watchtower":
+			var count = GameManager.get_watchtower_count()
+			if _watchtower_wants_new_tower():
+				var build_cost = _get_watchtower_build_cost()
+				if level == 0:
+					_detail_next.text = "Build your first Watchtower!"
+				else:
+					_detail_next.text = "Build tower %d of %d" % [count + 1, GameManager.MAX_WATCHTOWERS]
+				_detail_cost.text = "Cost: %d wood" % build_cost
+				_detail_action_btn.text = "Build & Place (%d wood)" % build_cost
+				_detail_action_btn.disabled = GameManager.wood < build_cost
+			else:
+				_detail_next.text = "Next (Lv %d): %s" % [level + 1, _get_bonus_text(key, level + 1)]
+				_detail_cost.text = "Cost: %d wood" % cost
+				_detail_action_btn.text = "Upgrade All (%d wood)" % cost
+				_detail_action_btn.disabled = GameManager.wood < cost
 		else:
+			_detail_next.text = "Next (Lv %d): %s" % [level + 1, _get_bonus_text(key, level + 1)]
+			_detail_cost.text = "Cost: %d wood" % cost
 			_detail_action_btn.text = "Build (%d wood)" % cost
-		_detail_action_btn.disabled = GameManager.wood < cost
+			_detail_action_btn.disabled = GameManager.wood < cost
 		# Reconnect
 		for conn in _detail_action_btn.pressed.get_connections():
 			_detail_action_btn.pressed.disconnect(conn["callable"])
@@ -492,18 +505,19 @@ func _do_upgrade(key: String) -> void:
 		GameManager.game_message.emit("Not enough wood!", Color(1, 0.3, 0.3))
 		return
 
-	# Watchtower: first build enters placement mode
-	if key == "watchtower" and level == 0:
-		GameManager.spend_wood(cost)
-		_set_level(key, 1)
+	# Watchtower: first build or new tower enters placement mode
+	if key == "watchtower" and _watchtower_wants_new_tower():
+		var slot_cost = _get_watchtower_build_cost()
+		if GameManager.wood < slot_cost:
+			GameManager.game_message.emit("Not enough wood! Need %d." % slot_cost, Color(1, 0.3, 0.3))
+			return
+		GameManager.spend_wood(slot_cost)
+		_placement_cost_paid = slot_cost
+		if level == 0:
+			_set_level(key, 1)
 		_apply_woodwork_bonuses()
 		close()
 		_start_placement_mode()
-		return
-
-	# Watchtower upgrade: must be placed first
-	if key == "watchtower" and not GameManager.watchtower_built:
-		GameManager.game_message.emit("Place your watchtower first!", Color(1.0, 0.5, 0.3))
 		return
 
 	GameManager.spend_wood(cost)
@@ -570,10 +584,25 @@ func _style_btn(btn: Button, accent: Color = Color(0.9, 0.75, 0.3)) -> void:
 	btn.add_theme_stylebox_override("disabled", disabled)
 	btn.add_theme_stylebox_override("focus", hover)
 
+func _watchtower_wants_new_tower() -> bool:
+	var level = _get_level("watchtower")
+	if level == 0:
+		return true  # First tower ever
+	# Has upgrade level but can build more towers
+	var count = GameManager.get_watchtower_count()
+	return count < GameManager.MAX_WATCHTOWERS
+
+func _get_watchtower_build_cost() -> int:
+	var base = UPGRADES["watchtower"]["base_cost"]
+	var level = _get_level("watchtower")
+	var level_cost = int(base * pow(level + 1, 1.3)) if level == 0 else 0
+	var slot_cost = GameManager.get_watchtower_slot_cost(base)
+	return level_cost + slot_cost
+
 func _upgrade_existing_tower() -> void:
-	var towers = get_tree().get_nodes_in_group("watchtower")
-	if towers.size() > 0:
-		towers[0].setup(GameManager.woodwork_watchtower_level, towers[0].current_hp)
+	for tower in get_tree().get_nodes_in_group("watchtower"):
+		if is_instance_valid(tower) and not tower._is_destroyed:
+			tower.setup(GameManager.woodwork_watchtower_level, tower.current_hp)
 
 func _start_placement_mode() -> void:
 	_placing_tower = true
@@ -594,15 +623,20 @@ func _start_placement_mode() -> void:
 	_placement_ghost = ghost_container
 	GameManager.game_message.emit("Click to place your Watchtower!", Color(1.0, 0.9, 0.4))
 
+# Store the cost paid when entering placement mode so we can refund exactly
+var _placement_cost_paid: int = 0
+
 func _cancel_placement() -> void:
 	_placing_tower = false
 	if _placement_ghost and is_instance_valid(_placement_ghost):
 		_placement_ghost.queue_free()
 		_placement_ghost = null
-	# Refund: reset level back to 0 and refund the wood
-	var cost = int(UPGRADES["watchtower"]["base_cost"] * pow(1, 1.3))
-	GameManager.add_wood(cost)
-	_set_level("watchtower", 0)
+	# Refund the wood spent
+	GameManager.add_wood(_placement_cost_paid)
+	# If this was the very first tower, reset level back to 0
+	if GameManager.get_watchtower_count() == 0 and GameManager.woodwork_watchtower_level == 1:
+		_set_level("watchtower", 0)
+	_placement_cost_paid = 0
 	GameManager.game_message.emit("Watchtower placement cancelled. Wood refunded.", Color(0.7, 0.7, 0.7))
 
 func _place_tower(world_pos: Vector2) -> void:
@@ -611,26 +645,43 @@ func _place_tower(world_pos: Vector2) -> void:
 		_placement_ghost.queue_free()
 		_placement_ghost = null
 
+	# Find first available slot
+	var slot := -1
+	for i in range(GameManager.MAX_WATCHTOWERS):
+		if not GameManager.watchtowers[i]["built"]:
+			slot = i
+			break
+	if slot < 0:
+		GameManager.game_message.emit("All tower slots are full!", Color(1.0, 0.3, 0.3))
+		return
+
 	# Spawn the actual watchtower
 	var tower = _watchtower_scene.instantiate()
 	tower.global_position = world_pos
+	tower.tower_index = slot
 	var world_nodes = get_tree().get_nodes_in_group("world")
 	var world = world_nodes[0] if world_nodes.size() > 0 else get_tree().current_scene
 	world.add_child(tower)
 	tower.setup(GameManager.woodwork_watchtower_level)
 
-	# Save state
+	# Save state in multi-tower array
+	GameManager.watchtowers[slot] = {
+		"built": true,
+		"pos_x": world_pos.x,
+		"pos_y": world_pos.y,
+		"hp": tower.current_hp,
+	}
+	# Legacy compat
 	GameManager.watchtower_built = true
 	GameManager.watchtower_pos_x = world_pos.x
 	GameManager.watchtower_pos_y = world_pos.y
 	GameManager.watchtower_hp = tower.current_hp
 
-	# Connect destroyed signal
-	tower.destroyed.connect(func():
-		GameManager.watchtower_built = false
+	var count = GameManager.get_watchtower_count()
+	GameManager.game_message.emit(
+		"Watchtower %d built! It will defend the area." % count,
+		Color(1.0, 0.9, 0.4)
 	)
-
-	GameManager.game_message.emit("Watchtower built! It will defend the area.", Color(1.0, 0.9, 0.4))
 	AudioManager.play_sfx("woodwork_watchtower", -6.0)
 
 func _unhandled_input(event: InputEvent) -> void:

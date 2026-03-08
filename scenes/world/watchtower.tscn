@@ -3,7 +3,7 @@
 [ext_resource type="Script" path="res://scenes/world/watchtower.gd" id="1_watchtower"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_tower"]
-size = Vector2(24, 24)
+size = Vector2(40, 40)
 
 [node name="Watchtower" type="StaticBody2D"]
 collision_layer = 4
@@ -12,14 +12,14 @@ script = ExtResource("1_watchtower")
 
 [node name="Sprite" type="Sprite2D" parent="."]
 texture_filter = 0
-position = Vector2(0, -16)
+position = Vector2(0, -32)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 shape = SubResource("RectangleShape2D_tower")
 
 [node name="HPBar" type="ProgressBar" parent="."]
-offset_left = -20.0
-offset_top = -36.0
-offset_right = 20.0
-offset_bottom = -32.0
+offset_left = -28.0
+offset_top = -72.0
+offset_right = 28.0
+offset_bottom = -66.0
 show_percentage = false

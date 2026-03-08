@@ -72,11 +72,16 @@ func save_game() -> void:
 	data["woodwork_totem_level"] = GameManager.woodwork_totem_level
 	data["woodwork_watchtower_level"] = GameManager.woodwork_watchtower_level
 
-	# Watchtower building state
+	# Watchtower building state (multi-tower)
 	data["watchtower_built"] = GameManager.watchtower_built
 	data["watchtower_pos_x"] = GameManager.watchtower_pos_x
 	data["watchtower_pos_y"] = GameManager.watchtower_pos_y
 	data["watchtower_hp"] = GameManager.watchtower_hp
+	# Save all tower slots
+	var towers_data: Array = []
+	for t in GameManager.watchtowers:
+		towers_data.append(t.duplicate())
+	data["watchtowers"] = towers_data
 
 	# Region time played (for wave/boss spawn timers)
 	data["region_elapsed_time"] = GameManager.region_elapsed_time
@@ -145,6 +150,26 @@ func load_game() -> bool:
 	GameManager.watchtower_pos_x = data.get("watchtower_pos_x", 0.0)
 	GameManager.watchtower_pos_y = data.get("watchtower_pos_y", 0.0)
 	GameManager.watchtower_hp = data.get("watchtower_hp", 200)
+	# Restore multi-tower data
+	GameManager._init_watchtowers()
+	if data.has("watchtowers"):
+		var loaded_towers = data["watchtowers"]
+		for i in range(min(loaded_towers.size(), GameManager.MAX_WATCHTOWERS)):
+			var td = loaded_towers[i]
+			GameManager.watchtowers[i] = {
+				"built": td.get("built", false),
+				"pos_x": td.get("pos_x", 0.0),
+				"pos_y": td.get("pos_y", 0.0),
+				"hp": td.get("hp", 200),
+			}
+	elif GameManager.watchtower_built:
+		# Legacy save migration: single tower → slot 0
+		GameManager.watchtowers[0] = {
+			"built": true,
+			"pos_x": GameManager.watchtower_pos_x,
+			"pos_y": GameManager.watchtower_pos_y,
+			"hp": GameManager.watchtower_hp,
+		}
 
 	# Restore region elapsed time (wave/boss spawn timers)
 	GameManager.region_elapsed_time = data.get("region_elapsed_time", 0.0)

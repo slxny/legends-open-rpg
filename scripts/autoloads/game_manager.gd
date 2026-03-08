@@ -46,11 +46,36 @@ var woodwork_shield_level: int = 0   # Wooden Bulwark: +armor, +HP
 var woodwork_totem_level: int = 0    # Totem of Vigor: +regen, +stats
 var woodwork_watchtower_level: int = 0  # Watchtower: building level
 
-# Watchtower state
+# Watchtower state (supports up to 4 towers)
 var watchtower_built: bool = false
 var watchtower_pos_x: float = 0.0
 var watchtower_pos_y: float = 0.0
 var watchtower_hp: int = 200
+# Multi-tower: array of {built, pos_x, pos_y, hp} for towers 0-3
+const MAX_WATCHTOWERS: int = 4
+var watchtowers: Array[Dictionary] = []
+
+func _init_watchtowers() -> void:
+	watchtowers.clear()
+	for i in range(MAX_WATCHTOWERS):
+		watchtowers.append({"built": false, "pos_x": 0.0, "pos_y": 0.0, "hp": 200})
+
+func get_watchtower_count() -> int:
+	var count := 0
+	for t in watchtowers:
+		if t["built"]:
+			count += 1
+	return count
+
+# Cost multiplier: each tower costs much more than the last
+# Tower 1: base, Tower 2: 4x, Tower 3: 12x, Tower 4: 32x
+const WATCHTOWER_COST_MULTIPLIERS: Array[int] = [1, 4, 12, 32]
+
+func get_watchtower_slot_cost(base_cost: int) -> int:
+	var count = get_watchtower_count()
+	if count >= MAX_WATCHTOWERS:
+		return 0
+	return base_cost * WATCHTOWER_COST_MULTIPLIERS[count]
 
 # Time played in the current region (persisted across save/load for wave timers)
 var region_elapsed_time: float = 0.0
@@ -83,6 +108,7 @@ func get_upgrade_cost(current_level: int) -> int:
 	return int(10 * pow(current_level + 1, 1.5))
 
 func _ready() -> void:
+	_init_watchtowers()
 	_setup_custom_cursor()
 	get_viewport().size_changed.connect(_setup_custom_cursor)
 

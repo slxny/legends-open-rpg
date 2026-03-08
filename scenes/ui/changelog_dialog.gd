@@ -9,9 +9,22 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.79.0"
+const GAME_VERSION := "v0.80.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.80.0",
+		"title": "Multiple Watchtowers — build up to 4, bigger sprite, hero repair",
+		"date": "2026-03-08",
+		"entries": [
+			"Build up to 4 watchtowers — each additional tower costs much more (1x, 4x, 12x, 32x)",
+			"Watchtower sprite is now 2x bigger with more detail (flag, door, brick lines)",
+			"Walk near a damaged watchtower and press E (or tap) to repair with 2 wood for 40 HP",
+			"Repair prompt appears when hero is within range of a damaged tower",
+			"Upgrading at the Woodworker now upgrades all placed towers at once",
+			"Full save/load support for multiple watchtowers with legacy save migration",
+		]
+	},
 	{
 		"version": "v0.79.0",
 		"title": "Watchtower — build, place, and upgrade a defensive tower",

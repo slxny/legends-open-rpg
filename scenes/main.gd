@@ -174,15 +174,33 @@ func _on_hero_chosen(hero_class: String) -> void:
 	_register_triggers()
 
 func _restore_watchtower() -> void:
-	if not GameManager.watchtower_built or GameManager.woodwork_watchtower_level <= 0:
+	if GameManager.woodwork_watchtower_level <= 0:
 		return
-	var tower = _watchtower_scene.instantiate()
-	tower.global_position = Vector2(GameManager.watchtower_pos_x, GameManager.watchtower_pos_y)
-	_world.add_child(tower)
-	tower.setup(GameManager.woodwork_watchtower_level, GameManager.watchtower_hp)
-	tower.destroyed.connect(func():
-		GameManager.watchtower_built = false
-	)
+	# Restore all built towers from multi-tower array
+	var any_built := false
+	for i in range(GameManager.MAX_WATCHTOWERS):
+		var td = GameManager.watchtowers[i]
+		if not td["built"]:
+			continue
+		any_built = true
+		var tower = _watchtower_scene.instantiate()
+		tower.global_position = Vector2(td["pos_x"], td["pos_y"])
+		tower.tower_index = i
+		_world.add_child(tower)
+		tower.setup(GameManager.woodwork_watchtower_level, td["hp"])
+	# Legacy: single tower (old saves without multi-tower data)
+	if not any_built and GameManager.watchtower_built:
+		var tower = _watchtower_scene.instantiate()
+		tower.global_position = Vector2(GameManager.watchtower_pos_x, GameManager.watchtower_pos_y)
+		tower.tower_index = 0
+		_world.add_child(tower)
+		tower.setup(GameManager.woodwork_watchtower_level, GameManager.watchtower_hp)
+		GameManager.watchtowers[0] = {
+			"built": true,
+			"pos_x": GameManager.watchtower_pos_x,
+			"pos_y": GameManager.watchtower_pos_y,
+			"hp": GameManager.watchtower_hp,
+		}
 
 func _on_player_leveled_up(new_level: int) -> void:
 	var gold_color = Color(1.0, 0.9, 0.2)

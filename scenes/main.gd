@@ -170,8 +170,19 @@ func _on_hero_chosen(hero_class: String) -> void:
 	# Restore watchtower if it was built
 	_restore_watchtower()
 
+	# Re-restore watchtowers when a save is loaded mid-game
+	SaveLoadManager.game_loaded.connect(_on_game_loaded)
+
 	# Register game-wide triggers
 	_register_triggers()
+
+func _on_game_loaded() -> void:
+	# Remove existing watchtower nodes and re-create from loaded state
+	for tower in get_tree().get_nodes_in_group("watchtower"):
+		if is_instance_valid(tower):
+			tower.queue_free()
+	# Defer so queue_free completes before re-creating
+	call_deferred("_restore_watchtower")
 
 func _restore_watchtower() -> void:
 	if GameManager.woodwork_watchtower_level <= 0:

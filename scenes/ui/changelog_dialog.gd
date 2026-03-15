@@ -9,9 +9,22 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.80.0"
+const GAME_VERSION := "v0.81.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.81.0",
+		"title": "Watchtower Upgrades — upgrade HP and attack directly at the tower",
+		"date": "2026-03-15",
+		"entries": [
+			"Walk near a watchtower and press Q (or tap when at full HP) to upgrade it directly",
+			"Each tower can be upgraded individually up to 50 levels (+30 HP, +3 ATK per level)",
+			"Upgrade cost scales with level — spend wood to make each tower stronger",
+			"Upgrading partially heals the tower and boosts its max HP",
+			"Per-tower upgrade levels are saved and restored across sessions",
+			"Woodworker upgrades still apply as a base level to all towers",
+		]
+	},
 	{
 		"version": "v0.80.0",
 		"title": "Multiple Watchtowers — build up to 4, bigger sprite, hero repair",

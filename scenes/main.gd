@@ -187,7 +187,7 @@ func _restore_watchtower() -> void:
 		tower.global_position = Vector2(td["pos_x"], td["pos_y"])
 		tower.tower_index = i
 		_world.add_child(tower)
-		tower.setup(GameManager.woodwork_watchtower_level, td["hp"])
+		tower.setup(GameManager.woodwork_watchtower_level, td["hp"], td.get("level", 0))
 	# Legacy: single tower (old saves without multi-tower data)
 	if not any_built and GameManager.watchtower_built:
 		var tower = _watchtower_scene.instantiate()
@@ -200,6 +200,7 @@ func _restore_watchtower() -> void:
 			"pos_x": GameManager.watchtower_pos_x,
 			"pos_y": GameManager.watchtower_pos_y,
 			"hp": GameManager.watchtower_hp,
+			"level": 0,
 		}
 
 func _on_player_leveled_up(new_level: int) -> void:

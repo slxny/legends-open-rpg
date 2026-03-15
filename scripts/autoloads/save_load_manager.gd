@@ -161,6 +161,7 @@ func load_game() -> bool:
 				"pos_x": td.get("pos_x", 0.0),
 				"pos_y": td.get("pos_y", 0.0),
 				"hp": td.get("hp", 200),
+				"level": td.get("level", 0),
 			}
 	elif GameManager.watchtower_built:
 		# Legacy save migration: single tower → slot 0
@@ -169,6 +170,7 @@ func load_game() -> bool:
 			"pos_x": GameManager.watchtower_pos_x,
 			"pos_y": GameManager.watchtower_pos_y,
 			"hp": GameManager.watchtower_hp,
+			"level": 0,
 		}
 
 	# Restore region elapsed time (wave/boss spawn timers)

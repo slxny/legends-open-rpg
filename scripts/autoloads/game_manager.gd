@@ -51,14 +51,14 @@ var watchtower_built: bool = false
 var watchtower_pos_x: float = 0.0
 var watchtower_pos_y: float = 0.0
 var watchtower_hp: int = 200
-# Multi-tower: array of {built, pos_x, pos_y, hp} for towers 0-3
+# Multi-tower: array of {built, pos_x, pos_y, hp, level} for towers 0-3
 const MAX_WATCHTOWERS: int = 4
 var watchtowers: Array[Dictionary] = []
 
 func _init_watchtowers() -> void:
 	watchtowers.clear()
 	for i in range(MAX_WATCHTOWERS):
-		watchtowers.append({"built": false, "pos_x": 0.0, "pos_y": 0.0, "hp": 200})
+		watchtowers.append({"built": false, "pos_x": 0.0, "pos_y": 0.0, "hp": 200, "level": 0})
 
 func get_watchtower_count() -> int:
 	var count := 0

@@ -602,7 +602,8 @@ func _get_watchtower_build_cost() -> int:
 func _upgrade_existing_tower() -> void:
 	for tower in get_tree().get_nodes_in_group("watchtower"):
 		if is_instance_valid(tower) and not tower._is_destroyed:
-			tower.setup(GameManager.woodwork_watchtower_level, tower.current_hp)
+			var extra = GameManager.watchtowers[tower.tower_index].get("level", 0) if tower.tower_index >= 0 and tower.tower_index < GameManager.watchtowers.size() else 0
+			tower.setup(GameManager.woodwork_watchtower_level, tower.current_hp, extra)
 
 func _start_placement_mode() -> void:
 	_placing_tower = true
@@ -670,6 +671,7 @@ func _place_tower(world_pos: Vector2) -> void:
 		"pos_x": world_pos.x,
 		"pos_y": world_pos.y,
 		"hp": tower.current_hp,
+		"level": 0,
 	}
 	# Legacy compat
 	GameManager.watchtower_built = true

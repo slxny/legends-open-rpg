@@ -2,7 +2,7 @@ extends StaticBody2D
 
 ## Watchtower — player-built defensive structure with archers.
 ## Attacks nearby enemies, grants XP to the player for kills.
-## Walk near and click (or press E) to repair with wood. Upgraded via woodworker.
+## Walk near and click (or press E) to repair with wood. Press Q to upgrade directly.
 
 signal destroyed
 
@@ -24,6 +24,8 @@ var _current_target: Node2D = null
 var _is_mobile: bool = false
 var _repair_prompt_visible: bool = false
 var _repair_label: Label = null
+var _upgrade_label: Label = null
+var _upgrade_prompt_visible: bool = false
 
 # Heal cost: wood per repair
 const HEAL_WOOD_COST: int = 2
@@ -31,6 +33,12 @@ const HEAL_AMOUNT: int = 40
 const HEAL_RANGE_SQ: float = 14400.0  # 120px
 const REPAIR_COOLDOWN: float = 0.4
 var _repair_timer: float = 0.0
+
+# Upgrade constants
+const UPGRADE_BASE_COST: int = 15
+const MAX_TOWER_LEVEL: int = 50
+const UPGRADE_COOLDOWN: float = 0.5
+var _upgrade_timer: float = 0.0
 
 # Scan for enemies every 0.5s (not every frame)
 const TARGET_SCAN_INTERVAL: float = 0.5
@@ -81,14 +89,26 @@ func _ready() -> void:
 	_repair_label.visible = false
 	add_child(_repair_label)
 
-func setup(level: int, hp: int = -1) -> void:
-	tower_level = level
+	# Upgrade prompt label (shows when player is near)
+	_upgrade_label = Label.new()
+	_upgrade_label.add_theme_font_size_override("font_size", 28 if _is_mobile else 11)
+	_upgrade_label.add_theme_color_override("font_color", Color(1.0, 0.9, 0.4, 0.9))
+	_upgrade_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_upgrade_label.position = Vector2(-50, -96)
+	_upgrade_label.visible = false
+	add_child(_upgrade_label)
+	_refresh_upgrade_label()
+
+func setup(level: int, hp: int = -1, extra_levels: int = 0) -> void:
+	tower_level = level + extra_levels
 	_apply_level_stats()
 	if hp >= 0:
 		current_hp = min(hp, max_hp)
 	else:
 		current_hp = max_hp
 	_update_hp_bar()
+	if _upgrade_label:
+		_refresh_upgrade_label()
 
 func _apply_level_stats() -> void:
 	# Each level: +30 HP, +3 ATK, +10 range (capped), -0.05s cooldown (capped)
@@ -105,6 +125,8 @@ func _process(delta: float) -> void:
 	_target_scan_timer -= delta
 	if _repair_timer > 0.0:
 		_repair_timer -= delta
+	if _upgrade_timer > 0.0:
+		_upgrade_timer -= delta
 
 	# Scan for targets periodically
 	if _target_scan_timer <= 0.0:
@@ -123,19 +145,23 @@ func _process(delta: float) -> void:
 			_current_target = null
 
 func _update_repair_prompt() -> void:
-	if current_hp >= max_hp:
-		if _repair_prompt_visible:
-			_repair_label.visible = false
-			_repair_prompt_visible = false
-		return
 	var player = _get_player()
 	if not player:
 		return
 	var dist_sq = global_position.distance_squared_to(player.global_position)
-	var should_show = dist_sq <= HEAL_RANGE_SQ
-	if should_show != _repair_prompt_visible:
-		_repair_prompt_visible = should_show
-		_repair_label.visible = should_show
+	var near = dist_sq <= HEAL_RANGE_SQ
+
+	# Repair prompt: only when damaged and near
+	var show_repair = near and current_hp < max_hp
+	if show_repair != _repair_prompt_visible:
+		_repair_prompt_visible = show_repair
+		_repair_label.visible = show_repair
+
+	# Upgrade prompt: when near and not at max level
+	var show_upgrade = near and _get_tower_extra_levels() < MAX_TOWER_LEVEL
+	if show_upgrade != _upgrade_prompt_visible:
+		_upgrade_prompt_visible = show_upgrade
+		_upgrade_label.visible = show_upgrade
 
 func _find_target() -> void:
 	_current_target = null
@@ -295,14 +321,23 @@ func _on_input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> voi
 		clicked = true
 
 	if clicked:
-		_try_heal()
+		if current_hp < max_hp:
+			_try_heal()
+		else:
+			_try_upgrade()
 
 func _unhandled_input(event: InputEvent) -> void:
-	if _is_destroyed or not _repair_prompt_visible:
+	if _is_destroyed:
+		return
+	if not event is InputEventKey or not event.pressed:
 		return
 	# E key to repair when near
-	if event is InputEventKey and event.pressed and event.keycode == KEY_E:
+	if event.keycode == KEY_E and _repair_prompt_visible:
 		_try_heal()
+		get_viewport().set_input_as_handled()
+	# Q key to upgrade when near
+	elif event.keycode == KEY_Q and _upgrade_prompt_visible:
+		_try_upgrade()
 		get_viewport().set_input_as_handled()
 
 func _try_heal() -> void:
@@ -325,6 +360,67 @@ func _try_heal() -> void:
 	_repair_timer = REPAIR_COOLDOWN
 	AudioManager.play_sfx("woodwork_bow", -6.0)
 	GameManager.game_message.emit("Watchtower repaired! (+%d HP, -%d wood)" % [HEAL_AMOUNT, HEAL_WOOD_COST], Color(0.5, 1.0, 0.5))
+
+func _get_tower_extra_levels() -> int:
+	if tower_index >= 0 and tower_index < GameManager.watchtowers.size():
+		return GameManager.watchtowers[tower_index].get("level", 0)
+	return 0
+
+func _get_upgrade_cost() -> int:
+	var extra = _get_tower_extra_levels()
+	return int(UPGRADE_BASE_COST * pow(extra + 1, 1.3))
+
+func _refresh_upgrade_label() -> void:
+	if not _upgrade_label:
+		return
+	var extra = _get_tower_extra_levels()
+	var cost = _get_upgrade_cost()
+	if _is_mobile:
+		_upgrade_label.text = "Tap to Upgrade (Lv %d, %d wood)" % [extra + 1, cost]
+	else:
+		_upgrade_label.text = "[Q] Upgrade Lv %d (%d wood)" % [extra + 1, cost]
+
+func _try_upgrade() -> void:
+	if _upgrade_timer > 0.0:
+		return
+	var extra = _get_tower_extra_levels()
+	if extra >= MAX_TOWER_LEVEL:
+		GameManager.game_message.emit("Watchtower is at max upgrade level!", Color(0.7, 0.7, 0.7))
+		return
+	var player = _get_player()
+	if not player:
+		return
+	var dist_sq = global_position.distance_squared_to(player.global_position)
+	if dist_sq > HEAL_RANGE_SQ:
+		GameManager.game_message.emit("Too far to upgrade!", Color(1.0, 0.5, 0.3))
+		return
+	var cost = _get_upgrade_cost()
+	if not GameManager.spend_wood(cost):
+		GameManager.game_message.emit("Need %d wood to upgrade!" % cost, Color(1.0, 0.3, 0.3))
+		return
+	# Apply upgrade
+	var new_extra = extra + 1
+	if tower_index >= 0 and tower_index < GameManager.watchtowers.size():
+		GameManager.watchtowers[tower_index]["level"] = new_extra
+	var old_hp_pct = float(current_hp) / float(max_hp)
+	tower_level = GameManager.woodwork_watchtower_level + new_extra
+	_apply_level_stats()
+	# Scale current HP proportionally so upgrade heals the new HP portion
+	current_hp = int(old_hp_pct * max_hp) + 30
+	current_hp = min(current_hp, max_hp)
+	_update_hp_bar()
+	_save_hp()
+	_upgrade_timer = UPGRADE_COOLDOWN
+	_refresh_upgrade_label()
+	AudioManager.play_sfx("woodwork_bow", -6.0)
+	# Gold flash
+	var tween = create_tween()
+	tween.tween_property(sprite, "modulate", Color(1.5, 1.3, 0.5), 0.1)
+	tween.tween_property(sprite, "modulate", Color.WHITE, 0.25)
+	GameManager.game_message.emit(
+		"Watchtower upgraded to Lv %d! (+HP, +ATK, -%d wood)" % [new_extra, cost],
+		Color(1.0, 0.9, 0.4)
+	)
 
 func _get_player() -> Node2D:
 	if _cached_player and is_instance_valid(_cached_player):

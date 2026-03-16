@@ -65,12 +65,98 @@ func _make_pressed_style() -> StyleBoxFlat:
 	s.set_border_width_all(2)
 	return s
 
+func _make_equipped_style() -> StyleBoxFlat:
+	var s = StyleBoxFlat.new()
+	s.bg_color = Color(0.12, 0.18, 0.1, 0.8)
+	s.set_corner_radius_all(6)
+	s.set_content_margin_all(6 if _is_mobile else 3)
+	s.border_color = Color(0.45, 0.7, 0.3, 0.8)
+	s.set_border_width_all(2)
+	return s
+
+func _make_equipped_hover_style() -> StyleBoxFlat:
+	var s = StyleBoxFlat.new()
+	s.bg_color = Color(0.16, 0.24, 0.14, 0.9)
+	s.set_corner_radius_all(6)
+	s.set_content_margin_all(6 if _is_mobile else 3)
+	s.border_color = Color(0.55, 0.85, 0.35, 0.9)
+	s.set_border_width_all(2)
+	return s
+
+func _make_upgrade_style() -> StyleBoxFlat:
+	var s = StyleBoxFlat.new()
+	s.bg_color = Color(0.12, 0.19, 0.1, 0.7)
+	s.set_corner_radius_all(6)
+	s.set_content_margin_all(6 if _is_mobile else 3)
+	s.border_color = Color(0.3, 0.7, 0.2, 0.5)
+	s.set_border_width_all(1)
+	return s
+
+func _make_downgrade_style() -> StyleBoxFlat:
+	var s = StyleBoxFlat.new()
+	s.bg_color = Color(0.19, 0.12, 0.1, 0.7)
+	s.set_corner_radius_all(6)
+	s.set_content_margin_all(6 if _is_mobile else 3)
+	s.border_color = Color(0.6, 0.25, 0.2, 0.5)
+	s.set_border_width_all(1)
+	return s
+
+func _make_sidegrade_style() -> StyleBoxFlat:
+	var s = StyleBoxFlat.new()
+	s.bg_color = Color(0.18, 0.16, 0.1, 0.7)
+	s.set_corner_radius_all(6)
+	s.set_content_margin_all(6 if _is_mobile else 3)
+	s.border_color = Color(0.6, 0.55, 0.2, 0.5)
+	s.set_border_width_all(1)
+	return s
+
 func _style_item_btn(btn: Button, is_empty: bool) -> void:
 	btn.add_theme_stylebox_override("normal", _make_item_style(is_empty))
 	btn.add_theme_stylebox_override("hover", _make_hover_style())
 	btn.add_theme_stylebox_override("pressed", _make_pressed_style())
 	btn.add_theme_stylebox_override("focus", _make_hover_style())
 	btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if not is_empty else Control.CURSOR_ARROW
+
+func _style_equipped_btn(btn: Button) -> void:
+	btn.add_theme_stylebox_override("normal", _make_equipped_style())
+	btn.add_theme_stylebox_override("hover", _make_equipped_hover_style())
+	btn.add_theme_stylebox_override("pressed", _make_pressed_style())
+	btn.add_theme_stylebox_override("focus", _make_equipped_hover_style())
+	btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+
+func _get_item_score(item: Dictionary) -> int:
+	# Sum all stats for simple comparison
+	var total := 0
+	var stats = item.get("stats", {})
+	for k in stats:
+		total += int(stats[k])
+	return total
+
+func _compare_item_to_equipped(bag_item: Dictionary) -> int:
+	# Returns: 1 = upgrade, -1 = downgrade, 0 = sidegrade/mixed
+	if not _player:
+		return 0
+	var slot_name = _slot_name_for_item(bag_item)
+	if slot_name.is_empty():
+		return 0
+	var equipped = _player.inventory.equipment.get(slot_name, {})
+	if equipped.is_empty():
+		return 1  # Anything is better than nothing
+	var bag_stats = bag_item.get("stats", {})
+	var eq_stats = equipped.get("stats", {})
+	var all_keys: Dictionary = {}
+	for k in bag_stats:
+		all_keys[k] = true
+	for k in eq_stats:
+		all_keys[k] = true
+	var total_diff := 0
+	for k in all_keys:
+		total_diff += int(bag_stats.get(k, 0)) - int(eq_stats.get(k, 0))
+	if total_diff > 0:
+		return 1
+	elif total_diff < 0:
+		return -1
+	return 0
 
 func _ready() -> void:
 	panel.visible = false
@@ -240,10 +326,10 @@ func _refresh_equipment() -> void:
 			btn.text = "-- empty --"
 			_style_item_btn(btn, true)
 		else:
-			btn.text = item.get("name", "?")
+			btn.text = "[E] " + item.get("name", "?")
 			var rarity = item.get("rarity", 0)
 			btn.add_theme_color_override("font_color", ItemData.RARITY_COLORS.get(rarity, Color.WHITE))
-			_style_item_btn(btn, false)
+			_style_equipped_btn(btn)
 			var bound_item = item
 			btn.pressed.connect(func():
 				AudioManager.play_sfx("ui_tap", -4.0)
@@ -307,11 +393,34 @@ func _refresh_bag() -> void:
 		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		btn.custom_minimum_size = Vector2(0, btn_height)
 		btn.add_theme_font_size_override("font_size", font_size)
-		btn.text = item.get("name", "?")
+
+		# Compare to equipped and show indicator
+		var cmp = _compare_item_to_equipped(item)
+		var prefix = ""
+		if cmp > 0:
+			prefix = "▲ "
+		elif cmp < 0:
+			prefix = "▼ "
+
+		btn.text = prefix + item.get("name", "?")
 		var rarity = item.get("rarity", 0)
 		btn.add_theme_color_override("font_color", ItemData.RARITY_COLORS.get(rarity, Color.WHITE))
 		btn.clip_text = true
-		_style_item_btn(btn, false)
+
+		if cmp > 0:
+			btn.add_theme_stylebox_override("normal", _make_upgrade_style())
+			btn.add_theme_stylebox_override("hover", _make_hover_style())
+			btn.add_theme_stylebox_override("pressed", _make_pressed_style())
+			btn.add_theme_stylebox_override("focus", _make_hover_style())
+			btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		elif cmp < 0:
+			btn.add_theme_stylebox_override("normal", _make_downgrade_style())
+			btn.add_theme_stylebox_override("hover", _make_hover_style())
+			btn.add_theme_stylebox_override("pressed", _make_pressed_style())
+			btn.add_theme_stylebox_override("focus", _make_hover_style())
+			btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		else:
+			_style_item_btn(btn, false)
 
 		var idx = i
 		var bound_item = item
@@ -358,9 +467,9 @@ func _get_comparison_text(bag_item: Dictionary, equipped_item: Dictionary) -> St
 	# Compact: item name + stats on one line, equipped on next, diff on third
 	var text = _get_item_detail_text(bag_item)
 	if equipped_item.is_empty():
-		text += "\nEquipped: (empty)"
+		text += "\n[E] (empty)"
 	else:
-		text += "\nEquipped: " + _get_item_detail_text(equipped_item)
+		text += "\n[E] " + _get_item_detail_text(equipped_item)
 	# Stat diff
 	var bag_stats = bag_item.get("stats", {})
 	var eq_stats = equipped_item.get("stats", {})
@@ -369,16 +478,25 @@ func _get_comparison_text(bag_item: Dictionary, equipped_item: Dictionary) -> St
 		all_keys[k] = true
 	for k in eq_stats:
 		all_keys[k] = true
-	var diffs: Array[String] = []
+	var ups: Array[String] = []
+	var downs: Array[String] = []
 	for k in all_keys:
 		var bag_val = bag_stats.get(k, 0)
 		var eq_val = eq_stats.get(k, 0)
 		var diff = bag_val - eq_val
-		if diff != 0:
-			var sign = "+" if diff > 0 else ""
-			diffs.append("%s%d %s" % [sign, diff, k.replace("_", " ").capitalize()])
-	if diffs.size() > 0:
-		text += "\n" + ", ".join(diffs)
+		if diff > 0:
+			ups.append("+%d %s" % [diff, k.replace("_", " ").capitalize()])
+		elif diff < 0:
+			downs.append("%d %s" % [diff, k.replace("_", " ").capitalize()])
+	var diff_parts: Array[String] = []
+	if ups.size() > 0:
+		diff_parts.append("▲ " + ", ".join(ups))
+	if downs.size() > 0:
+		diff_parts.append("▼ " + ", ".join(downs))
+	if diff_parts.size() > 0:
+		text += "\n" + "  |  ".join(diff_parts)
+	elif not equipped_item.is_empty():
+		text += "\n= No stat change"
 	text += "  [2x tap = equip]"
 	return text
 

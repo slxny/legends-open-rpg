@@ -9,9 +9,21 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.82.1"
+const GAME_VERSION := "v0.82.2"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.82.2",
+		"title": "Inventory Clarity — equipped vs bag items now visually distinct",
+		"date": "2026-03-16",
+		"entries": [
+			"Equipped items now have a green-bordered 'active gear' style with [E] prefix",
+			"Bag items show ▲ (upgrade) or ▼ (downgrade) vs currently equipped gear",
+			"Upgrade items have a green-tinted background, downgrades have red-tinted",
+			"Comparison panel now separates gains (▲) from losses (▼) for clarity",
+			"Empty equipment slots remain visually dimmed to stand out from equipped ones",
+		]
+	},
 	{
 		"version": "v0.82.1",
 		"title": "Watchtower Damage Visuals — towers show battle wear",

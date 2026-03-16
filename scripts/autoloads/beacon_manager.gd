@@ -16,6 +16,11 @@ func activate(beacon_type: String, data: Dictionary, player: Node2D = null) -> v
 		var now = Time.get_ticks_msec()
 		if now - _teleport_cooldown_ms < 1000:
 			return
+		# Block teleport beacons while the player is mid-special-attack animation
+		# (charged slash, dash strike, etc. physically move the player body and can
+		# accidentally push it into a beacon trigger zone)
+		if player and player.get("_is_attack_animating"):
+			return
 	if player == null:
 		var players = _get_players()
 		if players.size() > 0:

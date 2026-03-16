@@ -9,9 +9,18 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.83.0"
+const GAME_VERSION := "v0.83.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.83.1",
+		"title": "Fix special attacks teleporting player out of dungeon",
+		"date": "2026-03-16",
+		"entries": [
+			"Fixed bug where charged slash, dash strike, and other movement-based special attacks could accidentally push the player into dungeon exit beacons, teleporting them back to the main level",
+			"Beacon teleport activation is now blocked while the player is mid-attack animation",
+		]
+	},
 	{
 		"version": "v0.83.0",
 		"title": "Hero Animation Overhaul — dramatic death, level-up burst, richer idle",

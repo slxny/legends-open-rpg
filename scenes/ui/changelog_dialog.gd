@@ -9,9 +9,26 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.85.0"
+const GAME_VERSION := "v0.86.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.86.0",
+		"title": "New items, tougher bosses, tower stats & repair UX",
+		"date": "2026-03-16",
+		"entries": [
+			"Added 25+ new items across all slots and rarities: weapons (Frost Cleaver, Moonblade, Bloodreaver, Void Reaper, Frostmourne...), armor (Brigandine, Mithril Vest, Wyrmscale Mail, Voidweave Robe...), helms (Spiked Helm, Ranger Hood, Dragonbone Helm...), boots (Stalker Treads, Warboots of the Colossus, Boots of the Phantom...), rings (Onyx Band, Ring of Swiftness, Sigil of the Void...), and amulets (Bloodstone Pendant, Talisman of the Arcane, Eye of Eternity...)",
+			"All items now have unique pixel art icon sprites in the inventory (weapons, armor, helms, boots, rings, amulets, potions)",
+			"Hero flashes with the highest equipped item's rarity color when equipping gear",
+			"Miniboss HP multiplier increased from 3x to 8x, damage from 1.5x to 2x — they are now true boss fights",
+			"Added drop tables for Shadow Fang, War Spider, Bone Lord, and Inferno Wyrm minibosses with guaranteed unique loot",
+			"Right-click on watchtowers to view detailed stats panel (HP, ATK, range, speed, armor, upgrade cost, level bonuses)",
+			"Watchtower repair now has juicy visual feedback: green flash, scale pop, bounce settle, and rising sparkle particles",
+			"Watchtower upgrade has golden flash, white peak, bounce animation, sparkle burst, and expanding ring effect",
+			"Watchtowers highlight when hovered with mouse for better interaction feedback",
+			"Updated drop tables for all enemy types to include new mid-tier and high-tier items",
+		]
+	},
 	{
 		"version": "v0.85.0",
 		"title": "Epic miniboss death animations",

@@ -330,6 +330,11 @@ func _refresh_equipment() -> void:
 			var rarity = item.get("rarity", 0)
 			btn.add_theme_color_override("font_color", ItemData.RARITY_COLORS.get(rarity, Color.WHITE))
 			_style_equipped_btn(btn)
+			var icon_tex = SpriteGenerator.get_texture("item_" + item.get("id", ""))
+			if icon_tex:
+				btn.icon = icon_tex
+				btn.icon_alignment = HORIZONTAL_ALIGNMENT_LEFT
+				btn.expand_icon = true
 			var bound_item = item
 			btn.pressed.connect(func():
 				AudioManager.play_sfx("ui_tap", -4.0)
@@ -406,6 +411,11 @@ func _refresh_bag() -> void:
 		var rarity = item.get("rarity", 0)
 		btn.add_theme_color_override("font_color", ItemData.RARITY_COLORS.get(rarity, Color.WHITE))
 		btn.clip_text = true
+		var bag_icon = SpriteGenerator.get_texture("item_" + item.get("id", ""))
+		if bag_icon:
+			btn.icon = bag_icon
+			btn.icon_alignment = HORIZONTAL_ALIGNMENT_LEFT
+			btn.expand_icon = true
 
 		if cmp > 0:
 			btn.add_theme_stylebox_override("normal", _make_upgrade_style())

@@ -314,6 +314,9 @@ func _ready() -> void:
 	RespawnManager.player_died.connect(_on_death_animation)
 	RespawnManager.player_respawned.connect(_on_respawn_animation)
 
+	# Equipment visual feedback — flash hero with rarity color on equip
+	inventory.equipment_changed.connect(_on_equipment_visual_update)
+
 ## Public API for external systems (e.g. minimap click) to move the player.
 func move_to(world_pos: Vector2) -> void:
 	_move_target = world_pos
@@ -949,6 +952,11 @@ func _unhandled_input(event: InputEvent) -> void:
 				var rclick_tree = _get_tree_at_mouse()
 				if rclick_tree and rclick_tree.has_method("show_wood_info"):
 					rclick_tree.show_wood_info()
+					return
+				# Right-click on watchtower = show stats
+				var rclick_tower = _get_watchtower_at_mouse()
+				if rclick_tower:
+					_show_watchtower_stats(rclick_tower)
 					return
 			if event.button_index == MOUSE_BUTTON_LEFT:
 				# Left-click on enemy = attack (in range) or move-to-attack
@@ -2415,6 +2423,32 @@ func _get_tree_at_mouse() -> Node2D:
 				best = col
 	return best
 
+func _get_watchtower_at_mouse() -> Node2D:
+	var mouse_pos = _get_world_mouse_pos()
+	var best: Node2D = null
+	var best_dist_sq: float = 2500.0  # 50px radius
+	for tower in get_tree().get_nodes_in_group("watchtower"):
+		if not is_instance_valid(tower):
+			continue
+		var d = mouse_pos.distance_squared_to(tower.global_position)
+		if d < best_dist_sq:
+			best_dist_sq = d
+			best = tower
+	return best
+
+func _show_watchtower_stats(tower: Node2D) -> void:
+	var panels = get_tree().get_nodes_in_group("watchtower_stats_panel")
+	if panels.size() > 0:
+		panels[0].show_tower(tower)
+	else:
+		# Create panel on first use
+		var panel_scene = load("res://scenes/ui/watchtower_stats_panel.tscn")
+		if panel_scene:
+			var panel = panel_scene.instantiate()
+			panel.add_to_group("watchtower_stats_panel")
+			get_tree().current_scene.add_child(panel)
+			panel.show_tower(tower)
+
 func _set_facing(dir: Vector2) -> void:
 	_facing = dir
 	# 8-way direction detection using angle-based octants
@@ -3011,6 +3045,23 @@ func _toggle_hero_stats_panel() -> void:
 	var panels = get_tree().get_nodes_in_group("hero_stats_panel")
 	if panels.size() > 0:
 		panels[0].toggle()
+
+func _on_equipment_visual_update() -> void:
+	# Flash hero sprite with highest equipped rarity color
+	var best_rarity: int = -1
+	for slot_name in ["weapon", "armor", "helm", "boots", "ring", "amulet"]:
+		var item = inventory.equipment.get(slot_name, {})
+		if not item.is_empty():
+			var r = item.get("rarity", 0)
+			if r > best_rarity:
+				best_rarity = r
+	if best_rarity < 0:
+		return
+	var flash_color = ItemData.RARITY_COLORS.get(best_rarity, Color.WHITE)
+	# Brief bright flash then return to normal
+	var tween = create_tween()
+	tween.tween_property(sprite, "modulate", flash_color.lightened(0.5), 0.08)
+	tween.tween_property(sprite, "modulate", Color.WHITE, 0.25)
 
 func _set_longpress_outline(on: bool) -> void:
 	var mat = sprite.material as ShaderMaterial

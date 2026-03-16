@@ -84,6 +84,8 @@ func _ready() -> void:
 	# Clickable for healing
 	input_pickable = true
 	input_event.connect(_on_input_event)
+	mouse_entered.connect(func(): _on_input_event_highlight(true))
+	mouse_exited.connect(func(): _on_input_event_highlight(false))
 
 	# Repair prompt label (shows when player is near and tower is damaged)
 	_repair_label = Label.new()
@@ -302,10 +304,8 @@ func heal(amount: int) -> void:
 	_update_damage_visuals()
 	_save_hp()
 
-	# Green flash — returns to damage tint
-	var tween = create_tween()
-	tween.tween_property(sprite, "modulate", Color(0.5, 1.5, 0.5), 0.1)
-	tween.tween_property(sprite, "modulate", _damage_tint, 0.2)
+	# Satisfying repair feedback — bright flash, pulse, particles
+	_play_repair_feedback()
 
 func _update_hp_bar() -> void:
 	hp_bar.max_value = max_hp
@@ -475,14 +475,106 @@ func _try_upgrade() -> void:
 	_refresh_upgrade_label()
 	AudioManager.play_sfx("woodwork_bow", -6.0)
 	_update_damage_visuals()
-	# Emerald flash — returns to damage tint
-	var tween = create_tween()
-	tween.tween_property(sprite, "modulate", Color(0.4, 1.4, 0.55), 0.1)
-	tween.tween_property(sprite, "modulate", _damage_tint, 0.25)
+	# Satisfying upgrade feedback
+	_play_upgrade_feedback()
 	GameManager.game_message.emit(
 		"Watchtower upgraded to Lv %d! (+HP, +ATK, -%d wood)" % [new_extra, cost],
 		Color(0.18, 0.82, 0.44)
 	)
+
+func _play_repair_feedback() -> void:
+	# Phase 1: Bright green flash + scale pop
+	var tween = create_tween()
+	tween.tween_property(sprite, "modulate", Color(0.4, 2.0, 0.5), 0.06)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.12, 1.12), 0.06).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	# Phase 2: Bounce back with satisfying settle
+	tween.tween_property(sprite, "scale", Vector2(0.95, 1.05), 0.08)
+	tween.parallel().tween_property(sprite, "modulate", Color(0.6, 1.6, 0.7), 0.08)
+	tween.tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.12).set_trans(Tween.TRANS_SINE)
+	tween.parallel().tween_property(sprite, "modulate", _damage_tint, 0.2)
+	# Spawn repair sparkles
+	_spawn_repair_particles(Color(0.4, 1.0, 0.5), 5)
+
+func _play_upgrade_feedback() -> void:
+	# Phase 1: Golden flash + big scale pop
+	var tween = create_tween()
+	tween.tween_property(sprite, "modulate", Color(1.5, 1.2, 0.3), 0.05)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.2, 1.2), 0.05).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	# Phase 2: White flash peak
+	tween.tween_property(sprite, "modulate", Color(2.0, 2.0, 1.5), 0.04)
+	# Phase 3: Bounce settle
+	tween.tween_property(sprite, "scale", Vector2(0.92, 1.08), 0.08)
+	tween.parallel().tween_property(sprite, "modulate", Color(0.5, 1.4, 0.6), 0.08)
+	tween.tween_property(sprite, "scale", Vector2(1.02, 0.98), 0.06)
+	tween.tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.1).set_trans(Tween.TRANS_SINE)
+	tween.parallel().tween_property(sprite, "modulate", _damage_tint, 0.2)
+	# Spawn golden sparkles — more and brighter
+	_spawn_repair_particles(Color(1.0, 0.85, 0.3), 8)
+	# Spawn a radial ring burst
+	_spawn_upgrade_ring()
+
+func _spawn_repair_particles(base_color: Color, count: int) -> void:
+	var world = get_parent()
+	if not world:
+		return
+	var tex = SpriteGenerator.get_texture("crystal_white")
+	if not tex:
+		return
+	for _i in range(count):
+		var spark = Sprite2D.new()
+		spark.texture = tex
+		spark.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		spark.global_position = global_position + Vector2(randf_range(-14, 14), randf_range(-55, -25))
+		spark.scale = Vector2(randf_range(0.15, 0.3), randf_range(0.15, 0.3))
+		spark.modulate = Color(
+			base_color.r + randf_range(-0.2, 0.2),
+			base_color.g + randf_range(-0.2, 0.2),
+			base_color.b + randf_range(-0.1, 0.1),
+			0.9
+		)
+		spark.z_index = 2
+		world.add_child(spark)
+		var dest = spark.global_position + Vector2(randf_range(-10, 10), randf_range(-25, -12))
+		var t = spark.create_tween()
+		t.set_parallel(true)
+		t.tween_property(spark, "global_position", dest, randf_range(0.4, 0.7)).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		t.tween_property(spark, "scale", Vector2(0.03, 0.03), 0.6)
+		t.tween_property(spark, "modulate:a", 0.0, 0.5).set_delay(0.15)
+		t.set_parallel(false)
+		t.tween_callback(spark.queue_free)
+
+func _spawn_upgrade_ring() -> void:
+	var world = get_parent()
+	if not world:
+		return
+	var tex = SpriteGenerator.get_texture("beacon_yellow")
+	if not tex:
+		return
+	var ring = Sprite2D.new()
+	ring.texture = tex
+	ring.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	ring.global_position = global_position + Vector2(0, -30)
+	ring.scale = Vector2(0.2, 0.2)
+	ring.modulate = Color(1.0, 0.9, 0.4, 0.5)
+	ring.z_index = -1
+	world.add_child(ring)
+	var t = ring.create_tween()
+	t.set_parallel(true)
+	t.tween_property(ring, "scale", Vector2(3.0, 3.0), 0.4).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	t.tween_property(ring, "modulate:a", 0.0, 0.4).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	t.set_parallel(false)
+	t.tween_callback(ring.queue_free)
+
+func _on_input_event_highlight(entering: bool) -> void:
+	# Visual highlight when hovering over tower
+	if _is_destroyed:
+		return
+	if entering:
+		var tween = create_tween()
+		tween.tween_property(sprite, "modulate", _damage_tint.lightened(0.25), 0.1)
+	else:
+		var tween = create_tween()
+		tween.tween_property(sprite, "modulate", _damage_tint, 0.15)
 
 func _get_player() -> Node2D:
 	if _cached_player and is_instance_valid(_cached_player):

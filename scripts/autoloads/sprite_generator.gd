@@ -92,6 +92,9 @@ func _all_sprite_names() -> Array[String]:
 		"infernal",
 		"cave_snake", "dungeon_bat", "vampire_bat", "flan", "mimic",
 		"ghoul", "crypt_knight", "lich"])
+	# Item icons
+	for item_id in ItemData.ITEMS:
+		names.append("item_" + item_id)
 	return names
 
 ## Try loading a PNG from res://assets/sprites/<subdir>/<name>.png
@@ -306,6 +309,13 @@ func _generate_all() -> void:
 ## Try external PNG first; if not found, call the procedural generator.
 func _gen_or_load(sprite_name: String) -> void:
 	if _try_load_external(sprite_name):
+		return
+	# Item icons: "item_<id>" → generate via item system
+	if sprite_name.begins_with("item_"):
+		var item_id = sprite_name.substr(5)
+		var item = ItemData.ITEMS.get(item_id, {})
+		if not item.is_empty():
+			_gen_item_icon(item_id, item.get("slot", 0), item.get("rarity", 0))
 		return
 	var method_name = "_gen_" + sprite_name
 	if has_method(method_name):
@@ -5328,6 +5338,142 @@ func _fill_rect(img: Image, x: int, y: int, w: int, h: int, color: Color) -> voi
 				img.set_pixel(px, py, existing.blend(color))
 			else:
 				img.set_pixel(px, py, color)
+
+# ============================================================
+# ITEM ICON SPRITES (16x16 pixel art icons for inventory display)
+# ============================================================
+
+func _gen_item_icon(item_id: String, slot: int, rarity: int) -> void:
+	var img = Image.create(16, 16, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var rc = ItemData.RARITY_COLORS.get(rarity, Color.WHITE)
+	match slot:
+		0: _draw_weapon_icon(img, item_id, rc)   # WEAPON
+		1: _draw_armor_icon(img, item_id, rc)     # ARMOR
+		2: _draw_helm_icon(img, item_id, rc)      # HELM
+		3: _draw_boots_icon(img, item_id, rc)     # BOOTS
+		4: _draw_ring_icon(img, item_id, rc)      # RING
+		5: _draw_amulet_icon(img, item_id, rc)    # AMULET
+		6: _draw_potion_icon(img, item_id, rc)    # CONSUMABLE
+	textures["item_" + item_id] = ImageTexture.create_from_image(img)
+
+func _draw_weapon_icon(img: Image, id: String, rc: Color) -> void:
+	var blade = rc.lerp(Color.WHITE, 0.3)
+	var hilt = Color(0.45, 0.3, 0.15)
+	var edge = rc.darkened(0.3)
+	if "bow" in id or "longbow" in id:
+		# Bow shape
+		_fill_rect(img, 4, 2, 2, 12, Color(0.5, 0.35, 0.2))  # Wood
+		_fill_rect(img, 6, 3, 1, 10, rc.lerp(Color(0.8, 0.8, 0.6), 0.5))  # String
+		_fill_rect(img, 3, 1, 2, 1, edge)  # Top tip
+		_fill_rect(img, 3, 14, 2, 1, edge)  # Bottom tip
+	elif "staff" in id or "scepter" in id:
+		# Staff
+		_fill_rect(img, 7, 3, 2, 11, Color(0.45, 0.3, 0.18))  # Shaft
+		_fill_rect(img, 6, 1, 4, 3, rc)  # Orb
+		_fill_rect(img, 7, 2, 2, 1, Color(1.0, 1.0, 1.0, 0.8))  # Gleam
+	elif "dagger" in id or "knife" in id:
+		# Dagger — small blade
+		_fill_rect(img, 7, 2, 2, 7, blade)  # Blade
+		_fill_rect(img, 6, 9, 4, 1, hilt)  # Guard
+		_fill_rect(img, 7, 10, 2, 4, hilt)  # Grip
+		_fill_rect(img, 8, 3, 1, 1, Color(1.0, 1.0, 1.0, 0.6))
+	elif "hammer" in id or "mace" in id:
+		# Hammer/mace
+		_fill_rect(img, 7, 6, 2, 9, hilt)  # Handle
+		_fill_rect(img, 5, 1, 6, 5, blade)  # Head
+		_fill_rect(img, 6, 2, 4, 3, edge)  # Head detail
+		_fill_rect(img, 6, 2, 1, 1, Color(1.0, 1.0, 1.0, 0.5))
+	elif "axe" in id or "hatchet" in id or "cleaver" in id:
+		# Axe
+		_fill_rect(img, 7, 4, 2, 11, hilt)  # Handle
+		_fill_rect(img, 3, 1, 5, 5, blade)  # Axe head
+		_fill_rect(img, 4, 2, 3, 3, edge)
+	else:
+		# Default sword
+		_fill_rect(img, 7, 1, 2, 9, blade)  # Blade
+		_fill_rect(img, 8, 2, 1, 2, Color(1.0, 1.0, 1.0, 0.5))  # Edge gleam
+		_fill_rect(img, 5, 10, 6, 1, hilt)  # Guard
+		_fill_rect(img, 7, 11, 2, 4, hilt.darkened(0.2))  # Grip
+
+func _draw_armor_icon(img: Image, id: String, rc: Color) -> void:
+	var main = rc.lerp(Color(0.5, 0.5, 0.5), 0.3)
+	var dark = main.darkened(0.3)
+	# Chest piece
+	_fill_rect(img, 4, 2, 8, 10, main)
+	_fill_rect(img, 5, 3, 6, 8, dark)
+	# Shoulders
+	_fill_rect(img, 2, 2, 3, 3, main)
+	_fill_rect(img, 11, 2, 3, 3, main)
+	# Neck
+	_fill_rect(img, 6, 1, 4, 2, dark)
+	# Highlight
+	_fill_rect(img, 6, 4, 2, 2, rc.lightened(0.3))
+
+func _draw_helm_icon(img: Image, id: String, rc: Color) -> void:
+	var main = rc.lerp(Color(0.5, 0.5, 0.5), 0.3)
+	var dark = main.darkened(0.3)
+	# Dome
+	_fill_rect(img, 4, 2, 8, 8, main)
+	_fill_rect(img, 5, 3, 6, 6, dark)
+	# Visor slit
+	_fill_rect(img, 5, 7, 6, 2, Color(0.1, 0.1, 0.15))
+	# Crest
+	_fill_rect(img, 7, 1, 2, 3, rc)
+	# Highlight
+	_fill_rect(img, 5, 3, 2, 2, rc.lightened(0.2))
+	# Rim
+	_fill_rect(img, 3, 10, 10, 2, main.darkened(0.1))
+
+func _draw_boots_icon(img: Image, id: String, rc: Color) -> void:
+	var main = rc.lerp(Color(0.4, 0.3, 0.2), 0.4)
+	var dark = main.darkened(0.3)
+	# Left boot
+	_fill_rect(img, 2, 3, 4, 9, main)
+	_fill_rect(img, 1, 12, 6, 2, dark)  # Sole
+	_fill_rect(img, 3, 4, 2, 3, rc.lightened(0.2))  # Buckle
+	# Right boot
+	_fill_rect(img, 9, 3, 4, 9, main)
+	_fill_rect(img, 8, 12, 6, 2, dark)
+	_fill_rect(img, 10, 4, 2, 3, rc.lightened(0.2))
+
+func _draw_ring_icon(img: Image, id: String, rc: Color) -> void:
+	var band = rc.lerp(Color(0.7, 0.65, 0.3), 0.3)
+	# Ring band (circle via ellipse)
+	_fill_ellipse(img, 8, 8, 5, 5, band)
+	_fill_ellipse(img, 8, 8, 3, 3, Color(0, 0, 0, 0))  # Hollow center
+	# Gem on top
+	_fill_rect(img, 6, 2, 4, 3, rc)
+	_fill_rect(img, 7, 3, 2, 1, Color(1.0, 1.0, 1.0, 0.6))  # Sparkle
+
+func _draw_amulet_icon(img: Image, id: String, rc: Color) -> void:
+	var chain = Color(0.6, 0.55, 0.3)
+	# Chain
+	_fill_rect(img, 5, 1, 1, 5, chain)
+	_fill_rect(img, 10, 1, 1, 5, chain)
+	_fill_rect(img, 6, 5, 4, 1, chain)
+	# Pendant
+	_fill_rect(img, 6, 6, 4, 5, rc.darkened(0.2))
+	_fill_rect(img, 7, 7, 2, 3, rc)
+	_fill_rect(img, 7, 8, 1, 1, Color(1.0, 1.0, 1.0, 0.5))
+
+func _draw_potion_icon(img: Image, _id: String, _rc: Color) -> void:
+	var glass = Color(0.7, 0.75, 0.8, 0.6)
+	var liquid = Color(0.9, 0.2, 0.2)
+	# Bottle neck
+	_fill_rect(img, 7, 1, 2, 3, glass)
+	# Cork
+	_fill_rect(img, 7, 1, 2, 1, Color(0.5, 0.35, 0.2))
+	# Bottle body
+	_fill_rect(img, 5, 4, 6, 8, glass)
+	# Liquid fill
+	_fill_rect(img, 6, 6, 4, 5, liquid)
+	_fill_rect(img, 6, 6, 1, 1, Color(1.0, 0.5, 0.5, 0.6))  # Highlight
+
+func _generate_all_item_icons() -> void:
+	for item_id in ItemData.ITEMS:
+		var item = ItemData.ITEMS[item_id]
+		_gen_item_icon(item_id, item.get("slot", 0), item.get("rarity", 0))
 
 func _fill_ellipse(img: Image, cx: int, cy: int, rx: int, ry: int, color: Color) -> void:
 	for py in range(max(0, cy - ry), min(img.get_height(), cy + ry)):

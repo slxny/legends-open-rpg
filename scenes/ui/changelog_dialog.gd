@@ -9,9 +9,21 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.82.2"
+const GAME_VERSION := "v0.83.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.83.0",
+		"title": "Hero Animation Overhaul — dramatic death, level-up burst, richer idle",
+		"date": "2026-03-16",
+		"entries": [
+			"Death: multi-phase cinematic — white freeze, stagger wobble, knees buckle, sideways collapse with rising embers",
+			"Level Up: golden burst with radial sparkles, expanding ring, bounce settle with screen shake",
+			"Hit Reaction: impactful red flash with squash-stretch-wobble instead of flat color fade",
+			"Respawn: converging blue sparkles gather inward, ethereal flicker, golden power surge, double-ring flash",
+			"4 new idle fidgets: impatient foot tap, battle stance flex, cold shiver, yawn-then-alert snap (8 total)",
+		]
+	},
 	{
 		"version": "v0.82.2",
 		"title": "Inventory Clarity — equipped vs bag items now visually distinct",

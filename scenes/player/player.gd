@@ -647,7 +647,7 @@ func _play_idle_fidget() -> void:
 		_idle_breathe_tween.kill()
 		_idle_breathe_tween = null
 	_idle_fidget_tween = create_tween()
-	var fidget = randi() % 4
+	var fidget = randi() % 8
 	match fidget:
 		0:  # Look around — glance to one side then back
 			var orig_flip = sprite.flip_h
@@ -677,6 +677,43 @@ func _play_idle_fidget() -> void:
 			_idle_fidget_tween.tween_property(sprite, "position", Vector2(2, 0), 0.08)
 			_idle_fidget_tween.tween_property(sprite, "position", Vector2.ZERO, 0.15)
 			_idle_fidget_tween.parallel().tween_property(sprite, "scale", Vector2.ONE, 0.15)
+		4:  # Impatient tap — foot tap rhythm with bounce
+			for _i in range(3):
+				_idle_fidget_tween.tween_property(sprite, "position", Vector2(0, -1.5), 0.06)
+				_idle_fidget_tween.parallel().tween_property(sprite, "scale", Vector2(1.02, 0.97), 0.06)
+				_idle_fidget_tween.tween_property(sprite, "position", Vector2(0, 0.5), 0.05)
+				_idle_fidget_tween.parallel().tween_property(sprite, "scale", Vector2(0.98, 1.02), 0.05)
+			_idle_fidget_tween.tween_property(sprite, "position", Vector2.ZERO, 0.1)
+			_idle_fidget_tween.parallel().tween_property(sprite, "scale", Vector2.ONE, 0.1)
+		5:  # Battle stance — crouch, flex, hold ready
+			_idle_fidget_tween.tween_property(sprite, "scale", Vector2(1.1, 0.88), 0.1).set_trans(Tween.TRANS_BACK)
+			_idle_fidget_tween.parallel().tween_property(sprite, "position", Vector2(0, 3), 0.1)
+			# Brief golden flash — channeling power
+			_idle_fidget_tween.tween_property(sprite, "modulate", Color(1.2, 1.1, 0.85), 0.08)
+			_idle_fidget_tween.tween_interval(0.3)
+			# Spring back up
+			_idle_fidget_tween.tween_property(sprite, "scale", Vector2(0.94, 1.06), 0.1)
+			_idle_fidget_tween.parallel().tween_property(sprite, "position", Vector2(0, -1), 0.1)
+			_idle_fidget_tween.parallel().tween_property(sprite, "modulate", Color.WHITE, 0.1)
+			_idle_fidget_tween.tween_property(sprite, "scale", Vector2.ONE, 0.12)
+			_idle_fidget_tween.parallel().tween_property(sprite, "position", Vector2.ZERO, 0.12)
+		6:  # Shiver — quick cold shudder
+			for _i in range(4):
+				var x_off = randf_range(-1.5, 1.5)
+				_idle_fidget_tween.tween_property(sprite, "position", Vector2(x_off, 0), 0.03)
+			_idle_fidget_tween.tween_property(sprite, "scale", Vector2(0.96, 1.04), 0.06)
+			_idle_fidget_tween.tween_property(sprite, "scale", Vector2.ONE, 0.1)
+			_idle_fidget_tween.parallel().tween_property(sprite, "position", Vector2.ZERO, 0.1)
+		7:  # Yawn — stretch wide, hold, snap back alert
+			_idle_fidget_tween.tween_property(sprite, "scale", Vector2(1.08, 0.92), 0.2).set_trans(Tween.TRANS_SINE)
+			_idle_fidget_tween.parallel().tween_property(sprite, "position", Vector2(0, 1), 0.2)
+			_idle_fidget_tween.tween_interval(0.4)
+			# Alert snap — something caught their attention
+			_idle_fidget_tween.tween_property(sprite, "scale", Vector2(0.95, 1.08), 0.06)
+			_idle_fidget_tween.parallel().tween_property(sprite, "position", Vector2(0, -2), 0.06)
+			_idle_fidget_tween.tween_interval(0.2)
+			_idle_fidget_tween.tween_property(sprite, "scale", Vector2.ONE, 0.12)
+			_idle_fidget_tween.parallel().tween_property(sprite, "position", Vector2.ZERO, 0.12)
 	# Resume breathing after fidget completes
 	_idle_fidget_tween.tween_callback(func():
 		_is_idle_animating = false
@@ -3051,9 +3088,20 @@ func _recycle_player_dmg_label(label: Label) -> void:
 			label.queue_free()
 
 func _do_hit_flash() -> void:
-	sprite.modulate = Color(1, 0.5, 0.5)
+	# Impact squash + red flash + recoil wobble
+	var base_pos = sprite.position
 	var tween = create_tween()
-	tween.tween_property(sprite, "modulate", Color.WHITE, 0.15)
+	# Bright red flash with squeeze
+	tween.tween_property(sprite, "modulate", Color(1.6, 0.3, 0.3), 0.03)
+	tween.parallel().tween_property(sprite, "scale", Vector2(1.25, 0.75), 0.03)
+	# Stretch rebound
+	tween.tween_property(sprite, "scale", Vector2(0.85, 1.15), 0.05)
+	tween.parallel().tween_property(sprite, "modulate", Color(1.2, 0.6, 0.6), 0.05)
+	# Wobble settle
+	tween.tween_property(sprite, "scale", Vector2(1.06, 0.94), 0.04)
+	tween.tween_property(sprite, "scale", Vector2.ONE, 0.06)
+	tween.parallel().tween_property(sprite, "modulate", Color.WHITE, 0.1)
+	tween.parallel().tween_property(sprite, "position", base_pos, 0.06)
 
 ## Sprite upgrade at level milestones (5, 10, 15, ... 50)
 func _on_level_up_sprite_upgrade(new_level: int) -> void:
@@ -3067,6 +3115,8 @@ func _on_level_up_sprite_upgrade(new_level: int) -> void:
 	if tier > _current_sprite_tier:
 		_current_sprite_tier = tier
 		_apply_sprite_upgrade(tier)
+	# Celebration animation
+	_play_level_up_vfx()
 
 func _apply_sprite_upgrade(tier: int) -> void:
 	# Try to load tier-specific texture: e.g. blade_knight_t2
@@ -3081,6 +3131,81 @@ func _apply_sprite_upgrade(tier: int) -> void:
 		var dtex = SpriteGenerator.get_texture("%s_t%d_dir_%s" % [hero_class, tier, dir_key])
 		if dtex:
 			_dir_textures[dir_key] = dtex
+
+func _play_level_up_vfx() -> void:
+	# Golden burst: hero glows, expands, spawns radial sparkles, settles
+	var base_scale = sprite.scale
+	var tween = create_tween()
+	# Phase 1: Golden glow swell
+	tween.tween_property(sprite, "modulate", Color(1.8, 1.5, 0.5), 0.08)
+	tween.parallel().tween_property(sprite, "scale", base_scale * 1.25, 0.08).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	# Phase 2: Bright white peak flash
+	tween.tween_property(sprite, "modulate", Color(2.5, 2.2, 1.5), 0.04)
+	# Spawn radial sparkles at peak
+	tween.tween_callback(_spawn_level_up_sparkles)
+	# Spawn expanding ring
+	tween.tween_callback(_spawn_level_up_ring)
+	# Phase 3: Settle with bounce
+	tween.tween_property(sprite, "scale", base_scale * 0.9, 0.08)
+	tween.parallel().tween_property(sprite, "modulate", Color(1.4, 1.2, 0.7), 0.08)
+	tween.tween_property(sprite, "scale", base_scale * 1.05, 0.06)
+	tween.tween_property(sprite, "scale", base_scale, 0.08)
+	tween.parallel().tween_property(sprite, "modulate", Color.WHITE, 0.15)
+	_do_screen_shake(5.0)
+
+func _spawn_level_up_sparkles() -> void:
+	var world = _get_world_node()
+	if not world:
+		return
+	for _i in range(randi_range(8, 12)):
+		var sparkle = Sprite2D.new()
+		sparkle.texture = _tex_crystal_white
+		if not sparkle.texture:
+			sparkle.queue_free()
+			return
+		sparkle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		sparkle.global_position = global_position + Vector2(randf_range(-6, 6), randf_range(-20, -5))
+		sparkle.scale = Vector2(randf_range(0.3, 0.7), randf_range(0.3, 0.7))
+		sparkle.modulate = Color(
+			randf_range(1.2, 2.0),
+			randf_range(0.9, 1.5),
+			randf_range(0.2, 0.6),
+			0.9
+		)
+		sparkle.z_index = 5
+		world.add_child(sparkle)
+		var angle = randf() * TAU
+		var dist = randf_range(20, 45)
+		var dest = sparkle.global_position + Vector2(cos(angle), sin(angle)) * dist
+		var t = sparkle.create_tween()
+		t.set_parallel(true)
+		t.tween_property(sparkle, "global_position", dest, randf_range(0.3, 0.5)).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		t.tween_property(sparkle, "scale", Vector2(0.05, 0.05), 0.45)
+		t.tween_property(sparkle, "rotation", randf_range(-TAU, TAU), 0.45)
+		t.set_parallel(false)
+		t.tween_property(sparkle, "modulate:a", 0.0, 0.2)
+		t.tween_callback(sparkle.queue_free)
+
+func _spawn_level_up_ring() -> void:
+	var world = _get_world_node()
+	if not world:
+		return
+	var ring = Sprite2D.new()
+	ring.texture = _tex_crystal_white if _tex_crystal_white else _tex_slash_arc
+	if not ring.texture:
+		ring.queue_free()
+		return
+	ring.global_position = global_position + Vector2(0, -10)
+	ring.modulate = Color(1.0, 0.85, 0.3, 0.8)
+	ring.scale = Vector2(0.3, 0.3)
+	ring.z_index = 10
+	world.add_child(ring)
+	var t = ring.create_tween()
+	t.set_parallel(true)
+	t.tween_property(ring, "scale", Vector2(4.0, 4.0), 0.4).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	t.tween_property(ring, "modulate:a", 0.0, 0.45).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	t.set_parallel(false)
+	t.tween_callback(ring.queue_free)
 
 func _sync_to_death_counters() -> void:
 	DeathCounterSystem.set_value("level_p%d" % player_id, stats.level)
@@ -3113,17 +3238,68 @@ func _on_death_animation(_player_id: int) -> void:
 		_idle_fidget_tween.kill()
 	_stop_immunity_vfx()
 	_was_on_heal_beacon = false
-	# Death animation: red tint, collapse (shrink + rotate), fade to semi-transparent
+	# Death animation: dramatic multi-phase hero death
 	_death_tween = create_tween()
-	_death_tween.set_parallel(true)
-	# Red tint on death
-	_death_tween.tween_property(sprite, "modulate", Color(0.8, 0.15, 0.15, 0.6), 0.4)
-	# Collapse: shrink vertically (squash) and slight rotation (falling over)
-	_death_tween.tween_property(sprite, "scale", Vector2(1.2, 0.3), 0.4).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_BACK)
-	_death_tween.tween_property(sprite, "rotation", deg_to_rad(75.0), 0.4).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+	# Phase 1: Impact freeze — bright white flash, time stops for the hero
+	_death_tween.tween_property(sprite, "modulate", Color(2.0, 2.0, 2.0), 0.05)
+	_death_tween.parallel().tween_property(sprite, "scale", Vector2(1.15, 1.15), 0.05)
+	_death_tween.tween_interval(0.1)  # Hold the freeze frame
+	# Phase 2: Stagger — hero reels, trying to stay up
+	_death_tween.tween_property(sprite, "modulate", Color(1.3, 0.4, 0.3), 0.08)
+	_death_tween.tween_property(sprite, "position", sprite.position + Vector2(-3, 0), 0.06)
+	_death_tween.parallel().tween_property(sprite, "rotation", deg_to_rad(-8), 0.06)
+	_death_tween.tween_property(sprite, "position", sprite.position + Vector2(4, 0), 0.06)
+	_death_tween.parallel().tween_property(sprite, "rotation", deg_to_rad(12), 0.06)
+	_death_tween.tween_property(sprite, "position", sprite.position + Vector2(-2, 0), 0.05)
+	_death_tween.parallel().tween_property(sprite, "rotation", deg_to_rad(-5), 0.05)
+	# Phase 3: Knees buckle — squash down with color drain
+	_death_tween.tween_property(sprite, "scale", Vector2(1.3, 0.5), 0.15).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	_death_tween.parallel().tween_property(sprite, "position", sprite.position + Vector2(0, 6), 0.15)
+	_death_tween.parallel().tween_property(sprite, "modulate", Color(0.6, 0.2, 0.15, 0.8), 0.15)
+	# Phase 4: Final collapse sideways
+	_death_tween.tween_property(sprite, "rotation", deg_to_rad(80), 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	_death_tween.parallel().tween_property(sprite, "position", sprite.position + Vector2(6, 10), 0.2)
+	_death_tween.parallel().tween_property(sprite, "scale", Vector2(1.1, 0.3), 0.2)
+	# Phase 5: Fade to ghostly
+	_death_tween.tween_property(sprite, "modulate", Color(0.5, 0.15, 0.1, 0.3), 0.3)
 	# Hide shadow
 	if _shadow:
-		_death_tween.tween_property(_shadow, "modulate:a", 0.0, 0.3)
+		_death_tween.tween_property(_shadow, "modulate:a", 0.0, 0.15)
+	# Spawn death particles
+	_death_tween.tween_callback(_spawn_hero_death_particles)
+
+func _spawn_hero_death_particles() -> void:
+	var world = _get_world_node()
+	if not world:
+		return
+	# Red-orange embers rising from fallen hero
+	for _i in range(randi_range(6, 10)):
+		var ember = Sprite2D.new()
+		ember.texture = _tex_crystal_white
+		if not ember.texture:
+			ember.queue_free()
+			return
+		ember.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		ember.global_position = global_position + Vector2(randf_range(-8, 8), randf_range(-5, 5))
+		ember.scale = Vector2(randf_range(0.2, 0.5), randf_range(0.2, 0.5))
+		ember.modulate = Color(
+			randf_range(1.0, 1.8),
+			randf_range(0.2, 0.5),
+			randf_range(0.05, 0.15),
+			randf_range(0.6, 0.9)
+		)
+		ember.z_index = 5
+		world.add_child(ember)
+		var dest = ember.global_position + Vector2(randf_range(-15, 15), randf_range(-30, -12))
+		var t = ember.create_tween()
+		t.set_parallel(true)
+		t.tween_property(ember, "global_position", dest, randf_range(0.5, 0.9)).set_trans(Tween.TRANS_SINE)
+		t.tween_property(ember, "scale", Vector2(0.03, 0.03), 0.8)
+		t.tween_property(ember, "rotation", randf_range(-TAU, TAU), 0.8)
+		t.set_parallel(false)
+		t.tween_property(ember, "modulate:a", 0.0, 0.3)
+		t.tween_callback(ember.queue_free)
+	_do_screen_shake(8.0)
 
 func _on_respawn_animation(_player_id: int) -> void:
 	# Kill death tween if still running
@@ -3162,47 +3338,109 @@ func _on_respawn_animation(_player_id: int) -> void:
 	sprite.rotation = 0.0
 	if _shadow:
 		_shadow.modulate.a = 0.0
-	# Regeneration animation: glow/scale up from nothing, bright flash, then settle
+	# Grand resurrection animation
 	_death_tween = create_tween()
+	# Phase 1: Gathering energy — swirling sparkles converge inward
+	_death_tween.tween_callback(_spawn_respawn_converge_sparkles)
+	_death_tween.tween_interval(0.25)
+	# Phase 2: Form materializes — scale up from nothing with ethereal blue-white glow
 	_death_tween.set_parallel(true)
-	# Scale up from small to slightly oversized, then settle to normal
-	_death_tween.tween_property(sprite, "scale", Vector2(1.3, 1.3), 0.4).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
-	# Fade in with bright golden glow
-	_death_tween.tween_property(sprite, "modulate", Color(1.5, 1.3, 0.6, 1.0), 0.3).set_ease(Tween.EASE_OUT)
+	_death_tween.tween_property(sprite, "modulate", Color(0.7, 0.9, 1.5, 0.6), 0.15).set_ease(Tween.EASE_OUT)
+	_death_tween.tween_property(sprite, "scale", Vector2(0.6, 0.6), 0.15).set_ease(Tween.EASE_OUT)
+	_death_tween.chain()
+	# Phase 3: Body solidifies — flicker between translucent and solid
+	_death_tween.tween_property(sprite, "modulate:a", 1.0, 0.05)
+	_death_tween.tween_property(sprite, "modulate:a", 0.4, 0.04)
+	_death_tween.tween_property(sprite, "modulate:a", 1.0, 0.05)
+	_death_tween.tween_property(sprite, "modulate:a", 0.5, 0.03)
+	_death_tween.tween_property(sprite, "modulate:a", 1.0, 0.04)
+	# Phase 4: Golden power surge — expand with bright flash
+	_death_tween.set_parallel(true)
+	_death_tween.tween_property(sprite, "modulate", Color(2.0, 1.7, 0.8, 1.0), 0.08)
+	_death_tween.tween_property(sprite, "scale", Vector2(1.35, 1.35), 0.08).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	_death_tween.chain()
+	# Phase 5: Settle with heroic bounce
+	_death_tween.tween_property(sprite, "scale", Vector2(0.92, 1.08), 0.07)
+	_death_tween.parallel().tween_property(sprite, "modulate", Color(1.3, 1.15, 0.8), 0.07)
+	_death_tween.tween_property(sprite, "scale", Vector2(1.04, 0.97), 0.06)
+	_death_tween.tween_property(sprite, "scale", Vector2.ONE, 0.08)
+	_death_tween.parallel().tween_property(sprite, "modulate", Color.WHITE, 0.12)
 	# Restore shadow
 	if _shadow:
-		_death_tween.tween_property(_shadow, "modulate:a", 1.0, 0.4)
-	# Chain: settle back to normal size and color
-	_death_tween.chain()
-	_death_tween.set_parallel(true)
-	_death_tween.tween_property(sprite, "scale", Vector2.ONE, 0.25).set_ease(Tween.EASE_IN_OUT)
-	_death_tween.tween_property(sprite, "modulate", Color.WHITE, 0.25)
-	_death_tween.chain()
+		_death_tween.parallel().tween_property(_shadow, "modulate:a", 1.0, 0.15)
 	_death_tween.tween_callback(func():
 		_is_dead = false
-		# Spawn a bright flash ring VFX at player position
 		_spawn_respawn_flash()
+		_do_screen_shake(6.0)
 	)
 
-func _spawn_respawn_flash() -> void:
-	# Bright expanding ring of light at the respawn point
-	var flash = Sprite2D.new()
-	flash.texture = _tex_crystal_white if _tex_crystal_white else _tex_slash_arc
-	if not flash.texture:
-		flash.queue_free()
-		return
-	flash.modulate = Color(0.6, 1.0, 0.6, 0.9)
-	flash.scale = Vector2(0.5, 0.5)
-	flash.z_index = 10
-	flash.global_position = global_position
+func _spawn_respawn_converge_sparkles() -> void:
+	# Sparkles that converge inward to the respawn point
 	var world = _get_world_node()
-	if world:
-		world.add_child(flash)
-	else:
-		add_child(flash)
-	var tween = create_tween()
-	tween.set_parallel(true)
-	tween.tween_property(flash, "scale", Vector2(3.0, 3.0), 0.5).set_ease(Tween.EASE_OUT)
-	tween.tween_property(flash, "modulate:a", 0.0, 0.5).set_ease(Tween.EASE_IN)
-	tween.chain()
-	tween.tween_callback(flash.queue_free)
+	if not world:
+		return
+	for _i in range(randi_range(8, 12)):
+		var spark = Sprite2D.new()
+		spark.texture = _tex_crystal_white
+		if not spark.texture:
+			spark.queue_free()
+			return
+		spark.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		var angle = randf() * TAU
+		var dist = randf_range(35, 60)
+		spark.global_position = global_position + Vector2(cos(angle), sin(angle)) * dist + Vector2(0, -10)
+		spark.scale = Vector2(randf_range(0.3, 0.6), randf_range(0.3, 0.6))
+		spark.modulate = Color(
+			randf_range(0.6, 1.0),
+			randf_range(0.8, 1.2),
+			randf_range(1.2, 2.0),
+			0.8
+		)
+		spark.z_index = 5
+		world.add_child(spark)
+		# Converge inward toward hero center
+		var dest = global_position + Vector2(randf_range(-3, 3), randf_range(-12, -8))
+		var t = spark.create_tween()
+		t.set_parallel(true)
+		t.tween_property(spark, "global_position", dest, randf_range(0.2, 0.4)).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		t.tween_property(spark, "scale", Vector2(0.1, 0.1), 0.35)
+		t.tween_property(spark, "rotation", randf_range(-TAU, TAU), 0.35)
+		t.set_parallel(false)
+		t.tween_property(spark, "modulate:a", 0.0, 0.05)
+		t.tween_callback(spark.queue_free)
+
+func _spawn_respawn_flash() -> void:
+	# Double expanding ring — golden inner, white outer
+	var world = _get_world_node()
+	if not world:
+		return
+	for ring_i in range(2):
+		var flash = Sprite2D.new()
+		flash.texture = _tex_crystal_white if _tex_crystal_white else _tex_slash_arc
+		if not flash.texture:
+			flash.queue_free()
+			continue
+		flash.global_position = global_position + Vector2(0, -10)
+		flash.z_index = 10
+		if ring_i == 0:
+			# Inner golden ring — faster, smaller
+			flash.modulate = Color(1.0, 0.85, 0.3, 0.9)
+			flash.scale = Vector2(0.3, 0.3)
+			world.add_child(flash)
+			var t = flash.create_tween()
+			t.set_parallel(true)
+			t.tween_property(flash, "scale", Vector2(3.5, 3.5), 0.35).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+			t.tween_property(flash, "modulate:a", 0.0, 0.4).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+			t.set_parallel(false)
+			t.tween_callback(flash.queue_free)
+		else:
+			# Outer white ring — slower, larger
+			flash.modulate = Color(0.8, 1.0, 0.8, 0.6)
+			flash.scale = Vector2(0.5, 0.5)
+			world.add_child(flash)
+			var t = flash.create_tween()
+			t.set_parallel(true)
+			t.tween_property(flash, "scale", Vector2(5.0, 5.0), 0.5).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+			t.tween_property(flash, "modulate:a", 0.0, 0.55).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+			t.set_parallel(false)
+			t.tween_callback(flash.queue_free)

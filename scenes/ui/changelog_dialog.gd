@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.83.2"
+const GAME_VERSION := "v0.83.3"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.83.3",
+		"title": "Fix Space key triggering UI buttons during combat",
+		"date": "2026-03-16",
+		"entries": [
+			"Fixed critical bug: Space (attack key) was also mapped to Godot's ui_accept, causing focused HUD buttons (Load Game, Save, etc.) to fire when attacking",
+			"Disabled keyboard focus on all HUD command card buttons and pause menu buttons so they respond to mouse/touch only",
+			"This was the root cause of charged slash teleporting players or triggering load game",
+		]
+	},
 	{
 		"version": "v0.83.2",
 		"title": "Fix repeated game loading in browser",

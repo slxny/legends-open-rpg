@@ -555,6 +555,12 @@ func setup(player: Node2D) -> void:
 	save_btn.pressed.connect(_on_save_pressed)
 	load_btn.pressed.connect(_on_load_pressed)
 
+	# Disable keyboard focus on all command card buttons so Space (attack key)
+	# doesn't trigger ui_accept on a focused button (Godot maps Space to
+	# ui_accept by default).  Mobile overlay buttons get this via _style_btn().
+	for btn in [log_btn, potion_1_btn, potion_2_btn, potion_3_btn, inv_btn, save_btn, load_btn]:
+		btn.focus_mode = Control.FOCUS_NONE
+
 	# Initial values
 	_on_hp_changed(stats.current_hp, stats.get_total_max_hp())
 	_on_mana_changed(stats.current_mana, stats.get_total_max_mana())
@@ -684,6 +690,9 @@ func _on_wood_changed(amount: int) -> void:
 	wood_label.text = "Wood: %d" % amount
 
 func _style_btn(btn: Button, accent: Color = Color(0.9, 0.75, 0.3)) -> void:
+	# All HUD buttons are mouse/touch only — disable keyboard focus so the
+	# Space key (attack) doesn't trigger ui_accept on a focused button.
+	btn.focus_mode = Control.FOCUS_NONE
 	var normal = StyleBoxFlat.new()
 	normal.bg_color = Color(0.12, 0.11, 0.08, 0.95)
 	normal.border_color = accent * Color(0.5, 0.5, 0.5, 0.6)

@@ -131,6 +131,9 @@ func _add_menu_button(parent: VBoxContainer, text: String, min_size: Vector2, fo
 	btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	btn.add_theme_font_size_override("font_size", font_size)
 	btn.add_theme_color_override("font_color", color)
+	# Prevent Space (ui_accept) from triggering menu buttons — Space is the
+	# attack key and Godot maps it to ui_accept by default.
+	btn.focus_mode = Control.FOCUS_NONE
 	_style_btn(btn, color)
 	btn.pressed.connect(callback)
 	parent.add_child(btn)

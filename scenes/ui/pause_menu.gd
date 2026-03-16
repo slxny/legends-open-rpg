@@ -159,7 +159,9 @@ func _on_save() -> void:
 	close()
 
 func _on_load() -> void:
-	SaveLoadManager.load_game()
+	if not SaveLoadManager.load_game():
+		close()
+		return
 	AudioManager.play_sfx("load_game")
 	if _player and is_instance_valid(_player):
 		SaveLoadManager.apply_to_player(_player)

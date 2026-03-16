@@ -10,6 +10,8 @@ const SAVE_PATH := "user://savegame.json"
 signal game_saved
 signal game_loaded
 
+var _load_cooldown_ms: int = 0  # Prevents duplicate loads from touch/mouse event duplication in web browsers
+
 func save_game() -> void:
 	var player = _get_player()
 	if not player:
@@ -96,6 +98,13 @@ func save_game() -> void:
 		game_saved.emit()
 
 func load_game() -> bool:
+	# Debounce: web browsers can fire duplicate events (touch + emulated mouse)
+	# for a single tap, causing load_game() to run twice in quick succession.
+	var now_ms = Time.get_ticks_msec()
+	if now_ms - _load_cooldown_ms < 1500:
+		return false
+	_load_cooldown_ms = now_ms
+
 	if not FileAccess.file_exists(SAVE_PATH):
 		return false
 

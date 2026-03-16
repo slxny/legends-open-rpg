@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.83.1"
+const GAME_VERSION := "v0.83.2"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.83.2",
+		"title": "Fix repeated game loading in browser",
+		"date": "2026-03-16",
+		"entries": [
+			"Fixed bug where load game could fire repeatedly in web browsers due to touch/mouse event duplication",
+			"Added 1.5s debounce cooldown to load_game() to prevent duplicate loads",
+			"Load handlers now check return value and skip SFX/apply when load is blocked",
+		]
+	},
 	{
 		"version": "v0.83.1",
 		"title": "Fix special attacks teleporting player out of dungeon",

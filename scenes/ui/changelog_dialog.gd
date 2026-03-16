@@ -9,9 +9,17 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.84.0"
+const GAME_VERSION := "v0.84.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.84.1",
+		"title": "Max watchtowers increased to 16",
+		"date": "2026-03-16",
+		"entries": [
+			"Increased maximum watchtower limit from 4 to 16",
+		]
+	},
 	{
 		"version": "v0.84.0",
 		"title": "Inventory comparison colors + unicode fix",

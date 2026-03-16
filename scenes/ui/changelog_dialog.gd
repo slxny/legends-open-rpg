@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.83.3"
+const GAME_VERSION := "v0.84.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.84.0",
+		"title": "Inventory comparison colors + unicode fix",
+		"date": "2026-03-16",
+		"entries": [
+			"Item comparison now shows stat gains in green (+) and losses in red (-) with clear color coding",
+			"Detail panel upgraded to rich text for colored stat diffs when comparing bag items to equipped gear",
+			"Replaced unicode arrows that displayed as broken codes in web builds with ASCII alternatives",
+			"Level-up message, tutorial tips, and buff/debuff icons now use compatible characters",
+		]
+	},
 	{
 		"version": "v0.83.3",
 		"title": "Fix Space key triggering UI buttons during combat",
@@ -59,9 +70,9 @@ const CHANGELOG: Array[Dictionary] = [
 		"date": "2026-03-16",
 		"entries": [
 			"Equipped items now have a green-bordered 'active gear' style with [E] prefix",
-			"Bag items show ▲ (upgrade) or ▼ (downgrade) vs currently equipped gear",
+			"Bag items show [+] (upgrade) or [-] (downgrade) vs currently equipped gear",
 			"Upgrade items have a green-tinted background, downgrades have red-tinted",
-			"Comparison panel now separates gains (▲) from losses (▼) for clarity",
+			"Comparison panel now separates gains ([+]) from losses ([-]) for clarity",
 			"Empty equipment slots remain visually dimmed to stand out from equipped ones",
 		]
 	},
@@ -194,7 +205,7 @@ const CHANGELOG: Array[Dictionary] = [
 			"Pooled effect labels (status text like BLEED, STUN, KNOCKBACK) — avoids Label.new() per proc",
 			"Cached LabelSettings per color — avoids LabelSettings.new() per effect label",
 			"Pooled bleed CPUParticles2D instances — reuses particles instead of allocating per tick",
-			"Tripled player damage label pool (10 → 30) to handle burst damage without allocations",
+			"Tripled player damage label pool (10 >> 30) to handle burst damage without allocations",
 			"Cached center message LabelSettings — avoids LabelSettings.new() per dramatic message",
 		]
 	},
@@ -218,7 +229,7 @@ const CHANGELOG: Array[Dictionary] = [
 		"entries": [
 			"Replaced Engine.time_scale hit-freeze with sprite-only flash — no more whole-game stutter on every hit",
 			"Basic attacks no longer trigger screen shake or hit freeze — reserved for crits and special abilities only",
-			"Reduced gib count on rat deaths (5-9 → 3-5 normal, 10-16 → 5-8 crit) to cut node/tween allocations",
+			"Reduced gib count on rat deaths (5-9 >> 3-5 normal, 10-16 >> 5-8 crit) to cut node/tween allocations",
 			"Reduced blood splatter spawns on enemy deaths",
 			"Reduced bone fragment and root tendril counts on skeleton/elk deaths",
 		]
@@ -352,7 +363,7 @@ const CHANGELOG: Array[Dictionary] = [
 		"entries": [
 			"Gold, wood, pickup, and upgrade messages now appear below the resource bar instead of overlapping it",
 			"Mobile: message position scales with screen size (8% from top)",
-			"Level up now shows LVL 4 → LVL 5 format instead of just the new level number",
+			"Level up now shows LVL 4 >> LVL 5 format instead of just the new level number",
 		]
 	},
 	{
@@ -583,7 +594,7 @@ const CHANGELOG: Array[Dictionary] = [
 		"entries": [
 			"Single click instantly shows detail panel in armory and woodworker (no more delay)",
 			"Removed double-click quick-upgrade from armory and woodworker for consistency",
-			"All shops now use the same pattern: click to view stats → button to buy/upgrade",
+			"All shops now use the same pattern: click to view stats >> button to buy/upgrade",
 		]
 	},
 	{
@@ -593,7 +604,7 @@ const CHANGELOG: Array[Dictionary] = [
 		"entries": [
 			"Tavern reverted to simple random visit — single button, random buff/debuff outcome",
 			"Tavern shows result text and active buff timer after visiting",
-			"Armory keeps sleek detail panel with manual select → view stats → upgrade flow",
+			"Armory keeps sleek detail panel with manual select >> view stats >> upgrade flow",
 		]
 	},
 	{
@@ -604,7 +615,7 @@ const CHANGELOG: Array[Dictionary] = [
 			"Armory redesigned with sleek upgrade list + detail panel (matches woodworker/shop)",
 			"Tavern redesigned with browsable buff list + detail panel",
 			"Double-click to quick-upgrade in armory, tavern, and woodworker",
-			"All NPC dialogs now share consistent UI pattern: compact list → detail on click",
+			"All NPC dialogs now share consistent UI pattern: compact list >> detail on click",
 		]
 	},
 	{
@@ -1005,7 +1016,7 @@ const CHANGELOG: Array[Dictionary] = [
 			"Kill counter tracks total enemies slain and updates in real-time",
 			"Milestone rewards at 100, 200, 500, 1K, 2K, 5K, and 10K kills",
 			"Each milestone grants gold and a random gear drop near the player",
-			"Higher milestones drop rarer gear (Common → Legendary)",
+			"Higher milestones drop rarer gear (Common >> Legendary)",
 			"Milestone progress saved and restored with save/load",
 		]
 	},
@@ -1276,9 +1287,9 @@ const CHANGELOG: Array[Dictionary] = [
 		"date": "2026-02-23",
 		"entries": [
 			"Added 20 new creep camps across mid-to-far zones (wolves, spiders, trolls, dark mages, ogres)",
-			"Wave spawns now deploy more camps per wave (3-4 → 5-6) for denser encounters",
+			"Wave spawns now deploy more camps per wave (3-4 >> 5-6) for denser encounters",
 			"Reduced base respawn timer from 45s to 30s and wave respawn from 60s to 40s",
-			"Performance: enemy separation now checks only camp-mates instead of all enemies globally (O(n²) → O(k))",
+			"Performance: enemy separation now checks only camp-mates instead of all enemies globally (O(n²) >> O(k))",
 		]
 	},
 	{
@@ -1395,7 +1406,7 @@ const CHANGELOG: Array[Dictionary] = [
 		"title": "More Transparent Inventory Panel",
 		"date": "2026-02-23",
 		"entries": [
-			"Inventory panel is now more see-through (opacity 92% → 78%)",
+			"Inventory panel is now more see-through (opacity 92% >> 78%)",
 		]
 	},
 	{
@@ -1676,7 +1687,7 @@ const CHANGELOG: Array[Dictionary] = [
 		"entries": [
 			"Bottom HUD panel height reduced ~30% for much more game view in landscape",
 			"HP/MP/XP bars, command buttons, and minimap all compacted for landscape",
-			"Mobile landscape layout significantly tighter (bottom panel 220px → 130px)",
+			"Mobile landscape layout significantly tighter (bottom panel 220px >> 130px)",
 			"Bar label font now auto-scales to bar height instead of fixed mobile/desktop sizes",
 			"Browser auto-enters fullscreen on first tap to hide the address bar",
 		]
@@ -1816,9 +1827,9 @@ const CHANGELOG: Array[Dictionary] = [
 		"title": "Mobile Text Scaling",
 		"date": "2026-02-21",
 		"entries": [
-			"Enemy name labels doubled for mobile (9px → 18px)",
-			"Enemy damage numbers doubled for mobile (14px → 28px normal, 28px → 44px crit)",
-			"Enemy info popup text doubled for mobile (11px → 22px)",
+			"Enemy name labels doubled for mobile (9px >> 18px)",
+			"Enemy damage numbers doubled for mobile (14px >> 28px normal, 28px >> 44px crit)",
+			"Enemy info popup text doubled for mobile (11px >> 22px)",
 			"Shop dialog: item names, prices, and Buy/Sell buttons doubled for mobile",
 			"Inventory: equipment/bag buttons and stats text doubled for mobile",
 			"Tavern dialog: all text and buttons doubled for mobile",

@@ -5,7 +5,7 @@ extends CanvasLayer
 @onready var bag_tab_btn: Button = $Panel/MarginContainer/VBox/TabBar/BagTab
 @onready var content_scroll: ScrollContainer = $Panel/MarginContainer/VBox/ContentScroll
 @onready var content_vbox: VBoxContainer = $Panel/MarginContainer/VBox/ContentScroll/ContentVBox
-@onready var detail_label: Label = $Panel/MarginContainer/VBox/DetailPanel/DetailMargin/DetailLabel
+@onready var detail_label: RichTextLabel = $Panel/MarginContainer/VBox/DetailPanel/DetailMargin/DetailLabel
 @onready var stats_label: Label = $Panel/MarginContainer/VBox/StatsLabel
 
 var _player: Node2D = null
@@ -221,7 +221,7 @@ func _detect_mobile() -> void:
 		equip_tab_btn.custom_minimum_size.y = tab_h
 		bag_tab_btn.add_theme_font_size_override("font_size", fs_tab)
 		bag_tab_btn.custom_minimum_size.y = tab_h
-		detail_label.add_theme_font_size_override("font_size", fs_detail)
+		detail_label.add_theme_font_size_override("normal_font_size", fs_detail)
 		stats_label.add_theme_font_size_override("font_size", fs_stats)
 		# Always show the fixed detail panel — it stays at the bottom, items scroll above
 		$Panel/MarginContainer/VBox/DetailPanel.visible = true
@@ -398,9 +398,9 @@ func _refresh_bag() -> void:
 		var cmp = _compare_item_to_equipped(item)
 		var prefix = ""
 		if cmp > 0:
-			prefix = "▲ "
+			prefix = "[+] "
 		elif cmp < 0:
-			prefix = "▼ "
+			prefix = "[-] "
 
 		btn.text = prefix + item.get("name", "?")
 		var rarity = item.get("rarity", 0)
@@ -464,13 +464,13 @@ func _get_item_detail_text(item: Dictionary) -> String:
 	return text
 
 func _get_comparison_text(bag_item: Dictionary, equipped_item: Dictionary) -> String:
-	# Compact: item name + stats on one line, equipped on next, diff on third
+	# BBCode formatted comparison: bag item, equipped item, colored stat diffs
 	var text = _get_item_detail_text(bag_item)
 	if equipped_item.is_empty():
-		text += "\n[E] (empty)"
+		text += "\n[color=#aaaaaa][E] (empty slot)[/color]"
 	else:
-		text += "\n[E] " + _get_item_detail_text(equipped_item)
-	# Stat diff
+		text += "\n[color=#aaaaaa][E] " + _get_item_detail_text(equipped_item) + "[/color]"
+	# Stat diff — green for gains, red for losses
 	var bag_stats = bag_item.get("stats", {})
 	var eq_stats = equipped_item.get("stats", {})
 	var all_keys: Dictionary = {}
@@ -478,32 +478,27 @@ func _get_comparison_text(bag_item: Dictionary, equipped_item: Dictionary) -> St
 		all_keys[k] = true
 	for k in eq_stats:
 		all_keys[k] = true
-	var ups: Array[String] = []
-	var downs: Array[String] = []
+	var diff_parts: Array[String] = []
 	for k in all_keys:
 		var bag_val = bag_stats.get(k, 0)
 		var eq_val = eq_stats.get(k, 0)
 		var diff = bag_val - eq_val
+		var stat_name = k.replace("_", " ").capitalize()
 		if diff > 0:
-			ups.append("+%d %s" % [diff, k.replace("_", " ").capitalize()])
+			diff_parts.append("[color=#55dd55]+%d %s[/color]" % [diff, stat_name])
 		elif diff < 0:
-			downs.append("%d %s" % [diff, k.replace("_", " ").capitalize()])
-	var diff_parts: Array[String] = []
-	if ups.size() > 0:
-		diff_parts.append("▲ " + ", ".join(ups))
-	if downs.size() > 0:
-		diff_parts.append("▼ " + ", ".join(downs))
+			diff_parts.append("[color=#ff5555]%d %s[/color]" % [diff, stat_name])
 	if diff_parts.size() > 0:
-		text += "\n" + "  |  ".join(diff_parts)
+		text += "\n" + ", ".join(diff_parts)
 	elif not equipped_item.is_empty():
-		text += "\n= No stat change"
-	text += "  [2x tap = equip]"
+		text += "\n[color=#bbbb55]= No stat change[/color]"
+	text += "\n[color=#888888][2x tap = equip][/color]"
 	return text
 
 func _refresh_detail() -> void:
-	# Always use the fixed detail_label at the bottom of the panel
+	# Always use the fixed detail_label (RichTextLabel) at the bottom of the panel
 	if _selected_item.is_empty():
-		detail_label.text = "Tap item to see stats, double-tap to equip"
+		detail_label.text = "[color=#888888]Tap item to see stats, double-tap to equip[/color]"
 		return
 
 	if _selected_bag_index >= 0 and _player:

@@ -217,7 +217,7 @@ func _restore_watchtower() -> void:
 func _on_player_leveled_up(new_level: int) -> void:
 	var gold_color = Color(1.0, 0.9, 0.2)
 	var stat_color = Color(0.6, 0.95, 0.6)
-	GameManager.game_message.emit("Level Up!  LVL %d → LVL %d" % [new_level - 1, new_level], gold_color)
+	GameManager.game_message.emit("Level Up!  LVL %d >> LVL %d" % [new_level - 1, new_level], gold_color)
 
 	# Show individual stat gains as top-down notifications
 	var data = HeroData.get_hero(_player.stats.hero_class)

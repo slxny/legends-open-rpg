@@ -854,38 +854,38 @@ func _start_tutorial_hints(hero_data: Dictionary) -> void:
 		_hint_queue.append_array([
 			{
 				"delay": 15.0,
-				"text": "[color=#f0d866]TIP:[/color]  [color=#ff9966][b]Double-tap %s[/b][/color] while moving → [color=#ffcc44]Piercing Shot[/color] — arrow passes through all enemies!" % ("ATK" if _is_mobile else "SPACE"),
+				"text": "[color=#f0d866]TIP:[/color]  [color=#ff9966][b]Double-tap %s[/b][/color] while moving >> [color=#ffcc44]Piercing Shot[/color] — arrow passes through all enemies!" % ("ATK" if _is_mobile else "SPACE"),
 			},
 			{
 				"delay": 30.0,
-				"text": "[color=#f0d866]TIP:[/color]  [color=#6699ff][b]Triple-tap %s[/b][/color] → [color=#6699ff]Arrow Rain[/color] — 6 arrows rain down on a target area!" % ("ATK" if _is_mobile else "SPACE"),
+				"text": "[color=#f0d866]TIP:[/color]  [color=#6699ff][b]Triple-tap %s[/b][/color] >> [color=#6699ff]Arrow Rain[/color] — 6 arrows rain down on a target area!" % ("ATK" if _is_mobile else "SPACE"),
 			},
 			{
 				"delay": 30.0,
-				"text": "[color=#f0d866]TIP:[/color]  [color=#ffdd55][b]Hold %s for 1.5s[/b][/color] then release → [color=#ffcc44]Sniper Shot[/color] — massive long-range precision hit!" % ("ATK" if _is_mobile else "SPACE"),
+				"text": "[color=#f0d866]TIP:[/color]  [color=#ffdd55][b]Hold %s for 1.5s[/b][/color] then release >> [color=#ffcc44]Sniper Shot[/color] — massive long-range precision hit!" % ("ATK" if _is_mobile else "SPACE"),
 			},
 			{
 				"delay": 30.0,
-				"text": "[color=#f0d866]TIP:[/color]  %s → [color=#66eebb]Shadow Step[/color] — dodge backward and fire a 3-arrow spread!" % DIAG,
+				"text": "[color=#f0d866]TIP:[/color]  %s >> [color=#66eebb]Shadow Step[/color] — dodge backward and fire a 3-arrow spread!" % DIAG,
 			},
 		])
 	else:
 		_hint_queue.append_array([
 			{
 				"delay": 15.0,
-				"text": "[color=#f0d866]TIP:[/color]  [color=#ff9966][b]Double-tap %s[/b][/color] while moving → [color=#ffcc44]Power Strike[/color] — 1.4x heavy single-target hit!" % ("ATK" if _is_mobile else "SPACE"),
+				"text": "[color=#f0d866]TIP:[/color]  [color=#ff9966][b]Double-tap %s[/b][/color] while moving >> [color=#ffcc44]Power Strike[/color] — 1.4x heavy single-target hit!" % ("ATK" if _is_mobile else "SPACE"),
 			},
 			{
 				"delay": 30.0,
-				"text": "[color=#f0d866]TIP:[/color]  [color=#cc88ff][b]Triple-tap %s[/b][/color] → [color=#cc88ff]Whirlwind[/color] — 720° spin hitting every enemy around you!" % ("ATK" if _is_mobile else "SPACE"),
+				"text": "[color=#f0d866]TIP:[/color]  [color=#cc88ff][b]Triple-tap %s[/b][/color] >> [color=#cc88ff]Whirlwind[/color] — 720° spin hitting every enemy around you!" % ("ATK" if _is_mobile else "SPACE"),
 			},
 			{
 				"delay": 30.0,
-				"text": "[color=#f0d866]TIP:[/color]  [color=#ffdd55][b]Hold %s for 1.5s[/b][/color] then release → [color=#ffcc44]Charged Slash[/color] — dash through enemies for 1.6x damage!" % ("ATK" if _is_mobile else "SPACE"),
+				"text": "[color=#f0d866]TIP:[/color]  [color=#ffdd55][b]Hold %s for 1.5s[/b][/color] then release >> [color=#ffcc44]Charged Slash[/color] — dash through enemies for 1.6x damage!" % ("ATK" if _is_mobile else "SPACE"),
 			},
 			{
 				"delay": 30.0,
-				"text": "[color=#f0d866]TIP:[/color]  %s → [color=#66eeff]Dash Strike[/color] — quick spin-dash through foes!" % DIAG,
+				"text": "[color=#f0d866]TIP:[/color]  %s >> [color=#66eeff]Dash Strike[/color] — quick spin-dash through foes!" % DIAG,
 			},
 		])
 
@@ -996,7 +996,7 @@ func _show_next_hint() -> void:
 	_hint_panel.offset_bottom = -(bottom_offset + 10)
 	_hint_panel.offset_top = -(bottom_offset + panel_h + 10)
 
-	# Fade in → hold → fade out
+	# Fade in >> hold >> fade out
 	if _hint_tween and _hint_tween.is_valid():
 		_hint_tween.kill()
 	_hint_tween = create_tween()

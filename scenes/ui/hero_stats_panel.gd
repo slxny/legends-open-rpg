@@ -223,10 +223,10 @@ func _create_buff_entry(buff: Dictionary) -> PanelContainer:
 	var icon = Label.new()
 	icon.add_theme_font_size_override("font_size", 38 if _is_mobile else 15)
 	if is_debuff:
-		icon.text = "▼"
+		icon.text = "[-]"
 		icon.add_theme_color_override("font_color", Color(1, 0.35, 0.35))
 	else:
-		icon.text = "▲"
+		icon.text = "[+]"
 		icon.add_theme_color_override("font_color", Color(0.35, 1, 0.55))
 	hbox.add_child(icon)
 

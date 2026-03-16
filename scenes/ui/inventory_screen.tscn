@@ -105,12 +105,14 @@ theme_override_constants/margin_top = 4
 theme_override_constants/margin_right = 6
 theme_override_constants/margin_bottom = 4
 
-[node name="DetailLabel" type="Label" parent="Panel/MarginContainer/VBox/DetailPanel/DetailMargin"]
+[node name="DetailLabel" type="RichTextLabel" parent="Panel/MarginContainer/VBox/DetailPanel/DetailMargin"]
 layout_mode = 2
+bbcode_enabled = true
 text = "Tap item to see stats"
-theme_override_font_sizes/font_size = 11
-theme_override_colors/font_color = Color(0.8, 0.78, 0.72, 1)
-autowrap_mode = 3
+theme_override_font_sizes/normal_font_size = 11
+theme_override_colors/default_color = Color(0.8, 0.78, 0.72, 1)
+fit_content = true
+scroll_active = false
 
 [node name="Sep3" type="HSeparator" parent="Panel/MarginContainer/VBox"]
 layout_mode = 2

@@ -753,17 +753,59 @@ func _die() -> void:
 		_play_death_animation()
 
 func _play_death_animation() -> void:
-	if sprite_type == "skeleton":
-		_die_crumble()
-	elif sprite_type == "rat":
-		_die_rat_select_variant()
-	elif sprite_type == "tree_god_elk":
-		_die_elk_collapse()
-	elif is_mini_boss:
+	if is_mini_boss:
 		_spawn_blood_splatter()
 		_die_boss()
-	else:
-		_die_default_select_variant()
+		return
+	match sprite_type:
+		"skeleton":
+			_die_crumble()
+		"rat":
+			_die_rat_select_variant()
+		"tree_god_elk":
+			_die_elk_collapse()
+		"goblin":
+			_die_goblin()
+		"wolf":
+			_die_wolf()
+		"bandit":
+			_die_bandit()
+		"spider":
+			_die_spider()
+		"troll":
+			_die_troll()
+		"dark_mage":
+			_die_dark_mage()
+		"ogre", "ogre_boss":
+			_die_ogre()
+		"demon_knight":
+			_die_demon_knight()
+		"ancient_golem":
+			_die_ancient_golem()
+		"shadow_wraith":
+			_die_shadow_wraith()
+		"dragon_whelp":
+			_die_dragon_whelp()
+		"infernal":
+			_die_infernal()
+		"cave_snake":
+			_die_cave_snake()
+		"dungeon_bat":
+			_die_dungeon_bat()
+		"vampire_bat":
+			_die_vampire_bat()
+		"flan":
+			_die_flan()
+		"mimic":
+			_die_mimic()
+		"ghoul":
+			_die_ghoul()
+		"crypt_knight":
+			_die_crypt_knight()
+		"lich":
+			_die_lich()
+		_:
+			_die_default_select_variant()
 
 func _die_default_select_variant() -> void:
 	_spawn_blood_splatter()
@@ -1111,6 +1153,538 @@ func _spawn_bone_fragments() -> void:
 		t.tween_interval(randf_range(0.8, 1.5))
 		t.tween_property(bone, "modulate:a", 0.0, 0.5)
 		t.tween_callback(bone.queue_free)
+
+# ============================================================
+# UNIQUE DEATH ANIMATIONS PER ENEMY TYPE
+# ============================================================
+
+func _die_goblin() -> void:
+	# Sneaky escape fail: goblin tries to flee, stumbles, faceplants
+	_spawn_blood_splatter()
+	var player = _get_player()
+	var flee_dir = Vector2.RIGHT
+	if player and is_instance_valid(player):
+		flee_dir = (global_position - player.global_position).normalized()
+	var base_pos = sprite.position
+	var tween = create_tween()
+	# Panic hop backward
+	tween.tween_property(sprite, "position", base_pos + flee_dir * 8 + Vector2(0, -6), 0.08).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.parallel().tween_property(sprite, "scale", Vector2(_base_scale.x * 0.8, _base_scale.y * 1.3), 0.08)
+	# Stumble — tilt forward
+	tween.tween_property(sprite, "rotation", deg_to_rad(-20), 0.06)
+	tween.parallel().tween_property(sprite, "position", base_pos + flee_dir * 12, 0.06)
+	# Faceplant — slam flat
+	tween.tween_property(sprite, "rotation", deg_to_rad(90), 0.1).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tween.parallel().tween_property(sprite, "position", base_pos + flee_dir * 14 + Vector2(0, 6), 0.1)
+	tween.parallel().tween_property(sprite, "scale", Vector2(_base_scale.x * 1.2, _base_scale.y * 0.5), 0.1)
+	# Brief hold then fade
+	tween.tween_interval(0.12)
+	tween.tween_property(sprite, "modulate:a", 0.0, 0.3)
+	tween.tween_callback(queue_free)
+
+func _die_wolf() -> void:
+	# Wounded yelp: wolf recoils, rolls sideways, legs-up fade
+	_spawn_blood_splatter()
+	var player = _get_player()
+	var away_dir = Vector2.RIGHT
+	if player and is_instance_valid(player):
+		away_dir = (global_position - player.global_position).normalized()
+	var base_pos = sprite.position
+	var tween = create_tween()
+	# Recoil hop
+	tween.tween_property(sprite, "position", base_pos + away_dir * 6 + Vector2(0, -4), 0.06)
+	tween.parallel().tween_property(sprite, "modulate", Color(1.3, 0.9, 0.9), 0.06)
+	# Roll sideways
+	var roll_sign = 1.0 if away_dir.x >= 0 else -1.0
+	tween.tween_property(sprite, "rotation", deg_to_rad(180 * roll_sign), 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.parallel().tween_property(sprite, "position", base_pos + away_dir * 18 + Vector2(0, 4), 0.2)
+	# Legs-up settle
+	tween.tween_property(sprite, "rotation", deg_to_rad(160 * roll_sign), 0.08)
+	tween.parallel().tween_property(sprite, "scale", Vector2(_base_scale.x * 0.9, _base_scale.y * 0.7), 0.08)
+	# Fade
+	tween.tween_property(sprite, "modulate:a", 0.0, 0.35)
+	tween.tween_callback(queue_free)
+
+func _die_bandit() -> void:
+	# Dramatic stagger: clutch wound, stagger 2 steps, collapse
+	_spawn_blood_splatter()
+	var base_pos = sprite.position
+	var tween = create_tween()
+	# Clutch wound — brief freeze, red flash
+	tween.tween_property(sprite, "modulate", Color(1.5, 0.6, 0.6), 0.06)
+	tween.parallel().tween_property(sprite, "scale", Vector2(_base_scale.x * 1.1, _base_scale.y * 0.9), 0.06)
+	# Stagger step 1
+	tween.tween_property(sprite, "position", base_pos + Vector2(-4, 0), 0.1)
+	tween.parallel().tween_property(sprite, "rotation", deg_to_rad(-8), 0.1)
+	# Stagger step 2
+	tween.tween_property(sprite, "position", base_pos + Vector2(3, 0), 0.1)
+	tween.parallel().tween_property(sprite, "rotation", deg_to_rad(12), 0.1)
+	# Knees buckle — squash down
+	tween.tween_property(sprite, "scale", Vector2(_base_scale.x * 1.3, _base_scale.y * 0.4), 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tween.parallel().tween_property(sprite, "position", base_pos + Vector2(2, 8), 0.12)
+	tween.parallel().tween_property(sprite, "rotation", deg_to_rad(25), 0.12)
+	# Collapse forward and fade
+	tween.tween_property(sprite, "modulate:a", 0.0, 0.35)
+	tween.tween_callback(queue_free)
+
+func _die_spider() -> void:
+	# Curl and shrivel: legs curl inward, flip upside down, shrink
+	_spawn_blood_splatter()
+	var base_pos = sprite.position
+	var tween = create_tween()
+	# Recoil flash — green venom burst
+	tween.tween_property(sprite, "modulate", Color(0.8, 1.4, 0.6), 0.05)
+	tween.parallel().tween_property(sprite, "scale", _base_scale * 1.2, 0.05)
+	# Flip upside-down — legs curl
+	tween.tween_property(sprite, "rotation", deg_to_rad(180), 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tween.parallel().tween_property(sprite, "position", base_pos + Vector2(0, -4), 0.1)
+	tween.parallel().tween_property(sprite, "modulate", Color(0.6, 0.5, 0.4), 0.2)
+	# Shrivel — curl into ball
+	tween.tween_property(sprite, "scale", _base_scale * 0.3, 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tween.parallel().tween_property(sprite, "position", base_pos + Vector2(0, 4), 0.2)
+	# Fade the curled husk
+	tween.tween_interval(0.1)
+	tween.tween_property(sprite, "modulate:a", 0.0, 0.3)
+	tween.tween_callback(queue_free)
+
+func _die_troll() -> void:
+	# Mighty timber: troll wobbles, tips over like a falling tree, ground impact
+	_spawn_blood_splatter()
+	_spawn_death_fragments()
+	var base_pos = sprite.position
+	var fall_dir = 1.0 if randf() > 0.5 else -1.0
+	var tween = create_tween()
+	# Stunned wobble
+	tween.tween_property(sprite, "position", base_pos + Vector2(-3 * fall_dir, 0), 0.08)
+	tween.tween_property(sprite, "position", base_pos + Vector2(4 * fall_dir, 0), 0.08)
+	tween.tween_property(sprite, "position", base_pos + Vector2(-2 * fall_dir, 0), 0.06)
+	# Timber! — slow tip then accelerating fall
+	tween.tween_property(sprite, "rotation", deg_to_rad(15 * fall_dir), 0.15).set_trans(Tween.TRANS_SINE)
+	tween.tween_property(sprite, "rotation", deg_to_rad(85 * fall_dir), 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tween.parallel().tween_property(sprite, "position", base_pos + Vector2(12 * fall_dir, 6), 0.2)
+	# Ground impact — squash and camera shake feel
+	tween.tween_property(sprite, "scale", Vector2(_base_scale.x * 1.3, _base_scale.y * 0.6), 0.05)
+	tween.tween_property(sprite, "scale", _base_scale * 0.9, 0.08)
+	# Fade the fallen troll
+	tween.tween_property(sprite, "modulate:a", 0.0, 0.4)
+	tween.tween_callback(queue_free)
+
+func _die_dark_mage() -> void:
+	# Arcane unraveling: dark energy pulses out, mage dissolves into void wisps
+	var base_pos = sprite.position
+	var tween = create_tween()
+	# Dark energy surge — purple flash
+	tween.tween_property(sprite, "modulate", Color(1.2, 0.4, 1.5), 0.08)
+	tween.parallel().tween_property(sprite, "scale", _base_scale * 1.3, 0.08)
+	# Flicker between visible and translucent
+	for i in range(4):
+		tween.tween_property(sprite, "modulate:a", 0.2, 0.04)
+		tween.tween_property(sprite, "modulate:a", 0.9, 0.04)
+	# Spawn void wisps
+	tween.tween_callback(_spawn_void_wisps)
+	# Implode — shrink to point with purple glow
+	tween.tween_property(sprite, "scale", _base_scale * 0.05, 0.2).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_IN)
+	tween.parallel().tween_property(sprite, "modulate", Color(0.8, 0.2, 1.2, 0.0), 0.25)
+	tween.parallel().tween_property(sprite, "rotation", TAU * 1.5, 0.25)
+	tween.tween_callback(queue_free)
+
+func _spawn_void_wisps() -> void:
+	var world = _get_world_node()
+	for _i in range(randi_range(4, 6)):
+		var wisp = Sprite2D.new()
+		var tex = SpriteGenerator.get_texture("rat_gib")
+		if tex:
+			wisp.texture = tex
+		wisp.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		wisp.global_position = global_position + Vector2(randf_range(-4, 4), randf_range(-4, 4))
+		wisp.scale = Vector2(randf_range(0.3, 0.6), randf_range(0.3, 0.6))
+		wisp.modulate = Color(0.6, 0.2, 0.9, 0.8)
+		wisp.z_index = -1
+		world.add_child(wisp)
+		var dir = Vector2(randf_range(-1, 1), randf_range(-1, 1)).normalized()
+		var dest = wisp.global_position + dir * randf_range(20, 40) + Vector2(0, randf_range(-15, -5))
+		var t = wisp.create_tween()
+		t.set_parallel(true)
+		t.tween_property(wisp, "global_position", dest, randf_range(0.4, 0.7)).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		t.tween_property(wisp, "scale", Vector2(0.05, 0.05), 0.6)
+		t.tween_property(wisp, "rotation", randf_range(-TAU, TAU), 0.6)
+		t.set_parallel(false)
+		t.tween_property(wisp, "modulate:a", 0.0, 0.3)
+		t.tween_callback(wisp.queue_free)
+
+func _die_ogre() -> void:
+	# Heavy topple: ogre sways, slams face-first with ground shake
+	_spawn_blood_splatter()
+	_spawn_death_fragments()
+	var base_pos = sprite.position
+	var tween = create_tween()
+	# Dazed sway
+	tween.tween_property(sprite, "rotation", deg_to_rad(-10), 0.1)
+	tween.tween_property(sprite, "rotation", deg_to_rad(8), 0.1)
+	# Heavy forward slam
+	tween.tween_property(sprite, "rotation", deg_to_rad(95), 0.25).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tween.parallel().tween_property(sprite, "position", base_pos + Vector2(6, 10), 0.25)
+	# Impact squash — heavy thud
+	tween.tween_property(sprite, "scale", Vector2(_base_scale.x * 1.4, _base_scale.y * 0.5), 0.05)
+	tween.tween_property(sprite, "scale", Vector2(_base_scale.x * 1.1, _base_scale.y * 0.7), 0.08)
+	# Slow fade — heavy body lingers
+	tween.tween_property(sprite, "modulate:a", 0.0, 0.5)
+	tween.tween_callback(queue_free)
+
+func _die_demon_knight() -> void:
+	# Hellfire collapse: armor cracks with fire flashes, collapses in embers
+	_spawn_blood_splatter()
+	var base_pos = sprite.position
+	var tween = create_tween()
+	# Armor crack flashes — alternating red/orange
+	tween.tween_property(sprite, "modulate", Color(1.8, 0.5, 0.2), 0.05)
+	tween.tween_property(sprite, "modulate", Color(1.0, 0.3, 0.1), 0.05)
+	tween.tween_property(sprite, "modulate", Color(2.0, 0.8, 0.3), 0.05)
+	# Violent shudder
+	for i in range(4):
+		tween.tween_property(sprite, "position", base_pos + Vector2(randf_range(-4, 4), randf_range(-3, 3)), 0.03)
+	# Spawn ember fragments
+	tween.tween_callback(_spawn_ember_fragments)
+	# Collapse — armor falls apart
+	tween.tween_property(sprite, "scale", Vector2(_base_scale.x * 1.2, _base_scale.y * 0.3), 0.15).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tween.parallel().tween_property(sprite, "position", base_pos + Vector2(0, 8), 0.15)
+	tween.parallel().tween_property(sprite, "modulate", Color(1.5, 0.4, 0.1, 0.6), 0.15)
+	# Smolder out
+	tween.tween_property(sprite, "modulate", Color(0.3, 0.1, 0.05, 0.0), 0.4)
+	tween.tween_callback(queue_free)
+
+func _spawn_ember_fragments() -> void:
+	var world = _get_world_node()
+	var tex = SpriteGenerator.get_texture("rat_gib")
+	if not tex:
+		return
+	for _i in range(randi_range(4, 7)):
+		var ember = Sprite2D.new()
+		ember.texture = tex
+		ember.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		ember.global_position = global_position + Vector2(randf_range(-5, 5), randf_range(-6, 2))
+		ember.scale = Vector2(randf_range(0.2, 0.5), randf_range(0.2, 0.5))
+		ember.modulate = Color(
+			randf_range(1.2, 2.0),
+			randf_range(0.4, 0.8),
+			randf_range(0.1, 0.3),
+			0.9
+		)
+		ember.z_index = -1
+		world.add_child(ember)
+		# Float upward like embers
+		var dest = ember.global_position + Vector2(randf_range(-12, 12), randf_range(-25, -10))
+		var t = ember.create_tween()
+		t.set_parallel(true)
+		t.tween_property(ember, "global_position", dest, randf_range(0.5, 0.9)).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		t.tween_property(ember, "scale", Vector2(0.05, 0.05), 0.8)
+		t.tween_property(ember, "rotation", randf_range(-TAU, TAU), 0.8)
+		t.set_parallel(false)
+		t.tween_property(ember, "modulate:a", 0.0, 0.3)
+		t.tween_callback(ember.queue_free)
+
+func _die_ancient_golem() -> void:
+	# Crumbling monument: cracks spread, pieces break off, collapses into rubble
+	_spawn_death_fragments()
+	_spawn_death_fragments()  # Double fragments for large body
+	var base_pos = sprite.position
+	var tween = create_tween()
+	# Stone crack flash — gray-white
+	tween.tween_property(sprite, "modulate", Color(1.5, 1.5, 1.4), 0.06)
+	# Shudder as cracks form
+	for i in range(5):
+		var offset = Vector2(randf_range(-3, 3), randf_range(-2, 2))
+		tween.tween_property(sprite, "position", base_pos + offset, 0.04)
+	# Pieces break off — scale down in steps
+	tween.tween_property(sprite, "scale", _base_scale * 0.85, 0.1)
+	tween.parallel().tween_property(sprite, "modulate", Color(0.8, 0.75, 0.65), 0.1)
+	tween.tween_property(sprite, "scale", _base_scale * 0.65, 0.1)
+	# Final collapse — squash into rubble pile
+	tween.tween_property(sprite, "scale", Vector2(_base_scale.x * 1.6, _base_scale.y * 0.2), 0.15).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tween.parallel().tween_property(sprite, "position", base_pos + Vector2(0, 10), 0.15)
+	tween.parallel().tween_property(sprite, "modulate", Color(0.6, 0.55, 0.45), 0.15)
+	# Dust settle fade
+	tween.tween_property(sprite, "modulate:a", 0.0, 0.5)
+	tween.tween_callback(queue_free)
+
+func _die_shadow_wraith() -> void:
+	# Spectral dissipation: wraith flickers, splits into ghost wisps, evaporates
+	var base_pos = sprite.position
+	var tween = create_tween()
+	# Ethereal flicker — phase in/out rapidly
+	for i in range(6):
+		tween.tween_property(sprite, "modulate:a", randf_range(0.1, 0.3), 0.03)
+		tween.parallel().tween_property(sprite, "position", base_pos + Vector2(randf_range(-5, 5), randf_range(-3, 3)), 0.03)
+		tween.tween_property(sprite, "modulate:a", randf_range(0.6, 0.9), 0.03)
+	# Stretch upward — soul escaping
+	tween.tween_property(sprite, "scale", Vector2(_base_scale.x * 0.5, _base_scale.y * 1.8), 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tween.parallel().tween_property(sprite, "position", base_pos + Vector2(0, -12), 0.2)
+	tween.parallel().tween_property(sprite, "modulate", Color(0.5, 0.6, 1.2, 0.5), 0.2)
+	# Spawn ghost wisps
+	tween.tween_callback(_spawn_ghost_wisps)
+	# Final evaporate
+	tween.tween_property(sprite, "scale", Vector2(_base_scale.x * 0.1, _base_scale.y * 2.5), 0.15)
+	tween.parallel().tween_property(sprite, "modulate:a", 0.0, 0.15)
+	tween.tween_callback(queue_free)
+
+func _spawn_ghost_wisps() -> void:
+	var world = _get_world_node()
+	var tex = SpriteGenerator.get_texture("rat_gib")
+	if not tex:
+		return
+	for _i in range(randi_range(3, 5)):
+		var wisp = Sprite2D.new()
+		wisp.texture = tex
+		wisp.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		wisp.global_position = global_position + Vector2(randf_range(-3, 3), randf_range(-8, 0))
+		wisp.scale = Vector2(randf_range(0.3, 0.6), randf_range(0.3, 0.6))
+		wisp.modulate = Color(0.5, 0.6, 1.0, 0.6)
+		wisp.z_index = -1
+		world.add_child(wisp)
+		# Float upward and scatter
+		var dest = wisp.global_position + Vector2(randf_range(-15, 15), randf_range(-30, -15))
+		var t = wisp.create_tween()
+		t.set_parallel(true)
+		t.tween_property(wisp, "global_position", dest, randf_range(0.5, 0.8)).set_trans(Tween.TRANS_SINE)
+		t.tween_property(wisp, "scale", Vector2(0.05, 0.05), 0.7)
+		t.set_parallel(false)
+		t.tween_property(wisp, "modulate:a", 0.0, 0.3)
+		t.tween_callback(wisp.queue_free)
+
+func _die_dragon_whelp() -> void:
+	# Fiery demise: flame burst, spiral fall with trailing embers
+	_spawn_ember_fragments()
+	var base_pos = sprite.position
+	var tween = create_tween()
+	# Flame burst — bright orange flash
+	tween.tween_property(sprite, "modulate", Color(2.0, 1.2, 0.3), 0.06)
+	tween.parallel().tween_property(sprite, "scale", _base_scale * 1.3, 0.06)
+	# Spiral fall — wings folding
+	tween.set_parallel(true)
+	tween.tween_property(sprite, "rotation", TAU * 1.5, 0.4).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tween.tween_property(sprite, "position", base_pos + Vector2(randf_range(-10, 10), 15), 0.4).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tween.tween_property(sprite, "scale", _base_scale * 0.3, 0.4)
+	tween.tween_property(sprite, "modulate", Color(1.5, 0.6, 0.1, 0.0), 0.45)
+	tween.set_parallel(false)
+	tween.tween_callback(queue_free)
+
+func _die_infernal() -> void:
+	# Banishment: dark implosion, inverse explosion, demonic runes scatter
+	var base_pos = sprite.position
+	var tween = create_tween()
+	# Demonic glow intensifies
+	tween.tween_property(sprite, "modulate", Color(1.8, 0.3, 0.1), 0.08)
+	tween.parallel().tween_property(sprite, "scale", _base_scale * 1.2, 0.08)
+	# Reality tear — rapid size oscillation
+	tween.tween_property(sprite, "scale", _base_scale * 0.6, 0.06)
+	tween.tween_property(sprite, "scale", _base_scale * 1.5, 0.06)
+	tween.tween_property(sprite, "scale", _base_scale * 0.4, 0.06)
+	# Spawn dark rune fragments
+	tween.tween_callback(_spawn_void_wisps)
+	# Implosion — crush to center point
+	tween.tween_property(sprite, "scale", Vector2(0.02, 0.02), 0.15).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_IN)
+	tween.parallel().tween_property(sprite, "modulate", Color(2.0, 0.1, 0.0, 0.0), 0.2)
+	tween.parallel().tween_property(sprite, "rotation", -TAU, 0.2)
+	tween.tween_callback(queue_free)
+
+func _die_cave_snake() -> void:
+	# Coil and collapse: snake coils up, spasms, goes limp
+	_spawn_blood_splatter()
+	var base_pos = sprite.position
+	var tween = create_tween()
+	# Recoil — stretch horizontally (body extending)
+	tween.tween_property(sprite, "scale", Vector2(_base_scale.x * 1.5, _base_scale.y * 0.7), 0.08)
+	tween.parallel().tween_property(sprite, "modulate", Color(1.2, 1.0, 0.8), 0.08)
+	# Coil up — compress into tight ball
+	tween.tween_property(sprite, "scale", Vector2(_base_scale.x * 0.6, _base_scale.y * 1.1), 0.1)
+	# Spasm — quick jitters
+	for i in range(3):
+		tween.tween_property(sprite, "position", base_pos + Vector2(randf_range(-3, 3), randf_range(-2, 2)), 0.03)
+		tween.parallel().tween_property(sprite, "rotation", deg_to_rad(randf_range(-15, 15)), 0.03)
+	# Go limp — uncoil and flatten
+	tween.tween_property(sprite, "scale", Vector2(_base_scale.x * 1.3, _base_scale.y * 0.3), 0.15).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.parallel().tween_property(sprite, "rotation", deg_to_rad(randf_range(30, 60)), 0.15)
+	tween.parallel().tween_property(sprite, "position", base_pos + Vector2(0, 4), 0.15)
+	# Fade
+	tween.tween_property(sprite, "modulate:a", 0.0, 0.35)
+	tween.tween_callback(queue_free)
+
+func _die_dungeon_bat() -> void:
+	# Wing fold plummet: wings fold, plummets straight down, poof
+	var base_pos = sprite.position
+	var tween = create_tween()
+	# Wings fold — squeeze narrow
+	tween.tween_property(sprite, "scale", Vector2(_base_scale.x * 0.4, _base_scale.y * 1.3), 0.08)
+	# Plummet straight down
+	tween.tween_property(sprite, "position", base_pos + Vector2(0, 20), 0.15).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tween.parallel().tween_property(sprite, "rotation", deg_to_rad(randf_range(-30, 30)), 0.15)
+	# Impact poof — sudden expand then vanish
+	tween.tween_property(sprite, "scale", _base_scale * 1.5, 0.04)
+	tween.parallel().tween_property(sprite, "modulate:a", 0.3, 0.04)
+	tween.tween_property(sprite, "scale", _base_scale * 0.1, 0.08)
+	tween.parallel().tween_property(sprite, "modulate:a", 0.0, 0.08)
+	tween.tween_callback(queue_free)
+
+func _die_vampire_bat() -> void:
+	# Blood drain reversal: turns red, swells, blood bursts out, shrivels
+	_spawn_blood_splatter()
+	_spawn_blood_splatter()
+	var base_pos = sprite.position
+	var tween = create_tween()
+	# Blood overload — swell with deep red
+	tween.tween_property(sprite, "modulate", Color(1.5, 0.2, 0.2), 0.1)
+	tween.parallel().tween_property(sprite, "scale", _base_scale * 1.5, 0.1)
+	# Brief hold — about to burst
+	tween.tween_interval(0.08)
+	# Burst — rapid shrink with blood spray
+	tween.tween_property(sprite, "scale", _base_scale * 0.3, 0.06).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_IN)
+	tween.parallel().tween_property(sprite, "modulate", Color(0.8, 0.1, 0.1), 0.06)
+	# Shrivel and fade
+	tween.tween_property(sprite, "scale", _base_scale * 0.15, 0.15)
+	tween.parallel().tween_property(sprite, "position", base_pos + Vector2(0, 6), 0.15)
+	tween.parallel().tween_property(sprite, "modulate:a", 0.0, 0.2)
+	tween.tween_callback(queue_free)
+
+func _die_flan() -> void:
+	# Jelly splat: wobbles wildly, flattens into puddle, dissolves
+	var base_pos = sprite.position
+	var tween = create_tween()
+	# Frantic wobble — elastic bouncing
+	tween.tween_property(sprite, "scale", Vector2(_base_scale.x * 1.5, _base_scale.y * 0.6), 0.06).set_trans(Tween.TRANS_SINE)
+	tween.tween_property(sprite, "scale", Vector2(_base_scale.x * 0.6, _base_scale.y * 1.5), 0.06).set_trans(Tween.TRANS_SINE)
+	tween.tween_property(sprite, "scale", Vector2(_base_scale.x * 1.3, _base_scale.y * 0.7), 0.05).set_trans(Tween.TRANS_SINE)
+	tween.tween_property(sprite, "scale", Vector2(_base_scale.x * 0.8, _base_scale.y * 1.2), 0.05).set_trans(Tween.TRANS_SINE)
+	# SPLAT — flatten completely into puddle
+	tween.tween_property(sprite, "scale", Vector2(_base_scale.x * 2.2, _base_scale.y * 0.1), 0.08).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+	tween.parallel().tween_property(sprite, "position", base_pos + Vector2(0, 8), 0.08)
+	# Puddle color shift and dissolve
+	tween.tween_property(sprite, "modulate", Color(0.7, 0.9, 0.5, 0.6), 0.2)
+	tween.tween_property(sprite, "modulate:a", 0.0, 0.4)
+	tween.tween_callback(queue_free)
+
+func _die_mimic() -> void:
+	# Chest slam shut: snaps open wide, tongue lashes, slams shut, crumbles
+	_spawn_death_fragments()
+	var base_pos = sprite.position
+	var tween = create_tween()
+	# Snap open wide — mouth agape
+	tween.tween_property(sprite, "scale", Vector2(_base_scale.x * 1.1, _base_scale.y * 1.5), 0.06)
+	tween.parallel().tween_property(sprite, "modulate", Color(1.4, 0.8, 0.8), 0.06)
+	# Tongue lash — quick horizontal stretch
+	tween.tween_property(sprite, "scale", Vector2(_base_scale.x * 1.6, _base_scale.y * 0.8), 0.05)
+	# SLAM shut — violent compress
+	tween.tween_property(sprite, "scale", Vector2(_base_scale.x * 0.8, _base_scale.y * 0.5), 0.04).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+	tween.parallel().tween_property(sprite, "position", base_pos + Vector2(0, 4), 0.04)
+	# Crack and crumble — jittery break apart
+	for i in range(3):
+		tween.tween_property(sprite, "position", base_pos + Vector2(randf_range(-3, 3), 4 + randf_range(-2, 2)), 0.04)
+	tween.tween_property(sprite, "modulate", Color(0.6, 0.5, 0.4), 0.1)
+	# Collapse into fragments
+	tween.tween_property(sprite, "scale", Vector2(_base_scale.x * 1.4, _base_scale.y * 0.15), 0.12)
+	tween.tween_property(sprite, "modulate:a", 0.0, 0.3)
+	tween.tween_callback(queue_free)
+
+func _die_ghoul() -> void:
+	# Rotting collapse: flesh sloughs off, staggers, melts into ground
+	_spawn_blood_splatter()
+	var base_pos = sprite.position
+	var tween = create_tween()
+	# Sickly green flash — toxin release
+	tween.tween_property(sprite, "modulate", Color(0.6, 1.2, 0.4), 0.06)
+	# Stagger with pieces falling off (scale shrinking in steps)
+	tween.tween_property(sprite, "position", base_pos + Vector2(-3, 2), 0.08)
+	tween.parallel().tween_property(sprite, "scale", _base_scale * 0.9, 0.08)
+	tween.parallel().tween_property(sprite, "rotation", deg_to_rad(-5), 0.08)
+	tween.tween_property(sprite, "position", base_pos + Vector2(2, 4), 0.08)
+	tween.parallel().tween_property(sprite, "scale", _base_scale * 0.75, 0.08)
+	tween.parallel().tween_property(sprite, "rotation", deg_to_rad(8), 0.08)
+	# Melt into ground — wide puddle
+	tween.tween_property(sprite, "scale", Vector2(_base_scale.x * 1.6, _base_scale.y * 0.15), 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tween.parallel().tween_property(sprite, "position", base_pos + Vector2(0, 10), 0.2)
+	tween.parallel().tween_property(sprite, "modulate", Color(0.3, 0.5, 0.2, 0.6), 0.2)
+	tween.parallel().tween_property(sprite, "rotation", 0.0, 0.2)
+	# Dissolve
+	tween.tween_property(sprite, "modulate:a", 0.0, 0.4)
+	tween.tween_callback(queue_free)
+
+func _die_crypt_knight() -> void:
+	# Armor shatter: freezes, cracks appear (flash), pieces fly off, empty armor falls
+	_spawn_bone_fragments()
+	_spawn_death_fragments()
+	var base_pos = sprite.position
+	var tween = create_tween()
+	# Freeze frame — bright metallic flash
+	tween.tween_property(sprite, "modulate", Color(1.8, 1.8, 2.0), 0.06)
+	tween.tween_interval(0.08)
+	# Crack flickers
+	tween.tween_property(sprite, "modulate", Color(1.0, 0.9, 1.2), 0.04)
+	tween.tween_property(sprite, "modulate", Color(1.6, 1.6, 1.8), 0.04)
+	tween.tween_property(sprite, "modulate", Color(0.8, 0.8, 1.0), 0.04)
+	# Armor shatters — brief expand then hollow collapse
+	tween.tween_property(sprite, "scale", _base_scale * 1.2, 0.05)
+	tween.tween_property(sprite, "scale", _base_scale * 0.7, 0.08)
+	tween.parallel().tween_property(sprite, "modulate", Color(0.5, 0.5, 0.6), 0.08)
+	# Empty armor falls sideways
+	tween.tween_property(sprite, "rotation", deg_to_rad(75), 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tween.parallel().tween_property(sprite, "position", base_pos + Vector2(6, 8), 0.2)
+	tween.parallel().tween_property(sprite, "scale", Vector2(_base_scale.x * 1.1, _base_scale.y * 0.6), 0.2)
+	# Clatter fade
+	tween.tween_property(sprite, "modulate:a", 0.0, 0.35)
+	tween.tween_callback(queue_free)
+
+func _die_lich() -> void:
+	# Phylactery shatter: soul scream (expand), arcane explosion, fragments ascend
+	var base_pos = sprite.position
+	var tween = create_tween()
+	# Soul scream — expand with blue-white glow
+	tween.tween_property(sprite, "modulate", Color(0.6, 0.8, 2.0), 0.1)
+	tween.parallel().tween_property(sprite, "scale", _base_scale * 1.4, 0.1)
+	# Violent convulsion
+	for i in range(5):
+		tween.tween_property(sprite, "position", base_pos + Vector2(randf_range(-5, 5), randf_range(-5, 5)), 0.03)
+	# Arcane explosion flash
+	tween.tween_property(sprite, "modulate", Color(2.5, 2.5, 3.0), 0.04)
+	tween.parallel().tween_property(sprite, "scale", _base_scale * 1.8, 0.04)
+	# Spawn ascending soul fragments
+	tween.tween_callback(_spawn_soul_fragments)
+	# Implode and disintegrate
+	tween.tween_property(sprite, "scale", _base_scale * 0.05, 0.2).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_IN)
+	tween.parallel().tween_property(sprite, "rotation", TAU * 2.0, 0.25)
+	tween.parallel().tween_property(sprite, "modulate", Color(0.4, 0.5, 1.5, 0.0), 0.25)
+	tween.tween_callback(queue_free)
+
+func _spawn_soul_fragments() -> void:
+	var world = _get_world_node()
+	var tex = SpriteGenerator.get_texture("bone_fragment")
+	if not tex:
+		tex = SpriteGenerator.get_texture("rat_gib")
+	if not tex:
+		return
+	for _i in range(randi_range(5, 8)):
+		var frag = Sprite2D.new()
+		frag.texture = tex
+		frag.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		frag.global_position = global_position + Vector2(randf_range(-5, 5), randf_range(-5, 5))
+		frag.scale = Vector2(randf_range(0.3, 0.7), randf_range(0.3, 0.7))
+		frag.modulate = Color(
+			randf_range(0.4, 0.7),
+			randf_range(0.5, 0.8),
+			randf_range(1.2, 2.0),
+			0.8
+		)
+		frag.z_index = -1
+		world.add_child(frag)
+		# Ascend upward in spiraling pattern
+		var x_drift = randf_range(-20, 20)
+		var dest = frag.global_position + Vector2(x_drift, randf_range(-40, -20))
+		var t = frag.create_tween()
+		t.set_parallel(true)
+		t.tween_property(frag, "global_position", dest, randf_range(0.6, 1.0)).set_trans(Tween.TRANS_SINE)
+		t.tween_property(frag, "rotation", randf_range(-TAU * 2, TAU * 2), 0.9)
+		t.tween_property(frag, "scale", Vector2(0.05, 0.05), 0.9)
+		t.set_parallel(false)
+		t.tween_property(frag, "modulate:a", 0.0, 0.3)
+		t.tween_callback(frag.queue_free)
 
 func apply_knockback(dir: Vector2, force: float) -> void:
 	if _is_dead:

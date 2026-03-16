@@ -59,7 +59,7 @@ const UPGRADES = {
 		"desc": "Build defensive towers with archers. Up to 4 towers, each costs much more. Walk near and press E (or tap) to repair with wood.",
 		"max_level": 50,
 		"base_cost": 15,
-		"color": Color(1.0, 0.9, 0.4),
+		"color": Color(0.18, 0.82, 0.44),
 	},
 }
 
@@ -622,7 +622,7 @@ func _start_placement_mode() -> void:
 	ghost_container.add_child(_placement_ghost)
 	world.add_child(ghost_container)
 	_placement_ghost = ghost_container
-	GameManager.game_message.emit("Click to place your Watchtower!", Color(1.0, 0.9, 0.4))
+	GameManager.game_message.emit("Click to place your Watchtower!", Color(0.18, 0.82, 0.44))
 
 # Store the cost paid when entering placement mode so we can refund exactly
 var _placement_cost_paid: int = 0
@@ -682,7 +682,7 @@ func _place_tower(world_pos: Vector2) -> void:
 	var count = GameManager.get_watchtower_count()
 	GameManager.game_message.emit(
 		"Watchtower %d built! It will defend the area." % count,
-		Color(1.0, 0.9, 0.4)
+		Color(0.25, 0.9, 0.5)
 	)
 	AudioManager.play_sfx("woodwork_watchtower", -6.0)
 

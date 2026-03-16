@@ -92,7 +92,7 @@ func _ready() -> void:
 	# Upgrade prompt label (shows when player is near)
 	_upgrade_label = Label.new()
 	_upgrade_label.add_theme_font_size_override("font_size", 28 if _is_mobile else 11)
-	_upgrade_label.add_theme_color_override("font_color", Color(1.0, 0.9, 0.4, 0.9))
+	_upgrade_label.add_theme_color_override("font_color", Color(0.18, 0.82, 0.44, 0.9))
 	_upgrade_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_upgrade_label.position = Vector2(-50, -96)
 	_upgrade_label.visible = false
@@ -229,7 +229,7 @@ func _grant_xp(enemy: Node2D) -> void:
 		player.stats.add_xp(xp)
 		GameManager.game_message.emit(
 			"Watchtower kill! +%d XP" % xp,
-			Color(1.0, 0.9, 0.4)
+			Color(0.25, 0.9, 0.5)
 		)
 
 func get_stats_dict() -> Dictionary:
@@ -413,13 +413,13 @@ func _try_upgrade() -> void:
 	_upgrade_timer = UPGRADE_COOLDOWN
 	_refresh_upgrade_label()
 	AudioManager.play_sfx("woodwork_bow", -6.0)
-	# Gold flash
+	# Emerald flash
 	var tween = create_tween()
-	tween.tween_property(sprite, "modulate", Color(1.5, 1.3, 0.5), 0.1)
+	tween.tween_property(sprite, "modulate", Color(0.4, 1.4, 0.55), 0.1)
 	tween.tween_property(sprite, "modulate", Color.WHITE, 0.25)
 	GameManager.game_message.emit(
 		"Watchtower upgraded to Lv %d! (+HP, +ATK, -%d wood)" % [new_extra, cost],
-		Color(1.0, 0.9, 0.4)
+		Color(0.18, 0.82, 0.44)
 	)
 
 func _get_player() -> Node2D:

@@ -9,9 +9,45 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.81.0"
+const GAME_VERSION := "v0.82.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.82.0",
+		"title": "Unique Death Animations — every enemy type gets a signature death",
+		"date": "2026-03-16",
+		"entries": [
+			"Goblin: panics, stumbles backward, and faceplants",
+			"Wolf: recoils, rolls sideways, settles legs-up",
+			"Bandit: clutches wound, staggers, collapses to knees",
+			"Spider: flips upside-down, curls inward, shrivels into a husk",
+			"Troll: wobbles like a falling tree, timber-crashes with ground impact",
+			"Dark Mage: arcane flicker, spawns void wisps, implodes into nothing",
+			"Ogre: dazed sway, heavy face-first slam with dust thud",
+			"Demon Knight: hellfire armor cracks, ember burst, smolders out",
+			"Ancient Golem: stone cracks spread, crumbles into rubble pile",
+			"Shadow Wraith: ethereal flicker, stretches upward, ghost wisps dissipate",
+			"Dragon Whelp: flame burst, spiraling fall with trailing embers",
+			"Infernal: demonic glow, reality-tear oscillation, banished implosion",
+			"Cave Snake: coils up, spasms, goes limp and flattens",
+			"Dungeon Bat: wings fold, plummets straight down, poof on impact",
+			"Vampire Bat: swells with blood, bursts, shrivels away",
+			"Flan: wobbles wildly, splats flat into a dissolving puddle",
+			"Mimic: snaps open, tongue lashes, slams shut, crumbles apart",
+			"Ghoul: sickly green flash, staggers, melts into the ground",
+			"Crypt Knight: metallic flash, armor shatters, empty shell falls sideways",
+			"Lich: soul scream, arcane explosion, soul fragments ascend to the sky",
+		]
+	},
+	{
+		"version": "v0.81.1",
+		"title": "Watchtower UI polish — emerald green theme, load fix",
+		"date": "2026-03-15",
+		"entries": [
+			"Watchtower colors updated to rich emerald green palette (labels, messages, flashes)",
+			"Fixed watchtowers not being restored when loading a save mid-game",
+		]
+	},
 	{
 		"version": "v0.81.0",
 		"title": "Watchtower Upgrades — upgrade HP and attack directly at the tower",

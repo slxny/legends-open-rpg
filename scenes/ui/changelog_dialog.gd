@@ -9,9 +9,21 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.84.1"
+const GAME_VERSION := "v0.85.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.85.0",
+		"title": "Epic miniboss death animations",
+		"date": "2026-03-16",
+		"entries": [
+			"Miniboss deaths now have a 6-phase cinematic sequence: frozen moment, stagger, violent convulsions, blinding flash, massive explosion, and lingering embers",
+			"Expanding shockwave ring radiates outward from the boss on death",
+			"Screen shake triggers on miniboss kill for impact",
+			"Triple debris burst, double ember shower, and blood splatters on explosion",
+			"Rising sparks linger in the air after the boss vanishes",
+		]
+	},
 	{
 		"version": "v0.84.1",
 		"title": "Max watchtowers increased to 16",

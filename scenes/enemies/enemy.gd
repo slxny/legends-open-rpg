@@ -1098,26 +1098,120 @@ func _spawn_elk_root_tendrils() -> void:
 		t.tween_callback(tendril.queue_free)
 
 func _die_boss() -> void:
-	# Dramatic mini-boss death: expand, flash bright, shake violently, explode outward
+	# Epic multi-phase cinematic miniboss death
 	var base_pos = sprite.position
 	var sx = _base_scale.x
 	var sy = _base_scale.y
 	var tween = create_tween()
-	# Flash bright and swell
-	tween.tween_property(sprite, "modulate", Color(2.0, 2.0, 2.0), 0.08)
-	tween.parallel().tween_property(sprite, "scale", Vector2(sx * 1.4, sy * 1.4), 0.08)
-	# Violent shake (6 jitters)
-	for i in range(6):
-		tween.tween_property(sprite, "position", base_pos + Vector2(randf_range(-6, 6), randf_range(-4, 4)), 0.03)
-	# Pulsing flash — alternate bright/dim
-	tween.tween_property(sprite, "modulate", Color(1.5, 0.5, 0.3), 0.06)
-	tween.tween_property(sprite, "modulate", Color(2.5, 2.0, 1.5), 0.06)
-	# Explode outward — scale up fast then shrink to nothing
-	tween.tween_property(sprite, "scale", Vector2(sx * 2.0, sy * 2.0), 0.08).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	tween.parallel().tween_property(sprite, "modulate:a", 0.0, 0.25)
-	tween.parallel().tween_property(sprite, "position", base_pos, 0.08)
-	tween.tween_property(sprite, "scale", Vector2(sx * 0.1, sy * 0.1), 0.15).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+
+	# --- PHASE 1: FROZEN MOMENT — white freeze, time stops for the boss (0.35s) ---
+	tween.tween_property(sprite, "modulate", Color(3.0, 3.0, 3.0), 0.04)
+	tween.parallel().tween_property(sprite, "scale", Vector2(sx * 1.15, sy * 1.15), 0.04)
+	tween.tween_interval(0.3)
+
+	# --- PHASE 2: STAGGER — boss stumbles, trying to stay alive (0.5s) ---
+	tween.tween_property(sprite, "modulate", Color(1.6, 0.4, 0.3), 0.06)
+	tween.tween_property(sprite, "rotation", deg_to_rad(-12), 0.08).set_trans(Tween.TRANS_QUAD)
+	tween.tween_property(sprite, "rotation", deg_to_rad(15), 0.1).set_trans(Tween.TRANS_QUAD)
+	tween.tween_property(sprite, "rotation", deg_to_rad(-8), 0.08).set_trans(Tween.TRANS_QUAD)
+	tween.tween_callback(func(): _spawn_blood_splatter(); _spawn_blood_splatter())
+	tween.tween_property(sprite, "scale", Vector2(sx * 0.9, sy * 1.2), 0.1)
+	tween.tween_property(sprite, "rotation", 0.0, 0.06)
+
+	# --- PHASE 3: VIOLENT CONVULSIONS — shaking apart with flashing (0.6s) ---
+	tween.tween_callback(func(): _spawn_death_fragments())
+	# Rapid shake with escalating intensity — 12 jitters getting wilder
+	for i in range(12):
+		var intensity = lerpf(4.0, 14.0, float(i) / 11.0)
+		var flash_r = lerpf(1.5, 3.0, float(i) / 11.0)
+		var flash_gb = lerpf(0.8, 0.2, float(i) / 11.0)
+		tween.tween_property(sprite, "position", base_pos + Vector2(randf_range(-intensity, intensity), randf_range(-intensity * 0.7, intensity * 0.7)), 0.025)
+		tween.parallel().tween_property(sprite, "modulate", Color(flash_r, flash_gb, flash_gb), 0.025)
+	tween.tween_callback(func():
+		_spawn_death_fragments()
+		_spawn_ember_fragments()
+	)
+	# Scale pulse during convulsions
+	tween.tween_property(sprite, "scale", Vector2(sx * 1.3, sy * 0.8), 0.05)
+	tween.tween_property(sprite, "scale", Vector2(sx * 0.8, sy * 1.3), 0.05)
+	tween.tween_property(sprite, "scale", Vector2(sx * 1.2, sy * 1.2), 0.05)
+
+	# --- PHASE 4: FINAL FLASH — blinding white before the explosion (0.15s) ---
+	tween.tween_property(sprite, "modulate", Color(4.0, 4.0, 4.0), 0.05)
+	tween.parallel().tween_property(sprite, "scale", Vector2(sx * 1.6, sy * 1.6), 0.05)
+	tween.parallel().tween_property(sprite, "position", base_pos, 0.05)
+	tween.tween_interval(0.1)
+
+	# --- PHASE 5: EXPLOSION — burst outward with debris shower (0.5s) ---
+	tween.tween_callback(func():
+		# Massive debris burst — fragments, embers, blood in all directions
+		for _k in range(3):
+			_spawn_death_fragments()
+		_spawn_ember_fragments()
+		_spawn_ember_fragments()
+		_spawn_blood_splatter()
+		_spawn_blood_splatter()
+		_spawn_blood_splatter()
+		# Spawn expanding shockwave ring
+		_spawn_boss_shockwave()
+		# Trigger screen shake on the player
+		var player = _get_player()
+		if player and is_instance_valid(player) and player.has_method("_do_screen_shake"):
+			player._do_screen_shake(15.0)
+	)
+	# Sprite explodes outward then implodes to nothing
+	tween.tween_property(sprite, "scale", Vector2(sx * 2.5, sy * 2.5), 0.1).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.parallel().tween_property(sprite, "modulate", Color(2.0, 0.6, 0.2, 0.7), 0.1)
+	tween.tween_property(sprite, "scale", Vector2(sx * 0.05, sy * 0.05), 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tween.parallel().tween_property(sprite, "modulate:a", 0.0, 0.2)
+	tween.parallel().tween_property(sprite, "rotation", randf_range(-1.5, 1.5), 0.2)
+
+	# --- PHASE 6: LINGERING EMBERS — rising sparks after death (fire via callback) ---
+	tween.tween_callback(func():
+		# Delayed rising embers for atmosphere
+		var world = _get_world_node()
+		var gib_tex = SpriteGenerator.get_texture("rat_gib")
+		if gib_tex and world:
+			for _j in range(8):
+				var spark = Sprite2D.new()
+				spark.texture = gib_tex
+				spark.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+				spark.global_position = global_position + Vector2(randf_range(-20, 20), randf_range(-10, 10))
+				spark.scale = Vector2(randf_range(0.15, 0.35), randf_range(0.15, 0.35))
+				spark.modulate = Color(randf_range(1.5, 2.5), randf_range(0.6, 1.2), randf_range(0.1, 0.3), 0.8)
+				spark.z_index = 1
+				world.add_child(spark)
+				var rise_dest = spark.global_position + Vector2(randf_range(-15, 15), randf_range(-40, -20))
+				var st = spark.create_tween()
+				st.set_parallel(true)
+				st.tween_property(spark, "global_position", rise_dest, randf_range(0.6, 1.2)).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+				st.tween_property(spark, "scale", Vector2(0.02, 0.02), 1.0)
+				st.tween_property(spark, "modulate:a", 0.0, 1.0).set_delay(0.3)
+				st.set_parallel(false)
+				st.tween_callback(spark.queue_free)
+	)
 	tween.tween_callback(queue_free)
+
+func _spawn_boss_shockwave() -> void:
+	# Expanding translucent ring that radiates outward from the boss
+	var world = _get_world_node()
+	var ring_tex = SpriteGenerator.get_texture("beacon_yellow")
+	if not ring_tex or not world:
+		return
+	var ring = Sprite2D.new()
+	ring.texture = ring_tex
+	ring.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	ring.global_position = global_position
+	ring.scale = Vector2(0.3, 0.3)
+	ring.modulate = Color(2.0, 1.5, 0.5, 0.6)
+	ring.z_index = -1
+	world.add_child(ring)
+	var rt = ring.create_tween()
+	rt.set_parallel(true)
+	rt.tween_property(ring, "scale", Vector2(6.0, 6.0), 0.5).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	rt.tween_property(ring, "modulate:a", 0.0, 0.5).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	rt.set_parallel(false)
+	rt.tween_callback(ring.queue_free)
 
 func start_boss_pulse() -> void:
 	# Looping idle breathing animation for mini-bosses — subtle scale + modulate pulse

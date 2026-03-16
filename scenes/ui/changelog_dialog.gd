@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.82.0"
+const GAME_VERSION := "v0.82.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.82.1",
+		"title": "Watchtower Damage Visuals — towers show battle wear",
+		"date": "2026-03-16",
+		"entries": [
+			"Watchtower sprite progressively darkens as HP drops (soot tint at 75%, char at 50%, scorched at 30%)",
+			"Smoke puffs rise from critically damaged towers (below 30% HP)",
+			"Damage visuals persist across repair and upgrade — healed towers brighten back up",
+			"All flash effects (hit, heal, upgrade) now blend with the current damage tint",
+		]
+	},
 	{
 		"version": "v0.82.0",
 		"title": "Unique Death Animations — every enemy type gets a signature death",

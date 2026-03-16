@@ -27,6 +27,12 @@ var _repair_label: Label = null
 var _upgrade_label: Label = null
 var _upgrade_prompt_visible: bool = false
 
+# Visual damage state
+var _damage_tint: Color = Color.WHITE
+var _smoke_timer: float = 0.0
+var _smoke_active: bool = false
+const SMOKE_INTERVAL: float = 0.35
+
 # Heal cost: wood per repair
 const HEAL_WOOD_COST: int = 2
 const HEAL_AMOUNT: int = 40
@@ -107,6 +113,7 @@ func setup(level: int, hp: int = -1, extra_levels: int = 0) -> void:
 	else:
 		current_hp = max_hp
 	_update_hp_bar()
+	_update_damage_visuals()
 	if _upgrade_label:
 		_refresh_upgrade_label()
 
@@ -127,6 +134,13 @@ func _process(delta: float) -> void:
 		_repair_timer -= delta
 	if _upgrade_timer > 0.0:
 		_upgrade_timer -= delta
+
+	# Smoke puffs when critically damaged
+	if _smoke_active:
+		_smoke_timer -= delta
+		if _smoke_timer <= 0.0:
+			_smoke_timer = SMOKE_INTERVAL + randf_range(-0.1, 0.1)
+			_spawn_smoke_puff()
 
 	# Scan for targets periodically
 	if _target_scan_timer <= 0.0:
@@ -249,6 +263,7 @@ func take_damage(amount: int, _is_crit: bool = false) -> void:
 		return
 	current_hp = max(0, current_hp - amount)
 	_update_hp_bar()
+	_update_damage_visuals()
 	_do_hit_flash()
 	_save_hp()
 
@@ -284,12 +299,13 @@ func heal(amount: int) -> void:
 		return
 	current_hp = min(current_hp + amount, max_hp)
 	_update_hp_bar()
+	_update_damage_visuals()
 	_save_hp()
 
-	# Green flash
+	# Green flash — returns to damage tint
 	var tween = create_tween()
 	tween.tween_property(sprite, "modulate", Color(0.5, 1.5, 0.5), 0.1)
-	tween.tween_property(sprite, "modulate", Color.WHITE, 0.2)
+	tween.tween_property(sprite, "modulate", _damage_tint, 0.2)
 
 func _update_hp_bar() -> void:
 	hp_bar.max_value = max_hp
@@ -306,10 +322,55 @@ func _update_hp_bar() -> void:
 		fill_style.bg_color = Color(0.9, 0.2, 0.1)
 	hp_bar.add_theme_stylebox_override("fill", fill_style)
 
+func _update_damage_visuals() -> void:
+	var pct = float(current_hp) / float(max_hp) if max_hp > 0 else 1.0
+	if pct > 0.75:
+		# Healthy — clean white
+		_damage_tint = Color.WHITE
+	elif pct > 0.5:
+		# Light damage — slight darken, warm soot tint
+		var t = inverse_lerp(0.75, 0.5, pct)
+		_damage_tint = Color.WHITE.lerp(Color(0.85, 0.78, 0.7), t)
+	elif pct > 0.3:
+		# Moderate damage — noticeable darken, brownish char
+		var t = inverse_lerp(0.5, 0.3, pct)
+		_damage_tint = Color(0.85, 0.78, 0.7).lerp(Color(0.65, 0.55, 0.45), t)
+	else:
+		# Critical — dark scorched look
+		var t = inverse_lerp(0.3, 0.0, pct)
+		_damage_tint = Color(0.65, 0.55, 0.45).lerp(Color(0.45, 0.35, 0.3), t)
+	sprite.modulate = _damage_tint
+	# Toggle smoke
+	_smoke_active = pct <= 0.3
+
+func _spawn_smoke_puff() -> void:
+	var world_nodes = get_tree().get_nodes_in_group("world")
+	var world = world_nodes[0] if world_nodes.size() > 0 else get_tree().current_scene
+	if not world:
+		return
+	var puff = Sprite2D.new()
+	var tex = SpriteGenerator.get_texture("iso_shadow")
+	if tex:
+		puff.texture = tex
+	puff.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	puff.global_position = global_position + Vector2(randf_range(-8, 8), randf_range(-50, -35))
+	puff.scale = Vector2(randf_range(0.3, 0.5), randf_range(0.3, 0.5))
+	puff.modulate = Color(0.3, 0.3, 0.3, randf_range(0.4, 0.6))
+	puff.z_index = 1
+	world.add_child(puff)
+	var dest = puff.global_position + Vector2(randf_range(-6, 6), randf_range(-18, -10))
+	var t = puff.create_tween()
+	t.set_parallel(true)
+	t.tween_property(puff, "global_position", dest, randf_range(0.6, 1.0)).set_trans(Tween.TRANS_SINE)
+	t.tween_property(puff, "scale", Vector2(randf_range(0.7, 1.0), randf_range(0.7, 1.0)), 0.8)
+	t.tween_property(puff, "modulate:a", 0.0, 0.9)
+	t.set_parallel(false)
+	t.tween_callback(puff.queue_free)
+
 func _do_hit_flash() -> void:
 	var tween = create_tween()
 	tween.tween_property(sprite, "modulate", Color(1.5, 0.5, 0.5), 0.08)
-	tween.tween_property(sprite, "modulate", Color.WHITE, 0.15)
+	tween.tween_property(sprite, "modulate", _damage_tint, 0.15)
 
 func _on_input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> void:
 	if _is_destroyed:
@@ -413,10 +474,11 @@ func _try_upgrade() -> void:
 	_upgrade_timer = UPGRADE_COOLDOWN
 	_refresh_upgrade_label()
 	AudioManager.play_sfx("woodwork_bow", -6.0)
-	# Emerald flash
+	_update_damage_visuals()
+	# Emerald flash — returns to damage tint
 	var tween = create_tween()
 	tween.tween_property(sprite, "modulate", Color(0.4, 1.4, 0.55), 0.1)
-	tween.tween_property(sprite, "modulate", Color.WHITE, 0.25)
+	tween.tween_property(sprite, "modulate", _damage_tint, 0.25)
 	GameManager.game_message.emit(
 		"Watchtower upgraded to Lv %d! (+HP, +ATK, -%d wood)" % [new_extra, cost],
 		Color(0.18, 0.82, 0.44)

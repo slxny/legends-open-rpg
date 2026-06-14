@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.83.29"
+const GAME_VERSION := "v0.83.30"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.83.30",
+		"title": "Combat overhaul — Phase 1B.6b enemies visually flinch on hit",
+		"date": "2026-06-14",
+		"entries": [
+			"VISIBLE CHANGE: every enemy now visually recoils when it takes a confirmed hit. Direction-aware nudge + squash + slight rotation. Heavier enemy tiers (troll/ogre = HEAVY, bandit/wolf = MEDIUM, mini-bosses = ELITE) react less than common enemies.",
+			"enemy.gd: HitReactionComponent created in _ready with the enemy's tier preset. Subscribes to CombatManager.hit_resolved and fires visual flinch when event.victim == self. Knockback emission is intentionally skipped (force=0) so the existing apply_knockback path stays the sole writer of _knockback_velocity. Stagger signals from the component are not connected this stage either.",
+			"HitReactionComponent: visual layer now only touches modulate when hit_flash_strength != 1.0, so it never fights the existing _do_hit_flash modulate tween.",
+			"Result: hits visibly land harder than damage numbers alone communicate, without disrupting any existing enemy behavior.",
+		]
+	},
 	{
 		"version": "v0.83.29",
 		"title": "Combat overhaul — Phase 1B.6a screen shake routes through CameraShake2D",

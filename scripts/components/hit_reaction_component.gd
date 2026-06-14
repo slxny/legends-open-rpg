@@ -153,7 +153,7 @@ func _play_visual(direction: Vector2, dampened: bool, was_crit: bool) -> void:
 
 	var target_pos := _orig_position + recoil_dir * recoil_distance
 	var target_rot := _orig_rotation + (rot if recoil_dir.x >= 0.0 else -rot)
-	var flash_color := Color(_orig_modulate.r * flash, _orig_modulate.g * flash, _orig_modulate.b * flash, _orig_modulate.a)
+	var write_modulate: bool = abs(flash - 1.0) > 0.001
 
 	var pivot: Node2D = reaction_pivot
 	if pivot == null:
@@ -161,18 +161,22 @@ func _play_visual(direction: Vector2, dampened: bool, was_crit: bool) -> void:
 
 	# Instant snap to recoil pose then tween back to original. Generation
 	# guard prevents a newer reaction's restoration from being overwritten
-	# by an older one.
+	# by an older one. Modulate is touched only when hit_flash_strength
+	# differs from 1.0 so this never fights an owner-side flash tween.
 	pivot.position = target_pos
 	pivot.scale = squash
 	pivot.rotation = target_rot
-	pivot.modulate = flash_color
+	if write_modulate:
+		var flash_color := Color(_orig_modulate.r * flash, _orig_modulate.g * flash, _orig_modulate.b * flash, _orig_modulate.a)
+		pivot.modulate = flash_color
 
 	var t := pivot.create_tween()
 	t.set_parallel(true)
 	t.tween_property(pivot, "position", _orig_position, dur)
 	t.tween_property(pivot, "scale", _orig_scale, dur)
 	t.tween_property(pivot, "rotation", _orig_rotation, dur)
-	t.tween_property(pivot, "modulate", _orig_modulate, dur * 0.7)
+	if write_modulate:
+		t.tween_property(pivot, "modulate", _orig_modulate, dur * 0.7)
 	t.set_parallel(false)
 	t.tween_callback(func() -> void:
 		if gen != _generation:
@@ -181,7 +185,8 @@ func _play_visual(direction: Vector2, dampened: bool, was_crit: bool) -> void:
 			pivot.position = _orig_position
 			pivot.scale = _orig_scale
 			pivot.rotation = _orig_rotation
-			pivot.modulate = _orig_modulate
+			if write_modulate:
+				pivot.modulate = _orig_modulate
 		reaction_visual_finished.emit())
 
 

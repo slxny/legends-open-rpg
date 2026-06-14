@@ -1,5 +1,10 @@
 extends CharacterBody2D
 
+# Phase 1B.6b — visual hit reactions via component (no class_name to keep
+# autoload boot order safe).
+const HitReactionComponentCls = preload("res://scripts/components/hit_reaction_component.gd")
+const HitReactionDataCls = preload("res://scripts/data/hit_reaction_data.gd")
+
 signal died(enemy: Node2D, xp_reward: int, gold_reward: int)
 
 @onready var sprite: Sprite2D = $Sprite
@@ -99,6 +104,12 @@ static var _last_global_death_msec: int = 0
 # Killing blow info for death animation selection
 var _last_hit_was_crit: bool = false
 var _overkill_ratio: float = 0.0
+# Phase 1B.6b — visual hit-reaction component. Created in _ready, profile
+# selected from enemy tier (mini_boss / heavy sprites → tougher reaction
+# tier). Knockback/stagger emissions are intentionally NOT connected this
+# stage — the existing apply_knockback path stays the sole writer of
+# _knockback_velocity. 1B.7 reconciles the dual paths.
+var _hit_reaction: Node = null
 
 func _ready() -> void:
 	add_to_group("enemies")
@@ -108,6 +119,23 @@ func _ready() -> void:
 		sprite.texture = tex
 	hp_bar.visible = false
 	name_label.visible = false
+
+	# Phase 1B.6b — visual hit reaction component.
+	_hit_reaction = HitReactionComponentCls.new()
+	_hit_reaction.name = "HitReactionComponent"
+	_hit_reaction.reaction_pivot = sprite
+	var tier_int: int = _pick_reaction_tier()  # 0=LIGHT...4=BOSS
+	_hit_reaction.profile = HitReactionDataCls.new().apply_preset(tier_int)
+	# Existing _do_hit_flash owns the modulate flash; the component
+	# handles position/scale/rotation only this stage.
+	_hit_reaction.profile.hit_flash_strength = 1.0
+	add_child(_hit_reaction)
+	# Subscribe to confirmed hits — fires visual flinch only this stage.
+	# Knockback emissions from the component are intentionally NOT
+	# connected; the existing apply_knockback path stays the sole writer
+	# of _knockback_velocity.
+	if CombatManager.has_signal("hit_resolved"):
+		CombatManager.hit_resolved.connect(_on_hit_resolved_for_reaction)
 	# Detect mobile for font scaling
 	var vp_size = get_viewport().get_visible_rect().size
 	var is_mobile = GameManager.is_mobile_device()
@@ -2847,3 +2875,37 @@ func _get_world_node() -> Node:
 	else:
 		_cached_world_node = get_tree().current_scene
 	return _cached_world_node
+
+
+# Phase 1B.6b — visual hit reaction wiring.
+# Heuristic tier mapping: mini-bosses → ELITE; specific tough sprites →
+# HEAVY; everything else → LIGHT. Tuning expected at 1B.7.
+# Returns the int matching HitReactionData.Tier (LIGHT=0..BOSS=4).
+func _pick_reaction_tier() -> int:
+	if is_mini_boss:
+		return 3  # ELITE
+	match sprite_type:
+		"troll", "ogre":
+			return 2  # HEAVY
+		"bandit", "wolf":
+			return 1  # MEDIUM
+		_:
+			return 0  # LIGHT
+
+
+# Fires for every confirmed hit anywhere in the world. Cheap filter so
+# unrelated hits don't trigger this enemy's flinch.
+func _on_hit_resolved_for_reaction(result: Resource) -> void:
+	if result == null or _is_dead:
+		return
+	var event = result.event
+	if event == null:
+		return
+	if event.victim != self:
+		return
+	if _hit_reaction == null or not is_instance_valid(_hit_reaction):
+		return
+	var dir: Vector2 = event.direction
+	# force = 0 → component skips emitting knockback_requested (still
+	# disconnected this stage anyway). Visual flinch + flash still runs.
+	_hit_reaction.react(dir, 0.0, bool(result.was_crit), false)

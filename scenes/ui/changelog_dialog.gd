@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.83.14"
+const GAME_VERSION := "v0.83.15"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.83.15",
+		"title": "Combat overhaul — Phase 1A.5f power strike migrated",
+		"date": "2026-06-14",
+		"entries": [
+			"Power strike (double-tap-moving special) now routes per-cone-target damage through CombatManager.resolve_hit (typed HitResult per victim). Cooldown derives from AttackTimings.power_strike().duration_sec.",
+			"Visual tween chain (wind-up coil, lunge, impact, recovery bounces) is preserved — too bespoke and well-timed to restructure. Contact trigger is still the visual tween's impact callback.",
+			"Knockback 120, slash fan VFX, 5.0/10.0 shake, hit-freeze on hit, audio + 'POWER STRIKE!' label all identical to legacy.",
+			"Whirlwind, charged_slash, dash_strike, ranged specials still on legacy path.",
+		]
+	},
 	{
 		"version": "v0.83.14",
 		"title": "Combat overhaul — Phase 1A.5e swing E migrated (all 5 basic swings done)",

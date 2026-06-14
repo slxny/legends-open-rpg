@@ -1366,8 +1366,14 @@ func _try_special_attack(special: SpecialAttack) -> void:
 func _execute_power_strike(attack_dir: Vector2) -> void:
 	# Double-tap: AoE directional slam — lunge forward, hit up to 5 enemies
 	# in a cone, 1.5x damage with splash. Satisfying bouncy animation.
+	# Phase 1A.5f: damage routes through CombatManager.resolve_hit (typed
+	# HitResult for Phase 1B subscribers). Cooldown derived from
+	# AttackTimings.power_strike().duration_sec. Visual tween contact
+	# callback remains the trigger — its chain is too bespoke to
+	# restructure without risk.
 	_is_attack_animating = true
-	_attack_cooldown = 0.8 / stats.attack_speed
+	var ps_timing = AttackTimingsCls.power_strike()
+	_attack_cooldown = ps_timing.duration_sec / max(0.1, stats.attack_speed)
 	var dir = attack_dir
 	var base_pos = sprite.position
 	var dmg_mult := 1.5
@@ -1432,11 +1438,17 @@ func _execute_power_strike(attack_dir: Vector2) -> void:
 		var hit_count := 0
 		for enemy in cone_targets:
 			if is_instance_valid(enemy) and not enemy.get("_is_dead"):
-				var result = CombatManager.calculate_damage(stats.get_stats_dict(), enemy.get_stats_dict(), dmg_mult)
-				enemy.take_damage(result["damage"], result["is_crit"])
-				var kb_dir = (enemy.global_position - global_position).normalized()
-				enemy.apply_knockback(kb_dir, 120.0)
-				_spawn_impact_vfx(enemy.global_position, result["is_crit"])
+				var event = HitEventCls.new()
+				event.attacker = self
+				event.victim = enemy
+				event.direction = (enemy.global_position - global_position).normalized()
+				event.attack_id = &"power_strike"
+				event.ability_multiplier = dmg_mult
+				var _result = CombatManager.resolve_hit(event, stats.get_stats_dict(), enemy.get_stats_dict(), true)
+				if is_instance_valid(enemy):
+					var kb_dir = (enemy.global_position - global_position).normalized()
+					enemy.apply_knockback(kb_dir, 120.0)
+					_spawn_impact_vfx(enemy.global_position, _result.was_crit)
 				hit_count += 1
 		# Big directional slash VFX fan
 		_spawn_slash_vfx(dir, 70.0, 2.4)

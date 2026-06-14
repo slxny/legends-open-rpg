@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.83.28"
+const GAME_VERSION := "v0.83.29"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.83.29",
+		"title": "Combat overhaul — Phase 1B.6a screen shake routes through CameraShake2D",
+		"date": "2026-06-14",
+		"entries": [
+			"FIRST PHASE 1B GAMEPLAY-VISIBLE CHANGE. Screen shake now uses the trauma model (intensity² mapping) — light hits feel light, heavy and crit hits feel proportionally heavier without a discontinuous step from subtle to screen-filling.",
+			"player.gd: CameraShake2D is created as a child of the player's Camera2D in _ready. _do_screen_shake(intensity) now maps the legacy intensity (1.5–10.0) to trauma (clamp(intensity/12, 0, 1)) and calls add_trauma. Legacy random-offset code remains as a fallback if the shake node fails to initialize.",
+			"All existing call sites (every swing, every special, every crit) keep working unchanged — the felt response is similar to today, just smoother in decay and with the trauma² curve giving better dynamic range.",
+		]
+	},
 	{
 		"version": "v0.83.28",
 		"title": "Combat overhaul — Phase 1B.4/1B.5 CombatFeedbackProfile + CombatAudioComponent",

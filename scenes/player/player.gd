@@ -4,6 +4,7 @@ extends CharacterBody2D
 const AttackClockCls = preload("res://scripts/combat/attack_clock.gd")
 const AttackTimingsCls = preload("res://scripts/data/attack_timings.gd")
 const HitEventCls = preload("res://scripts/combat/hit_event.gd")
+const CameraShake2DCls = preload("res://scripts/combat/camera_shake_2d.gd")
 
 signal attacked(target: Node2D)
 
@@ -162,6 +163,11 @@ const CHARGE_THRESHOLD: float = 1.5   # Hold 1.5s for charged slash
 
 # Screen shake state (procedural, no tween)
 var _shake_intensity: float = 0.0
+# Phase 1B.6a — trauma-model shake. Created in _ready as a child of camera.
+var _camera_shake: Node2D = null
+# Captured at the moment a swing's contact callback fires so radial trauma
+# becomes directional shake. Cleared each time the player attacks.
+var _last_hit_direction: Vector2 = Vector2.ZERO
 var _shake_time_left: float = 0.0
 const SHAKE_DURATION: float = 0.11
 
@@ -216,6 +222,14 @@ func _ready() -> void:
 	hero_class = GameManager.current_hero_class
 	stats.initialize_from_hero(hero_class)
 	inventory.setup(stats)
+
+	# Phase 1B.6a: attach trauma-model shake to the camera. Legacy
+	# procedural shake in _physics_process remains as a fallback if this
+	# creation ever fails.
+	if camera != null and _camera_shake == null:
+		_camera_shake = CameraShake2DCls.new()
+		_camera_shake.name = "CameraShake2D"
+		camera.add_child(_camera_shake)
 
 	var tex = SpriteGenerator.get_texture(hero_class)
 	if tex:
@@ -3113,7 +3127,19 @@ func _do_hit_freeze(is_crit: bool) -> void:
 	)
 
 func _do_screen_shake(intensity: float) -> void:
-	# Procedural shake — driven by _physics_process, no tween allocation
+	# Phase 1B.6a: route legacy raw-intensity calls through CameraShake2D.
+	# Map intensity (existing call sites pass 1.5–10.0) to trauma (0.0–1.0)
+	# via a tunable scalar so the felt response stays close to today while
+	# benefiting from the trauma² mapping (light hits stay light; heavy and
+	# crit hits feel proportionally heavier). 10.0 → ~0.83 trauma.
+	if _camera_shake != null and _camera_shake.has_method("add_trauma"):
+		var trauma_amount: float = clamp(intensity / 12.0, 0.0, 1.0)
+		_camera_shake.add_trauma(trauma_amount, _last_hit_direction)
+		# Clear the legacy random-offset path so the two systems don't fight.
+		_shake_intensity = 0.0
+		_shake_time_left = 0.0
+		return
+	# Legacy fallback if for any reason _camera_shake didn't initialize.
 	_shake_intensity = intensity
 	_shake_time_left = SHAKE_DURATION
 

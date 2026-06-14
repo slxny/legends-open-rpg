@@ -2919,11 +2919,6 @@ func _on_hit_resolved_for_reaction(result: Resource) -> void:
 	var dir: Vector2 = event.direction
 	# force = 0 → component skips emitting knockback_requested (still
 	# disconnected this stage anyway). Visual flinch + flash still runs.
+	# Note (1B.6d): victim freeze is now dispatched by CombatManager from
+	# result.final_feedback.victim_freeze_ms — no per-enemy freeze call here.
 	_hit_reaction.react(dir, 0.0, bool(result.was_crit), false)
-
-	# Phase 1B.6c: brief AI freeze so the impact registers as weight.
-	# Crit hits get a longer freeze. HitStopController uses monotonic
-	# wall-clock deadlines so we can't lock the enemy.
-	if HitStopController != null:
-		var freeze_ms: int = 90 if bool(result.was_crit) else 45
-		HitStopController.freeze_target(self, freeze_ms, 1)  # VICTIM

@@ -2,6 +2,34 @@ extends Node
 
 const HitEventCls := preload("res://scripts/combat/hit_event.gd")
 const HitResultCls := preload("res://scripts/combat/hit_result.gd")
+const AttackTimingsCls := preload("res://scripts/data/attack_timings.gd")
+const AttackTimingDataCls := preload("res://scripts/data/attack_timing_data.gd")
+const CombatFeedbackProfileCls := preload("res://scripts/data/combat_feedback_profile.gd")
+
+# Phase 1B.6d feedback dispatch — profile per weight class. Cached so we
+# don't allocate a Resource per hit.
+var _profile_cache: Dictionary = {}
+
+# CombatFeedbackProfile.Weight values inlined to avoid a class_name lookup.
+const _W_LIGHT := 0
+const _W_MEDIUM := 1
+const _W_HEAVY := 2
+const _W_FINISHER := 3
+const _W_CRIT := 4
+const _W_ELITE_KILL := 5
+const _W_BOSS_EVENT := 6
+
+# AttackTimingData.RhythmClass values inlined.
+const _R_CORE_A := 0
+const _R_CORE_B := 1
+const _R_FINISHER_C := 2
+const _R_EXTENSION_D := 3
+const _R_EXTENSION_E := 4
+const _R_BRANCH_SLAM := 5
+const _R_BRANCH_UPPERCUT := 6
+const _R_BRANCH_SPIN := 7
+const _R_SPECIAL := 8
+const _R_CHARGED := 9
 
 signal damage_dealt(target: Node, amount: int, is_crit: bool)
 
@@ -82,13 +110,58 @@ func resolve_hit(event: Resource, attacker_stats: Dictionary, defender_stats: Di
 		if hp_before > 0 and stats_node != null and "current_hp" in stats_node:
 			result.was_lethal = int(stats_node.get("current_hp")) <= 0
 
+	# Phase 1B.6d: profile-driven feedback dispatch. Weight is derived from
+	# the attack's rhythm class (lookup via AttackTimings.by_id) and crit
+	# state. Finisher (C) gets its own stronger profile distinct from crit.
+	var profile: Resource = _select_profile_for(event, result)
+	result.final_feedback = profile
+
 	emit_signal("hit_resolved", result)
 
-	# Phase 1B.6c: crit hits dispatch a short global Engine.time_scale dip
-	# via HitStopController → TimeManager (sole owner). attack_id dedupe
-	# at the HitStop layer coalesces wide-attack bursts so 5-enemy
-	# whirlwind / charged-slash kills produce ONE dip, not five.
-	if is_crit and HitStopController != null and event.attack_id != &"":
-		HitStopController.request_global_dip(0.35, 50, 2, event.attack_id)
+	if profile != null and HitStopController != null:
+		# Localized victim freeze.
+		if is_instance_valid(event.victim) and int(profile.victim_freeze_ms) > 0:
+			HitStopController.freeze_target(event.victim, int(profile.victim_freeze_ms), 1)  # VICTIM
+		# Optional global dip — only crit/elite-kill/boss profiles have
+		# dip_ms > 0. attack_id dedupe at the HitStop layer means a wide
+		# attack hitting 5 enemies still fires ONE dip.
+		if int(profile.dip_ms) > 0 and event.attack_id != &"":
+			HitStopController.request_global_dip(float(profile.dip_scale), int(profile.dip_ms), int(profile.dip_priority), event.attack_id)
 
 	return result
+
+
+## Pick (or lazily build + cache) the feedback profile for this hit.
+func _select_profile_for(event: Resource, result: Resource) -> Resource:
+	var crit: bool = bool(result.was_crit)
+	var weight: int = _weight_for(event.attack_id, crit)
+	if not _profile_cache.has(weight):
+		_profile_cache[weight] = CombatFeedbackProfileCls.new().apply_preset(weight)
+	return _profile_cache[weight]
+
+
+## Map (attack_id, was_crit) → CombatFeedbackProfile.Weight.
+## Crit always wins over basic weights but loses to FINISHER on a C-finisher
+## landing a crit (we still gate global dip via crit profile because that's
+## the player-facing reward for landing crits).
+func _weight_for(attack_id: StringName, is_crit: bool) -> int:
+	# Crit takes precedence — it's what players notice as "big" feedback.
+	if is_crit:
+		return _W_CRIT
+	if attack_id == &"":
+		return _W_LIGHT
+	var timing: Resource = AttackTimingsCls.by_id(attack_id)
+	if timing == null:
+		return _W_LIGHT
+	match int(timing.rhythm_class):
+		_R_CORE_A, _R_CORE_B:
+			return _W_LIGHT
+		_R_FINISHER_C:
+			return _W_FINISHER
+		_R_EXTENSION_D, _R_EXTENSION_E:
+			return _W_HEAVY
+		_R_BRANCH_SLAM, _R_BRANCH_UPPERCUT, _R_BRANCH_SPIN:
+			return _W_HEAVY
+		_R_SPECIAL, _R_CHARGED:
+			return _W_HEAVY
+	return _W_MEDIUM

@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.83.31"
+const GAME_VERSION := "v0.83.32"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.83.32",
+		"title": "Combat overhaul — Phase 1B.6d profile-driven feedback (C-finisher distinct)",
+		"date": "2026-06-14",
+		"entries": [
+			"VISIBLE CHANGE: Swing C (finisher) now feels distinctly heavier than A/B. Victim freeze is longer (105 ms vs 35 ms light, 90 ms crit) — the C hit lands with weight. D/E/specials/charged all use the HEAVY profile (85 ms victim freeze).",
+			"CombatManager.resolve_hit now derives feedback from each attack's rhythm class via AttackTimings.by_id, builds a CombatFeedbackProfile, and dispatches HitStopController.freeze_target + request_global_dip centrally. Profiles are cached so per-hit allocation is zero.",
+			"Removed the ad-hoc enemy-side freeze added in 1B.6c — single dispatcher in CombatManager owns it now (cleaner).",
+			"Crit dip still uses CRIT profile (50 ms @ 0.35×, priority 2). Profile priorities for elite-kill (60 ms @ 0.30, p3) and boss-event (70 ms @ 0.25, p4) are wired and ready for Phase 1B.7 escalation.",
+		]
+	},
 	{
 		"version": "v0.83.31",
 		"title": "Combat overhaul — Phase 1B.6c hit-stop: enemy freeze + crit time dip",

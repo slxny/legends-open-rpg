@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.83.7"
+const GAME_VERSION := "v0.83.8"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.83.8",
+		"title": "Combat overhaul — Phase 1A.3 AttackIntentResolver",
+		"date": "2026-06-14",
+		"entries": [
+			"Internal foundation — no gameplay changes (player.gd not yet migrated)",
+			"Added scripts/combat/attack_intent.gd: typed AttackIntent with Kind enum (BASIC_SWING, POWER_STRIKE, WHIRLWIND, CHARGED_SLASH, DASH_STRIKE, RANGED_BASIC, PIERCING_SHOT, ARROW_RAIN, SNIPER_SHOT, SHADOW_STEP, DODGE) and BranchHint (HORIZONTAL, OVERHEAD, THRUST, SPIN)",
+			"Added scripts/combat/attack_intent_resolver.gd: mirrors existing tap-buffer + charge + diagonal-dash + branch-table behavior. Hero-class aware (melee vs ranged). Dodge > attack priority. CombatController (Phase 1C) will drop this in and the duplicate logic in player.gd will be removed atomically.",
+			"Smoke now 38 checks (13 added covering single/double/triple tap, charge release threshold, diagonal dash, dodge priority, branch hints for horizontal->down=OVERHEAD and any->up=THRUST, ranged-class variants, sub-threshold charge fallthrough)",
+		]
+	},
 	{
 		"version": "v0.83.7",
 		"title": "Combat overhaul — Phase 1A.2 InputBuffer",

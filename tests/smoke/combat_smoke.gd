@@ -18,6 +18,8 @@ extends Node
 const HitEventCls := preload("res://scripts/combat/hit_event.gd")
 const HitResultCls := preload("res://scripts/combat/hit_result.gd")
 const InputBufferCls := preload("res://scripts/combat/input_buffer.gd")
+const AttackIntentCls := preload("res://scripts/combat/attack_intent.gd")
+const AttackIntentResolverCls := preload("res://scripts/combat/attack_intent_resolver.gd")
 
 var _errors: Array[String] = []
 
@@ -63,6 +65,7 @@ func _ready() -> void:
 	_check("Engine.time_scale still 1.0 after resolves", abs(Engine.time_scale - 1.0) < 0.0001)
 
 	_test_input_buffer()
+	_test_intent_resolver()
 
 	if _errors.is_empty():
 		print("[combat_smoke] OK")
@@ -113,6 +116,114 @@ func _test_input_buffer() -> void:
 	buf.push(&"dodge", now)
 	buf.clear()
 	_check("InputBuffer clear empties records", buf.size() == 0)
+
+
+func _test_intent_resolver() -> void:
+	var Kind = AttackIntentCls.Kind
+	var Branch = AttackIntentCls.BranchHint
+	var WIN_USEC := AttackIntentResolverCls.TAP_RESOLVE_MS * 1000
+
+	# 1. Single tap, horizontal direction, no movement → BASIC_SWING
+	var r = AttackIntentResolverCls.new()
+	var t := 1_000_000_000
+	r.notify_attack_press(t, Vector2.RIGHT, false)
+	_check("Resolver pending intent before window expires", r.tick(t + 50_000, Vector2.RIGHT, false) == null)
+	var intent = r.tick(t + WIN_USEC + 1000, Vector2.RIGHT, false)
+	_check("Resolver single tap classifies BASIC_SWING", intent != null and intent.kind == Kind.BASIC_SWING)
+
+	# 2. Double tap while moving → POWER_STRIKE
+	r = AttackIntentResolverCls.new()
+	r.notify_attack_press(t, Vector2.RIGHT, true)
+	r.notify_attack_press(t + 50_000, Vector2.RIGHT, true)
+	intent = r.tick(t + WIN_USEC + 100_000, Vector2.RIGHT, true)
+	_check("Resolver double-tap moving = POWER_STRIKE", intent != null and intent.kind == Kind.POWER_STRIKE)
+
+	# 3. Double tap stationary → BASIC_SWING (not power strike)
+	r = AttackIntentResolverCls.new()
+	r.notify_attack_press(t, Vector2.RIGHT, false)
+	r.notify_attack_press(t + 50_000, Vector2.RIGHT, false)
+	intent = r.tick(t + WIN_USEC + 100_000, Vector2.RIGHT, false)
+	_check("Resolver double-tap stationary = BASIC_SWING", intent != null and intent.kind == Kind.BASIC_SWING)
+
+	# 4. Triple tap → WHIRLWIND
+	r = AttackIntentResolverCls.new()
+	r.notify_attack_press(t, Vector2.RIGHT, false)
+	r.notify_attack_press(t + 20_000, Vector2.RIGHT, false)
+	r.notify_attack_press(t + 40_000, Vector2.RIGHT, false)
+	intent = r.tick(t + WIN_USEC + 100_000, Vector2.RIGHT, false)
+	_check("Resolver triple-tap = WHIRLWIND", intent != null and intent.kind == Kind.WHIRLWIND)
+
+	# 5. Diagonal single tap → DASH_STRIKE
+	r = AttackIntentResolverCls.new()
+	r.notify_attack_press(t, Vector2(1, 1).normalized(), true)
+	intent = r.tick(t + WIN_USEC + 100_000, Vector2(1, 1).normalized(), true)
+	_check("Resolver diagonal single tap = DASH_STRIKE", intent != null and intent.kind == Kind.DASH_STRIKE)
+
+	# 6. Charge held past threshold → CHARGED_SLASH on release
+	r = AttackIntentResolverCls.new()
+	r.notify_charge_press(t)
+	r.notify_charge_release(t + 1_600_000)  # 1.6s > 1.5s threshold
+	intent = r.tick(t + 1_700_000, Vector2.RIGHT, false)
+	_check("Resolver charge release past threshold = CHARGED_SLASH", intent != null and intent.kind == Kind.CHARGED_SLASH)
+	_check("Resolver CHARGED_SLASH carries duration_ms ~1600", intent != null and abs(intent.charge_duration_ms - 1600) < 50)
+
+	# 7. Dodge priority over pending attack
+	r = AttackIntentResolverCls.new()
+	r.notify_attack_press(t, Vector2.RIGHT, false)
+	r.notify_dodge_press()
+	intent = r.tick(t + 1000, Vector2.RIGHT, false)
+	_check("Resolver dodge fires before tap window closes", intent != null and intent.kind == Kind.DODGE)
+
+	# 8. Branch hint: horizontal then down → OVERHEAD
+	r = AttackIntentResolverCls.new()
+	r.notify_attack_press(t, Vector2.RIGHT, false)
+	intent = r.tick(t + WIN_USEC + 1000, Vector2.RIGHT, false)
+	r.notify_attack_press(t + WIN_USEC + 2000, Vector2.DOWN, false)
+	intent = r.tick(t + 2 * WIN_USEC + 100_000, Vector2.DOWN, false)
+	_check("Resolver horizontal->down hint = OVERHEAD", intent != null and intent.branch_hint == Branch.OVERHEAD)
+
+	# 9. Branch hint: any → up → THRUST
+	r = AttackIntentResolverCls.new()
+	r.notify_attack_press(t, Vector2.RIGHT, false)
+	intent = r.tick(t + WIN_USEC + 1000, Vector2.RIGHT, false)
+	r.notify_attack_press(t + WIN_USEC + 2000, Vector2.UP, false)
+	intent = r.tick(t + 2 * WIN_USEC + 100_000, Vector2.UP, false)
+	_check("Resolver any->up hint = THRUST", intent != null and intent.branch_hint == Branch.THRUST)
+
+	# 10. Branch hint: any → diagonal-up → SPIN (diagonal beats up check)
+	# Note: diagonal single tap maps to DASH_STRIKE, not BASIC_SWING.
+	# So this checks classification ordering — diagonal goes to dash before branch_hint applies.
+	r = AttackIntentResolverCls.new()
+	r.notify_attack_press(t, Vector2.RIGHT, false)
+	intent = r.tick(t + WIN_USEC + 1000, Vector2.RIGHT, false)
+	r.notify_attack_press(t + WIN_USEC + 2000, Vector2(1, -1).normalized(), false)
+	intent = r.tick(t + 2 * WIN_USEC + 100_000, Vector2(1, -1).normalized(), false)
+	_check("Resolver diagonal beats branch_hint via DASH_STRIKE", intent != null and intent.kind == Kind.DASH_STRIKE)
+
+	# 11. Ranged class: triple tap = ARROW_RAIN
+	r = AttackIntentResolverCls.new()
+	r.set_hero_class(AttackIntentResolverCls.HeroClass.RANGED)
+	r.notify_attack_press(t, Vector2.RIGHT, false)
+	r.notify_attack_press(t + 20_000, Vector2.RIGHT, false)
+	r.notify_attack_press(t + 40_000, Vector2.RIGHT, false)
+	intent = r.tick(t + WIN_USEC + 100_000, Vector2.RIGHT, false)
+	_check("Resolver ranged triple-tap = ARROW_RAIN", intent != null and intent.kind == Kind.ARROW_RAIN)
+
+	# 12. Ranged class: 2 taps moving = PIERCING_SHOT
+	r = AttackIntentResolverCls.new()
+	r.set_hero_class(AttackIntentResolverCls.HeroClass.RANGED)
+	r.notify_attack_press(t, Vector2.RIGHT, true)
+	r.notify_attack_press(t + 30_000, Vector2.RIGHT, true)
+	intent = r.tick(t + WIN_USEC + 100_000, Vector2.RIGHT, true)
+	_check("Resolver ranged double-tap moving = PIERCING_SHOT", intent != null and intent.kind == Kind.PIERCING_SHOT)
+
+	# 13. Charge below threshold falls through to tap classification (no charged_slash)
+	r = AttackIntentResolverCls.new()
+	r.notify_charge_press(t)
+	r.notify_attack_press(t, Vector2.RIGHT, false)
+	r.notify_charge_release(t + 800_000)  # 0.8s < 1.5s
+	intent = r.tick(t + WIN_USEC + 1_000_000, Vector2.RIGHT, false)
+	_check("Resolver sub-threshold release = BASIC_SWING (not CHARGED)", intent != null and intent.kind == Kind.BASIC_SWING)
 
 
 func _check(label: String, ok: bool) -> void:

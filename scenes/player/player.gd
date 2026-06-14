@@ -30,6 +30,7 @@ var _is_chopping_tree: bool = false  # When true, spacebar hold = repeat chop (n
 var _move_target: Vector2 = Vector2.ZERO
 var _is_moving_to_target: bool = false
 var _stuck_time: float = 0.0  # Tracks how long we've been colliding while moving
+var _footstep_timer: float = 0.0
 
 var _shadow: Sprite2D = null
 
@@ -388,6 +389,16 @@ func _physics_process(delta: float) -> void:
 		velocity = velocity.move_toward(Vector2.ZERO, FRICTION * delta)
 
 	move_and_slide()
+
+	# Footstep cadence — scales with speed; quieter and faster when moving fast
+	var speed := velocity.length()
+	if speed > 25.0 and not _is_attack_animating:
+		_footstep_timer -= delta * (0.6 + speed / 220.0)
+		if _footstep_timer <= 0.0:
+			_footstep_timer = 0.32
+			AudioManager.play_sfx("footstep", -8.0)
+	else:
+		_footstep_timer = 0.0
 
 	# Obstacle avoidance: when stuck on a tree/building, steer around it
 	if _is_moving_to_target and get_slide_collision_count() > 0 and desired_velocity.length_squared() > 1.0:

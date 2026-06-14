@@ -540,7 +540,8 @@ func setup(player: Node2D) -> void:
 	)
 
 	# Pass potion button refs to player for multitouch handling on mobile
-	player._mobile_potion_btns = [potion_1_btn, potion_2_btn, potion_3_btn]
+	var potion_btns: Array[Button] = [potion_1_btn, potion_2_btn, potion_3_btn]
+	player._mobile_potion_btns = potion_btns
 
 	# Update potion button labels when inventory changes
 	player.inventory.inventory_changed.connect(_update_potion_labels)

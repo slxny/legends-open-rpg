@@ -9,9 +9,18 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.83.3"
+const GAME_VERSION := "v0.83.4"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.83.4",
+		"title": "Combat & movement feel polish",
+		"date": "2026-06-14",
+		"entries": [
+			"Non-crit basic attacks now have a subtle screen shake — every hit feels tactile, not just crits",
+			"Added footstep SFX with speed-scaled cadence — movement no longer silent",
+		]
+	},
 	{
 		"version": "v0.83.3",
 		"title": "Fix Space key triggering UI buttons during combat",

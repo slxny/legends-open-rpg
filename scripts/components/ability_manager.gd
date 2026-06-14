@@ -22,7 +22,7 @@ func setup(stats: StatsComponent, hero_class_key: String) -> void:
 		abilities = data["abilities"]
 
 func _process(delta: float) -> void:
-	var has_active_cooldowns := cooldowns["ability_1"] > 0 or cooldowns["ability_2"] > 0
+	var has_active_cooldowns: bool = cooldowns["ability_1"] > 0 or cooldowns["ability_2"] > 0
 	var has_active_buffs := _active_buffs.size() > 0
 
 	# Early-out: nothing to tick

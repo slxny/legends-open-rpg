@@ -385,6 +385,7 @@ func _generate_all_sfx() -> void:
 	_sfx_cache["charge_ready"] = _gen_charge_ready()
 	_sfx_cache["charge_release"] = _gen_charge_release()
 	_sfx_cache["tree_chop"] = _gen_tree_chop()
+	_sfx_cache["footstep"] = _gen_footstep()
 	_sfx_cache["tree_fall"] = _gen_tree_fall()
 	_sfx_cache["beacon_heal"] = _gen_beacon_heal()
 	_sfx_cache["enter_shop"] = _gen_enter_shop()
@@ -850,6 +851,16 @@ func _gen_tree_chop() -> AudioStreamWAV:
 	_add_sine_segment(samples, 300.0, 0.15, 0.01, 0.08)
 	_apply_envelope(samples, 0.002, 0.02, 0.12)
 	_soft_clip(samples, 1.3)
+	return _to_stream(samples)
+
+func _gen_footstep() -> AudioStreamWAV:
+	# Short soft thump — grass/dirt scuff. Quick attack, fast decay.
+	var samples = _make_samples(0.07)
+	# Low-mid body thump
+	_pitch_sweep_sine(samples, 180.0, 90.0, 0.35)
+	# Scuff noise high band
+	_add_pitched_noise(samples, 2400.0, 1200.0, 0.12)
+	_apply_envelope(samples, 0.002, 0.008, 0.058)
 	return _to_stream(samples)
 
 func _gen_tree_fall() -> AudioStreamWAV:

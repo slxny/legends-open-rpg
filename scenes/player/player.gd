@@ -1969,8 +1969,10 @@ func _execute_arrow_rain(attack_dir: Vector2) -> void:
 
 func _execute_sniper_shot(attack_dir: Vector2) -> void:
 	# Hold 1.5s: Long-range precision shot. 1.3x damage, huge range, knockback.
+	# Phase 1A.5l.
 	_is_attack_animating = true
-	_attack_cooldown = 0.8 / stats.attack_speed
+	var ss_timing = AttackTimingsCls.sniper_shot()
+	_attack_cooldown = ss_timing.duration_sec / max(0.1, stats.attack_speed)
 	var dir = attack_dir
 	var base_pos = sprite.position
 	var dmg_mult := 1.3
@@ -2056,10 +2058,16 @@ func _execute_sniper_shot(attack_dir: Vector2) -> void:
 			var hit_delay = best_dist / 700.0
 			get_tree().create_timer(hit_delay).timeout.connect(func():
 				if is_instance_valid(best_target) and not best_target.get("_is_dead"):
-					var result = CombatManager.calculate_damage(stats.get_stats_dict(), best_target.get_stats_dict(), dmg_mult)
-					best_target.take_damage(result["damage"], result["is_crit"])
-					best_target.apply_knockback(dir, 120.0)
-					_spawn_impact_vfx(best_target.global_position, true)
+					var event = HitEventCls.new()
+					event.attacker = self
+					event.victim = best_target
+					event.direction = dir
+					event.attack_id = &"sniper_shot"
+					event.ability_multiplier = dmg_mult
+					CombatManager.resolve_hit(event, stats.get_stats_dict(), best_target.get_stats_dict(), true)
+					if is_instance_valid(best_target):
+						best_target.apply_knockback(dir, 120.0)
+						_spawn_impact_vfx(best_target.global_position, true)
 					_do_screen_shake(8.0)
 					_do_hit_freeze(true)
 			)

@@ -9,9 +9,18 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.83.20"
+const GAME_VERSION := "v0.83.21"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.83.21",
+		"title": "Combat overhaul — Phase 1A.5l sniper shot migrated",
+		"date": "2026-06-14",
+		"entries": [
+			"Sniper shot (ranged hold-1.5s) routes damage through CombatManager.resolve_hit. Cooldown derives from AttackTimings.sniper_shot().duration_sec.",
+			"Long-range projectile, afterimage trail, single-target lock with travel delay, knockback 120, shake 8, hit-freeze, audio + label identical to legacy.",
+		]
+	},
 	{
 		"version": "v0.83.20",
 		"title": "Combat overhaul — Phase 1A.5k arrow rain migrated",

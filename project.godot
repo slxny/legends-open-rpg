@@ -37,6 +37,7 @@ FogOfWarManager="*res://scripts/autoloads/fog_of_war_manager.gd"
 RespawnManager="*res://scripts/autoloads/respawn_manager.gd"
 SaveLoadManager="*res://scripts/autoloads/save_load_manager.gd"
 AudioManager="*res://scripts/autoloads/audio_manager.gd"
+HitStopController="*res://scripts/autoloads/hit_stop_controller.gd"
 
 [display]
 

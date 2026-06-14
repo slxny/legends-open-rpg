@@ -72,6 +72,7 @@ func _ready() -> void:
 	_test_attack_timings()
 	await _test_attack_clock()
 	await _test_time_manager()
+	await _test_hit_stop_controller()
 
 	if _errors.is_empty():
 		print("[combat_smoke] OK")
@@ -355,6 +356,54 @@ func _test_time_manager() -> void:
 	# (Validated externally by the build script; here we just confirm the
 	# guard intent in case anyone wires up a writer mid-development.)
 	_check("time_scale back to 1.0 after all tests", abs(Engine.time_scale - 1.0) < 0.0001)
+
+
+func _test_hit_stop_controller() -> void:
+	_check("HitStopController autoload reachable", get_node_or_null("/root/HitStopController") != null)
+	_check("HitStopController.is_frozen on null returns false", not HitStopController.is_frozen(null))
+	_check("HitStopController.active_freeze_count starts 0", HitStopController.active_freeze_count() == 0)
+
+	# Use this scene's own node as a dummy freeze target.
+	var dummy := Node.new()
+	dummy.name = "FreezeDummy"
+	add_child(dummy)
+	_check("freeze_target accepts node", HitStopController.freeze_target(dummy, 200, 1))
+	_check("is_frozen true while in window", HitStopController.is_frozen(dummy))
+	_check("active_freeze_count is 1", HitStopController.active_freeze_count() == 1)
+
+	# A shorter re-freeze does NOT cut the existing deadline.
+	HitStopController.freeze_target(dummy, 5, 1)
+	_check("shorter re-freeze keeps longer deadline", HitStopController.is_frozen(dummy))
+	_check("re-freeze count still 1", HitStopController.active_freeze_count() == 1)
+
+	# Wait past expiry (headless time is slow — wait generously).
+	await get_tree().create_timer(1.0).timeout
+	_check("is_frozen false after deadline", not HitStopController.is_frozen(dummy))
+	_check("active_freeze_count cleaned up to 0", HitStopController.active_freeze_count() == 0)
+
+	# force_reset clears everything.
+	HitStopController.freeze_target(dummy, 5000, 1)
+	HitStopController.force_reset()
+	_check("force_reset clears freezes", not HitStopController.is_frozen(dummy))
+	_check("force_reset clears count", HitStopController.active_freeze_count() == 0)
+
+	# Global dip routing — strongest-wins via attack_id dedupe.
+	var ok_a = HitStopController.request_global_dip(0.3, 60, 2, &"smoke_attack_1")
+	_check("request_global_dip accepted (priority 2)", ok_a)
+	_check("Engine.time_scale 0.3 after dip request", abs(Engine.time_scale - 0.3) < 0.0001)
+	# Same attack_id within window is deduped at HitStop layer.
+	var ok_dup = HitStopController.request_global_dip(0.3, 60, 2, &"smoke_attack_1")
+	_check("duplicate attack_id dedupe rejects second call", not ok_dup)
+	# Different attack_id with HIGHER priority replaces.
+	var ok_b = HitStopController.request_global_dip(0.2, 60, 4, &"smoke_attack_2")
+	_check("higher-priority different attack_id accepted", ok_b)
+	_check("Engine.time_scale 0.2 after replace", abs(Engine.time_scale - 0.2) < 0.0001)
+
+	# Wait for recovery via TimeManager (wall clock).
+	await get_tree().create_timer(0.40).timeout
+	_check("time_scale restored to 1.0 after dip deadline", abs(Engine.time_scale - 1.0) < 0.0001)
+
+	dummy.queue_free()
 
 
 func _check(label: String, ok: bool) -> void:

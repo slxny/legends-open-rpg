@@ -9,9 +9,21 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.83.24"
+const GAME_VERSION := "v0.83.25"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.83.25",
+		"title": "Combat overhaul — Phase 1B.1 HitStopController",
+		"date": "2026-06-14",
+		"entries": [
+			"Internal — no gameplay change yet. Phase 1B.6 wires player.gd / enemy.gd to consult this.",
+			"Added scripts/autoloads/hit_stop_controller.gd: localized freeze API (freeze_target / is_frozen / active_freeze_count) using monotonic Time.get_ticks_usec() deadlines. process_mode=PROCESS_MODE_ALWAYS so freezes expire during pause.",
+			"request_global_dip(scale, ms, priority, attack_id) routes through TimeManager (never writes Engine.time_scale directly). Per-attack_id dedupe coalesces wide-attack bursts so 5-enemy whirlwind/charged-slash kills produce one dip, not five.",
+			"Mirrors TimeManager's reset sources (scene_changed, player_died, game_loaded, save_about_to_load, returning_to_menu).",
+			"Smoke now 93 checks. Grep guard still clean: only TimeManager writes Engine.time_scale.",
+		]
+	},
 	{
 		"version": "v0.83.24",
 		"title": "Combat overhaul — Phase 1B.0 TimeManager owns Engine.time_scale",

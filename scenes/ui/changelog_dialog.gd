@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.83.21"
+const GAME_VERSION := "v0.83.22"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.83.22",
+		"title": "Combat overhaul — Phase 1A.5m shadow step + shared projectile migrated (1A.5 complete)",
+		"date": "2026-06-14",
+		"entries": [
+			"Shadow step (ranged diagonal special) — backward dodge-roll + 3-arrow spread — now routes damage through the migrated _spawn_projectile. Cooldown derives from AttackTimings.shadow_step().duration_sec.",
+			"_spawn_projectile shared infrastructure now takes an attack_id and emits HitResult per body_entered hit, so the basic ranged auto-attack also benefits.",
+			"PHASE 1A.5 MILESTONE: All 13 player attacks (5 basic swings + 4 melee specials + 4 ranged specials) plus shared projectile are now data-driven. Every confirmed hit emits a typed HitResult. Cooldowns derive from each attack's AttackTimings duration — no more 0.5/attack_speed constants except as defaults for any attack that hasn't been authored.",
+		]
+	},
 	{
 		"version": "v0.83.21",
 		"title": "Combat overhaul — Phase 1A.5l sniper shot migrated",

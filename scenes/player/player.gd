@@ -2083,8 +2083,10 @@ func _execute_sniper_shot(attack_dir: Vector2) -> void:
 
 func _execute_shadow_step(attack_dir: Vector2) -> void:
 	# Diagonal + attack: Quick dodge-roll backward, then fire 3 arrows in a spread. 1.1x damage.
+	# Phase 1A.5m.
 	_is_attack_animating = true
-	_attack_cooldown = 0.6 / stats.attack_speed
+	var sst_timing = AttackTimingsCls.shadow_step()
+	_attack_cooldown = sst_timing.duration_sec / max(0.1, stats.attack_speed)
 	var dir = attack_dir
 	var base_pos = sprite.position
 	var dmg_mult := 1.1
@@ -2110,7 +2112,7 @@ func _execute_shadow_step(attack_dir: Vector2) -> void:
 		for i in range(3):
 			var angle_offset = lerp(-spread_deg / 2.0, spread_deg / 2.0, float(i) / 2.0)
 			var shot_dir = dir.rotated(angle_offset)
-			_spawn_projectile(shot_dir, 420.0, stats.attack_range * 2.0, dmg_mult)
+			_spawn_projectile(shot_dir, 420.0, stats.attack_range * 2.0, dmg_mult, &"shadow_step")
 		AudioManager.play_sfx("dash_swoosh")
 		_spawn_effect_label("SHADOW STEP!", Color(0.4, 1.0, 0.7))
 		_do_screen_shake(4.0)
@@ -2564,7 +2566,7 @@ func _get_aim_direction() -> Vector2:
 	return _facing
 
 
-func _spawn_projectile(direction: Vector2, speed: float, max_range: float, dmg_mult: float) -> void:
+func _spawn_projectile(direction: Vector2, speed: float, max_range: float, dmg_mult: float, attack_id: StringName = &"projectile") -> void:
 	var projectile = Area2D.new()
 	projectile.position = global_position
 	projectile.collision_layer = 0
@@ -2595,9 +2597,15 @@ func _spawn_projectile(direction: Vector2, speed: float, max_range: float, dmg_m
 		if not is_instance_valid(projectile):
 			return
 		if body.is_in_group("enemies") and body.has_method("take_damage"):
-			var result = CombatManager.calculate_damage(stats.get_stats_dict(), body.get_stats_dict(), dmg_mult)
-			body.take_damage(result["damage"], result["is_crit"])
-			_spawn_impact_vfx(body.global_position)
+			var event = HitEventCls.new()
+			event.attacker = self
+			event.victim = body
+			event.direction = direction
+			event.attack_id = attack_id
+			event.ability_multiplier = dmg_mult
+			var _result = CombatManager.resolve_hit(event, stats.get_stats_dict(), body.get_stats_dict(), true)
+			if is_instance_valid(body):
+				_spawn_impact_vfx(body.global_position, _result.was_crit)
 			projectile.queue_free()
 	)
 

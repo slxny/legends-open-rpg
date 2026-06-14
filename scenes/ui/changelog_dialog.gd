@@ -9,9 +9,18 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.83.15"
+const GAME_VERSION := "v0.83.16"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.83.16",
+		"title": "Combat overhaul — Phase 1A.5g whirlwind migrated",
+		"date": "2026-06-14",
+		"entries": [
+			"Whirlwind (triple-tap AoE) now routes per-enemy damage through CombatManager.resolve_hit. Cooldown derives from AttackTimings.whirlwind().duration_sec.",
+			"720° double-spin visual identity preserved; per-enemy knockback 70, shake 3.0/8.0, hit-freeze on hit, audio + label identical to legacy.",
+		]
+	},
 	{
 		"version": "v0.83.15",
 		"title": "Combat overhaul — Phase 1A.5f power strike migrated",

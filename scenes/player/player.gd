@@ -1482,8 +1482,11 @@ func _execute_power_strike(attack_dir: Vector2) -> void:
 
 func _execute_whirlwind(attack_dir: Vector2) -> void:
 	# Triple-tap: AoE attack hitting ALL enemies in range, 720° double spin
+	# Phase 1A.5g: damage routes through resolve_hit; cooldown derived from
+	# AttackTimings.whirlwind().duration_sec.
 	_is_attack_animating = true
-	_attack_cooldown = 1.0 / stats.attack_speed  # Longer cooldown for AoE
+	var ww_timing = AttackTimingsCls.whirlwind()
+	_attack_cooldown = ww_timing.duration_sec / max(0.1, stats.attack_speed)
 	var dir = attack_dir
 	var base_pos = sprite.position
 	var dmg_mult := 1.2
@@ -1520,11 +1523,17 @@ func _execute_whirlwind(attack_dir: Vector2) -> void:
 		var hit_count := 0
 		for enemy in _enemies_in_range:
 			if is_instance_valid(enemy) and not enemy.get("_is_dead") and enemy.has_method("take_damage"):
-				var result = CombatManager.calculate_damage(stats.get_stats_dict(), enemy.get_stats_dict(), dmg_mult)
-				enemy.take_damage(result["damage"], result["is_crit"])
-				var kb_dir = (enemy.global_position - global_position).normalized()
-				enemy.apply_knockback(kb_dir, 70.0)
-				_spawn_impact_vfx(enemy.global_position, result["is_crit"])
+				var event = HitEventCls.new()
+				event.attacker = self
+				event.victim = enemy
+				event.direction = (enemy.global_position - global_position).normalized()
+				event.attack_id = &"whirlwind"
+				event.ability_multiplier = dmg_mult
+				var _result = CombatManager.resolve_hit(event, stats.get_stats_dict(), enemy.get_stats_dict(), true)
+				if is_instance_valid(enemy):
+					var kb_dir = (enemy.global_position - global_position).normalized()
+					enemy.apply_knockback(kb_dir, 70.0)
+					_spawn_impact_vfx(enemy.global_position, _result.was_crit)
 				hit_count += 1
 		if hit_count > 0:
 			_do_screen_shake(8.0)

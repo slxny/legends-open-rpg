@@ -23,6 +23,7 @@ const AttackIntentResolverCls := preload("res://scripts/combat/attack_intent_res
 const AttackClockCls := preload("res://scripts/combat/attack_clock.gd")
 const AttackTimingDataCls := preload("res://scripts/data/attack_timing_data.gd")
 const AttackTimingsCls := preload("res://scripts/data/attack_timings.gd")
+const CameraShakeCls := preload("res://scripts/combat/camera_shake_2d.gd")
 
 var _errors: Array[String] = []
 
@@ -73,6 +74,7 @@ func _ready() -> void:
 	await _test_attack_clock()
 	await _test_time_manager()
 	await _test_hit_stop_controller()
+	await _test_camera_shake()
 
 	if _errors.is_empty():
 		print("[combat_smoke] OK")
@@ -404,6 +406,53 @@ func _test_hit_stop_controller() -> void:
 	_check("time_scale restored to 1.0 after dip deadline", abs(Engine.time_scale - 1.0) < 0.0001)
 
 	dummy.queue_free()
+
+
+func _test_camera_shake() -> void:
+	# Build a tiny camera + shake-component pair to exercise the
+	# trauma-driven offset writeback.
+	var cam := Camera2D.new()
+	add_child(cam)
+	var shake = CameraShakeCls.new()
+	cam.add_child(shake)
+	# Allow the engine to call _ready on the shake node.
+	await get_tree().process_frame
+	_check("CameraShake2D trauma starts at 0", shake.current_trauma() < 0.001)
+	_check("camera offset starts at Vector2.ZERO", cam.offset == Vector2.ZERO)
+
+	shake.add_trauma(0.6, Vector2.RIGHT)
+	_check("CameraShake2D trauma after add ~ 0.6", abs(shake.current_trauma() - 0.6) < 0.01)
+	# Allow process_mode=ALWAYS to apply offset.
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check("camera.offset moved off zero", cam.offset != Vector2.ZERO)
+
+	# Negative impulse is a no-op.
+	var t_before: float = shake.current_trauma()
+	shake.add_trauma(-1.0, Vector2.ZERO)
+	_check("negative trauma is no-op", abs(shake.current_trauma() - t_before) < 0.001)
+
+	# Decay returns to zero — wait generously since headless ticks slow.
+	await get_tree().create_timer(0.9).timeout
+	_check("CameraShake2D trauma decays to 0", shake.current_trauma() < 0.001)
+	_check("camera.offset returns to ZERO after decay", cam.offset == Vector2.ZERO)
+
+	# force_reset is idempotent.
+	shake.add_trauma(0.4, Vector2.UP)
+	shake.force_reset()
+	_check("force_reset clears trauma", shake.current_trauma() < 0.001)
+	_check("force_reset zeros camera offset", cam.offset == Vector2.ZERO)
+
+	# Accessibility scalar 0.0 disables visible shake but trauma still
+	# applies — gameplay events stay decoupled.
+	shake.intensity_scalar = 0.0
+	shake.add_trauma(0.8, Vector2.RIGHT)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check("intensity_scalar=0 produces zero offset", cam.offset == Vector2.ZERO)
+	shake.intensity_scalar = 1.0
+
+	cam.queue_free()
 
 
 func _check(label: String, ok: bool) -> void:

@@ -9,9 +9,22 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.83.25"
+const GAME_VERSION := "v0.83.26"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.83.26",
+		"title": "Combat overhaul — Phase 1B.2 CameraShake2D",
+		"date": "2026-06-14",
+		"entries": [
+			"Internal — no gameplay change yet. Phase 1B.6 wires this into the player Camera2D.",
+			"Added scripts/combat/camera_shake_2d.gd: trauma-model camera shake (Squirrel Eiserloh). trauma ∈ [0,1]; offset = max_offset * trauma² * pseudo-noise. Light impulses feel light, finishers and crits feel proportionally heavier without discontinuity.",
+			"Directional impulse: an optional hit-direction Vector2 nudges the noise toward the hit so shake feels pushed, not radially symmetric.",
+			"Accessibility: intensity_scalar ∈ [0,1] disables visible shake without affecting trauma logic — gameplay events stay decoupled. process_mode=ALWAYS so decay continues during pause; offset returns exactly to Vector2.ZERO when trauma reaches 0 (drift guard).",
+			"Trauma presets baked in for CombatFeedbackProfile use: LIGHT 0.18, MEDIUM 0.30, HEAVY 0.45, FINISHER/CRIT 0.55, ELITE_KILL 0.70, BOSS_EVENT 0.85.",
+			"Smoke now 103 checks (trauma add, decay-to-zero, no-op on negative, force_reset, accessibility scalar).",
+		]
+	},
 	{
 		"version": "v0.83.25",
 		"title": "Combat overhaul — Phase 1B.1 HitStopController",

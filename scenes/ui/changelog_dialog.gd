@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.83.17"
+const GAME_VERSION := "v0.83.18"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.83.18",
+		"title": "Combat overhaul — Phase 1A.5i dash strike migrated (all melee specials done)",
+		"date": "2026-06-14",
+		"entries": [
+			"Dash strike (diagonal+attack special) now routes per-path-target damage through CombatManager.resolve_hit. Cooldown derives from AttackTimings.dash_strike().duration_sec.",
+			"Knockback 75, three slash arcs, shake 2/6, audio + 'DASH STRIKE!' label identical to legacy.",
+			"Milestone: all four melee specials (power strike, whirlwind, charged slash, dash strike) now data-driven and typed. Ranged class specials (piercing, arrow rain, sniper, shadow step) remain on legacy path.",
+		]
+	},
 	{
 		"version": "v0.83.17",
 		"title": "Combat overhaul — Phase 1A.5h charged slash migrated",

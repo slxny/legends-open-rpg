@@ -1711,8 +1711,11 @@ func _execute_charged_slash(attack_dir: Vector2) -> void:
 
 func _execute_dash_strike(attack_dir: Vector2) -> void:
 	# Diagonal + attack: Dash forward through enemies, 1.3x damage
+	# Phase 1A.5i: damage routes through resolve_hit; cooldown derived from
+	# AttackTimings.dash_strike().duration_sec.
 	_is_attack_animating = true
-	_attack_cooldown = 0.6 / stats.attack_speed
+	var ds_timing = AttackTimingsCls.dash_strike()
+	_attack_cooldown = ds_timing.duration_sec / max(0.1, stats.attack_speed)
 	var dir = attack_dir
 	var base_pos = sprite.position
 	var dmg_mult := 1.3
@@ -1768,10 +1771,16 @@ func _execute_dash_strike(attack_dir: Vector2) -> void:
 		var did_hit := false
 		for hit_target in dash_targets:
 			if is_instance_valid(hit_target) and not hit_target.get("_is_dead"):
-				var result = CombatManager.calculate_damage(stats.get_stats_dict(), hit_target.get_stats_dict(), dmg_mult)
-				hit_target.take_damage(result["damage"], result["is_crit"])
-				hit_target.apply_knockback(dir, 75.0)
-				_spawn_impact_vfx(hit_target.global_position, result["is_crit"])
+				var event = HitEventCls.new()
+				event.attacker = self
+				event.victim = hit_target
+				event.direction = dir
+				event.attack_id = &"dash_strike"
+				event.ability_multiplier = dmg_mult
+				var _result = CombatManager.resolve_hit(event, stats.get_stats_dict(), hit_target.get_stats_dict(), true)
+				if is_instance_valid(hit_target):
+					hit_target.apply_knockback(dir, 75.0)
+					_spawn_impact_vfx(hit_target.global_position, _result.was_crit)
 				did_hit = true
 		if did_hit:
 			_do_screen_shake(6.0)

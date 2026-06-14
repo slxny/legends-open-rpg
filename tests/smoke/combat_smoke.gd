@@ -26,6 +26,8 @@ const AttackTimingsCls := preload("res://scripts/data/attack_timings.gd")
 const CameraShakeCls := preload("res://scripts/combat/camera_shake_2d.gd")
 const HitReactionDataCls := preload("res://scripts/data/hit_reaction_data.gd")
 const HitReactionComponentCls := preload("res://scripts/components/hit_reaction_component.gd")
+const CombatFeedbackProfileCls := preload("res://scripts/data/combat_feedback_profile.gd")
+const CombatAudioComponentCls := preload("res://scripts/components/combat_audio_component.gd")
 
 var _errors: Array[String] = []
 
@@ -78,6 +80,7 @@ func _ready() -> void:
 	await _test_hit_stop_controller()
 	await _test_camera_shake()
 	await _test_hit_reaction()
+	_test_feedback_profiles()
 
 	if _errors.is_empty():
 		print("[combat_smoke] OK")
@@ -532,6 +535,30 @@ func _test_hit_reaction() -> void:
 	comp.queue_free()
 	boss_pivot.queue_free()
 	boss_comp.queue_free()
+
+
+func _test_feedback_profiles() -> void:
+	# Weights: LIGHT=0, MEDIUM=1, HEAVY=2, FINISHER=3, CRIT=4, ELITE_KILL=5, BOSS_EVENT=6
+	var light = CombatFeedbackProfileCls.new().apply_preset(0)
+	var crit = CombatFeedbackProfileCls.new().apply_preset(4)
+	var boss = CombatFeedbackProfileCls.new().apply_preset(6)
+	_check("LIGHT profile no global dip", light.dip_ms == 0)
+	_check("CRIT profile has global dip", crit.dip_ms > 0)
+	_check("CRIT trauma > LIGHT trauma", crit.camera_trauma > light.camera_trauma)
+	_check("BOSS_EVENT highest priority", boss.dip_priority > crit.dip_priority)
+	_check("FINISHER no global dip", CombatFeedbackProfileCls.new().apply_preset(3).dip_ms == 0)
+	_check("BOSS_EVENT longer victim freeze", boss.victim_freeze_ms > light.victim_freeze_ms)
+
+	# CombatAudioComponent — verify it exists and can be instantiated.
+	var audio = CombatAudioComponentCls.new()
+	_check("CombatAudioComponent has play_swing", audio.has_method("play_swing"))
+	_check("CombatAudioComponent has play_impact", audio.has_method("play_impact"))
+	_check("CombatAudioComponent has play_kill", audio.has_method("play_kill"))
+	# Call with null profile must be safe (no crash).
+	audio.play_swing(null)
+	audio.play_impact(null, &"body")
+	audio.play_kill(null)
+	_check("CombatAudio handles null profile without crash", true)
 
 
 func _check(label: String, ok: bool) -> void:

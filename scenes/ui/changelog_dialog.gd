@@ -9,9 +9,21 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.83.27"
+const GAME_VERSION := "v0.83.28"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.83.28",
+		"title": "Combat overhaul — Phase 1B.4/1B.5 CombatFeedbackProfile + CombatAudioComponent",
+		"date": "2026-06-14",
+		"entries": [
+			"Internal — no gameplay change yet. Phase 1B.6 wires these into hit_resolved subscribers.",
+			"Added scripts/data/combat_feedback_profile.gd: per-weight Resource bundling attacker/victim freeze ms, camera trauma + impulse, global Engine.time_scale dip (scale, ms, priority), audio group ids (swing/impact/body/armor/magical/kill), VFX preset id + flash color, optional reaction tier override.",
+			"Presets via apply_preset(weight): LIGHT (no dip), MEDIUM, HEAVY, FINISHER (A→B→C natural finisher), CRIT (50ms @ 0.35), ELITE_KILL (60ms @ 0.30), BOSS_EVENT (70ms @ 0.25). Wide-attack aggregation already handled at HitStopController layer via attack_id dedupe.",
+			"Added scripts/components/combat_audio_component.gd: combat-specific audio SELECTION. AudioManager still owns playback / pooling / buses / pitch / variation. Plan corr. 11 — does NOT grow the 2,888-line AudioManager with combat selection.",
+			"Smoke now 127 checks.",
+		]
+	},
 	{
 		"version": "v0.83.27",
 		"title": "Combat overhaul — Phase 1B.3 HitReactionComponent + HitReactionData",

@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.83.10"
+const GAME_VERSION := "v0.83.11"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.83.11",
+		"title": "Combat overhaul — Phase 1A.5b swing B migrated to AttackClock",
+		"date": "2026-06-14",
+		"entries": [
+			"Swing B (right-to-left backhand) now drives damage from AttackClock + AttackTimings.swing_b() instead of a hard-coded tween_callback.",
+			"Refactored swing A helper into _start_basic_horizontal_clock(timing, target, dir, side) so A and B share one path with side=±1.0. Both still preserve their visual identity (slash arc rotation flips sign with side).",
+			"Cooldown for both A and B now derives from each swing's duration_sec / attack_speed.",
+			"C/D/E and all specials still on the legacy path.",
+		]
+	},
 	{
 		"version": "v0.83.10",
 		"title": "Combat overhaul — Phase 1A.5a swing A migrated to AttackClock",

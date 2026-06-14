@@ -2647,8 +2647,9 @@ func _do_melee_attack(target: Node2D, result: Dictionary, attack_dir: Vector2 = 
 		1:  # B: right-to-left backhand — MIGRATED (Phase 1A.5b)
 			_anim_swing_horizontal(tween, frames, base_pos, dir, perp, target, result, -1.0, true)
 			_start_basic_horizontal_clock(AttackTimingsCls.swing_b(), target, dir, -1.0)
-		2:  # C: overhead chop
-			_anim_overhead_chop(tween, frames, base_pos, dir, target, result)
+		2:  # C: overhead chop — MIGRATED (Phase 1A.5c). FINISHER_C rhythm class.
+			_anim_overhead_chop(tween, frames, base_pos, dir, target, result, true)
+			_start_overhead_chop_clock(AttackTimingsCls.swing_c(), target, dir)
 		3:  # D: upward thrust
 			_anim_upward_thrust(tween, frames, base_pos, dir, target, result)
 		4:  # E: spin slash
@@ -2690,15 +2691,16 @@ func _anim_swing_horizontal(tween: Tween, frames: Array, base_pos: Vector2,
 	_anim_return_to_idle(tween, base_pos)
 
 
-# Phase 1A.5 — basic horizontal swing migration (A + B).
-# Runs a parallel AttackClock alongside the visual tween. Contact event
-# (normalized progress) drives damage via CombatManager.resolve_hit,
-# then knockback + VFX + shake + hit-freeze are applied verbatim from
-# the legacy callback so the felt behavior is preserved exactly.
-# Lock-target preserved: damage targets the same `target` captured at
-# attack start. `side` flips the VFX arc rotation so backhand (B) looks
-# like it does today.
-func _start_basic_horizontal_clock(timing: Resource, target: Node2D, dir: Vector2, side: float, ability_mult: float = 1.0) -> void:
+# Phase 1A.5 — generic AttackClock runner.
+# Drives a parallel AttackClock from the attack's AttackTimingData. At
+# contact_event we build a HitEvent, route through CombatManager.
+# resolve_hit (typed HitResult), then invoke `on_contact` with
+# (target, dir, was_crit) so each swing can preserve its bespoke
+# knockback / VFX / shake / hit-freeze identity verbatim until Phase 1B
+# replaces it with CombatFeedbackProfile-driven behavior.
+# Lock-target preserved: damage targets the `target` captured at
+# attack start.
+func _run_clocked_attack(timing: Resource, target: Node2D, dir: Vector2, ability_mult: float, on_contact: Callable) -> void:
 	if not is_instance_valid(target):
 		return
 	var clock = AttackClockCls.new()
@@ -2706,8 +2708,8 @@ func _start_basic_horizontal_clock(timing: Resource, target: Node2D, dir: Vector
 	var contact_fired := [false]
 	var captured_target := target
 	var captured_dir := dir
-	var captured_side := side
 	var captured_mult := ability_mult
+	var captured_on_contact := on_contact
 	clock.progress_changed.connect(func(p: float) -> void:
 		if contact_fired[0]:
 			return
@@ -2725,17 +2727,7 @@ func _start_basic_horizontal_clock(timing: Resource, target: Node2D, dir: Vector
 		var atk_stats: Dictionary = stats.get_stats_dict()
 		var def_stats: Dictionary = captured_target.get_stats_dict()
 		var result = CombatManager.resolve_hit(event, atk_stats, def_stats, true)
-		# Preserve legacy feedback verbatim until Phase 1B replaces it.
-		if is_instance_valid(captured_target):
-			captured_target.apply_knockback(captured_dir, 40.0)
-		_spawn_slash_vfx(captured_dir.rotated(captured_side * 0.3), 35.0, 1.0)
-		if is_instance_valid(captured_target):
-			_spawn_impact_vfx(captured_target.global_position, result.was_crit)
-		if result.was_crit:
-			_do_screen_shake(4.0)
-			_do_hit_freeze(true)
-		else:
-			_do_screen_shake(1.5)
+		captured_on_contact.call(captured_target, captured_dir, result.was_crit)
 	)
 	clock.start(clock_tween, timing.duration_sec, max(0.1, stats.attack_speed), timing.attack_id)
 	# Cooldown derived from recovery_end (= duration_sec) and attack speed —
@@ -2743,8 +2735,42 @@ func _start_basic_horizontal_clock(timing: Resource, target: Node2D, dir: Vector
 	_attack_cooldown = timing.duration_sec / max(0.1, stats.attack_speed)
 
 
+# Per-swing wrappers — bespoke knockback / VFX / shake / freeze.
+
+func _start_basic_horizontal_clock(timing: Resource, target: Node2D, dir: Vector2, side: float, ability_mult: float = 1.0) -> void:
+	var captured_side := side
+	_run_clocked_attack(timing, target, dir, ability_mult, func(t: Node2D, d: Vector2, crit: bool) -> void:
+		if is_instance_valid(t):
+			t.apply_knockback(d, 40.0)
+		_spawn_slash_vfx(d.rotated(captured_side * 0.3), 35.0, 1.0)
+		if is_instance_valid(t):
+			_spawn_impact_vfx(t.global_position, crit)
+		if crit:
+			_do_screen_shake(4.0)
+			_do_hit_freeze(true)
+		else:
+			_do_screen_shake(1.5)
+	)
+
+
+# Swing C — the A→B→C finisher. Audit: knockback 55, VFX scale 1.4, shake 2.0/5.0.
+func _start_overhead_chop_clock(timing: Resource, target: Node2D, dir: Vector2, ability_mult: float = 1.0) -> void:
+	_run_clocked_attack(timing, target, dir, ability_mult, func(t: Node2D, d: Vector2, crit: bool) -> void:
+		if is_instance_valid(t):
+			t.apply_knockback(d, 55.0)
+		_spawn_slash_vfx(d, 40.0, 1.4)
+		if is_instance_valid(t):
+			_spawn_impact_vfx(t.global_position, crit)
+		if crit:
+			_do_screen_shake(5.0)
+			_do_hit_freeze(true)
+		else:
+			_do_screen_shake(2.0)
+	)
+
+
 func _anim_overhead_chop(tween: Tween, frames: Array, base_pos: Vector2,
-		dir: Vector2, target: Node2D, result: Dictionary) -> void:
+		dir: Vector2, target: Node2D, result: Dictionary, clock_driven: bool = false) -> void:
 	if frames.size() >= 3:
 		tween.tween_callback(func(): sprite.texture = frames[0])
 	# Big wind-up: pull back and lift
@@ -2760,18 +2786,19 @@ func _anim_overhead_chop(tween: Tween, frames: Array, base_pos: Vector2,
 		tween.tween_callback(func(): sprite.texture = frames[2])
 	# Impact — lunge and stretch
 	tween.tween_property(sprite, "position", base_pos + dir * 14.0, 0.04)
-	tween.tween_callback(func():
-		if is_instance_valid(target):
-			target.take_damage(result["damage"], result["is_crit"])
-			target.apply_knockback(dir, 55.0)
-			_spawn_slash_vfx(dir, 40.0, 1.4)
-			_spawn_impact_vfx(target.global_position, result["is_crit"])
-			if result["is_crit"]:
-				_do_screen_shake(5.0)
-				_do_hit_freeze(true)
-			else:
-				_do_screen_shake(2.0)
-	)
+	if not clock_driven:
+		tween.tween_callback(func():
+			if is_instance_valid(target):
+				target.take_damage(result["damage"], result["is_crit"])
+				target.apply_knockback(dir, 55.0)
+				_spawn_slash_vfx(dir, 40.0, 1.4)
+				_spawn_impact_vfx(target.global_position, result["is_crit"])
+				if result["is_crit"]:
+					_do_screen_shake(5.0)
+					_do_hit_freeze(true)
+				else:
+					_do_screen_shake(2.0)
+		)
 	tween.tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.06)
 	tween.tween_interval(0.04)
 	_anim_return_to_idle(tween, base_pos)

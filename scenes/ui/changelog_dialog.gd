@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.83.11"
+const GAME_VERSION := "v0.83.12"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.83.12",
+		"title": "Combat overhaul — Phase 1A.5c swing C (finisher) migrated",
+		"date": "2026-06-14",
+		"entries": [
+			"Swing C (overhead chop) — the A→B→C finisher — now drives damage from AttackClock + AttackTimings.swing_c() (FINISHER_C rhythm class).",
+			"Extracted _run_clocked_attack(timing, target, dir, mult, on_contact) so each remaining swing/special migration is a small wrapper with bespoke knockback / VFX / shake / freeze, sharing one clock-driven contact path.",
+			"swing_a / swing_b now use the new wrappers (no behavior change). swing_c has its own wrapper that applies knockback 55, VFX scale 1.4, shake 2.0/5.0 — preserved verbatim from the legacy callback.",
+			"D, E, and all specials still on legacy path.",
+		]
+	},
 	{
 		"version": "v0.83.11",
 		"title": "Combat overhaul — Phase 1A.5b swing B migrated to AttackClock",

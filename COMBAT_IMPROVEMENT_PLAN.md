@@ -213,23 +213,264 @@
 - Verify `player.gd` line count drops meaningfully.
 - Final acceptance pass + summary.
 
-### Phase 2 — Combat rhythm, ability interactions, build depth *(later)*
-Resource cost system, cooldowns/charges, combo finishers beyond C, held-input attacks, ability chaining, status application & consumption, vulnerability / armor break, behavior-changing upgrades, reward the perfect-dodge window detected in 1C.
+### Phase 2 — Combat depth: attack motion, poise, defensive reward, resource rhythm, status interactions *(next)*
 
-### Phase 3 — Enemy behavior & encounter design *(later)*
-Roles, telegraphs, group-attack limits, flanking, repositioning, mixed encounters, ambushes, environmental hazards. Event-driven AI.
+Phase 2 makes combat tactical. Each system below is a separate stage; ordering reflects dependency. The user's expanded roadmap (added 2026-06-14) places 7 of the 11 expanded systems into Phase 2 and the rest into Phases 3, 5, 6.
+
+#### 2.0 — Poise & stagger break (Expanded System #5)
+- **Smallest viable:** `PoiseComponent` on enemy with capacity, regen, regen-delay, resistance. Each `HitEvent` carries `poise_damage`. `PoiseComponent` consumes poise on hit; on break, fires `poise_broken` with a brief vulnerability window where reaction is forced to one tier heavier and stagger is unblockable.
+- **Dependencies:** `HitEvent`, `HitReactionComponent` (have).
+- **Required new artifacts:** `scripts/components/poise_component.gd`, `scripts/data/poise_profile.gd` Resource. Signals: `poise_changed(current, max)`, `poise_broken(duration_ms)`, `poise_recovered`.
+- **Acceptance:** A→B→C finisher visibly breaks light/medium enemies. Heavy enemies require multiple finishers or charged. Boss has its own poise pool (vulnerability windows only). Repeated light hits drain poise but do not stun-lock. Regen begins after regen-delay, not instantly.
+- **Performance risk:** None — event-driven.
+- **Touches `player.gd`?** No. Reads `final_feedback` + adds `poise_damage` field to `HitEvent`.
+
+#### 2.1 — Attack magnetism & motion data (Expanded System #1)
+- **Smallest viable:** `AttackMotionData` Resource per swing: `magnetism_max_angle_deg`, `magnetism_max_range`, `motion_curve` (Curve Resource), `motion_distance`, `commitment_progress` (after which steering ends), `obstacle_check` (bool). `CombatController` (or a small helper inside `player.gd` until 1C extraction) selects a target by score (distance × angle × LOS × range) at the swing's *start* and emits a movement request. **Player remains the sole writer of `velocity` / `move_and_slide()`.**
+- **Dependencies:** AttackClock (have), AttackTimingData (have). Sole-writer guarantee preserved by emitting a request signal that `player.gd` consumes.
+- **Required new artifacts:** `scripts/data/attack_motion_data.gd`, per-swing `.tres` values, `motion_requested(velocity, duration_sec)` signal on `CombatController` (or a slim `AttackMotionRequestor` until 1C). `MagnetismScorer` RefCounted helper.
+- **Acceptance:** No attack stops just outside contact range. No pull through walls (raycast). No snap behind player unless attack explicitly supports it. Steering ends at commitment_progress (typically 0.55 — the contact_event). Per-swing motion profiles: A short forward, B small lateral, C strong forward, D upward forward, E spin pivot.
+- **Performance risk:** One raycast per swing start (cheap).
+- **Touches `player.gd`?** Adds `apply_motion_request(velocity, duration)` method that integrates into existing physics_process via velocity overlay. No new `move_and_slide()` writer.
+
+#### 2.2 — Directional attack mechanical functions (Expanded System #2 — extended)
+- **Smallest viable:** assign mechanical role to each `RhythmClass.BRANCH_*`:
+  - `BRANCH_SLAM` — radial knockdown, +poise damage, downward squash on hit
+  - `BRANCH_UPPERCUT` — launch-like enemy reaction (visual lift via HitReactionComponent's recoil_distance × vertical), armor-break on poise-broken targets
+  - `BRANCH_SPIN` — wide-arc crowd control (multi-target stagger from one hit), short forward motion
+  - Specials are wired through 2.1 motion + 2.0 poise damage values
+- **Dependencies:** 2.0 (poise), 2.1 (motion), HitReactionComponent (have).
+- **Required new artifacts:** Updated tunings on each `AttackTimingData` (`poise_damage` field added; reuses existing `AttackTimings` library). Optional `BranchEffectData` Resource for slam/uppercut/spin extras (knockdown duration, launch height).
+- **Acceptance:** Slam knocks down light enemies, dents heavy poise. Uppercut visibly lifts enemies and breaks armor on already-staggered targets. Spin hits up to N enemies in a radius. C-finisher does meaningful poise damage to medium enemies; D and E feel more committed.
+- **Performance risk:** None.
+
+#### 2.3 — DodgeController introduction + perfect-dodge detection (Expanded System #6 prep)
+- **Smallest viable:** new `dodge` input action; `DodgeController` Node child of Player with i-frames (220 ms), accel/decel `Curve`, perfect-dodge window (80 ms — detection only, signal `perfect_dodge_executed` emitted but no reward yet). `player.gd` still writes velocity via dodge_velocity_request hook.
+- **Dependencies:** None (clean introduction — there is no existing dodge to extract per Phase 1A.0 audit).
+- **Required new artifacts:** `scenes/player/dodge_controller.gd`, `project.godot` input map entry for `dodge`, `DodgeData` Resource (curve, i-frames, perfect window). Signals: `dodge_started`, `dodge_ended`, `iframes_active(bool)`, `perfect_dodge_executed(against_attack_id)`.
+- **Acceptance:** Dodge fires immediately, i-frames protect from a timed enemy hit, can cancel from late attack recovery, never gets stuck. Perfect-dodge fires its signal when a hit lands during the 80 ms window — no reward yet. Controller / keyboard / mouse all drive.
+- **Performance risk:** None.
+- **Save format:** Unchanged.
+
+#### 2.4 — Combat resource rhythm: Momentum (Expanded System #7)
+- **Smallest viable:** `MomentumComponent` Node child of Player. Tracks `current_momentum` (0–100) and a temporary `combo_multiplier` (decays after no-hit window). Basic attacks generate +5/+8/+15 (A/B/C). Finishers generate more. Specials cost 20–40. Taking damage drops momentum by 25. Kills refund +5. UI hookup deferred to Phase 6.
+- **Dependencies:** None (subscribes to `hit_resolved`, `RespawnManager.player_died`, enemy `died`).
+- **Required new artifacts:** `scripts/components/momentum_component.gd`, `scripts/data/momentum_profile.gd` Resource (per-attack-id grants and costs), signals: `momentum_changed(value, max)`, `momentum_spent(amount, reason)`, `combo_multiplier_changed`.
+- **Acceptance:** Spamming A only barely builds momentum. Varied A→B→C → special chain refunds well. Specials gated by momentum cost (cannot fire if insufficient). Taking damage feels punishing. Decay curve doesn't reset combo on micro-pauses.
+- **Performance risk:** None — event-driven.
+- **Save format:** Optional — momentum is transient per-encounter unless we choose to persist a "best combo" stat.
+
+#### 2.5 — Perfect-dodge reward (Expanded System #6 completion)
+- **Smallest viable:** **Single reward type, recommended: momentum refund.** Perfect-dodge → `MomentumComponent.add(perfect_dodge_grant=40)` + brief vulnerability window on the attacker (local enemy time slowed via `HitStopController.freeze_target(attacker, 250 ms, ATTACKER)`).
+- **Dependencies:** 2.3 (DodgeController perfect-dodge signal), 2.4 (Momentum), Phase 3.0 (enemy attack timeline so we know an attack instance to flag — see #6 in plan: "Do not add the reward until dodge timing and enemy telegraphs are reliable").
+- **Required new artifacts:** Connector function; no new Resource.
+- **Acceptance:** Perfect-dodging a clearly telegraphed enemy attack refunds significant momentum, brief slowdown on attacker, satisfying audio cue. Cannot perfect-dodge attacks flagged `unparriable`.
+- **Performance risk:** None.
+
+#### 2.6 — Status effects: data, component, and apply path (Expanded System #8 part 1)
+- **Smallest viable:** `StatusEffectData` Resource (id, duration_ms, tick_interval_ms, tier "bleed"/"chill"/"mark"/"armor_break"/"burn", per-tick damage, visual id, on_apply_signal, on_expire_signal). `StatusEffectComponent` on enemy: stacking rules per tier ("refresh duration", "stack count cap", "highest-tier wins"), tick processing. `HitEvent` gains `status_to_apply: StringName` field. Existing player attacks unchanged this stage — status applied only by future ability upgrades / specific attack flags.
+- **Dependencies:** HitEvent (have), HitReactionComponent (have — reads no status data; they're independent).
+- **Required new artifacts:** `scripts/data/status_effect_data.gd`, `scripts/components/status_effect_component.gd`, `res://data/status/*.tres`. Signals: `status_applied(id, source)`, `status_expired(id)`, `status_consumed(id, by_attack_id)`.
+- **Acceptance:** A test attack with `status_to_apply = &"bleed"` applies bleed; bleed ticks deal damage; bleed expires. Stacking rules respected. No status framework changes to existing combat behavior.
+- **Performance risk:** Per-tick processing. Mitigation: use Timer per status, not per_frame poll.
+- **Save format:** Unchanged (statuses are transient).
+
+#### 2.7 — Ability interactions: consume-status finishers (Expanded System #8 part 2)
+- **Smallest viable:** Two interactions live as proof:
+  1. **Bleed → Detonate**: power_strike (or a new "rupture" upgrade) deals 2× damage to bleeding targets, consumes bleed, spreads as a small AoE.
+  2. **Mark → Execute**: charged_slash on a marked target deals critical + mark consumed.
+- **Dependencies:** 2.6 (Status), HitEvent (have), Combat Manager hit_resolved.
+- **Required new artifacts:** `InteractionRule` Resource (StringName trigger_attack, StringName consume_status, modifier params). Processed in `CombatManager.resolve_hit` before damage compute. Smaller alternative: per-attack lambda hooks on `AttackTimingData`.
+- **Acceptance:** Both interactions visible. Single hit on bleeding enemy detonates with VFX + extra damage. Marked enemy dies dramatically on charged slash. Non-bleeding/non-marked targets behave normally.
+- **Performance risk:** None — event-driven.
+
+### Phase 3 — Enemy combat behavior: timelines, telegraphs, coordination, encounter design
+
+Plan corr. 3 lock: enemies do not run expensive every-frame logic. Timers, distance thresholds, event-driven.
+
+#### 3.0 — Enemy attack timeline (Expanded System #3)
+- **Smallest viable:** `EnemyAttackTimingData` Resource per attack: `anticipation_sec`, `telegraph_sec`, `active_window_sec`, `recovery_sec`, `optional_vulnerability_sec`. Enemy entering ATTACK state starts a single Tween driving normalized `attack_progress`. Damage applies during `active_window`, not on cooldown expiry. Hit detection uses Area2D or distance + cone for melee enemies. Optional vulnerability window flags the enemy for stronger reactions.
+- **Dependencies:** None foundational. Builds on the same normalized-progress pattern as player's AttackClock.
+- **Required new artifacts:** `scripts/data/enemy_attack_timing_data.gd`, `scripts/combat/enemy_attack_clock.gd` (or generic — could share `AttackClock`). Signals: `enemy_attack_anticipation_started(enemy, attack_id)`, `enemy_attack_telegraph(...)`, `enemy_attack_active(...)`, `enemy_attack_recovered(...)`.
+- **Acceptance:** First migrated enemy (skeleton) anticipates → telegraphs → strikes → recovers. Damage lands during active window. Cancellation on interrupt clears the clock cleanly. No regression on other enemy types (they keep legacy path until migrated).
+- **Performance risk:** One Tween per attacking enemy. Free when not attacking.
+
+#### 3.1 — Telegraph rendering (Expanded System #3 part 2)
+- **Smallest viable:** `TelegraphRenderer` component. Modes: `GROUND_CIRCLE`, `GROUND_ARC`, `GROUND_LINE`, `SPRITE_ANTICIPATION` (already kind of exists via squash), `WEAPON_GLOW`. Uses Phase 1B existing 40-sprite pool when possible. Color = severity (yellow normal / orange heavy / red unblockable). Audio cue per severity.
+- **Dependencies:** 3.0 (timing data fields drive duration), existing sprite pool.
+- **Required new artifacts:** `scripts/components/telegraph_renderer.gd`, `scripts/data/telegraph_profile.gd` Resource. No new pool needed.
+- **Acceptance:** Each migrated enemy attack shows a visible telegraph for its `telegraph_sec` duration. Cancellation on interrupt removes the telegraph immediately. Accessibility scalar reduces opacity but not duration.
+
+#### 3.2 — Migrate representative enemies (Expanded System #3 part 3)
+- **Smallest viable:** Skeleton (light melee), Goblin (light), Rat (light fast), Bandit (medium), Wolf (medium fast), Troll (heavy slow), Ogre (heavy). Each gets one `EnemyAttackTimingData`. Mini-bosses keep existing behavior until 3.5.
+- **Dependencies:** 3.0, 3.1.
+- **Acceptance:** All listed enemies attack with anticipation → telegraph → active → recovery. Damage lands at active window. Death animations still play correctly.
+
+#### 3.3 — Encounter-local AttackCoordinator (Expanded System #4)
+- **Smallest viable:** `AttackCoordinator` Node — **one per spawner / encounter, not a global autoload**. Tracks danger tokens per attack tier (`light=1`, `heavy=2`, `ranged=2`, `crowd_control=3`, `elite=4`). Enemies request a token at *anticipation start*; coordinator grants based on available budget. Budget = function of encounter difficulty. Tokens released on cancel / interrupt / death / recovery. Enemies who fail to reserve a token circle, reposition, or threaten instead of attacking.
+- **Dependencies:** 3.0 (anticipation hook), simple per-encounter ownership (find via group "encounter").
+- **Required new artifacts:** `scripts/components/attack_coordinator.gd`, `scripts/data/encounter_difficulty_profile.gd` (budget per tier). Signals: `token_reserved(enemy, cost)`, `token_released(enemy)`, `pressure_changed(active_attackers)`.
+- **Acceptance:** 8 enemies surround player — only 2–3 are mid-attack at any moment; the rest circle / reposition / hold preferred range. Token release on enemy death frees budget immediately. Difficulty setting changes how many simultaneous attackers. **Important: enemies should NOT politely wait — non-attacking enemies still pressure.**
+- **Performance risk:** None.
+
+#### 3.4 — Enemy roles & repositioning (Expanded System #4 extended)
+- **Smallest viable:** Per-enemy `RoleProfile` (Resource): `role` enum (BASIC_MELEE / CHARGER / TANK / SUPPORT / SUMMONER / RANGED / ASSASSIN / CC / ELITE), `preferred_range`, `circling_speed`, `flank_preference`. State machine extended with PATROL/CHASE/CIRCLE/REPOSITION/ATTACK/RETREAT. Distance + role drives state. Staggered AI updates — not every frame.
+- **Dependencies:** 3.3 (coordinator informs whether an enemy attacks now or waits).
+- **Acceptance:** Charger sometimes runs in for one big hit then retreats; ranged maintains preferred distance and kites; tank takes pressure while squishies kite. No enemies pathfinding through walls.
+- **Performance risk:** Decision tick interval ≥ 200 ms per enemy, not per frame.
+
+#### 3.5 — Boss / elite vulnerability windows
+- **Smallest viable:** Boss / elite `EnemyAttackTimingData` includes `optional_vulnerability_sec` after a heavy attack. During vulnerability, `final_feedback.weight` is forced to BOSS_EVENT / ELITE_KILL and HitReactionComponent applies the heavier tier reaction. Boss poise (from 2.0) ties in.
+- **Dependencies:** 3.0, 2.0 (poise), 1B feedback profile dispatch.
+- **Acceptance:** Boss occasionally enters a 0.5–1.0 s vulnerability window where the player can land a punish; a punish lands with screen-filling shake + brief global dip (boss event profile).
+
+#### 3.6 — EncounterData + SpawnDirector (Expanded System #9)
+- **Smallest viable:** `EncounterData` Resource: enemy roster + roles + spawn pattern (`SURROUND` / `AMBUSH` / `WAVE` / `LINE`) + reinforcement triggers + hazards optional. `SpawnDirector` Node placed per encounter area. Reads data, spawns enemies, handles waves.
+- **Dependencies:** 3.4 (roles).
+- **Required new artifacts:** `scripts/data/encounter_data.gd`, `scenes/encounters/spawn_director.gd`. Signals: `wave_started(index)`, `wave_cleared`, `encounter_cleared`, `reinforcements_arrived(count)`.
+- **Acceptance:** A test encounter has mixed roles, a tactical second wave, no health-bloat difficulty.
+- **Save format:** Add a `cleared_encounters: Array[String]` field — needs migration (default `[]`).
+
+#### 3.7 — Environmental hazards (Expanded System #9 part 2) — also intersects Phase 7
+- **Smallest viable:** Damaging tiles + knockback hazards owned by the encounter, not the world. Triggered by `EncounterData.hazards`.
+- **Dependencies:** 3.6.
+- **Acceptance:** A test encounter features a knockback wall the player can push enemies into for free poise damage.
 
 ### Phase 4 — Animation polish & procedural motion *(later)*
-AnimationTree transitions, attack/movement blending, directional anims, anticipation poses, additive recoil, squash/stretch refinement, footstep sync. No skeletal features incompatible with current sprites.
 
-### Phase 5 — VFX / shaders / audio / screen feedback *(later)*
-`GPUParticles2D` impacts, `Line2D` projectile/weapon trails, ground indicators, status visuals, dissolve shaders, scorch/ice/poison surfaces, audio variation pools, bus ducking, elite cues. **All new pool types live here.**
+AnimationTree transitions, attack/movement blending, directional anims, anticipation poses (player side), additive recoil, squash/stretch refinement, footstep sync, animation-speed scaling. No skeletal features incompatible with current sprites.
 
-### Phase 6 — Damage presentation, UI, progression feedback *(later)*
+This phase has no expanded-system items mapped to it; expanded #2 directional functions live in 2.2, expanded #11 death feedback lives in Phase 5.
+
+### Phase 5 — VFX, shaders, audio, screen feedback
+
+#### 5.0 — Death & execution feedback (Expanded System #11)
+- **Smallest viable:** `DeathReactionData` Resource per killing-attack-type: `directional_knockback` / `uppercut_lift` / `slam_compression` / `spin_rotation` / `elemental_dissolve` (when elements ship). `HitResult.was_lethal` (have) triggers selection. Selection key = killing attack's `AttackTimingData.rhythm_class` + status_flags. Rare major kills (boss / elite) trigger a brief global dip (already supported via HitStopController) — **ordinary crowd kills do NOT dip**.
+- **Dependencies:** HitResult (have), `was_lethal` (have), AttackTimings rhythm_class (have).
+- **Required new artifacts:** `scripts/data/death_reaction_data.gd`, per-attack mapping in `attack_timings.gd` or a dedicated dispatch table. Signal: `death_reaction_played(enemy, reaction_id)`.
+- **Acceptance:** Killing with slam compresses + radial; uppercut lofts visibly; spin spins the enemy mid-death; elite kills get the heavy global dip (already wired). Crowd-killing 8 enemies in 1 s does not stutter — token dedupe on global dip + lightweight per-enemy death tween.
+- **Performance risk:** Watch pool usage during high-death moments.
+
+#### 5.1 — Telegraph VFX polish
+- Heavier graphical work for telegraphs from 3.1 — shaders, gradients, on-ground projections.
+
+#### 5.2 — Status effect visuals
+- Bleed drops + spray, chill icicles, mark glow. Hooks to 2.6 status visual_id.
+
+#### 5.3 — Existing audio centralization (back-fills 1B.4 deferral)
+- Migrate the remaining direct `AudioManager.play_sfx` calls in player swings to flow through `CombatAudioComponent`. Adds layered impact / armor / magical groups.
+
+#### 5.4 — Particle systems
+- GPUParticles2D for impacts, projectile trails, ground indicators.
+
+### Phase 6 — Damage presentation, UI, progression feedback
+
+#### 6.0 — Damage numbers, vulnerability indicators, boss stagger bar
+- Already-pooled labels gain grouping (e.g., multi-hit shows one accumulating number) and crit emphasis. Boss vulnerability + stagger bar UI from 3.5.
+
+#### 6.1 — Resource UI for Momentum (depends on 2.4)
+- Visible momentum bar with combo multiplier indicator.
+
+#### 6.2 — Behavior-changing upgrades (Expanded System #10)
+- **Smallest viable:** `AttackUpgrade` Resource. Modifies one specific `AttackTimingData` or layered behavior via a `effect_id` (e.g. `add_shockwave`, `add_pull`, `chain_to_target`, `extra_projectile`, `delayed_explosion`, `cooldown_refund_on_crit`, `dodge_afterimage_attack`, `finisher_consumes_bleed_for_aoe`). `UpgradeManager` (player component, not autoload) loads selected upgrades from save and applies them.
+- **Dependencies:** 2.6 (status framework — many upgrades create or consume status), 2.4 (momentum effects), 2.1 (motion effects).
+- **Required new artifacts:** `scripts/data/attack_upgrade.gd`, `scripts/components/upgrade_manager.gd`, save schema field `attack_upgrades: Array[String]`.
+- **Save format:** Adds field. Migration default = `[]`.
+- **Acceptance:** Picking "Slam adds shockwave" measurably changes slam behavior. Picking 3 upgrades stacks without crashing. Upgrades persist across save/load.
+
+#### 6.3 — Upgrade preview UI
+- Inline behavior-change preview for behavior-changing upgrades.
 
 ### Phase 7 — Environment interaction *(later)*
 
+Breakable props, explosive objects, traps, knockback hazards (shared with 3.7), grass/foliage, wall impact effects, temporary elemental surfaces. Pooling + lifetime caps.
+
 ### Phase 8 — Performance, accessibility, final tuning *(later)*
+
+Profiling sweep across AI / navigation / collision / particles / projectiles / damage numbers / audio / status. Accessibility settings UI for camera shake / hit-stop / screen flash / particle density / aim assist / vibration / high-contrast telegraphs / reduced motion. Centralized combat tuning Resources.
+
+---
+
+## 5b. Expanded systems cross-cutting map (added 2026-06-14)
+
+The user's expanded roadmap adds 11 systems. They are placed below with phase, dependency chain, smallest viable, and risks. Repeating §5 in compact form for navigation.
+
+| # | System | Phase | Depends on | Save format | New autoloads? |
+|---|---|---|---|---|---|
+| 1 | Attack magnetism + motion | 2.1 | AttackClock, AttackTimingData | None | None |
+| 2 | Three-hit core + directional functions | done (rhythm) / 2.2 (functions) | 2.0 poise, 2.1 motion | None | None |
+| 3 | Enemy attack timelines + telegraphs | 3.0–3.2 | None foundational | None | None |
+| 4 | Enemy attack coordination | 3.3–3.4 | 3.0 anticipation hook | None | None — coordinator is per-encounter |
+| 5 | Poise & stagger break | 2.0 | HitEvent, HitReactionComponent | None | None |
+| 6 | Defensive skill reward | 2.3 detect → 2.5 reward | 2.4 Momentum, 3.0 telegraphs | None | None |
+| 7 | Combat resource rhythm | 2.4 | None | Optional best-combo stat | None |
+| 8 | Ability interactions | 2.6 framework → 2.7 proofs | HitEvent, status framework | None (statuses transient) | None |
+| 9 | Encounter composition | 3.6–3.7 | 3.0–3.4 | `cleared_encounters: Array[String]` | None — SpawnDirector per encounter |
+| 10 | Behavior-changing upgrades | 6.2 | 2.4 momentum, 2.6 status, 2.1 motion | `attack_upgrades: Array[String]` | None |
+| 11 | Death & execution feedback | 5.0 | HitResult, AttackTimings | None | None |
+
+### Dependency chain (consolidated)
+
+```
+HitEvent / HitResult / AttackClock / AttackTimingData (Phase 1A — DONE)
+   ↓
+HitStopController / CameraShake2D / HitReactionComponent / CombatFeedbackProfile (Phase 1B — IN PROGRESS)
+   ↓
+PoiseComponent (2.0) ── feeds ──┐
+                                ├──► Directional functions (2.2)
+AttackMotionData (2.1) ─────────┤
+                                ├──► DodgeController detect (2.3)
+                                │       ↓
+                                │   Momentum (2.4)
+                                │       ↓
+                                │   Perfect-dodge reward (2.5)
+                                │
+                                └──► StatusEffects (2.6)
+                                       ↓
+                                   Ability interactions (2.7)
+                                       ↓
+                            ┌──► Behavior-changing upgrades (6.2)
+                            │
+EnemyAttackTimingData (3.0) ┴──► Telegraphs (3.1)
+                                       ↓
+                                Migrate enemies (3.2)
+                                       ↓
+                                Coordinator (3.3)
+                                       ↓
+                                Roles (3.4)
+                                       ↓
+                                Boss vulnerability (3.5)
+                                       ↓
+                                EncounterData (3.6)
+                                       ↓
+                                Hazards (3.7)
+
+Death reactions (5.0) ──── needs ──── AttackTimings rhythm_class (have)
+```
+
+### Architectural guard-rails for all expanded systems
+
+- **No new global autoloads** beyond what already exists. Per-encounter coordinator, per-player components.
+- **No god-script growth.** `player.gd` already 3,500+ lines. New systems add components; they consume signals; `player.gd` keeps movement / physics / animation ownership.
+- **CharacterBody2D `velocity` and `move_and_slide()` writer remains the relevant body's own script.** Motion (2.1) is request-based — receiver applies.
+- **Saved schema changes are additive only.** Default values ensure pre-existing saves load. (Adds in 3.6 `cleared_encounters: Array[String] = []` and 6.2 `attack_upgrades: Array[String] = []`.)
+- **Performance:** all enemy decisions ≥ 200 ms tick, never per-frame. Status / poise / cooldowns are event-driven or per-status-Timer.
+
+### Smallest-viable acceptance summary per system
+
+Below = the minimum signal that confirms the system shipped. Each is also called out under its phase entry above.
+
+1. **Magnetism**: a swing started at 25° off-target with target in range visibly steers to hit; no wall pull.
+2. **Directional functions**: slam knocks down a light enemy; uppercut visibly lifts; spin hits 3+ enemies.
+3. **Enemy timelines**: skeleton anticipates → telegraphs → strikes → recovers.
+4. **Coordinator**: 8 enemies — at most 2–3 attack at a time; others circle.
+5. **Poise**: A→B→C breaks a light enemy; charged breaks a medium.
+6. **Perfect dodge**: telegraphed enemy attack perfect-dodged → momentum refund + brief attacker slow.
+7. **Momentum**: bar visibly fills with varied attacks; depletes on damage / disengage.
+8. **Status interactions**: bleed → power_strike detonate; mark → charged_slash execute.
+9. **Encounter**: tactical encounter with mixed roles, waves, no health-bloat.
+10. **Upgrades**: "slam shockwave" upgrade measurably changes slam.
+11. **Death reactions**: slam-kill compresses; uppercut-kill lifts; elite-kill triggers boss-event profile.
 
 ---
 
@@ -546,16 +787,25 @@ All three run at the end of every stage and at Phase 1 close.
 
 ---
 
-## 13. Out of scope for Phase 1
+## 13. Out of scope for Phase 1 (and where each item now lives)
 
-- New abilities, weapons, enemies, encounters.
-- Resource/cost system, status-effect rewrite, vulnerability / armor-break gameplay.
-- AnimationTree overhaul, new directional animations.
-- **`GPUParticles2D` and `Line2D` effect systems** — Phase 5.
-- New particle / trail pool types beyond the existing sprite pool — Phase 5.
-- UI / HUD changes beyond damage-number tier tweaks.
-- Environment interaction, breakables, hazards.
-- Performance profiling sweep (Phase 8).
+- New abilities, weapons, enemies, encounters → Phase 3 (enemies / encounters), Phase 6 (upgrades).
+- Resource/cost system → **Phase 2.4 Momentum**.
+- Status-effect framework → **Phase 2.6**; status interactions → **Phase 2.7**.
+- Vulnerability / armor-break gameplay → **Phase 2.0 Poise** + **Phase 3.5 boss vulnerability windows**.
+- AnimationTree overhaul, new directional animations → Phase 4.
+- **`GPUParticles2D` and `Line2D` effect systems** → Phase 5.4.
+- New particle / trail pool types beyond the existing sprite pool → Phase 5.
+- UI / HUD changes beyond damage-number tier tweaks → Phase 6 (damage UI, momentum bar, upgrade preview).
+- Environment interaction, breakables, hazards → Phase 7 (shared knockback-hazard work with Phase 3.7).
+- Performance profiling sweep → Phase 8.
 - Accessibility settings UI (scalars exist; settings screen ships in Phase 8).
-- Hand-authored per-enemy flinch animations beyond at most one cheap proof of extensibility.
-- Perfect-dodge rewards (detection only in 1C; reward in Phase 2).
+- Hand-authored per-enemy flinch animations beyond at most one cheap proof of extensibility → Phase 4.
+- Perfect-dodge **rewards** → **Phase 2.5**; detection-only signal → **Phase 2.3**.
+- Attack magnetism / motion → **Phase 2.1**.
+- Directional attack mechanical functions (slam knockdown / uppercut launch / spin CC) → **Phase 2.2**.
+- Enemy attack timelines + telegraphs → **Phase 3.0–3.2**.
+- Enemy attack coordinator + tokens → **Phase 3.3–3.4**.
+- Encounter composition + spawn director → **Phase 3.6–3.7** (save schema: `cleared_encounters: Array[String]`).
+- Behavior-changing upgrades → **Phase 6.2** (save schema: `attack_upgrades: Array[String]`).
+- Death & execution feedback per killing attack → **Phase 5.0**.

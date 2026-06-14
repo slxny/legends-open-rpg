@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.83.34"
+const GAME_VERSION := "v0.83.35"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.83.35",
+		"title": "Combat plan — expanded roadmap for Phases 2/3/5/6 (docs only)",
+		"date": "2026-06-14",
+		"entries": [
+			"Docs only. No gameplay changes.",
+			"COMBAT_IMPROVEMENT_PLAN.md expanded with 11 future systems: attack magnetism + motion (2.1), directional attack mechanics (2.2), poise & stagger break (2.0), DodgeController + perfect-dodge detection (2.3), Momentum resource (2.4), perfect-dodge reward (2.5), status effect framework + interactions (2.6/2.7), enemy attack timelines + telegraphs (3.0–3.2), per-encounter AttackCoordinator + roles (3.3–3.4), boss vulnerability windows (3.5), EncounterData + SpawnDirector + hazards (3.6/3.7), death & execution feedback per killing attack (5.0), behavior-changing upgrades (6.2).",
+			"Each system has: smallest viable scope, dependencies, required Resources/components/signals, acceptance criteria, performance risk note, save-format impact. Two save schema additions identified (cleared_encounters, attack_upgrades) — both additive with default [].",
+			"Architectural guard-rails preserved: no new global autoloads, no god-script growth, body-velocity ownership stays with each CharacterBody2D script, motion requests stay request-based, enemy decisions tick ≥ 200 ms.",
+		]
+	},
 	{
 		"version": "v0.83.34",
 		"title": "Combat overhaul — Phase 1B.6f directional camera shake",

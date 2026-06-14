@@ -24,6 +24,8 @@ const AttackClockCls := preload("res://scripts/combat/attack_clock.gd")
 const AttackTimingDataCls := preload("res://scripts/data/attack_timing_data.gd")
 const AttackTimingsCls := preload("res://scripts/data/attack_timings.gd")
 const CameraShakeCls := preload("res://scripts/combat/camera_shake_2d.gd")
+const HitReactionDataCls := preload("res://scripts/data/hit_reaction_data.gd")
+const HitReactionComponentCls := preload("res://scripts/components/hit_reaction_component.gd")
 
 var _errors: Array[String] = []
 
@@ -75,6 +77,7 @@ func _ready() -> void:
 	await _test_time_manager()
 	await _test_hit_stop_controller()
 	await _test_camera_shake()
+	await _test_hit_reaction()
 
 	if _errors.is_empty():
 		print("[combat_smoke] OK")
@@ -453,6 +456,82 @@ func _test_camera_shake() -> void:
 	shake.intensity_scalar = 1.0
 
 	cam.queue_free()
+
+
+func _test_hit_reaction() -> void:
+	# Presets sanity — via instance.apply_preset(Tier) which works on
+	# first headless boot. Tier enum values: LIGHT=0, MEDIUM=1, HEAVY=2,
+	# ELITE=3, BOSS=4.
+	var light = HitReactionDataCls.new().apply_preset(0)
+	var boss = HitReactionDataCls.new().apply_preset(4)
+	_check("light preset has knockback", light.knockback_scalar > 0.5)
+	_check("boss preset immune to knockback", boss.knockback_scalar == 0.0)
+	_check("boss preset immune to stagger", boss.stagger_resistance >= 1.0)
+	var elite = HitReactionDataCls.new().apply_preset(3)
+	_check("elite preset gated to heavy attacks", elite.stagger_only_heavy)
+
+	# Build a sprite + component pair.
+	var pivot := Sprite2D.new()
+	pivot.name = "ReactPivot"
+	add_child(pivot)
+	var comp = HitReactionComponentCls.new()
+	comp.reaction_pivot = pivot
+	comp.profile = HitReactionDataCls.new().apply_preset(0)
+	add_child(comp)
+	await get_tree().process_frame
+
+	var kb_fired := [false]
+	var kb_force := [0.0]
+	var stagger_fired := [false]
+	var stagger_ended_fired := [false]
+	comp.knockback_requested.connect(func(_dir: Vector2, force: float) -> void:
+		kb_fired[0] = true
+		kb_force[0] = force)
+	comp.stagger_requested.connect(func(_ms: int) -> void: stagger_fired[0] = true)
+	comp.stagger_ended.connect(func() -> void: stagger_ended_fired[0] = true)
+
+	comp.react(Vector2.RIGHT, 40.0, false, false)
+	_check("react fires knockback_requested", kb_fired[0])
+	_check("knockback force = incoming * scalar (40 * 1.0)", abs(kb_force[0] - 40.0) < 0.01)
+	_check("react fires stagger_requested (light tier)", stagger_fired[0])
+	_check("is_staggered while in window", comp.is_staggered())
+
+	# Repeated hit within min_interval → dampened (no second knockback / stagger).
+	kb_fired[0] = false
+	stagger_fired[0] = false
+	comp.react(Vector2.RIGHT, 40.0, false, false)
+	_check("dampened hit does NOT fire knockback again", not kb_fired[0])
+	_check("dampened hit does NOT fire stagger again", not stagger_fired[0])
+
+	# cancel_reaction clears stagger.
+	comp.cancel_reaction()
+	_check("cancel_reaction clears stagger", not comp.is_staggered())
+
+	# Boss tier — no knockback, no stagger.
+	kb_fired[0] = false
+	stagger_fired[0] = false
+	var boss_pivot := Sprite2D.new()
+	add_child(boss_pivot)
+	var boss_comp = HitReactionComponentCls.new()
+	boss_comp.reaction_pivot = boss_pivot
+	boss_comp.profile = HitReactionDataCls.new().apply_preset(4)
+	add_child(boss_comp)
+	await get_tree().process_frame
+	boss_comp.knockback_requested.connect(func(_d, _f): kb_fired[0] = true)
+	boss_comp.stagger_requested.connect(func(_ms): stagger_fired[0] = true)
+	boss_comp.react(Vector2.RIGHT, 100.0, true, true)
+	_check("boss tier emits no knockback", not kb_fired[0])
+	_check("boss tier emits no stagger", not stagger_fired[0])
+
+	# Original transform restored after visual tween — wait for full duration + slack.
+	await get_tree().create_timer(0.50).timeout
+	_check("pivot.scale returned to Vector2.ONE", pivot.scale.is_equal_approx(Vector2.ONE))
+	_check("pivot.rotation returned to 0", abs(pivot.rotation) < 0.001)
+
+	pivot.queue_free()
+	comp.queue_free()
+	boss_pivot.queue_free()
+	boss_comp.queue_free()
 
 
 func _check(label: String, ok: bool) -> void:

@@ -9,9 +9,23 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.83.26"
+const GAME_VERSION := "v0.83.27"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.83.27",
+		"title": "Combat overhaul — Phase 1B.3 HitReactionComponent + HitReactionData",
+		"date": "2026-06-14",
+		"entries": [
+			"Internal — no gameplay change yet. Phase 1B.6/1B.7 wire this into enemies.",
+			"Added scripts/data/hit_reaction_data.gd: per-tier Resource with separate visual, physical, and stagger params. Tiers LIGHT/MEDIUM/HEAVY/ELITE/BOSS. Presets via instance.apply_preset(tier) — boss is knockback+stagger immune, elite stagger-resists 60% and gates to heavy only, etc.",
+			"Added scripts/components/hit_reaction_component.gd: three independent reaction layers (plan §3). Visual flinch on exported reaction_pivot (NO reparenting — pivot is explicit; falls back to transform-only writes on the assigned node). Original transform captured on first reaction, restored exactly on completion. Generation tokens prevent stale tweens fighting newer ones.",
+			"Physical knockback is emitted as a signal — component NEVER writes velocity directly. Owner code stays the sole writer of CharacterBody2D.velocity (plan corr. 9 spirit).",
+			"Stagger emits request + ended signals. Phase 1B.6 will wire the enemy stagger_ended handler to re-evaluate AI state from CURRENT conditions (plan corr. 10), not blindly restore the prior state.",
+			"Repeated-hit dampening per profile.min_interval_ms: rapid hits get a reduced visual flash only — knockback and stagger are skipped until the interval elapses. Prevents stun-lock.",
+			"Smoke now 117 checks (presets, react fires/dampens, boss immunity, cancel_reaction, pivot transform restoration).",
+		]
+	},
 	{
 		"version": "v0.83.26",
 		"title": "Combat overhaul — Phase 1B.2 CameraShake2D",

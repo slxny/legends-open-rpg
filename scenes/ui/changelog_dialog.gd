@@ -9,9 +9,21 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.83.9"
+const GAME_VERSION := "v0.83.10"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.83.10",
+		"title": "Combat overhaul — Phase 1A.5a swing A migrated to AttackClock",
+		"date": "2026-06-14",
+		"entries": [
+			"First gameplay-code change of the combat overhaul. Lock-target preserved; felt behavior preserved.",
+			"Swing A (left-to-right basic slash) now drives damage from a parallel AttackClock + AttackTimingData rather than a hard-coded tween_callback timestamp. Contact event at 55% normalized progress (matches the legacy timing audit). Damage routes through CombatManager.resolve_hit producing a typed HitResult — Phase 1B feedback systems will subscribe later.",
+			"Swing A cooldown is now derived from AttackTimings.swing_a().duration_sec / attack_speed instead of the legacy 0.5/attack_speed constant. Slightly tighter at high attack-speed; matches the actual visual recovery length.",
+			"Knockback (40.0), slash VFX, impact VFX, screen shake (1.5 / 4.0 crit), and hit freeze on crit are preserved verbatim from the legacy callback so feel is identical.",
+			"Swings B/C/D/E and all specials remain on the legacy path — subsequent commits migrate them one at a time.",
+		]
+	},
 	{
 		"version": "v0.83.9",
 		"title": "Combat overhaul — Phase 1A.4 AttackClock + AttackTimingData",

@@ -1798,8 +1798,10 @@ func _execute_dash_strike(attack_dir: Vector2) -> void:
 
 func _execute_piercing_shot(attack_dir: Vector2) -> void:
 	# Double-tap: Piercing arrow that passes through all enemies in a line. 1.2x damage.
+	# Phase 1A.5j.
 	_is_attack_animating = true
-	_attack_cooldown = 0.6 / stats.attack_speed
+	var psh_timing = AttackTimingsCls.piercing_shot()
+	_attack_cooldown = psh_timing.duration_sec / max(0.1, stats.attack_speed)
 	var dir = attack_dir
 	var base_pos = sprite.position
 	var dmg_mult := 1.2
@@ -1856,10 +1858,16 @@ func _execute_piercing_shot(attack_dir: Vector2) -> void:
 		projectile.body_entered.connect(func(body: Node2D):
 			if body.is_in_group("enemies") and body.has_method("take_damage") and body not in hit_enemies:
 				hit_enemies.append(body)
-				var result = CombatManager.calculate_damage(stats.get_stats_dict(), body.get_stats_dict(), dmg_mult)
-				body.take_damage(result["damage"], result["is_crit"])
-				body.apply_knockback(dir, 30.0)
-				_spawn_impact_vfx(body.global_position, result["is_crit"])
+				var event = HitEventCls.new()
+				event.attacker = self
+				event.victim = body
+				event.direction = dir
+				event.attack_id = &"piercing_shot"
+				event.ability_multiplier = dmg_mult
+				var _result = CombatManager.resolve_hit(event, stats.get_stats_dict(), body.get_stats_dict(), true)
+				if is_instance_valid(body):
+					body.apply_knockback(dir, 30.0)
+					_spawn_impact_vfx(body.global_position, _result.was_crit)
 				_do_screen_shake(3.0)
 		)
 		AudioManager.play_sfx("power_strike")

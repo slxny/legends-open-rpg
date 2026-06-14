@@ -9,9 +9,18 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.83.18"
+const GAME_VERSION := "v0.83.19"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.83.19",
+		"title": "Combat overhaul — Phase 1A.5j piercing shot migrated",
+		"date": "2026-06-14",
+		"entries": [
+			"Piercing shot (ranged double-tap) now routes per-pass-through-victim damage through CombatManager.resolve_hit. Cooldown derives from AttackTimings.piercing_shot().duration_sec.",
+			"Projectile pass-through behavior, knockback 30, single-fire-per-enemy guard, shake 3, audio + label identical to legacy.",
+		]
+	},
 	{
 		"version": "v0.83.18",
 		"title": "Combat overhaul — Phase 1A.5i dash strike migrated (all melee specials done)",

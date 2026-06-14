@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.83.4"
+const GAME_VERSION := "v0.83.5"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.83.5",
+		"title": "Combat overhaul — Phase 1A.0 audit & plan",
+		"date": "2026-06-14",
+		"entries": [
+			"Docs only — no gameplay changes",
+			"Added COMBAT_IMPROVEMENT_PLAN.md: phased plan (1A foundations, 1B feedback, 1C extraction) for Diablo-IV-grade game feel while preserving the 5-swing directional combat system",
+			"Added docs/combat/PHASE_1A_0_BEHAVIORAL_CHECKLIST.md: full attack inventory, state-flag inventory, manual + headless regression checklist re-run after every Phase 1 stage",
+		]
+	},
 	{
 		"version": "v0.83.4",
 		"title": "Combat & movement feel polish",

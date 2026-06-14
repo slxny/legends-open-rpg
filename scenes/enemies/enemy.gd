@@ -136,6 +136,13 @@ func _ready() -> void:
 	# of _knockback_velocity.
 	if CombatManager.has_signal("hit_resolved"):
 		CombatManager.hit_resolved.connect(_on_hit_resolved_for_reaction)
+	# Phase 1B.6e: stagger wiring. The component decides WHEN to stagger
+	# (tier resistance, stagger_only_heavy, repeated-hit dampening); we
+	# decide WHAT it does to AI here.
+	if _hit_reaction.has_signal("stagger_requested"):
+		_hit_reaction.stagger_requested.connect(_on_stagger_requested)
+	if _hit_reaction.has_signal("stagger_ended"):
+		_hit_reaction.stagger_ended.connect(_on_stagger_ended)
 	# Detect mobile for font scaling
 	var vp_size = get_viewport().get_visible_rect().size
 	var is_mobile = GameManager.is_mobile_device()
@@ -2904,6 +2911,34 @@ func _pick_reaction_tier() -> int:
 			return 0  # LIGHT
 
 
+# Phase 1B.6e — stagger handlers.
+# HitReactionComponent fires stagger_requested when the hit is strong
+# enough (tier-dependent, with profile.stagger_only_heavy gating).
+# Owner code decides what stagger means to the AI. We:
+#   - cancel any in-flight attack
+#   - extend the hit-stop freeze for the full stagger duration so
+#     _physics_process keeps skipping
+func _on_stagger_requested(duration_ms: int) -> void:
+	if _is_dead:
+		return
+	# Interrupt the attack so the enemy can't immediately re-strike on
+	# resume (plan corr. 10: don't blindly restore prior state).
+	if current_state == State.ATTACK:
+		_attack_timer = attack_cooldown * 0.5
+	if HitStopController != null and duration_ms > 0:
+		HitStopController.freeze_target(self, duration_ms, 1)  # VICTIM
+
+
+# Plan corr. 10: after stagger, re-evaluate state from CURRENT conditions
+# rather than blindly resuming ATTACK.
+func _on_stagger_ended() -> void:
+	if _is_dead:
+		return
+	if current_state == State.ATTACK:
+		current_state = State.CHASE
+		_attack_timer = max(_attack_timer, attack_cooldown * 0.4)
+
+
 # Fires for every confirmed hit anywhere in the world. Cheap filter so
 # unrelated hits don't trigger this enemy's flinch.
 func _on_hit_resolved_for_reaction(result: Resource) -> void:
@@ -2921,4 +2956,14 @@ func _on_hit_resolved_for_reaction(result: Resource) -> void:
 	# disconnected this stage anyway). Visual flinch + flash still runs.
 	# Note (1B.6d): victim freeze is now dispatched by CombatManager from
 	# result.final_feedback.victim_freeze_ms — no per-enemy freeze call here.
-	_hit_reaction.react(dir, 0.0, bool(result.was_crit), false)
+	# Phase 1B.6e: derive was_heavy from the chosen profile so stagger can
+	# fire for HEAVY/FINISHER/CRIT/ELITE/BOSS-weight hits. Light/medium
+	# attacks don't pass was_heavy=true, so heavy-only tiers (HEAVY, ELITE,
+	# BOSS) won't stagger on a basic A/B swing.
+	var was_heavy: bool = false
+	var feedback = result.final_feedback
+	if feedback != null:
+		var w: int = int(feedback.get("weight"))
+		# Weight enum: HEAVY=2, FINISHER=3, CRIT=4, ELITE_KILL=5, BOSS_EVENT=6
+		was_heavy = w >= 2
+	_hit_reaction.react(dir, 0.0, bool(result.was_crit), was_heavy)

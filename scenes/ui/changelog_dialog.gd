@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.83.32"
+const GAME_VERSION := "v0.83.33"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.83.33",
+		"title": "Combat overhaul — Phase 1B.6e enemy stagger interrupts attacks",
+		"date": "2026-06-14",
+		"entries": [
+			"VISIBLE CHANGE: heavy hits now INTERRUPT enemy attacks. A C-finisher, D thrust, E spin, or any special / charged / crit landing on a mid-attack light or medium enemy cancels their swing — they stagger briefly, then re-evaluate state instead of resuming the attack.",
+			"enemy.gd: connected HitReactionComponent.stagger_requested + stagger_ended. On stagger, current attack timer is reset and freeze is extended to the stagger duration so AI ticks are skipped for the full window. On stagger_ended, ATTACK state transitions to CHASE with a fresh cooldown — plan corr. 10 (never blindly restore prior state).",
+			"_on_hit_resolved_for_reaction now derives was_heavy from the CombatFeedbackProfile weight (HEAVY/FINISHER/CRIT/ELITE/BOSS). Light/medium attacks don't trip heavy-only tier gates (HEAVY/ELITE/BOSS enemies require heavy attacks to stagger; LIGHT/MEDIUM enemies stagger on any hit).",
+			"Boss tier still immune to stagger (stagger_resistance = 1.0 in preset).",
+		]
+	},
 	{
 		"version": "v0.83.32",
 		"title": "Combat overhaul — Phase 1B.6d profile-driven feedback (C-finisher distinct)",

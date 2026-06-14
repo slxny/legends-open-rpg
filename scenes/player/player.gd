@@ -1551,8 +1551,11 @@ func _execute_whirlwind(attack_dir: Vector2) -> void:
 func _execute_charged_slash(attack_dir: Vector2) -> void:
 	# Hold attack 1.5s: Dash the full slash range with running animation,
 	# cleaving all enemies in the path. 1.6x damage.
+	# Phase 1A.5h: damage routes through resolve_hit; cooldown derived from
+	# AttackTimings.charged_slash().duration_sec.
 	_is_attack_animating = true
-	_attack_cooldown = 0.8 / stats.attack_speed
+	var cs_timing = AttackTimingsCls.charged_slash()
+	_attack_cooldown = cs_timing.duration_sec / max(0.1, stats.attack_speed)
 	var dir = attack_dir
 	var perp = Vector2(-dir.y, dir.x)
 	var base_pos = sprite.position
@@ -1683,10 +1686,16 @@ func _execute_charged_slash(attack_dir: Vector2) -> void:
 		for enemy in slash_targets:
 			if not is_instance_valid(enemy) or enemy.get("_is_dead"):
 				continue
-			var result = CombatManager.calculate_damage(stats.get_stats_dict(), enemy.get_stats_dict(), dmg_mult)
-			enemy.take_damage(result["damage"], result["is_crit"])
-			enemy.apply_knockback(dir, 140.0)
-			_spawn_impact_vfx(enemy.global_position, result["is_crit"])
+			var event = HitEventCls.new()
+			event.attacker = self
+			event.victim = enemy
+			event.direction = dir
+			event.attack_id = &"charged_slash"
+			event.ability_multiplier = dmg_mult
+			var _result = CombatManager.resolve_hit(event, stats.get_stats_dict(), enemy.get_stats_dict(), true)
+			if is_instance_valid(enemy):
+				enemy.apply_knockback(dir, 140.0)
+				_spawn_impact_vfx(enemy.global_position, _result.was_crit)
 			hit_count += 1
 		if hit_count > 0:
 			_do_screen_shake(10.0)

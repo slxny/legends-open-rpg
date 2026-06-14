@@ -9,9 +9,18 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.83.16"
+const GAME_VERSION := "v0.83.17"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.83.17",
+		"title": "Combat overhaul — Phase 1A.5h charged slash migrated",
+		"date": "2026-06-14",
+		"entries": [
+			"Charged slash (hold-1.5s special) now routes per-corridor-target damage through CombatManager.resolve_hit. Cooldown derives from AttackTimings.charged_slash().duration_sec.",
+			"Dash animation, afterimage ghosts, trail VFX along the slash corridor, big final slash, 140 knockback per enemy, shake 5/10, hit-freeze on hit, audio + label all preserved verbatim.",
+		]
+	},
 	{
 		"version": "v0.83.16",
 		"title": "Combat overhaul — Phase 1A.5g whirlwind migrated",

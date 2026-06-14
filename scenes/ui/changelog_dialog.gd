@@ -9,9 +9,21 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.83.8"
+const GAME_VERSION := "v0.83.9"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.83.9",
+		"title": "Combat overhaul — Phase 1A.4 AttackClock + AttackTimingData",
+		"date": "2026-06-14",
+		"entries": [
+			"Internal foundation — no gameplay changes (player.gd not yet migrated)",
+			"Added scripts/combat/attack_clock.gd: normalized progress (0.0→1.0) driven by a single Tween. Gameplay windows are evaluated against progress, never against the visual Tween's elapsed time (per plan corr. 7). Generation tokens guard against stale callbacks; cancel() emits signal and freezes progress.",
+			"Added scripts/data/attack_timing_data.gd: per-attack window Resource (contact_event, active_window, combo_window, dodge_cancel_start, movement_cancel_start, special_branch_window, recovery_end, max_hits_per_target, wide_attack, unstoppable, rhythm_class).",
+			"Added scripts/data/attack_timings.gd: 16 per-attack timings calibrated to the Phase 1A.0 audit. swing_c is FINISHER_C (plan corr. 1 — A→B→C core, D/E optional extensions). Includes branch_slam/uppercut/spin and all melee+ranged specials.",
+			"Smoke now 51 checks (13 added covering all 16 timings have sane windows, swing_c rhythm class, wide/unstoppable flags, AttackClock progresses to 1.0, fires finished, cancel freezes progress, is_in_window).",
+		]
+	},
 	{
 		"version": "v0.83.8",
 		"title": "Combat overhaul — Phase 1A.3 AttackIntentResolver",

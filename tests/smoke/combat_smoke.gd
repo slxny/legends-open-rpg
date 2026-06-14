@@ -20,6 +20,9 @@ const HitResultCls := preload("res://scripts/combat/hit_result.gd")
 const InputBufferCls := preload("res://scripts/combat/input_buffer.gd")
 const AttackIntentCls := preload("res://scripts/combat/attack_intent.gd")
 const AttackIntentResolverCls := preload("res://scripts/combat/attack_intent_resolver.gd")
+const AttackClockCls := preload("res://scripts/combat/attack_clock.gd")
+const AttackTimingDataCls := preload("res://scripts/data/attack_timing_data.gd")
+const AttackTimingsCls := preload("res://scripts/data/attack_timings.gd")
 
 var _errors: Array[String] = []
 
@@ -66,6 +69,8 @@ func _ready() -> void:
 
 	_test_input_buffer()
 	_test_intent_resolver()
+	_test_attack_timings()
+	await _test_attack_clock()
 
 	if _errors.is_empty():
 		print("[combat_smoke] OK")
@@ -224,6 +229,84 @@ func _test_intent_resolver() -> void:
 	r.notify_charge_release(t + 800_000)  # 0.8s < 1.5s
 	intent = r.tick(t + WIN_USEC + 1_000_000, Vector2.RIGHT, false)
 	_check("Resolver sub-threshold release = BASIC_SWING (not CHARGED)", intent != null and intent.kind == Kind.BASIC_SWING)
+
+
+func _test_attack_timings() -> void:
+	# Every advertised attack has a timing entry, and windows are sane.
+	var ids = AttackTimingsCls.all_ids()
+	_check("AttackTimings exposes 16 attacks", ids.size() == 16)
+	var ok_all := true
+	for id in ids:
+		var t = AttackTimingsCls.by_id(id)
+		if t == null:
+			_check("AttackTimings.by_id(" + str(id) + ") not null", false)
+			ok_all = false
+			continue
+		var sane: bool = (
+			t.duration_sec > 0.0
+			and t.active_window_start >= 0.0 and t.active_window_end <= 1.0
+			and t.active_window_start < t.active_window_end
+			and t.contact_event >= t.active_window_start and t.contact_event <= t.active_window_end
+			and t.combo_window_start < t.combo_window_end
+			and t.recovery_end == 1.0
+			and t.dodge_cancel_start <= t.recovery_end
+			and t.movement_cancel_start <= t.recovery_end
+		)
+		if not sane:
+			_check("Timing windows sane for " + str(id), false)
+			ok_all = false
+	_check("All 16 attack timings have sane windows", ok_all)
+
+	# C is the finisher (per plan corr. 1).
+	var c = AttackTimingsCls.swing_c()
+	_check("swing_c is FINISHER_C", c.rhythm_class == AttackTimingDataCls.RhythmClass.FINISHER_C)
+	# Wide/multi-hit flags set on the right specials.
+	_check("spin is wide", AttackTimingsCls.swing_e().wide_attack)
+	_check("whirlwind is wide+unstoppable", AttackTimingsCls.whirlwind().wide_attack and AttackTimingsCls.whirlwind().unstoppable)
+	_check("dash_strike is unstoppable", AttackTimingsCls.dash_strike().unstoppable)
+	_check("piercing_shot single-target", not AttackTimingsCls.piercing_shot().wide_attack)
+
+
+func _test_attack_clock() -> void:
+	# Live clock test inside a SceneTree — we drive a Tween created on
+	# `self` and confirm progress + signals fire.
+	var clock = AttackClockCls.new()
+	var saw_finish := [false]
+	clock.finished.connect(func(): saw_finish[0] = true)
+
+	var tween := create_tween()
+	clock.start(tween, 0.10, 1.0, &"swing_a")
+	_check("AttackClock active after start", clock.active)
+	_check("AttackClock starts at progress 0", clock.progress < 0.01)
+
+	# Headless frame rate is slower than wall time — wait generously.
+	await get_tree().create_timer(0.40).timeout
+	_check("AttackClock reaches 1.0 after duration", clock.progress >= 0.999)
+	_check("AttackClock fires finished()", saw_finish[0])
+	_check("AttackClock inactive after finish", not clock.active)
+
+	# Cancel mid-flight invalidates pending writes.
+	clock = AttackClockCls.new()
+	var saw_cancel := [false]
+	clock.cancelled.connect(func(): saw_cancel[0] = true)
+	var tween2 := create_tween()
+	clock.start(tween2, 0.50, 1.0, &"swing_b")
+	await get_tree().create_timer(0.10).timeout
+	clock.cancel()
+	_check("AttackClock cancelled emits signal", saw_cancel[0])
+	_check("AttackClock inactive after cancel", not clock.active)
+	var p_after: float = clock.progress
+	await get_tree().create_timer(0.20).timeout
+	_check("AttackClock progress frozen after cancel", abs(clock.progress - p_after) < 0.001)
+
+	# is_in_window basic.
+	clock = AttackClockCls.new()
+	var tween3 := create_tween()
+	clock.start(tween3, 0.50, 1.0, &"swing_c")
+	_check("is_in_window false before window", not clock.is_in_window(0.5, 0.6))
+	await get_tree().create_timer(0.40).timeout  # well into the tween
+	_check("is_in_window true in window", clock.is_in_window(0.3, 0.95))
+	clock.cancel()
 
 
 func _check(label: String, ok: bool) -> void:

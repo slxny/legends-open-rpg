@@ -9,6 +9,9 @@ const SAVE_PATH := "user://savegame.json"
 
 signal game_saved
 signal game_loaded
+## Emitted at the very top of load_game() before any state mutation —
+## subscribers (TimeManager etc.) can reset transient state cleanly.
+signal save_about_to_load
 
 var _load_cooldown_ms: int = 0  # Prevents duplicate loads from touch/mouse event duplication in web browsers
 
@@ -123,6 +126,11 @@ func load_game() -> bool:
 	var data: Dictionary = json.data
 	if data.is_empty():
 		return false
+
+	# Phase 1B.0: notify subscribers (TimeManager etc.) before any state
+	# mutation so transient state — time-scale, hit-stop, camera shake —
+	# is reset cleanly.
+	save_about_to_load.emit()
 
 	# Restore death counters first (foundation for all other systems)
 	if data.has("death_counters"):

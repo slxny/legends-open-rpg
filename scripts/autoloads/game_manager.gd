@@ -7,6 +7,7 @@ signal hero_selected(hero_class: String)
 signal game_started
 signal item_picked_up(item_name: String)
 signal game_message(text: String, color: Color)
+signal returning_to_menu  # Emitted by menu-transition sites; TimeManager listens to force-reset Engine.time_scale.
 
 enum HeroClass { BLADE_KNIGHT, SHADOW_RANGER }
 

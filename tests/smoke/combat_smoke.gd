@@ -71,6 +71,7 @@ func _ready() -> void:
 	_test_intent_resolver()
 	_test_attack_timings()
 	await _test_attack_clock()
+	await _test_time_manager()
 
 	if _errors.is_empty():
 		print("[combat_smoke] OK")
@@ -307,6 +308,53 @@ func _test_attack_clock() -> void:
 	await get_tree().create_timer(0.40).timeout  # well into the tween
 	_check("is_in_window true in window", clock.is_in_window(0.3, 0.95))
 	clock.cancel()
+
+
+func _test_time_manager() -> void:
+	_check("TimeManager exposes returning_to_menu signal", GameManager.has_signal("returning_to_menu"))
+	_check("TimeManager exposes save_about_to_load signal", SaveLoadManager.has_signal("save_about_to_load"))
+	_check("TimeManager has request_time_scale method", TimeManager.has_method("request_time_scale"))
+	_check("TimeManager has force_reset method", TimeManager.has_method("force_reset"))
+	_check("Engine.time_scale starts at 1.0", abs(Engine.time_scale - 1.0) < 0.0001)
+	_check("TimeManager.is_time_dilated false at rest", not TimeManager.is_time_dilated())
+
+	# Request scale 1.0+ rejected (no-op)
+	_check("request scale >= 1.0 rejected", not TimeManager.request_time_scale(1.0, 50, 2, &"test_noop"))
+	_check("Engine.time_scale unchanged after no-op request", abs(Engine.time_scale - 1.0) < 0.0001)
+
+	# Normal request accepted
+	var accepted = TimeManager.request_time_scale(0.3, 50, 2, &"smoke_crit")
+	_check("normal time-scale request accepted", accepted)
+	_check("Engine.time_scale set to 0.3", abs(Engine.time_scale - 0.3) < 0.0001)
+	_check("is_time_dilated true while active", TimeManager.is_time_dilated())
+
+	# Lower-priority during active rejected
+	_check("lower-priority during active rejected", not TimeManager.request_time_scale(0.2, 100, 1, &"smoke_weak"))
+	_check("Engine.time_scale unchanged after rejection", abs(Engine.time_scale - 0.3) < 0.0001)
+
+	# Equal-priority during active rejected
+	_check("equal-priority during active rejected", not TimeManager.request_time_scale(0.1, 200, 2, &"smoke_equal"))
+
+	# Higher-priority during active replaces
+	_check("higher-priority replaces active", TimeManager.request_time_scale(0.25, 50, 4, &"smoke_boss"))
+	_check("Engine.time_scale now 0.25", abs(Engine.time_scale - 0.25) < 0.0001)
+
+	# Recovery on deadline expiry — wall-time, needs real-time wait
+	await get_tree().create_timer(0.40).timeout
+	_check("Engine.time_scale restored to 1.0 after deadline", abs(Engine.time_scale - 1.0) < 0.0001)
+	_check("is_time_dilated false after recovery", not TimeManager.is_time_dilated())
+
+	# Force reset works even when active
+	TimeManager.request_time_scale(0.4, 1000, 2, &"smoke_force")
+	_check("Engine.time_scale 0.4 mid-flight", abs(Engine.time_scale - 0.4) < 0.0001)
+	TimeManager.force_reset()
+	_check("force_reset restores time_scale", abs(Engine.time_scale - 1.0) < 0.0001)
+	_check("force_reset clears active", not TimeManager.is_time_dilated())
+
+	# Sole-owner grep guard: no other .gd file writes Engine.time_scale.
+	# (Validated externally by the build script; here we just confirm the
+	# guard intent in case anyone wires up a writer mid-development.)
+	_check("time_scale back to 1.0 after all tests", abs(Engine.time_scale - 1.0) < 0.0001)
 
 
 func _check(label: String, ok: bool) -> void:

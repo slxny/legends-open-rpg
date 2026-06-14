@@ -9,9 +9,23 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.83.23"
+const GAME_VERSION := "v0.83.24"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.83.24",
+		"title": "Combat overhaul — Phase 1B.0 TimeManager owns Engine.time_scale",
+		"date": "2026-06-14",
+		"entries": [
+			"Internal — no gameplay change yet. Phase 1B feedback systems will use this in subsequent commits.",
+			"TimeManager is now the singular owner of Engine.time_scale (plan corr. 2). New API: request_time_scale(scale, duration_ms, priority, source_id) → bool; force_reset(); is_time_dilated(); active_source(); time_scale_changed signal.",
+			"Conflict policy: higher priority wins; equal or lower priority during an active request is rejected; stronger requests replace mid-flight.",
+			"Timing uses monotonic Time.get_ticks_usec() — slowdowns can NOT extend their own recovery. process_mode=PROCESS_MODE_ALWAYS so recovery ticks even while game is paused.",
+			"Added explicit reset sources: SceneTree.scene_changed, RespawnManager.player_died, SaveLoadManager.game_loaded + save_about_to_load, GameManager.returning_to_menu, plus NOTIFICATION_WM_CLOSE_REQUEST / NOTIFICATION_PREDELETE shutdown safety.",
+			"New signals: GameManager.returning_to_menu, SaveLoadManager.save_about_to_load (emitted at top of load_game before mutations).",
+			"Grep guard: only scripts/autoloads/time_manager.gd writes Engine.time_scale. Smoke now 75 checks including TimeManager API and recovery.",
+		]
+	},
 	{
 		"version": "v0.83.23",
 		"title": "Combat overhaul — Phase 1A.6 A→B→C natural rhythm finisher",

@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.83.12"
+const GAME_VERSION := "v0.83.13"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.83.13",
+		"title": "Combat overhaul — Phase 1A.5d swing D migrated",
+		"date": "2026-06-14",
+		"entries": [
+			"Swing D (upward thrust extension) now drives damage from AttackClock + AttackTimings.swing_d() (EXTENSION_D rhythm class).",
+			"_start_upward_thrust_clock wrapper preserves bespoke knockback 30, VFX rotated -0.4, shake 1.5/5.0 — identical to legacy callback.",
+			"E and all specials still on legacy path.",
+		]
+	},
 	{
 		"version": "v0.83.12",
 		"title": "Combat overhaul — Phase 1A.5c swing C (finisher) migrated",

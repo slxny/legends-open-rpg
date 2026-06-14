@@ -2650,8 +2650,9 @@ func _do_melee_attack(target: Node2D, result: Dictionary, attack_dir: Vector2 = 
 		2:  # C: overhead chop — MIGRATED (Phase 1A.5c). FINISHER_C rhythm class.
 			_anim_overhead_chop(tween, frames, base_pos, dir, target, result, true)
 			_start_overhead_chop_clock(AttackTimingsCls.swing_c(), target, dir)
-		3:  # D: upward thrust
-			_anim_upward_thrust(tween, frames, base_pos, dir, target, result)
+		3:  # D: upward thrust — MIGRATED (Phase 1A.5d). EXTENSION_D.
+			_anim_upward_thrust(tween, frames, base_pos, dir, target, result, true)
+			_start_upward_thrust_clock(AttackTimingsCls.swing_d(), target, dir)
 		4:  # E: spin slash
 			_anim_spin_slash(tween, frames, base_pos, dir, target, result)
 
@@ -2769,6 +2770,22 @@ func _start_overhead_chop_clock(timing: Resource, target: Node2D, dir: Vector2, 
 	)
 
 
+# Swing D — optional thrust extension. Audit: knockback 30, VFX rotated -0.4, shake 1.5/5.0.
+func _start_upward_thrust_clock(timing: Resource, target: Node2D, dir: Vector2, ability_mult: float = 1.0) -> void:
+	_run_clocked_attack(timing, target, dir, ability_mult, func(t: Node2D, d: Vector2, crit: bool) -> void:
+		if is_instance_valid(t):
+			t.apply_knockback(d, 30.0)
+		_spawn_slash_vfx(d.rotated(-0.4), 30.0, 1.0)
+		if is_instance_valid(t):
+			_spawn_impact_vfx(t.global_position, crit)
+		if crit:
+			_do_screen_shake(5.0)
+			_do_hit_freeze(true)
+		else:
+			_do_screen_shake(1.5)
+	)
+
+
 func _anim_overhead_chop(tween: Tween, frames: Array, base_pos: Vector2,
 		dir: Vector2, target: Node2D, result: Dictionary, clock_driven: bool = false) -> void:
 	if frames.size() >= 3:
@@ -2804,7 +2821,7 @@ func _anim_overhead_chop(tween: Tween, frames: Array, base_pos: Vector2,
 	_anim_return_to_idle(tween, base_pos)
 
 func _anim_upward_thrust(tween: Tween, frames: Array, base_pos: Vector2,
-		dir: Vector2, target: Node2D, result: Dictionary) -> void:
+		dir: Vector2, target: Node2D, result: Dictionary, clock_driven: bool = false) -> void:
 	if frames.size() >= 3:
 		tween.tween_callback(func(): sprite.texture = frames[0])
 	# Crouch down
@@ -2819,18 +2836,19 @@ func _anim_upward_thrust(tween: Tween, frames: Array, base_pos: Vector2,
 		tween.tween_callback(func(): sprite.texture = frames[2])
 	# Full extension
 	tween.tween_property(sprite, "position", base_pos + dir * 12.0 + Vector2(0, -8), 0.03)
-	tween.tween_callback(func():
-		if is_instance_valid(target):
-			target.take_damage(result["damage"], result["is_crit"])
-			target.apply_knockback(dir, 30.0)
-			_spawn_slash_vfx(dir.rotated(-0.4), 30.0, 1.0)
-			_spawn_impact_vfx(target.global_position, result["is_crit"])
-			if result["is_crit"]:
-				_do_screen_shake(5.0)
-				_do_hit_freeze(true)
-			else:
-				_do_screen_shake(1.5)
-	)
+	if not clock_driven:
+		tween.tween_callback(func():
+			if is_instance_valid(target):
+				target.take_damage(result["damage"], result["is_crit"])
+				target.apply_knockback(dir, 30.0)
+				_spawn_slash_vfx(dir.rotated(-0.4), 30.0, 1.0)
+				_spawn_impact_vfx(target.global_position, result["is_crit"])
+				if result["is_crit"]:
+					_do_screen_shake(5.0)
+					_do_hit_freeze(true)
+				else:
+					_do_screen_shake(1.5)
+		)
 	tween.tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.06)
 	tween.tween_interval(0.04)
 	_anim_return_to_idle(tween, base_pos)

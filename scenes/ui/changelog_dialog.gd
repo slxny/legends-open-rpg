@@ -9,9 +9,18 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.83.19"
+const GAME_VERSION := "v0.83.20"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.83.20",
+		"title": "Combat overhaul — Phase 1A.5k arrow rain migrated",
+		"date": "2026-06-14",
+		"entries": [
+			"Arrow rain (ranged triple-tap AoE) routes per-target damage through CombatManager.resolve_hit. Cooldown derives from AttackTimings.arrow_rain().duration_sec.",
+			"12-arrow visual rain, radial knockback 35, shake 3/6, hit-freeze, audio + label identical to legacy.",
+		]
+	},
 	{
 		"version": "v0.83.19",
 		"title": "Combat overhaul — Phase 1A.5j piercing shot migrated",

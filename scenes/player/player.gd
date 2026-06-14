@@ -1879,8 +1879,10 @@ func _execute_piercing_shot(attack_dir: Vector2) -> void:
 
 func _execute_arrow_rain(attack_dir: Vector2) -> void:
 	# Triple-tap: Rain of arrows centered on the hero. 1.0x damage, AoE.
+	# Phase 1A.5k.
 	_is_attack_animating = true
-	_attack_cooldown = 0.9 / stats.attack_speed
+	var ar_timing = AttackTimingsCls.arrow_rain()
+	_attack_cooldown = ar_timing.duration_sec / max(0.1, stats.attack_speed)
 	var dir = attack_dir
 	var base_pos = sprite.position
 	var dmg_mult := 1.0
@@ -1942,10 +1944,16 @@ func _execute_arrow_rain(attack_dir: Vector2) -> void:
 			var did_hit := false
 			for hit_target in rain_targets:
 				if is_instance_valid(hit_target) and not hit_target.get("_is_dead"):
-					var result = CombatManager.calculate_damage(stats.get_stats_dict(), hit_target.get_stats_dict(), dmg_mult)
-					hit_target.take_damage(result["damage"], result["is_crit"])
-					var kb_dir = (hit_target.global_position - rain_center).normalized()
-					hit_target.apply_knockback(kb_dir, 35.0)
+					var event = HitEventCls.new()
+					event.attacker = self
+					event.victim = hit_target
+					event.direction = (hit_target.global_position - rain_center).normalized()
+					event.attack_id = &"arrow_rain"
+					event.ability_multiplier = dmg_mult
+					CombatManager.resolve_hit(event, stats.get_stats_dict(), hit_target.get_stats_dict(), true)
+					if is_instance_valid(hit_target):
+						var kb_dir = (hit_target.global_position - rain_center).normalized()
+						hit_target.apply_knockback(kb_dir, 35.0)
 					did_hit = true
 			if did_hit:
 				_do_screen_shake(6.0)

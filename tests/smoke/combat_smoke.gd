@@ -17,6 +17,7 @@ extends Node
 
 const HitEventCls := preload("res://scripts/combat/hit_event.gd")
 const HitResultCls := preload("res://scripts/combat/hit_result.gd")
+const InputBufferCls := preload("res://scripts/combat/input_buffer.gd")
 
 var _errors: Array[String] = []
 
@@ -61,6 +62,8 @@ func _ready() -> void:
 
 	_check("Engine.time_scale still 1.0 after resolves", abs(Engine.time_scale - 1.0) < 0.0001)
 
+	_test_input_buffer()
+
 	if _errors.is_empty():
 		print("[combat_smoke] OK")
 		get_tree().quit(0)
@@ -68,6 +71,48 @@ func _ready() -> void:
 		for e in _errors:
 			printerr("[combat_smoke] FAIL: ", e)
 		get_tree().quit(1)
+
+
+func _test_input_buffer() -> void:
+	var buf = InputBufferCls.new()
+	var now: int = 1_000_000_000  # arbitrary base in usec
+	var rec_attack = buf.push(&"attack", now)
+	_check("InputBuffer push records exist", buf.size() == 1)
+	_check("InputBuffer peek returns the record", buf.peek(&"attack", now) == rec_attack)
+	_check("InputBuffer take consumes the record", buf.take(&"attack", now) == rec_attack)
+	_check("InputBuffer peek after consume returns null", buf.peek(&"attack", now) == null)
+	_check("InputBuffer second consume returns false", not buf.consume(rec_attack, now))
+
+	# TTL expiry — default attack TTL is 140 ms
+	var rec_expire = buf.push(&"attack", now)
+	var later: int = now + 200_000  # +200 ms in usec
+	_check("InputBuffer record expires past TTL", rec_expire.is_expired(later))
+	_check("InputBuffer peek skips expired record", buf.peek(&"attack", later) == null)
+
+	# Generation increments
+	var g1 = buf.push(&"dodge", now)
+	var g2 = buf.push(&"dodge", now)
+	_check("InputBuffer generation increments on re-press", g2.generation == g1.generation + 1)
+
+	# Hold-indefinite (charge_press) does not expire
+	var hold = buf.push(&"charge_press", now)
+	var much_later: int = now + 10_000_000  # +10s
+	_check("InputBuffer charge_press does not expire", not hold.is_expired(much_later))
+	buf.release(&"charge_press")
+	_check("InputBuffer release marks charge_press consumed", buf.peek(&"charge_press", much_later) == null)
+
+	# Action-specific TTL respected
+	var dir = buf.push(&"direction_intent", now)
+	var dir_age = now + 170_000  # 170 ms < 180 ms default
+	_check("InputBuffer direction_intent alive at 170ms", not dir.is_expired(dir_age))
+	var dir_late = now + 190_000
+	_check("InputBuffer direction_intent expired at 190ms", dir.is_expired(dir_late))
+
+	# Clear drops everything
+	buf.push(&"attack", now)
+	buf.push(&"dodge", now)
+	buf.clear()
+	_check("InputBuffer clear empties records", buf.size() == 0)
 
 
 func _check(label: String, ok: bool) -> void:

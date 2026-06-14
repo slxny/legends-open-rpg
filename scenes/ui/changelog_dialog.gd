@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.83.6"
+const GAME_VERSION := "v0.83.7"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.83.7",
+		"title": "Combat overhaul — Phase 1A.2 InputBuffer",
+		"date": "2026-06-14",
+		"entries": [
+			"Internal foundation — no gameplay changes (player.gd not yet migrated)",
+			"Added scripts/combat/input_buffer.gd: raw combat-input event buffer with monotonic timestamps, per-action TTL (attack 140ms, dodge 120ms, direction_intent 180ms, special_tap 180ms, charge_press hold-indefinite), single-consume tokens, per-action generation counter, debug toggle",
+			"Buffer stores raw presses only — no tap-count interpretation, no special selection, no priority (those live in AttackIntentResolver in Phase 1A.3)",
+			"Smoke test now 25 checks (13 added for InputBuffer push/peek/consume/expiry/generation/release/clear)",
+		]
+	},
 	{
 		"version": "v0.83.6",
 		"title": "Combat overhaul — Phase 1A.1 typed HitEvent / HitResult",

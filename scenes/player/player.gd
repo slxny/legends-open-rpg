@@ -2660,6 +2660,8 @@ func _anim_swing_horizontal(tween: Tween, frames: Array, base_pos: Vector2,
 			if result["is_crit"]:
 				_do_screen_shake(4.0)
 				_do_hit_freeze(true)
+			else:
+				_do_screen_shake(1.5)
 	)
 	# Return to idle
 	tween.tween_interval(0.05)
@@ -2691,6 +2693,8 @@ func _anim_overhead_chop(tween: Tween, frames: Array, base_pos: Vector2,
 			if result["is_crit"]:
 				_do_screen_shake(5.0)
 				_do_hit_freeze(true)
+			else:
+				_do_screen_shake(2.0)
 	)
 	tween.tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.06)
 	tween.tween_interval(0.04)
@@ -2721,6 +2725,8 @@ func _anim_upward_thrust(tween: Tween, frames: Array, base_pos: Vector2,
 			if result["is_crit"]:
 				_do_screen_shake(5.0)
 				_do_hit_freeze(true)
+			else:
+				_do_screen_shake(1.5)
 	)
 	tween.tween_property(sprite, "scale", Vector2(1.0, 1.0), 0.06)
 	tween.tween_interval(0.04)

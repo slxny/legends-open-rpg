@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.83.33"
+const GAME_VERSION := "v0.83.34"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.83.34",
+		"title": "Combat overhaul — Phase 1B.6f directional camera shake",
+		"date": "2026-06-14",
+		"entries": [
+			"VISIBLE CHANGE: camera shake now PUNCHES toward where the hit lands instead of bouncing radially. Combined with the trauma model this makes every hit feel like a real impact landing on the enemy rather than a screen-wide jitter.",
+			"player.gd: _last_hit_direction is captured at the moment of contact for every basic swing (via _run_clocked_attack) and at the start of every special / charged / dash strike / ranged special. CameraShake2D blends this direction into the trauma vector so the shake leans toward the enemy.",
+			"Radial fallback preserved: if no direction is set (e.g. enemy attacks on the player) the shake stays radial.",
+		]
+	},
 	{
 		"version": "v0.83.33",
 		"title": "Combat overhaul — Phase 1B.6e enemy stagger interrupts attacks",

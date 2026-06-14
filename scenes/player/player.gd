@@ -1386,6 +1386,7 @@ func _execute_power_strike(attack_dir: Vector2) -> void:
 	# callback remains the trigger — its chain is too bespoke to
 	# restructure without risk.
 	_is_attack_animating = true
+	_last_hit_direction = attack_dir  # Phase 1B.6f directional shake
 	var ps_timing = AttackTimingsCls.power_strike()
 	_attack_cooldown = ps_timing.duration_sec / max(0.1, stats.attack_speed)
 	var dir = attack_dir
@@ -1499,6 +1500,7 @@ func _execute_whirlwind(attack_dir: Vector2) -> void:
 	# Phase 1A.5g: damage routes through resolve_hit; cooldown derived from
 	# AttackTimings.whirlwind().duration_sec.
 	_is_attack_animating = true
+	_last_hit_direction = attack_dir  # Phase 1B.6f directional shake
 	var ww_timing = AttackTimingsCls.whirlwind()
 	_attack_cooldown = ww_timing.duration_sec / max(0.1, stats.attack_speed)
 	var dir = attack_dir
@@ -1568,6 +1570,7 @@ func _execute_charged_slash(attack_dir: Vector2) -> void:
 	# Phase 1A.5h: damage routes through resolve_hit; cooldown derived from
 	# AttackTimings.charged_slash().duration_sec.
 	_is_attack_animating = true
+	_last_hit_direction = attack_dir  # Phase 1B.6f directional shake
 	var cs_timing = AttackTimingsCls.charged_slash()
 	_attack_cooldown = cs_timing.duration_sec / max(0.1, stats.attack_speed)
 	var dir = attack_dir
@@ -1728,6 +1731,7 @@ func _execute_dash_strike(attack_dir: Vector2) -> void:
 	# Phase 1A.5i: damage routes through resolve_hit; cooldown derived from
 	# AttackTimings.dash_strike().duration_sec.
 	_is_attack_animating = true
+	_last_hit_direction = attack_dir  # Phase 1B.6f directional shake
 	var ds_timing = AttackTimingsCls.dash_strike()
 	_attack_cooldown = ds_timing.duration_sec / max(0.1, stats.attack_speed)
 	var dir = attack_dir
@@ -1814,6 +1818,7 @@ func _execute_piercing_shot(attack_dir: Vector2) -> void:
 	# Double-tap: Piercing arrow that passes through all enemies in a line. 1.2x damage.
 	# Phase 1A.5j.
 	_is_attack_animating = true
+	_last_hit_direction = attack_dir  # Phase 1B.6f directional shake
 	var psh_timing = AttackTimingsCls.piercing_shot()
 	_attack_cooldown = psh_timing.duration_sec / max(0.1, stats.attack_speed)
 	var dir = attack_dir
@@ -1895,6 +1900,7 @@ func _execute_arrow_rain(attack_dir: Vector2) -> void:
 	# Triple-tap: Rain of arrows centered on the hero. 1.0x damage, AoE.
 	# Phase 1A.5k.
 	_is_attack_animating = true
+	_last_hit_direction = attack_dir  # Phase 1B.6f directional shake
 	var ar_timing = AttackTimingsCls.arrow_rain()
 	_attack_cooldown = ar_timing.duration_sec / max(0.1, stats.attack_speed)
 	var dir = attack_dir
@@ -1985,6 +1991,7 @@ func _execute_sniper_shot(attack_dir: Vector2) -> void:
 	# Hold 1.5s: Long-range precision shot. 1.3x damage, huge range, knockback.
 	# Phase 1A.5l.
 	_is_attack_animating = true
+	_last_hit_direction = attack_dir  # Phase 1B.6f directional shake
 	var ss_timing = AttackTimingsCls.sniper_shot()
 	_attack_cooldown = ss_timing.duration_sec / max(0.1, stats.attack_speed)
 	var dir = attack_dir
@@ -2099,6 +2106,7 @@ func _execute_shadow_step(attack_dir: Vector2) -> void:
 	# Diagonal + attack: Quick dodge-roll backward, then fire 3 arrows in a spread. 1.1x damage.
 	# Phase 1A.5m.
 	_is_attack_animating = true
+	_last_hit_direction = attack_dir  # Phase 1B.6f directional shake
 	var sst_timing = AttackTimingsCls.shadow_step()
 	_attack_cooldown = sst_timing.duration_sec / max(0.1, stats.attack_speed)
 	var dir = attack_dir
@@ -2832,6 +2840,10 @@ func _run_clocked_attack(timing: Resource, target: Node2D, dir: Vector2, ability
 		var atk_stats: Dictionary = stats.get_stats_dict()
 		var def_stats: Dictionary = captured_target.get_stats_dict()
 		var result = CombatManager.resolve_hit(event, atk_stats, def_stats, true)
+		# Phase 1B.6f: capture hit direction so CameraShake2D nudges its
+		# trauma vector toward the enemy — shake feels "pushed" rather than
+		# radially symmetric.
+		_last_hit_direction = captured_dir
 		captured_on_contact.call(captured_target, captured_dir, result.was_crit)
 	)
 	clock.start(clock_tween, timing.duration_sec, max(0.1, stats.attack_speed), timing.attack_id)

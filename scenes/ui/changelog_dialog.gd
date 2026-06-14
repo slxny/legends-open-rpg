@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.83.22"
+const GAME_VERSION := "v0.83.23"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.83.23",
+		"title": "Combat overhaul — Phase 1A.6 A→B→C natural rhythm finisher",
+		"date": "2026-06-14",
+		"entries": [
+			"REAL GAMEPLAY CHANGE: A → B → C is now the natural horizontal combo rhythm. Two horizontal swings in a row, then the third press is C (overhead chop, the FINISHER_C rhythm class). Previously the third press cycled back to A.",
+			"After C / D / E the combo resets so the next press starts at A again — preserves the ability to intentionally stop after any swing.",
+			"D (thrust) and E (spin) remain optional higher-commitment extensions reachable only via explicit directional input — they are not part of the natural A→B→C core.",
+			"Phase 1B will give C the stronger feedback profile (larger hit-stop, camera trauma, heavier reaction tier) it deserves.",
+		]
+	},
 	{
 		"version": "v0.83.22",
 		"title": "Combat overhaul — Phase 1A.5m shadow step + shared projectile migrated (1A.5 complete)",

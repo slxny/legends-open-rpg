@@ -2679,6 +2679,15 @@ func _pick_combo_swing(cur_cat: String) -> int:
 		# Vertical → horizontal: spin out of the vertical
 		["up", "horizontal"], ["down", "horizontal"]:
 			return 4   # Spin slash when sweeping horizontal after vertical
+		# Phase 1A.6: A → B → C natural finisher (plan corr. 1).
+		# Two horizontal swings in a row → the third is C (overhead chop,
+		# FINISHER_C rhythm class). After C the combo resets so the next
+		# horizontal press is A again. D and E remain optional extensions
+		# reachable only via explicit directional input.
+		["horizontal", "horizontal"]:
+			if _combo_index >= 2:
+				return 2   # C — the satisfying finisher
+			return _combo_index % 2
 		# Same or fallback: alternate A/B horizontal swings
 		_:
 			return _combo_index % 2
@@ -2721,12 +2730,21 @@ func _do_melee_attack(target: Node2D, result: Dictionary, attack_dir: Vector2 = 
 		2:  # C: overhead chop — MIGRATED (Phase 1A.5c). FINISHER_C rhythm class.
 			_anim_overhead_chop(tween, frames, base_pos, dir, target, result, true)
 			_start_overhead_chop_clock(AttackTimingsCls.swing_c(), target, dir)
+			# Phase 1A.6: C is the finisher — reset combo so next press is A again.
+			_combo_index = 0
+			_last_dir_category = ""
 		3:  # D: upward thrust — MIGRATED (Phase 1A.5d). EXTENSION_D.
 			_anim_upward_thrust(tween, frames, base_pos, dir, target, result, true)
 			_start_upward_thrust_clock(AttackTimingsCls.swing_d(), target, dir)
+			# Phase 1A.6: D is a higher-commitment extension — reset combo.
+			_combo_index = 0
+			_last_dir_category = ""
 		4:  # E: spin slash — MIGRATED (Phase 1A.5e). EXTENSION_E (wide attack).
 			_anim_spin_slash(tween, frames, base_pos, dir, target, result, true)
 			_start_spin_slash_clock(AttackTimingsCls.swing_e(), target, dir)
+			# Phase 1A.6: E is a higher-commitment extension — reset combo.
+			_combo_index = 0
+			_last_dir_category = ""
 
 func _anim_swing_horizontal(tween: Tween, frames: Array, base_pos: Vector2,
 		dir: Vector2, perp: Vector2, target: Node2D, result: Dictionary, side: float,

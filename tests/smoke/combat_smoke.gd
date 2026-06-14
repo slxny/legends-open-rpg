@@ -70,7 +70,10 @@ func _ready() -> void:
 	_check("force_crit produces was_crit=true", bool(crit_result.was_crit))
 	_check("force_crit damage >= base damage", int(crit_result.damage_dealt) >= int(result.damage_dealt))
 
-	_check("Engine.time_scale still 1.0 after resolves", abs(Engine.time_scale - 1.0) < 0.0001)
+	# Phase 1B.6c: crits now dispatch a 50ms global dip via HitStopController.
+	# Reset and verify time_scale returns to 1.0 cleanly before subsequent tests.
+	TimeManager.force_reset()
+	_check("time_scale restorable after crit dip path", abs(Engine.time_scale - 1.0) < 0.0001)
 
 	_test_input_buffer()
 	_test_intent_resolver()

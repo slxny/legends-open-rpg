@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.83.30"
+const GAME_VERSION := "v0.83.31"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.83.31",
+		"title": "Combat overhaul — Phase 1B.6c hit-stop: enemy freeze + crit time dip",
+		"date": "2026-06-14",
+		"entries": [
+			"VISIBLE CHANGE: hits now have WEIGHT.",
+			"Localized victim freeze: every confirmed hit briefly pauses the enemy's AI (45 ms basic, 90 ms crit) via HitStopController. The enemy stops chasing/attacking for that real-time window, then resumes. Knockback decay keeps ticking so the enemy never gets physics-stuck.",
+			"Crit global dip: critical hits now trigger a brief Engine.time_scale dip (0.35× for 50 ms) routed through TimeManager (sole owner). Per-attack_id dedupe at the HitStopController layer means whirlwind / charged slash killing 5 enemies still only fires ONE dip, not five.",
+			"Wall-clock recovery via Time.get_ticks_usec() — slowdowns can NOT extend their own recovery. Pause / scene change / save load / player death / quit-to-menu all force-reset the time scale.",
+		]
+	},
 	{
 		"version": "v0.83.30",
 		"title": "Combat overhaul — Phase 1B.6b enemies visually flinch on hit",

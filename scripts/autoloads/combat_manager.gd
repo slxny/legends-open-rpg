@@ -83,4 +83,12 @@ func resolve_hit(event: Resource, attacker_stats: Dictionary, defender_stats: Di
 			result.was_lethal = int(stats_node.get("current_hp")) <= 0
 
 	emit_signal("hit_resolved", result)
+
+	# Phase 1B.6c: crit hits dispatch a short global Engine.time_scale dip
+	# via HitStopController → TimeManager (sole owner). attack_id dedupe
+	# at the HitStop layer coalesces wide-attack bursts so 5-enemy
+	# whirlwind / charged-slash kills produce ONE dip, not five.
+	if is_crit and HitStopController != null and event.attack_id != &"":
+		HitStopController.request_global_dip(0.35, 50, 2, event.attack_id)
+
 	return result

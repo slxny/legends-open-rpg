@@ -360,6 +360,17 @@ func _physics_process(delta: float) -> void:
 	if _is_dead:
 		return
 
+	# Phase 1B.6c: hit-stop. Skip AI + movement while frozen so the
+	# impact has weight. Knockback is intentionally NOT skipped — the
+	# decay still ticks below so freeze doesn't lock physics state.
+	if HitStopController != null and HitStopController.is_frozen(self):
+		# Keep the knockback decay running so we don't get stuck moving.
+		if _knockback_velocity.length_squared() > 4.0:
+			velocity = _knockback_velocity
+			_knockback_velocity = _knockback_velocity.lerp(Vector2.ZERO, delta * 14.0)
+			move_and_slide()
+		return
+
 	# Distance-based sleep/wake check (throttled) — only for awake enemies.
 	# Sleeping enemies have physics_process disabled; creep_camp handles their wake check.
 	_sleep_check_timer -= delta
@@ -2909,3 +2920,10 @@ func _on_hit_resolved_for_reaction(result: Resource) -> void:
 	# force = 0 → component skips emitting knockback_requested (still
 	# disconnected this stage anyway). Visual flinch + flash still runs.
 	_hit_reaction.react(dir, 0.0, bool(result.was_crit), false)
+
+	# Phase 1B.6c: brief AI freeze so the impact registers as weight.
+	# Crit hits get a longer freeze. HitStopController uses monotonic
+	# wall-clock deadlines so we can't lock the enemy.
+	if HitStopController != null:
+		var freeze_ms: int = 90 if bool(result.was_crit) else 45
+		HitStopController.freeze_target(self, freeze_ms, 1)  # VICTIM

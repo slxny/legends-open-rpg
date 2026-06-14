@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.83.5"
+const GAME_VERSION := "v0.83.6"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.83.6",
+		"title": "Combat overhaul — Phase 1A.1 typed HitEvent / HitResult",
+		"date": "2026-06-14",
+		"entries": [
+			"Internal foundation — no gameplay changes (legacy damage path unchanged)",
+			"Added typed HitEvent and HitResult Resources in scripts/combat/ — Phase 1B feedback systems (hit-stop, camera shake, audio, enemy reaction) will trigger from confirmed HitResults",
+			"Extended CombatManager with resolve_hit() typed adapter and hit_resolved signal — calculate_damage() preserved verbatim for all existing callers",
+			"Added tests/smoke/combat_smoke.tscn headless validation — 12 checks for boot, autoloads, typed-path, force_crit, time_scale==1.0",
+		]
+	},
 	{
 		"version": "v0.83.5",
 		"title": "Combat overhaul — Phase 1A.0 audit & plan",

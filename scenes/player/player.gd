@@ -2653,8 +2653,9 @@ func _do_melee_attack(target: Node2D, result: Dictionary, attack_dir: Vector2 = 
 		3:  # D: upward thrust — MIGRATED (Phase 1A.5d). EXTENSION_D.
 			_anim_upward_thrust(tween, frames, base_pos, dir, target, result, true)
 			_start_upward_thrust_clock(AttackTimingsCls.swing_d(), target, dir)
-		4:  # E: spin slash
-			_anim_spin_slash(tween, frames, base_pos, dir, target, result)
+		4:  # E: spin slash — MIGRATED (Phase 1A.5e). EXTENSION_E (wide attack).
+			_anim_spin_slash(tween, frames, base_pos, dir, target, result, true)
+			_start_spin_slash_clock(AttackTimingsCls.swing_e(), target, dir)
 
 func _anim_swing_horizontal(tween: Tween, frames: Array, base_pos: Vector2,
 		dir: Vector2, perp: Vector2, target: Node2D, result: Dictionary, side: float,
@@ -2786,6 +2787,24 @@ func _start_upward_thrust_clock(timing: Resource, target: Node2D, dir: Vector2, 
 	)
 
 
+# Swing E — wide spin extension. Audit: knockback 60, three slash arcs, shake 2.0/6.0.
+func _start_spin_slash_clock(timing: Resource, target: Node2D, dir: Vector2, ability_mult: float = 1.0) -> void:
+	_run_clocked_attack(timing, target, dir, ability_mult, func(t: Node2D, d: Vector2, crit: bool) -> void:
+		if is_instance_valid(t):
+			t.apply_knockback(d, 60.0)
+		_spawn_slash_vfx(d, 40.0, 1.6)
+		_spawn_slash_vfx(d.rotated(PI * 0.5), 35.0, 1.2)
+		_spawn_slash_vfx(d.rotated(-PI * 0.5), 35.0, 1.2)
+		if is_instance_valid(t):
+			_spawn_impact_vfx(t.global_position, crit)
+		if crit:
+			_do_screen_shake(6.0)
+			_do_hit_freeze(true)
+		else:
+			_do_screen_shake(2.0)
+	)
+
+
 func _anim_overhead_chop(tween: Tween, frames: Array, base_pos: Vector2,
 		dir: Vector2, target: Node2D, result: Dictionary, clock_driven: bool = false) -> void:
 	if frames.size() >= 3:
@@ -2854,7 +2873,7 @@ func _anim_upward_thrust(tween: Tween, frames: Array, base_pos: Vector2,
 	_anim_return_to_idle(tween, base_pos)
 
 func _anim_spin_slash(tween: Tween, frames: Array, base_pos: Vector2,
-		dir: Vector2, target: Node2D, result: Dictionary) -> void:
+		dir: Vector2, target: Node2D, result: Dictionary, clock_driven: bool = false) -> void:
 	if frames.size() >= 3:
 		tween.tween_callback(func(): sprite.texture = frames[0])
 	# Coil
@@ -2868,21 +2887,22 @@ func _anim_spin_slash(tween: Tween, frames: Array, base_pos: Vector2,
 	tween.set_parallel(false)
 	if frames.size() >= 3:
 		tween.tween_callback(func(): sprite.texture = frames[2])
-	tween.tween_callback(func():
-		if is_instance_valid(target):
-			target.take_damage(result["damage"], result["is_crit"])
-			target.apply_knockback(dir, 60.0)
-			# Wide slash VFX — hits in a circle
-			_spawn_slash_vfx(dir, 40.0, 1.6)
-			_spawn_slash_vfx(dir.rotated(PI * 0.5), 35.0, 1.2)
-			_spawn_slash_vfx(dir.rotated(-PI * 0.5), 35.0, 1.2)
-			_spawn_impact_vfx(target.global_position, result["is_crit"])
-			if result["is_crit"]:
-				_do_screen_shake(6.0)
-				_do_hit_freeze(true)
-			else:
-				_do_screen_shake(2.0)
-	)
+	if not clock_driven:
+		tween.tween_callback(func():
+			if is_instance_valid(target):
+				target.take_damage(result["damage"], result["is_crit"])
+				target.apply_knockback(dir, 60.0)
+				# Wide slash VFX — hits in a circle
+				_spawn_slash_vfx(dir, 40.0, 1.6)
+				_spawn_slash_vfx(dir.rotated(PI * 0.5), 35.0, 1.2)
+				_spawn_slash_vfx(dir.rotated(-PI * 0.5), 35.0, 1.2)
+				_spawn_impact_vfx(target.global_position, result["is_crit"])
+				if result["is_crit"]:
+					_do_screen_shake(6.0)
+					_do_hit_freeze(true)
+				else:
+					_do_screen_shake(2.0)
+		)
 	# Unwind rotation
 	tween.tween_property(sprite, "rotation", 0.0, 0.08)
 	tween.tween_interval(0.04)

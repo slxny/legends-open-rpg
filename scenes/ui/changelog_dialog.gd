@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.83.13"
+const GAME_VERSION := "v0.83.14"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.83.14",
+		"title": "Combat overhaul — Phase 1A.5e swing E migrated (all 5 basic swings done)",
+		"date": "2026-06-14",
+		"entries": [
+			"Swing E (spin slash extension) now drives damage from AttackClock + AttackTimings.swing_e() (EXTENSION_E, wide_attack).",
+			"_start_spin_slash_clock wrapper preserves all three slash arcs (forward, +90°, -90°), knockback 60, shake 2.0/6.0.",
+			"Milestone: all five basic swings A→B→C→D→E now contact-frame-driven via AttackClock + AttackTimingData. Cooldown per swing now derives from its own duration. C-finisher rhythm class is in place ready for Phase 1B's stronger feedback profile.",
+			"Specials (power_strike, whirlwind, dash_strike, charged_slash) and ranged equivalents still on legacy path — next commits migrate them.",
+		]
+	},
 	{
 		"version": "v0.83.13",
 		"title": "Combat overhaul — Phase 1A.5d swing D migrated",

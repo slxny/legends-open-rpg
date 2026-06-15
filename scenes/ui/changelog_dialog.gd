@@ -9,9 +9,18 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.89.7"
+const GAME_VERSION := "v0.89.8"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.89.8",
+		"title": "Combat feel — CRITICAL HITS flash brighter & squash harder",
+		"date": "2026-06-15",
+		"entries": [
+			"Critical hits on enemies now PUNCH MUCH HARDER visually: near-pure white modulate (2.4 vs 1.7), bigger horizontal squash (1.45× vs 1.3×), and a longer 0.22 s decay so the eye latches onto crits even in chaotic fights.",
+			"Internal: enemy.gd _do_hit_flash branches on _last_hit_was_crit (already set by take_damage). flash_col / squash_x / squash_y / decay vary by crit state.",
+		]
+	},
 	{
 		"version": "v0.89.7",
 		"title": "Combat feel — GOLD & ITEM MAGNET (Diablo-style auto-pickup pull)",

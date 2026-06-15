@@ -2181,15 +2181,18 @@ func apply_knockback(dir: Vector2, force: float) -> void:
 	_knockback_velocity = dir * force
 
 func _do_hit_flash() -> void:
-	# Bright white flash + squash on hit
-	sprite.modulate = Color(1.5, 1.5, 1.5)
+	# Bright white flash + squash on hit. Crits flash MUCH brighter + bigger squash.
+	var flash_col: Color = Color(2.4, 2.4, 2.4) if _last_hit_was_crit else Color(1.7, 1.7, 1.7)
+	var squash_x: float = 1.45 if _last_hit_was_crit else 1.3
+	var squash_y: float = 0.6 if _last_hit_was_crit else 0.7
+	var decay: float = 0.22 if _last_hit_was_crit else 0.18
+	sprite.modulate = flash_col
 	var tween = create_tween()
 	tween.set_parallel(true)
-	tween.tween_property(sprite, "modulate", _base_modulate, 0.18)
-	# Squash: squeeze horizontally, stretch vertically, then bounce back
+	tween.tween_property(sprite, "modulate", _base_modulate, decay)
 	var sx = _base_scale.x
 	var sy = _base_scale.y
-	tween.tween_property(sprite, "scale", Vector2(sx * 1.3, sy * 0.7), 0.05)
+	tween.tween_property(sprite, "scale", Vector2(sx * squash_x, sy * squash_y), 0.05)
 	tween.set_parallel(false)
 	tween.tween_property(sprite, "scale", Vector2(sx * 0.85, sy * 1.2), 0.06)
 	tween.tween_property(sprite, "scale", _base_scale, 0.08)

@@ -9,9 +9,26 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.87.3"
+const GAME_VERSION := "v0.87.4"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.87.4",
+		"title": "Combat overhaul — Phase 6.2 BEHAVIOR-CHANGING UPGRADES (auto-granted on level up)",
+		"date": "2026-06-15",
+		"entries": [
+			"LEVEL UP = NEW POWER. Every time you level up, you automatically gain one random behavior-changing combat upgrade. The full pool ships with 7 upgrades — drawn from until exhausted.",
+			"SLAM SHOCKWAVE — branch_slam fires a SECOND outer shockwave + extra AoE pulse.",
+			"SPIN: WIDER RADIUS — branch_spin / whirlwind crowd-control radius +50% (100 → 150 px).",
+			"CHARGED: DEVASTATING SLASH — charged_slash damage +30% (placeholder applied next stage).",
+			"EXECUTION: DEATH SENTENCE — execution finisher variant triggers at ≤35% target HP instead of 25%. Way more frequent.",
+			"DODGE: PHANTOM STRIKE — dodge afterimages damage on contact (placeholder, ships next stage).",
+			"CRIT: ADRENALINE SURGE — crit hits credit +5 momentum AND reset dodge cooldown. Crit fishing becomes a viable build.",
+			"UPPERCUT: SKYBREAKER — branch_uppercut deals an extra 20 damage + 30 poise on the locked target.",
+			"Upgrade name floats above the player on grant with a charge_release audio cue. Save format extended: attack_upgrades: Array[String]; defaults to [] for legacy saves so old saves load cleanly.",
+			"Internal: scripts/components/upgrade_manager.gd UpgradeManager component on player. AVAILABLE_UPGRADES static const list. grant_random_unowned picks from unowned pool. display_name static helper. Subscribes to stats.leveled_up signal in player._ready. Each effect checks _upgrades.has(&id) at its application site so adding new upgrades is a single check elsewhere.",
+		]
+	},
 	{
 		"version": "v0.87.3",
 		"title": "Combat overhaul — Phase 7 DESTRUCTIBLE EXPLOSIVE BARRELS",

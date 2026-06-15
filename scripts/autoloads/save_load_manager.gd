@@ -91,6 +91,12 @@ func save_game() -> void:
 	# Region time played (for wave/boss spawn timers)
 	data["region_elapsed_time"] = GameManager.region_elapsed_time
 
+	# Phase 6.2 — behavior-changing attack upgrades (per the combat plan).
+	# Stored as Array[String]; defaults to [] for legacy saves.
+	var upgrade_node = player.get_node_or_null("UpgradeManager")
+	if upgrade_node != null and upgrade_node.has_method("to_save"):
+		data["attack_upgrades"] = upgrade_node.to_save()
+
 	# Write to file
 	var json_string = JSON.stringify(data, "\t")
 	var file = FileAccess.open(SAVE_PATH, FileAccess.WRITE)
@@ -192,6 +198,15 @@ func load_game() -> bool:
 
 	# Restore region elapsed time (wave/boss spawn timers)
 	GameManager.region_elapsed_time = data.get("region_elapsed_time", 0.0)
+
+	# Phase 6.2 — restore behavior-changing attack upgrades. Defaults to
+	# [] for legacy saves so they load cleanly without forcing migration.
+	if data.has("attack_upgrades"):
+		var player_node := _get_player()
+		if player_node != null:
+			var upgrade_node = player_node.get_node_or_null("UpgradeManager")
+			if upgrade_node != null and upgrade_node.has_method("from_save"):
+				upgrade_node.from_save(data["attack_upgrades"])
 
 	# Restore explored tiles
 	if data.has("explored_tiles"):

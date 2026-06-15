@@ -11,6 +11,7 @@ const DodgeControllerCls = preload("res://scenes/player/dodge_controller.gd")
 const DodgeDataCls = preload("res://scripts/data/dodge_data.gd")
 const MomentumComponentCls = preload("res://scripts/components/momentum_component.gd")
 const CombatJuiceLayerCls = preload("res://scripts/components/combat_juice_layer.gd")
+const UpgradeManagerCls = preload("res://scripts/components/upgrade_manager.gd")
 
 signal attacked(target: Node2D)
 
@@ -209,6 +210,8 @@ var _dodge: Node = null
 var _momentum: Node = null
 # Phase 2.x — combat juice layer (floating pop-ups + combo counter).
 var _juice: Node = null
+# Phase 6.2 — behavior-changing upgrades.
+var _upgrades: Node = null
 # Phase 2.x — high-momentum player aura sprite.
 var _momentum_aura: Sprite2D = null
 var _momentum_aura_tween: Tween = null
@@ -307,6 +310,14 @@ func _ready() -> void:
 	_juice = CombatJuiceLayerCls.new()
 	_juice.name = "CombatJuiceLayer"
 	add_child(_juice)
+
+	# Phase 6.2 — upgrade manager. Auto-grants one random upgrade on
+	# every level-up. Save/load handled via stats.leveled_up signal.
+	_upgrades = UpgradeManagerCls.new()
+	_upgrades.name = "UpgradeManager"
+	add_child(_upgrades)
+	if stats.has_signal("leveled_up"):
+		stats.leveled_up.connect(_on_level_up_grant_upgrade)
 
 	# Momentum aura — fades in when momentum > 60. Below player z so the
 	# sprite stays readable.
@@ -2971,6 +2982,7 @@ const _SLAM_AOE_KNOCKBACK: float = 60.0
 const _SLAM_AOE_POISE: float = 6.0
 const _SPIN_RADIUS_SQ: float = 100.0 * 100.0
 const _SPIN_POISE: float = 8.0
+const _SPIN_RADIUS_BOOSTED_SQ: float = 150.0 * 150.0  # +50% via upgrade
 
 
 func _apply_slam_aoe(impact_pos: Vector2, _dir: Vector2, exclude: Node2D) -> void:
@@ -3005,13 +3017,15 @@ func _apply_uppercut_lift(target: Node2D) -> void:
 
 
 func _apply_spin_radial(impact_pos: Vector2, exclude: Node2D) -> void:
+	# Phase 6.2 — spin_radius_boost upgrade widens the radius from 100 → 150.
+	var r_sq: float = _SPIN_RADIUS_BOOSTED_SQ if (_upgrades != null and _upgrades.has(&"spin_radius_boost")) else _SPIN_RADIUS_SQ
 	for enemy in _nearby_enemies:
 		if not is_instance_valid(enemy) or enemy == exclude:
 			continue
 		if enemy.get("_is_dead"):
 			continue
 		var to_e: Vector2 = enemy.global_position - impact_pos
-		if to_e.length_squared() > _SPIN_RADIUS_SQ:
+		if to_e.length_squared() > r_sq:
 			continue
 		var poise_node = enemy.get_node_or_null("PoiseComponent")
 		if poise_node != null and poise_node.has_method("take_poise_damage"):
@@ -3188,6 +3202,10 @@ func _start_overhead_chop_clock(timing: Resource, target: Node2D, dir: Vector2, 
 		if rhythm_capture == AttackTimingDataCls.RhythmClass.BRANCH_SLAM and is_instance_valid(t):
 			_apply_slam_aoe(t.global_position, d, t)
 			_spawn_impact_vfx(t.global_position, true)
+			# Phase 6.2 — Slam Shockwave upgrade: second outer ring + extra AoE.
+			if _upgrades != null and _upgrades.has(&"slam_shockwave"):
+				_spawn_finisher_ring(t.global_position, Color(1.5, 0.8, 0.2, 0.9), 7.0, 0.45)
+				_apply_slam_aoe(t.global_position, d, t)  # second pulse
 		# Phase 2.9 — apply the chosen finisher variant on top.
 		_apply_finisher_variant(variant, t, d)
 	)
@@ -3212,6 +3230,13 @@ func _start_upward_thrust_clock(timing: Resource, target: Node2D, dir: Vector2, 
 		# upward recoil on HitReactionComponent.
 		if rhythm_capture == AttackTimingDataCls.RhythmClass.BRANCH_UPPERCUT:
 			_apply_uppercut_lift(t)
+			# Phase 6.2 — Skybreaker upgrade: +50% damage + double poise.
+			if _upgrades != null and _upgrades.has(&"uppercut_bonus"):
+				if is_instance_valid(t) and t.has_method("take_damage"):
+					t.take_damage(int(20 * (_momentum.get_damage_mult() if _momentum != null else 1.0)), true)
+				var poise_n = t.get_node_or_null("PoiseComponent") if is_instance_valid(t) else null
+				if poise_n != null and poise_n.has_method("take_poise_damage"):
+					poise_n.take_poise_damage(30.0, true)
 	)
 
 
@@ -4074,6 +4099,15 @@ func _on_hit_resolved_for_momentum(result: Resource) -> void:
 	if is_instance_valid(result.event.victim):
 		vpos = result.event.victim.global_position
 	_momentum.on_hit_landed(result.event.attack_id, bool(result.was_crit), vpos)
+	# Phase 6.2 — crit_refund upgrade: crit hits credit +5 momentum and
+	# reduce dodge cooldown.
+	if bool(result.was_crit) and _upgrades != null and _upgrades.has(&"crit_refund"):
+		if _momentum.has_method("add_bonus"):
+			_momentum.add_bonus(5.0, &"crit_refund")
+		if _dodge != null and _dodge.has_method("force_reset"):
+			# Don't fully reset (would interrupt active dodge); just shorten cooldown by clearing.
+			if not _dodge.is_active():
+				_dodge.force_reset()
 	# Phase 2.x — lifesteal at high momentum. HEATED restores 2 HP per
 	# confirmed hit; FRENZY restores 4. Sustains aggressive play but stays
 	# small enough that you still have to choose your fights.
@@ -4216,6 +4250,21 @@ func _enter_low_hp() -> void:
 		AudioManager.play_sfx("charge_release", 2.0)
 
 
+func _on_level_up_grant_upgrade(_new_level: int) -> void:
+	if _upgrades == null:
+		return
+	var granted: StringName = _upgrades.grant_random_unowned()
+	if granted == &"":
+		return
+	# Big banner via juice layer.
+	if _juice != null and _juice.has_method("_spawn_floating_text"):
+		var display: String = UpgradeManagerCls.display_name(granted)
+		_juice._spawn_floating_text(global_position + Vector2(0, -90), display + "!", Color(1.4, 1.2, 0.4), true)
+	# Audio cue.
+	if AudioManager != null and AudioManager.has_method("play_sfx"):
+		AudioManager.play_sfx("charge_release", 0.0)
+
+
 func _exit_low_hp() -> void:
 	_low_hp_active = false
 	if _low_hp_vignette_tween != null and _low_hp_vignette_tween.is_valid():
@@ -4242,12 +4291,16 @@ func _select_finisher_variant(t: Node2D) -> StringName:
 	var poise = t.get_node_or_null("PoiseComponent")
 	if poise != null and poise.has_method("is_vulnerable") and poise.is_vulnerable():
 		return &"ground_slam"
-	# Execution — low HP.
+	# Execution — low HP. Phase 6.2 execution_lifted upgrade raises the
+	# threshold from 25% → 35%, making executions far more common.
 	if "stats" in t:
 		var s = t.get("stats")
 		if s != null and "current_hp" in s and "max_hp" in s:
 			var hp_ratio: float = float(s.current_hp) / max(1.0, float(s.max_hp))
-			if hp_ratio <= 0.25:
+			var threshold: float = 0.25
+			if _upgrades != null and _upgrades.has(&"execution_lifted"):
+				threshold = 0.35
+			if hp_ratio <= threshold:
 				return &"execution"
 	return &"default"
 

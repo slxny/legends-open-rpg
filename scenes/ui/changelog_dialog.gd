@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.86.9"
+const GAME_VERSION := "v0.87.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.87.0",
+		"title": "Combat feel pass — basic swing impact + SFX anti-grating + Stardew-style organic ground",
+		"date": "2026-06-15",
+		"entries": [
+			"BASIC SWING IMPACT: A/B basic swings now feel HEAVY. Slash arc is 65 px (was 45) at 1.7× scale (was 1.35), plus a secondary trail arc at 50 px / 1.3× scale. Player sprite punches forward 6 px over 40 ms then snaps back over 80 ms on every basic hit landing — tactile weight that was missing before. Combat now reads as 'each hit is a HIT', not 'each hit is a tap'.",
+			"SFX ANTI-GRATING PASS: AudioManager.play_sfx now applies per-sound min-interval cooldown (sword_swing 90 ms, hit_impact 60 ms, crit_hit 80 ms, footstep 110 ms, rat_squeal 250 ms, enemy_death 90 ms) so repeated swings can't machine-gun the same sample. Plus per-sound pitch jitter (sword_swing ±14%, hit_impact ±10%, crit_hit ±8%, footstep ±12%) so consecutive sounds are DIFFERENT instead of identical. Plus quiet-down on the most-played sounds (sword_swing -3 dB, hit_impact -2 dB, footstep -3 dB). Combat audio is now varied and pleasant rather than grating.",
+			"STARDEW-STYLE ORGANIC GROUND: Haven's Rest ground was visibly tiled with hard square boundaries. Bumped the variation density massively — pass 1 large soft tints from 45 → 220, added pass 2 (350 medium organic blobs at 0.25–0.5 alpha), added pass 3 (600 small flecks at 0.18–0.42 alpha for fine-grain texture). Plus more dirt patches (50 → 180). Plus scattered decorations: 350 grass tufts, 180 tall grass tufts, 140 flowers, 60 mushroom clusters. The repeating tile pattern is now broken up at three scales — the world reads as contoured biome variation, not a grid.",
+			"Internal: AudioManager._min_interval_overrides + _volume_offset_overrides + _pitch_jitter_overrides dictionaries keyed by sfx_name. play_sfx checks Time.get_ticks_msec against _last_played_msec and bails when inside the cooldown; sets p.pitch_scale to 1.0 + randf_range(-jitter, jitter). havens_rest.gd _scatter_small_decor helper for decoration scatter passes with batched awaits.",
+		]
+	},
 	{
 		"version": "v0.86.9",
 		"title": "Combat overhaul — Phase 2.13 LOW-HP DESPERATION (risk/reward adrenaline mode)",

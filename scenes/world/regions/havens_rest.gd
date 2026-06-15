@@ -389,6 +389,11 @@ func _generate_terrain_async() -> void:
 			await get_tree().process_frame
 
 	# --- Large terrain variation overlays: tinted blobs that break up repetition ---
+	# Stardew-style: dense organic variation so the underlying square tile
+	# pattern is broken up across the whole map. Three passes:
+	#   pass 1: 220 large soft tint blobs (was 45)
+	#   pass 2: 350 medium blobs (new) for mid-scale variation
+	#   pass 3: 600 small flecks (new) at higher density for fine detail
 	var blob_rng = RandomNumberGenerator.new()
 	blob_rng.seed = 777
 	var blob_tints = [
@@ -400,8 +405,15 @@ func _generate_terrain_async() -> void:
 		Color(0.22, 0.2, 0.1, 1.0),
 		Color(0.08, 0.18, 0.06, 1.0),
 		Color(0.16, 0.28, 0.1, 1.0),
+		# Warmer tones for sun-dappled spots
+		Color(0.30, 0.30, 0.13, 1.0),
+		Color(0.18, 0.24, 0.10, 1.0),
+		# Cooler, mossy tones
+		Color(0.10, 0.24, 0.18, 1.0),
+		Color(0.13, 0.22, 0.20, 1.0),
 	]
-	for _i in range(45):
+	# Pass 1: large soft tints — 220 of them
+	for _i in range(220):
 		var pos = Vector2(blob_rng.randf_range(-5800, 5800), blob_rng.randf_range(-4300, 4300))
 		if pos.length() < 500:
 			continue  # Skip town area
@@ -412,7 +424,9 @@ func _generate_terrain_async() -> void:
 		var s = blob_rng.randf_range(3.0, 8.0)
 		blob.scale = Vector2(s, s * blob_rng.randf_range(0.6, 1.4))
 		blob.rotation = blob_rng.randf_range(0, TAU)
-		blob.modulate = blob_tints[blob_rng.randi() % blob_tints.size()]
+		var tint: Color = blob_tints[blob_rng.randi() % blob_tints.size()]
+		tint.a = blob_rng.randf_range(0.55, 0.95)
+		blob.modulate = tint
 		blob.z_index = -9
 		add_child(blob)
 		_batch += 1
@@ -420,10 +434,55 @@ func _generate_terrain_async() -> void:
 			_batch = 0
 			await get_tree().process_frame
 
-	# Scattered dirt patches across the expanded map
+	# Pass 2: medium organic blobs — mid-scale variation
+	for _i in range(350):
+		var pos = Vector2(blob_rng.randf_range(-5800, 5800), blob_rng.randf_range(-4300, 4300))
+		if pos.length() < 480:
+			continue
+		var blob = Sprite2D.new()
+		blob.texture = SpriteGenerator.get_texture("terrain_blob")
+		blob.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		blob.position = pos
+		var s = blob_rng.randf_range(1.2, 3.5)
+		blob.scale = Vector2(s, s * blob_rng.randf_range(0.55, 1.6))
+		blob.rotation = blob_rng.randf_range(0, TAU)
+		var tint2: Color = blob_tints[blob_rng.randi() % blob_tints.size()]
+		tint2.a = blob_rng.randf_range(0.25, 0.5)
+		blob.modulate = tint2
+		blob.z_index = -8
+		add_child(blob)
+		_batch += 1
+		if _batch >= BATCH:
+			_batch = 0
+			await get_tree().process_frame
+
+	# Pass 3: small flecks — 600 tiny blobs for fine-grain texture, killing
+	# the perceived tile grid. These are placed denser.
+	for _i in range(600):
+		var pos = Vector2(blob_rng.randf_range(-5800, 5800), blob_rng.randf_range(-4300, 4300))
+		if pos.length() < 460:
+			continue
+		var fleck = Sprite2D.new()
+		fleck.texture = SpriteGenerator.get_texture("terrain_blob")
+		fleck.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		fleck.position = pos
+		var s = blob_rng.randf_range(0.35, 1.1)
+		fleck.scale = Vector2(s, s * blob_rng.randf_range(0.6, 1.3))
+		fleck.rotation = blob_rng.randf_range(0, TAU)
+		var tint3: Color = blob_tints[blob_rng.randi() % blob_tints.size()]
+		tint3.a = blob_rng.randf_range(0.18, 0.42)
+		fleck.modulate = tint3
+		fleck.z_index = -8
+		add_child(fleck)
+		_batch += 1
+		if _batch >= BATCH:
+			_batch = 0
+			await get_tree().process_frame
+
+	# Scattered dirt patches — bumped from 50 → 180 for denser variation.
 	var rng = RandomNumberGenerator.new()
 	rng.seed = 555
-	for _i in range(50):
+	for _i in range(180):
 		var pos = Vector2(rng.randf_range(-5700, 5700), rng.randf_range(-4200, 4200))
 		if pos.length() > 550:  # Avoid town area
 			_add_dirt_ground_patch(pos)
@@ -431,6 +490,41 @@ func _generate_terrain_async() -> void:
 			if _batch >= BATCH:
 				_batch = 0
 				await get_tree().process_frame
+
+	# Phase: small fauna/flora scatter — grass tufts and flowers for
+	# Stardew-style contour. Uses existing pregenerated assets so no
+	# extra texture work needed.
+	_scatter_small_decor(rng, "grass_tuft", 350, 1.0, 1.6, -7)
+	_scatter_small_decor(rng, "grass_tuft_tall", 180, 0.9, 1.4, -7)
+	_scatter_small_decor(rng, "flowers", 140, 0.7, 1.2, -7)
+	_scatter_small_decor(rng, "mushroom_cluster", 60, 0.7, 1.1, -7)
+
+
+# Scatter a decoration sprite type across the map. Each call awaits per
+# BATCH so we don't drop frames during generation.
+func _scatter_small_decor(rng: RandomNumberGenerator, tex_name: String, count: int, scale_min: float, scale_max: float, z: int) -> void:
+	var tex = SpriteGenerator.get_texture(tex_name)
+	if tex == null:
+		return
+	var batch_local: int = 0
+	for _i in range(count):
+		var pos = Vector2(rng.randf_range(-5700, 5700), rng.randf_range(-4200, 4200))
+		if pos.length() < 560:
+			continue
+		var spr := Sprite2D.new()
+		spr.texture = tex
+		spr.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		spr.position = pos
+		var s: float = rng.randf_range(scale_min, scale_max)
+		spr.scale = Vector2(s, s)
+		spr.rotation = rng.randf_range(-0.15, 0.15)
+		spr.modulate.a = rng.randf_range(0.7, 1.0)
+		spr.z_index = z
+		add_child(spr)
+		batch_local += 1
+		if batch_local >= 80:
+			batch_local = 0
+			await get_tree().process_frame
 
 func _add_creep_ground(center: Vector2, radius: float) -> void:
 	# Multiple overlapping dark ground sprites to form organic creep shape

@@ -3137,8 +3137,12 @@ func _start_basic_horizontal_clock(timing: Resource, target: Node2D, dir: Vector
 	_run_clocked_attack(timing, target, dir, ability_mult, func(t: Node2D, d: Vector2, crit: bool) -> void:
 		if is_instance_valid(t):
 			t.apply_knockback(d, 40.0)
-		# Slightly bigger arc per base swing — A/B feel more weighty.
-		_spawn_slash_vfx(d.rotated(captured_side * 0.3), 45.0, 1.35)
+		# Beefier basic swing: bigger main arc + secondary trail arc.
+		# A/B should feel HEFTY, not like a tap.
+		_spawn_slash_vfx(d.rotated(captured_side * 0.3), 65.0, 1.7)
+		_spawn_slash_vfx(d.rotated(captured_side * 0.15), 50.0, 1.3)
+		# Brief player sprite punch toward target — adds tactile weight.
+		_play_swing_punch(d)
 		if is_instance_valid(t):
 			_spawn_impact_vfx(t.global_position, crit)
 		if crit:
@@ -4146,6 +4150,21 @@ func _on_perfect_dodge_executed(_against_attack_id: StringName) -> void:
 # ability multiplier of any active swing.
 func _is_counter_window_active() -> bool:
 	return _counter_window_until_usec > 0 and Time.get_ticks_usec() < _counter_window_until_usec
+
+
+# Brief sprite punch on basic-swing contact — adds tactile weight so
+# A/B feel like real hits, not taps. Sprite kicks forward then snaps
+# back over ~120 ms. Cheap pooled-style tween.
+func _play_swing_punch(dir: Vector2) -> void:
+	if not is_instance_valid(sprite):
+		return
+	if dir.length() < 0.01:
+		return
+	var base_pos := sprite.position
+	var punch_offset: Vector2 = dir.normalized() * 6.0
+	var t := sprite.create_tween()
+	t.tween_property(sprite, "position", base_pos + punch_offset, 0.04).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	t.tween_property(sprite, "position", base_pos, 0.08).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 
 
 # Phase 2.13 — low-HP desperation. Activates when HP drops <= 25% of max.

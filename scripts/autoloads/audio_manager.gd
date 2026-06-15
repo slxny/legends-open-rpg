@@ -92,24 +92,80 @@ func get_sfx(sfx_name: String) -> AudioStreamWAV:
 
 var _next_sfx_player: int = 0  # Round-robin index for SFX pool
 
+# Anti-grating: per-sound cooldown to suppress rapid-fire same-sound spam,
+# plus volume tweaks for the most-played sounds. The combat audio was
+# grating before because every swing/hit fired at identical pitch +
+# full volume with no min interval.
+var _last_played_msec: Dictionary = {}  # sfx_name -> int (ticks msec)
+const _DEFAULT_MIN_INTERVAL_MS: int = 35
+# Per-sound min intervals. The combat sounds get the largest intervals
+# since they're the ones the player notices repeating most.
+var _min_interval_overrides: Dictionary = {
+	"sword_swing": 90,
+	"hit_impact": 60,
+	"crit_hit": 80,
+	"footstep": 110,
+	"rat_squeal_1": 250,
+	"rat_squeal_2": 250,
+	"rat_squeal_3": 250,
+	"enemy_death": 90,
+}
+# Per-sound volume offsets that get added on top of the caller's
+# volume_offset. Used to softly turn down sounds that play constantly
+# without changing all call sites.
+var _volume_offset_overrides: Dictionary = {
+	"sword_swing": -3.0,
+	"hit_impact": -2.0,
+	"footstep": -3.0,
+	"crit_hit": -1.0,
+}
+# Per-sound pitch jitter. ±this fraction. Combat sounds get the most
+# variety so repeat hits sound DIFFERENT.
+var _pitch_jitter_overrides: Dictionary = {
+	"sword_swing": 0.14,
+	"hit_impact": 0.10,
+	"crit_hit": 0.08,
+	"footstep": 0.12,
+	"power_strike": 0.07,
+	"whirlwind": 0.07,
+	"dash_swoosh": 0.10,
+	"charge_release": 0.06,
+}
+const _DEFAULT_PITCH_JITTER: float = 0.05
+
+
 func play_sfx(sfx_name: String, volume_offset: float = 0.0) -> void:
+	# Cooldown check — prevents grating repeat-fire of the same sound.
+	var now_msec: int = Time.get_ticks_msec()
+	var min_interval: int = int(_min_interval_overrides.get(sfx_name, _DEFAULT_MIN_INTERVAL_MS))
+	var last: int = int(_last_played_msec.get(sfx_name, -100000))
+	if now_msec - last < min_interval:
+		return
+	_last_played_msec[sfx_name] = now_msec
+
 	var stream = _ensure_sfx(sfx_name)
 	if not stream:
 		return
+	var per_sound_vol: float = float(_volume_offset_overrides.get(sfx_name, 0.0))
+	var jitter: float = float(_pitch_jitter_overrides.get(sfx_name, _DEFAULT_PITCH_JITTER))
+	var pitch: float = 1.0 + randf_range(-jitter, jitter)
+
 	# Quick check from round-robin position for an idle player
 	for _i in range(SFX_POOL_SIZE):
 		var p = _sfx_players[_next_sfx_player]
 		_next_sfx_player = (_next_sfx_player + 1) % SFX_POOL_SIZE
 		if not p.playing:
 			p.stream = stream
-			p.volume_db = _sfx_volume_db + volume_offset
+			p.volume_db = _sfx_volume_db + volume_offset + per_sound_vol
+			p.pitch_scale = pitch
 			p.play()
 			return
 	# All players busy — steal the next in round-robin
 	var p = _sfx_players[_next_sfx_player]
 	_next_sfx_player = (_next_sfx_player + 1) % SFX_POOL_SIZE
 	p.stream = stream
-	p.volume_db = _sfx_volume_db + volume_offset
+	p.volume_db = _sfx_volume_db + volume_offset + per_sound_vol
+	p.pitch_scale = pitch
 	p.play()
 
 func play_music(music_name: String) -> void:

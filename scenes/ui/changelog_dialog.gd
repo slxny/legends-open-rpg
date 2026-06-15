@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.88.7"
+const GAME_VERSION := "v0.88.8"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.88.8",
+		"title": "Combat feel — HEAL POPUP accumulator (+N HP floats above player)",
+		"date": "2026-06-15",
+		"entries": [
+			"HEALING NOW VISIBLE. Every time the player gains HP from lifesteal, pickups, hallowed ground, or kill streaks, the amount accumulates and pops up as a green '+N HP' label above the player.",
+			"600 ms accumulation window — so per-hit lifesteal in a long combo shows as one '+12 HP' label instead of twelve separate '+1' clutters.",
+			"Internal: player.gd _last_known_hp + _heal_popup_accum + _heal_popup_until_msec tracking. _check_heal_popup in _physics_process compares current stats.current_hp to last frame; on increase, adds delta to accumulator and extends window. When window expires with accumulator > 0, calls juice layer _spawn_floating_text with green color (0.4/1.5/0.5).",
+		]
+	},
 	{
 		"version": "v0.88.7",
 		"title": "Combat feel — DODGE AFTERIMAGE trail (cyan ghosts during i-frames)",

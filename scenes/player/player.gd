@@ -497,6 +497,9 @@ func _physics_process(delta: float) -> void:
 		_music_intensity_tick = _MUSIC_INTENSITY_INTERVAL
 		_report_music_intensity()
 
+	# Phase 5.x — heal popup detection (HP delta > 0 = healing).
+	_check_heal_popup()
+
 	# Heal beacon immunity visual feedback — detect transitions
 	if is_on_heal_beacon and not _was_on_heal_beacon:
 		_start_immunity_vfx()
@@ -4280,6 +4283,10 @@ const _FRENZY_TRAIL_INTERVAL: float = 0.06
 # Phase 5.x — dodge afterimage trail timer.
 var _dodge_trail_timer: float = 0.0
 const _DODGE_TRAIL_INTERVAL: float = 0.04
+# Phase 5.x — heal popup. Tracks last known HP to detect heal events.
+var _last_known_hp: int = -1
+var _heal_popup_accum: int = 0
+var _heal_popup_until_msec: int = 0
 # Phase 5.5 — reactive music intensity tick.
 var _music_intensity_tick: float = 0.0
 const _MUSIC_INTENSITY_INTERVAL: float = 0.3
@@ -4432,6 +4439,35 @@ func _spawn_frenzy_afterimage() -> void:
 
 
 # Phase 5.x — dodge afterimage. Cyan ghost trail during i-frames.
+# Phase 5.x — accumulate heals within ~600 ms into a single floating
+# green "+N" popup so the screen doesn't fill with +1 numbers from per-
+# hit lifesteal.
+func _check_heal_popup() -> void:
+	if _is_dead or not ("current_hp" in stats):
+		return
+	var cur: int = int(stats.current_hp)
+	if _last_known_hp < 0:
+		_last_known_hp = cur
+		return
+	if cur > _last_known_hp:
+		var delta: int = cur - _last_known_hp
+		_heal_popup_accum += delta
+		_heal_popup_until_msec = Time.get_ticks_msec() + 600
+	_last_known_hp = cur
+	# Flush accumulated heal as a popup when window expires.
+	if _heal_popup_accum > 0 and Time.get_ticks_msec() >= _heal_popup_until_msec:
+		_show_heal_popup(_heal_popup_accum)
+		_heal_popup_accum = 0
+		_heal_popup_until_msec = 0
+
+
+func _show_heal_popup(amount: int) -> void:
+	if _juice == null or not _juice.has_method("_spawn_floating_text"):
+		return
+	var label: String = "+%d HP" % amount
+	_juice._spawn_floating_text(global_position + Vector2(randf_range(-8, 8), -40), label, Color(0.4, 1.5, 0.5), false)
+
+
 func _spawn_dodge_afterimage() -> void:
 	if not is_instance_valid(sprite) or sprite.texture == null:
 		return

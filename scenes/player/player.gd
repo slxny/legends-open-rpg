@@ -3620,6 +3620,24 @@ const _MAGNET_RADIUS_SQ: float = 105.0 * 105.0
 const _MAGNET_PICKUP_RADIUS_SQ: float = 14.0 * 14.0
 const _MAGNET_SPEED: float = 480.0
 
+var _damage_punch_base_zoom: Vector2 = Vector2.ZERO
+var _damage_punch_tween: Tween = null
+
+func _do_damage_camera_punch(amount: int) -> void:
+	if camera == null:
+		return
+	if _damage_punch_base_zoom == Vector2.ZERO:
+		_damage_punch_base_zoom = camera.zoom
+	if _damage_punch_tween != null and _damage_punch_tween.is_valid():
+		_damage_punch_tween.kill()
+	var max_hp_i: int = max(1, int(stats.max_hp))
+	var severity: float = clamp(float(amount) / float(max_hp_i), 0.04, 0.35)
+	var punch: float = 1.0 - severity * 0.18  # zoom OUT (smaller zoom value)
+	var target_zoom: Vector2 = _damage_punch_base_zoom * punch
+	camera.zoom = target_zoom
+	_damage_punch_tween = camera.create_tween()
+	_damage_punch_tween.tween_property(camera, "zoom", _damage_punch_base_zoom, 0.28).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
 func _magnetize_nearby_drops(delta: float) -> void:
 	var step: float = _MAGNET_SPEED * delta
 	for d in get_tree().get_nodes_in_group("ground_items"):
@@ -3794,6 +3812,9 @@ func take_damage(amount: int, is_crit: bool = false) -> void:
 	# Phase 5.x — red screen edge flash on damage taken for visceral
 	# feedback. Quick fade so it doesn't linger.
 	_spawn_world_red_flash(amount)
+	# Phase 5.x — brief camera zoom-OUT punch on damage. Adds weight to
+	# the hit: the world "recoils" away from the player for ~120 ms.
+	_do_damage_camera_punch(amount)
 	# Phase 2.4 — damage drains momentum and breaks the combo.
 	if _momentum != null and _momentum.has_method("on_damage_taken"):
 		_momentum.on_damage_taken()

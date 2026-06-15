@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.89.8"
+const GAME_VERSION := "v0.89.9"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.89.9",
+		"title": "Combat feel — CAMERA ZOOM-OUT PUNCH on player damage (recoil weight)",
+		"date": "2026-06-15",
+		"entries": [
+			"Taking damage now briefly RECOILS the camera away from the player — a quick zoom-out (~4–6% on light hits, up to ~18% on devastating ones) that snaps back over 280 ms with an EASE_OUT BACK curve.",
+			"Subconsciously communicates impact severity: small hits give a flicker, big hits visibly shove the world back. Pairs with the red flash and screen edge vignette.",
+			"Internal: player.gd take_damage calls _do_damage_camera_punch(amount). Caches camera.zoom in _damage_punch_base_zoom (zero-init lazy capture). Severity = clamp(amount/max_hp, 0.04, 0.35). target_zoom = base * (1 - severity * 0.18). Returns to base over 0.28 s. Kills any previous punch tween so rapid hits don't stack.",
+		]
+	},
 	{
 		"version": "v0.89.8",
 		"title": "Combat feel — CRITICAL HITS flash brighter & squash harder",

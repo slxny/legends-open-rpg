@@ -30,6 +30,8 @@ const CombatFeedbackProfileCls := preload("res://scripts/data/combat_feedback_pr
 const CombatAudioComponentCls := preload("res://scripts/components/combat_audio_component.gd")
 const PoiseComponentCls := preload("res://scripts/components/poise_component.gd")
 const PoiseProfileCls := preload("res://scripts/data/poise_profile.gd")
+const DodgeControllerCls := preload("res://scenes/player/dodge_controller.gd")
+const DodgeDataCls := preload("res://scripts/data/dodge_data.gd")
 
 var _errors: Array[String] = []
 
@@ -87,6 +89,7 @@ func _ready() -> void:
 	await _test_hit_reaction()
 	_test_feedback_profiles()
 	await _test_poise()
+	await _test_dodge_controller()
 
 	if _errors.is_empty():
 		print("[combat_smoke] OK")
@@ -640,6 +643,69 @@ func _test_poise() -> void:
 
 	comp.queue_free()
 	boss_comp.queue_free()
+
+
+func _test_dodge_controller() -> void:
+	var dc = DodgeControllerCls.new()
+	dc.data = DodgeDataCls.new()
+	add_child(dc)
+	await get_tree().process_frame
+	_check("DodgeController inactive at rest", not dc.is_active())
+	_check("DodgeController no iframes at rest", not dc.is_iframes_active())
+
+	var started_fired := [false]
+	var ended_fired := [false]
+	var perfect_fired := [false]
+	dc.dodge_started.connect(func(_d: Vector2): started_fired[0] = true)
+	dc.dodge_ended.connect(func(): ended_fired[0] = true)
+	dc.perfect_dodge_executed.connect(func(_id: StringName): perfect_fired[0] = true)
+
+	# Start dodge.
+	var ok = dc.request_dodge(Vector2.RIGHT)
+	_check("request_dodge accepted from rest", ok)
+	_check("dodge_started fired", started_fired[0])
+	_check("is_active true after start", dc.is_active())
+	_check("iframes active after start", dc.is_iframes_active())
+	_check("perfect window true at very start", dc.is_perfect_window())
+	# Velocity overlay non-zero in the first frame.
+	var v0: Vector2 = dc.get_velocity_overlay()
+	_check("velocity overlay nonzero during dodge", v0.length() > 1.0)
+
+	# Second request during active dodge rejected.
+	var dup = dc.request_dodge(Vector2.UP)
+	_check("second dodge during active rejected", not dup)
+
+	# Incoming hit during i-frames is absorbed.
+	var absorbed = dc.on_incoming_hit(&"enemy_swing")
+	_check("on_incoming_hit absorbs during iframes", absorbed)
+	_check("perfect_dodge_executed fired (hit was within perfect window)", perfect_fired[0])
+
+	# Wait past perfect window but inside iframes.
+	await get_tree().create_timer(0.12).timeout
+	_check("perfect window false after 120ms", not dc.is_perfect_window())
+	# Hit during normal iframes still absorbed but no new perfect.
+	var perf_was = perfect_fired[0]
+	dc.on_incoming_hit(&"enemy_swing")
+	_check("perfect_dodge_executed not re-fired outside window", perfect_fired[0] == perf_was)
+
+	# Wait past dodge duration.
+	await get_tree().create_timer(0.35).timeout
+	_check("is_active false after dodge ends", not dc.is_active())
+	_check("dodge_ended fired", ended_fired[0])
+	_check("iframes inactive after dodge", not dc.is_iframes_active())
+
+	# Cooldown blocks immediate re-dodge.
+	var blocked = dc.request_dodge(Vector2.RIGHT)
+	_check("cooldown blocks immediate redo", not blocked)
+
+	# Wait past cooldown.
+	await get_tree().create_timer(0.45).timeout
+	var ok2 = dc.request_dodge(Vector2.LEFT)
+	_check("dodge accepted after cooldown", ok2)
+	dc.force_reset()
+	_check("force_reset clears active", not dc.is_active())
+
+	dc.queue_free()
 
 
 func _check(label: String, ok: bool) -> void:

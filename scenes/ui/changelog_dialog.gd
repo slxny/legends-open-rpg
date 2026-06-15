@@ -9,9 +9,21 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.84.2"
+const GAME_VERSION := "v0.84.3"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.84.3",
+		"title": "Combat overhaul — Phase 2.3 dodge action with i-frames + perfect-dodge detection",
+		"date": "2026-06-14",
+		"entries": [
+			"NEW INPUT: Shift (keyboard) or B / right-stick-press (controller) now dodges. 220 ms of i-frames absorb incoming damage. 250 ms total dodge distance with a punchy ease-out curve.",
+			"Perfect-dodge window: the first 80 ms of the dodge fires a perfect_dodge_executed signal when a hit lands. Detection only — Phase 2.5 wires the reward (momentum refund + brief attacker slow). Lets you start play-testing the dodge feel now without the gameplay-incentive complexity.",
+			"350 ms cooldown between dodges prevents spamming. Dodge direction follows movement input; falls back to facing when standing still. Player retains sole ownership of CharacterBody2D.velocity — the controller only provides a velocity overlay the player applies.",
+			"Internal: DodgeController Node + DodgeData Resource. player.gd creates it in _ready. take_damage consults on_incoming_hit before any damage path runs — i-frames absorb cleanly, perfect-dodge emit happens transparently.",
+			"Smoke: +16 dodge checks (start, iframes, perfect window, velocity overlay, cooldown, force_reset).",
+		]
+	},
 	{
 		"version": "v0.84.2",
 		"title": "Combat overhaul — Phase 2.2 directional attacks have real mechanical roles",

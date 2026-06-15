@@ -7,6 +7,8 @@ const AttackTimingDataCls = preload("res://scripts/data/attack_timing_data.gd")
 const HitEventCls = preload("res://scripts/combat/hit_event.gd")
 const CameraShake2DCls = preload("res://scripts/combat/camera_shake_2d.gd")
 const AttackMotionDataCls = preload("res://scripts/data/attack_motion_data.gd")
+const DodgeControllerCls = preload("res://scenes/player/dodge_controller.gd")
+const DodgeDataCls = preload("res://scripts/data/dodge_data.gd")
 
 signal attacked(target: Node2D)
 
@@ -170,6 +172,10 @@ var _camera_shake: Node2D = null
 # Captured at the moment a swing's contact callback fires so radial trauma
 # becomes directional shake. Cleared each time the player attacks.
 var _last_hit_direction: Vector2 = Vector2.ZERO
+# Phase 2.3 — dodge component. Created in _ready, owns dodge state +
+# i-frames + perfect-dodge detection. Player remains the sole writer of
+# CharacterBody2D.velocity; the controller provides a velocity overlay.
+var _dodge: Node = null
 var _shake_time_left: float = 0.0
 const SHAKE_DURATION: float = 0.11
 
@@ -232,6 +238,15 @@ func _ready() -> void:
 		_camera_shake = CameraShake2DCls.new()
 		_camera_shake.name = "CameraShake2D"
 		camera.add_child(_camera_shake)
+
+	# Phase 2.3 — dodge component.
+	_dodge = DodgeControllerCls.new()
+	_dodge.name = "DodgeController"
+	_dodge.data = DodgeDataCls.new()
+	add_child(_dodge)
+	_dodge.dodge_ended.connect(func() -> void:
+		if not _is_dead:
+			sprite.modulate = Color.WHITE)
 
 	var tex = SpriteGenerator.get_texture(hero_class)
 	if tex:
@@ -383,6 +398,20 @@ func _physics_process(delta: float) -> void:
 	var has_input = input_dir.length_squared() > 0.0
 	if has_input:
 		input_dir = input_dir.normalized()
+
+	# Phase 2.3 — dodge input. Picked up here so the dodge direction
+	# inherits the player's current movement input.
+	if Input.is_action_just_pressed("dodge") and _dodge != null and _dodge.has_method("request_dodge"):
+		var dodge_dir: Vector2 = input_dir if has_input else _facing
+		if _dodge.request_dodge(dodge_dir):
+			# Brief flicker so the start of the dodge is readable.
+			sprite.modulate = Color(0.7, 0.9, 1.0, 0.9)
+
+	# Phase 2.3 — while dodging, the dodge velocity overlay replaces input.
+	if _dodge != null and _dodge.is_active():
+		velocity = _dodge.get_velocity_overlay()
+		move_and_slide()
+		return
 
 	var max_speed = stats.get_total_move_speed() * _slow_factor
 	var desired_velocity := Vector2.ZERO
@@ -3491,6 +3520,17 @@ func take_damage(amount: int, is_crit: bool = false) -> void:
 		return  # Can't take damage while dead
 	if is_on_heal_beacon:
 		return  # Immune while standing on heal beacon
+	# Phase 2.3 — dodge absorption. on_incoming_hit returns true while
+	# i-frames are active. Also emits perfect_dodge_executed if the hit
+	# landed in the perfect window (subscribed by Phase 2.5 reward).
+	if _dodge != null and _dodge.has_method("on_incoming_hit"):
+		if _dodge.on_incoming_hit(&""):
+			# Cheap "dodged!" feedback — a brief modulate flicker.
+			sprite.modulate = Color(0.7, 0.9, 1.0)
+			get_tree().create_timer(0.08).timeout.connect(func() -> void:
+				if not _is_dead:
+					sprite.modulate = Color.WHITE)
+			return
 	stats.take_damage(amount)
 	_spawn_damage_number(amount, is_crit)
 	_do_hit_flash()

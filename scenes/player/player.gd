@@ -10,6 +10,7 @@ const AttackMotionDataCls = preload("res://scripts/data/attack_motion_data.gd")
 const DodgeControllerCls = preload("res://scenes/player/dodge_controller.gd")
 const DodgeDataCls = preload("res://scripts/data/dodge_data.gd")
 const MomentumComponentCls = preload("res://scripts/components/momentum_component.gd")
+const CombatJuiceLayerCls = preload("res://scripts/components/combat_juice_layer.gd")
 
 signal attacked(target: Node2D)
 
@@ -179,6 +180,11 @@ var _last_hit_direction: Vector2 = Vector2.ZERO
 var _dodge: Node = null
 # Phase 2.4 — momentum (build-and-spend resource).
 var _momentum: Node = null
+# Phase 2.x — combat juice layer (floating pop-ups + combo counter).
+var _juice: Node = null
+# Phase 2.x — high-momentum player aura sprite.
+var _momentum_aura: Sprite2D = null
+var _momentum_aura_tween: Tween = null
 var _shake_time_left: float = 0.0
 const SHAKE_DURATION: float = 0.11
 
@@ -268,6 +274,28 @@ func _ready() -> void:
 	# telegraphs ship in Phase 3; this reward is timing-safe today
 	# because the local freeze is short (220 ms).
 	_dodge.perfect_dodge_executed.connect(_on_perfect_dodge_executed)
+
+	# Combat juice layer — floating FINISHER / CRIT / KILL labels +
+	# combo counter + radial impact rings.
+	_juice = CombatJuiceLayerCls.new()
+	_juice.name = "CombatJuiceLayer"
+	add_child(_juice)
+
+	# Momentum aura — fades in when momentum > 60. Below player z so the
+	# sprite stays readable.
+	var aura_tex = SpriteGenerator.get_texture("ring_flash")
+	if aura_tex == null:
+		aura_tex = SpriteGenerator.get_texture("crystal_white")
+	if aura_tex != null:
+		_momentum_aura = Sprite2D.new()
+		_momentum_aura.texture = aura_tex
+		_momentum_aura.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		_momentum_aura.modulate = Color(1.0, 0.7, 0.2, 0.0)
+		_momentum_aura.scale = Vector2(2.6, 2.6)
+		_momentum_aura.z_index = -2
+		add_child(_momentum_aura)
+	if _momentum != null and _momentum.has_signal("momentum_changed"):
+		_momentum.momentum_changed.connect(_on_momentum_changed_for_aura)
 
 	var tex = SpriteGenerator.get_texture(hero_class)
 	if tex:
@@ -3048,7 +3076,8 @@ func _start_basic_horizontal_clock(timing: Resource, target: Node2D, dir: Vector
 	_run_clocked_attack(timing, target, dir, ability_mult, func(t: Node2D, d: Vector2, crit: bool) -> void:
 		if is_instance_valid(t):
 			t.apply_knockback(d, 40.0)
-		_spawn_slash_vfx(d.rotated(captured_side * 0.3), 35.0, 1.0)
+		# Slightly bigger arc per base swing — A/B feel more weighty.
+		_spawn_slash_vfx(d.rotated(captured_side * 0.3), 45.0, 1.35)
 		if is_instance_valid(t):
 			_spawn_impact_vfx(t.global_position, crit)
 		if crit:
@@ -3061,12 +3090,16 @@ func _start_basic_horizontal_clock(timing: Resource, target: Node2D, dir: Vector
 
 # Swing C — the A→B→C finisher. Audit: knockback 55, VFX scale 1.4, shake 2.0/5.0.
 # Phase 2.2: when this fires as branch_slam, also applies a radial AoE.
+# Visual polish: finisher slash is bigger + fanned for dramatic impact.
 func _start_overhead_chop_clock(timing: Resource, target: Node2D, dir: Vector2, ability_mult: float = 1.0) -> void:
 	var rhythm_capture: int = int(timing.rhythm_class)
 	_run_clocked_attack(timing, target, dir, ability_mult, func(t: Node2D, d: Vector2, crit: bool) -> void:
 		if is_instance_valid(t):
 			t.apply_knockback(d, 55.0)
-		_spawn_slash_vfx(d, 40.0, 1.4)
+		# Beefier slash fan — main arc + two angled side arcs.
+		_spawn_slash_vfx(d, 55.0, 2.2)
+		_spawn_slash_vfx(d.rotated(0.22), 40.0, 1.4)
+		_spawn_slash_vfx(d.rotated(-0.22), 40.0, 1.4)
 		if is_instance_valid(t):
 			_spawn_impact_vfx(t.global_position, crit)
 		if crit:
@@ -3113,9 +3146,13 @@ func _start_spin_slash_clock(timing: Resource, target: Node2D, dir: Vector2, abi
 	_run_clocked_attack(timing, target, dir, ability_mult, func(t: Node2D, d: Vector2, crit: bool) -> void:
 		if is_instance_valid(t):
 			t.apply_knockback(d, 60.0)
-		_spawn_slash_vfx(d, 40.0, 1.6)
-		_spawn_slash_vfx(d.rotated(PI * 0.5), 35.0, 1.2)
-		_spawn_slash_vfx(d.rotated(-PI * 0.5), 35.0, 1.2)
+		# Six-arc spin fan — way more visible.
+		_spawn_slash_vfx(d, 55.0, 2.2)
+		_spawn_slash_vfx(d.rotated(PI * 0.33), 45.0, 1.7)
+		_spawn_slash_vfx(d.rotated(-PI * 0.33), 45.0, 1.7)
+		_spawn_slash_vfx(d.rotated(PI * 0.66), 40.0, 1.4)
+		_spawn_slash_vfx(d.rotated(-PI * 0.66), 40.0, 1.4)
+		_spawn_slash_vfx(d.rotated(PI), 50.0, 1.6)
 		if is_instance_valid(t):
 			_spawn_impact_vfx(t.global_position, crit)
 		if crit:
@@ -3983,3 +4020,32 @@ func _on_perfect_dodge_executed(_against_attack_id: StringName) -> void:
 		if enemy.global_position.distance_squared_to(global_position) > _PERFECT_DODGE_RADIUS_SQ:
 			continue
 		HitStopController.freeze_target(enemy, _PERFECT_DODGE_FREEZE_MS, 1)  # VICTIM
+
+
+# Momentum-aura update. Fades in over 60 momentum; max intensity at
+# capacity. Also a slow pulse loop while above threshold.
+const _AURA_THRESHOLD: float = 60.0
+func _on_momentum_changed_for_aura(value: float, capacity: int) -> void:
+	if _momentum_aura == null or not is_instance_valid(_momentum_aura):
+		return
+	if _is_dead:
+		return
+	# Below threshold: fade out and stop the pulse.
+	if value < _AURA_THRESHOLD:
+		if _momentum_aura_tween != null and _momentum_aura_tween.is_valid():
+			_momentum_aura_tween.kill()
+		var t := _momentum_aura.create_tween()
+		t.tween_property(_momentum_aura, "modulate:a", 0.0, 0.3)
+		return
+	# Above threshold: scale alpha by how close to capacity we are.
+	var range_above: float = max(1.0, float(capacity) - _AURA_THRESHOLD)
+	var intensity: float = clamp((value - _AURA_THRESHOLD) / range_above, 0.0, 1.0)
+	var alpha: float = 0.18 + intensity * 0.55
+	# Restart the pulse loop only if not already running.
+	if _momentum_aura_tween == null or not _momentum_aura_tween.is_valid():
+		_momentum_aura_tween = _momentum_aura.create_tween().set_loops()
+		_momentum_aura_tween.tween_property(_momentum_aura, "scale", Vector2(3.1, 3.1), 0.5).set_trans(Tween.TRANS_SINE)
+		_momentum_aura_tween.tween_property(_momentum_aura, "scale", Vector2(2.4, 2.4), 0.5).set_trans(Tween.TRANS_SINE)
+	# Snappy alpha update so the visual responds to each hit.
+	var ta := _momentum_aura.create_tween()
+	ta.tween_property(_momentum_aura, "modulate:a", alpha, 0.18)

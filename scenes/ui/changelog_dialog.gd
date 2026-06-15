@@ -9,9 +9,22 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.84.7"
+const GAME_VERSION := "v0.85.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.85.0",
+		"title": "Combat juice — pop-up labels, combo counter, momentum aura, bigger slashes",
+		"date": "2026-06-15",
+		"entries": [
+			"FLOATING POP-UPS on every meaningful hit. KILL! / DEVASTATING! / CRIT! / FINISHER! / SLAM! / LIFT! / SPIN! / CHARGED! / WHIRLWIND! / POWER! Each colour-coded and sized for impact. Floats up over 0.85 s.",
+			"COMBO COUNTER top-center of screen. Shows '1.3x COMBO' (etc.) — pulses on each hit, font scales with multiplier, fades after the combo decays.",
+			"MOMENTUM AURA: when momentum ≥ 60, the player gains a warm golden glow that pulses slowly and intensifies with each landed hit. Fades out cleanly when momentum drops.",
+			"IMPACT RING on every confirmed hit — a quick radial flash at the point of impact, colored by hit type. Bigger and longer for crits / lethal hits.",
+			"BIGGER SLASH ARCS: basic swings A/B are 35% larger. Finisher C is now a 3-arc fan (main + two side blades). Spin E is now a SIX-arc explosion covering 360°. Slam still gets its bonus impact ring on top.",
+			"Internal: new scripts/components/combat_juice_layer.gd (CanvasLayer child of player, subscribes to CombatManager.hit_resolved + MomentumComponent.combo_multiplier_changed). Player has a new _momentum_aura sprite tied to momentum_changed. No new pools, no save changes.",
+		]
+	},
 	{
 		"version": "v0.84.7",
 		"title": "🐀💥💥 RATS EXPLODE × 10, gore now sticks to the player",

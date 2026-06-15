@@ -82,6 +82,15 @@ var _frenzy_until_usec: int = 0
 var _recent_attack_ids: Array[StringName] = []
 var _last_hit_world_pos: Vector2 = Vector2.ZERO
 
+# Phase 3.x — kill-streak reward. Killing 5 enemies inside KILL_STREAK_
+# WINDOW_MS grants a big momentum bonus + emits signal for player to
+# play a "STREAK!" feedback.
+const KILL_STREAK_TARGET: int = 5
+const KILL_STREAK_WINDOW_MS: int = 6000
+const KILL_STREAK_GRANT: float = 30.0
+var _recent_kill_msecs: Array[int] = []
+signal kill_streak_achieved(count: int)
+
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_PAUSABLE
@@ -177,6 +186,18 @@ func _record_recent(id: StringName) -> void:
 
 func on_kill() -> void:
 	_credit(float(kill_grant), &"kill")
+	# Phase 3.x — track kill streak window. Prune > KILL_STREAK_WINDOW_MS
+	# entries, append current, check threshold, fire bonus + signal.
+	var now_msec: int = Time.get_ticks_msec()
+	var threshold: int = now_msec - KILL_STREAK_WINDOW_MS
+	while _recent_kill_msecs.size() > 0 and _recent_kill_msecs[0] < threshold:
+		_recent_kill_msecs.pop_front()
+	_recent_kill_msecs.append(now_msec)
+	if _recent_kill_msecs.size() >= KILL_STREAK_TARGET:
+		_credit(KILL_STREAK_GRANT, &"kill_streak")
+		var count: int = _recent_kill_msecs.size()
+		kill_streak_achieved.emit(count)
+		_recent_kill_msecs.clear()
 
 
 # Phase 2.10 — bonus grant from kill chain or other external systems.

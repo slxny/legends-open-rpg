@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.88.0"
+const GAME_VERSION := "v0.88.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.88.1",
+		"title": "Combat overhaul — KILL STREAK REWARD (5 kills in 6s)",
+		"date": "2026-06-15",
+		"entries": [
+			"KILLING 5 ENEMIES WITHIN 6 SECONDS triggers a KILL STREAK!",
+			"Rewards: +30 momentum (pushes you toward FRENZY), +12 HP heal, screen shake 4, charge_release audio cue, big gold '5 KILL STREAK!' floating text above the player.",
+			"After the streak fires, the counter resets — chain another 5 to trigger again. Encourages aggressive crowd-clearing.",
+			"Internal: MomentumComponent tracks _recent_kill_msecs Array[int]. on_kill prunes entries older than 6000 ms, appends current Time.get_ticks_msec, checks size >= 5. On trigger: credits 30 via &kill_streak reason, emits kill_streak_achieved(count), clears the array. player.gd subscribes and applies HP heal + juice pop + shake.",
+		]
+	},
 	{
 		"version": "v0.88.0",
 		"title": "Combat overhaul — Phase 5.1 telegraph audio + apex flash",

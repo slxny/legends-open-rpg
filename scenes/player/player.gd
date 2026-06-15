@@ -341,6 +341,9 @@ func _ready() -> void:
 		_momentum.frenzy_started.connect(_on_frenzy_started)
 	if _momentum != null and _momentum.has_signal("frenzy_ended"):
 		_momentum.frenzy_ended.connect(_on_frenzy_ended)
+	# Phase 3.x — kill streak reward.
+	if _momentum != null and _momentum.has_signal("kill_streak_achieved"):
+		_momentum.kill_streak_achieved.connect(_on_kill_streak)
 
 	var tex = SpriteGenerator.get_texture(hero_class)
 	if tex:
@@ -4622,3 +4625,20 @@ func _on_frenzy_ended() -> void:
 	# Visual: aura back to gold pulse.
 	if _momentum_aura != null and is_instance_valid(_momentum_aura):
 		_momentum_aura.modulate = Color(1.0, 0.7, 0.2, 0.55)
+
+
+# Phase 3.x — kill-streak achievement reward.
+func _on_kill_streak(count: int) -> void:
+	if _is_dead:
+		return
+	# Big "STREAK!" pop via juice layer.
+	if _juice != null and _juice.has_method("_spawn_floating_text"):
+		var label: String = "%d KILL STREAK!" % count
+		_juice._spawn_floating_text(global_position + Vector2(0, -80), label, Color(1.5, 0.8, 0.2), true)
+	# Small heal as bonus on top of the momentum credit.
+	if "current_hp" in stats and "max_hp" in stats:
+		stats.current_hp = min(int(stats.max_hp), int(stats.current_hp) + 12)
+	# Cinematic punctuation.
+	_do_screen_shake(4.0)
+	if AudioManager != null and AudioManager.has_method("play_sfx"):
+		AudioManager.play_sfx("charge_release", 1.0)

@@ -474,6 +474,247 @@ Below = the minimum signal that confirms the system shipped. Each is also called
 
 ---
 
+## 5c. Fun & Combat Depth roadmap (added 2026-06-15)
+
+The systems above (1–11) make combat feel responsive and impactful. This section adds the systems that make combat **fun to keep playing** — interesting decisions, surprising moments, varied encounters, and rewards for mastery.
+
+For every system below: **Why fun?** (the player-experience answer), then smallest viable, dependencies, required artifacts, acceptance criteria, performance risk, and which Phase it belongs to.
+
+### Re-organized phase axes
+
+Per the user's final planning requirement, future phases are tagged with their axis:
+
+- **R** Responsiveness — input → action → contact (DONE, Phase 1A/1B/2.1)
+- **I** Impact feedback — visual/audio of a confirmed hit (DONE, Phase 1B + juice layer)
+- **D** Combat decisions — choices the player makes mid-fight (Phase 2.x + the new fun systems below)
+- **P** Enemy pressure — what enemies do to the player (Phase 3.x)
+- **B** Build progression — persistent character growth (Phase 6.2 + upgrades)
+- **E** Encounter variety — what each fight looks like (Phase 3.6/3.7 + 12/13 below)
+- **L** Long-term replayability — modifiers, challenge rooms (#12/#13/#14/#15 below)
+
+### F1 — Momentum thresholds with gameplay effects *(extends shipped 2.4)*
+**Why fun:** today momentum is just a number that draws an aura. Players need to *feel* it pay off — faster attacks, bigger crits, cooldown refunds. This is the system that makes the build-and-spend loop visceral.
+- **Phase:** 2.8 (extends 2.4)
+- **Axis:** D
+- **Smallest viable:** three thresholds on `MomentumComponent`: 33 (`focused` — +5% attack speed), 66 (`heated` — every 4th hit chains a free shockwave on the locked target), 100 (`frenzy` — for 6 s: specials cost 0 momentum, +20% damage, attack-clock duration ×0.85). Threshold entry emits `momentum_threshold_entered(name)` and triggers a juice pop-up label.
+- **Depends on:** 2.4 (shipped).
+- **Artifacts:** `MomentumComponent` gains `apply_threshold_effects()`; player applies temporary speed/damage modifiers via existing `stats` deltas. New signals: `threshold_entered`, `threshold_exited`, `frenzy_started`, `frenzy_ended`.
+- **Acceptance:** crossing 33 plays a "FOCUSED!" pop and basic-swing duration shortens audibly. Crossing 66 fires a shockwave on every 4th hit. Crossing 100 triggers a 6 s `FRENZY!` state with screen edge tint + free specials.
+- **Performance risk:** none.
+
+### F2 — Diminishing-returns variety bonus *(category 2)*
+**Why fun:** spamming A becomes naturally less rewarding without being punished. Players experiment with branches and specials because variety pays.
+- **Phase:** 2.8 (bundled with F1 since both touch Momentum)
+- **Axis:** D
+- **Smallest viable:** `MomentumComponent` tracks the last 4 attack_ids; per-attack grant is multiplied by `1.0 / (1.0 + repeats * 0.4)`. Variety bonus when last 4 are all unique: ×1.4.
+- **Depends on:** 2.4 (shipped).
+- **Acceptance:** spamming A grants 5, 5, 3.6, 2.5… vs A→B→C→slam grants 5+8+15+20 all at full bonus.
+
+### F3 — Context-sensitive finishers *(category 4)*
+**Why fun:** the same C-swing on a low-HP enemy plays as a beheading; on a launched enemy as a ground-slam; on a marked target as an execution. Same input, different drama based on what the player set up.
+- **Phase:** 2.9
+- **Axis:** D + I
+- **Smallest viable:** at C-swing contact, `_select_finisher_variant(target)` returns one of: `default`, `execution` (target HP < 25%), `ground_slam` (target staggered or knocked down), `marked_burst` (target has any mark/exposed status). Each variant changes the contact VFX (extra ring + radial blood for execution), the camera trauma (+15%), and consumes the relevant status if applicable.
+- **Depends on:** 2.0 (poise / vulnerability), 2.6 (status), 2.2 (branch detection).
+- **Artifacts:** `FinisherVariantData` Resource per variant (vfx_overlay, shake_bonus, audio_layer, momentum_grant_bonus).
+- **Acceptance:** C on a low-HP enemy looks distinctly different from C on a full-HP enemy; players recognize the variant immediately.
+
+### F4 — Kill-chain auto-retarget *(category 16, very high priority)*
+**Why fun:** today the combo dies when the locked enemy dies. The player wants to *keep swinging through the group*. Kills should feed momentum into the next target.
+- **Phase:** 2.10
+- **Axis:** D + R
+- **Smallest viable:** on `result.was_lethal`, look up the next-nearest unconsumed enemy within `chain_radius` (default 140 px). If found within 250 ms of the kill: bias the player's next swing direction toward it; the swing's magnetism cone is widened ×1.3. `MomentumComponent` adds a `kill_chain_grant` (+10 momentum + small attack-speed pulse for 800 ms).
+- **Depends on:** 2.1 (magnetism), 2.4 (momentum).
+- **Artifacts:** `_kill_chain_target: Node2D` + `_kill_chain_expires_usec` on player. Consumed by `_pick_target_for_swing` (extends `_find_best_target`).
+- **Acceptance:** killing one of three packed enemies; next attack lands on the next enemy without manual aim correction.
+- **Performance risk:** one extra distance check at lethal hit.
+
+### F5 — Temporary overpowered states (Frenzy / Berserk / Shrine) *(category 6)*
+**Why fun:** rare moments of "go nuts and obliterate everything" are the highest-arousal beats in modern action games. Diablo's Conduit shrine, DOOM's Berserk, Hades's God Mode pulses.
+- **Phase:** 2.11
+- **Axis:** D + I
+- **Smallest viable:** **Frenzy** (already triggered at momentum=100, see F1). Add **Berserk** triggered by killing 5 enemies in 4 s (kill streak). Berserk: 4 s of +30% attack speed + +50% AoE radius + free shockwave on every kill. Both modes share a `TemporaryEmpowermentComponent` that applies stacked stat deltas via a single typed signal and clears them automatically on expiry.
+- **Depends on:** 2.4 (momentum), 2.10 (kill chains — share kill detection).
+- **Artifacts:** `scripts/components/temporary_empowerment_component.gd`, `EmpowermentProfile` Resource (id, duration, stat deltas, vfx tint, audio cue).
+- **Acceptance:** chaining 5 kills in 4 s triggers a visible BERSERK! pop, screen edges tint red, the player's next 4 s of attacks shake the world.
+- **Performance risk:** none — event-driven.
+
+### F6 — Combat pickups (drop on kill) *(category 7)*
+**Why fun:** little gameplay rewards mid-fight — momentum orbs, health shards, cooldown-reset pulses — that pull the player around the battlefield and reward aggression.
+- **Phase:** 2.12
+- **Axis:** D
+- **Smallest viable:** `PickupSpawner` (per-encounter or global). On enemy death roll: 12% momentum_orb, 5% health_shard, 1% cooldown_orb. Pickups are pooled Area2D bodies that auto-magnetize when the player is within 80 px. Pickup → MomentumComponent / stats / DodgeController as appropriate.
+- **Depends on:** none (subscribes to enemy `died`).
+- **Artifacts:** `scripts/components/pickup_spawner.gd`, `scenes/pickups/combat_pickup.tscn`, `CombatPickupData` Resource (type, magnitude, vfx, sfx, magnet_radius).
+- **Acceptance:** killing 10 enemies drops at least 1 momentum orb and 0–1 health shards. Player walking past triggers magnet snap. Pickup glow is visible in dim areas.
+- **Performance risk:** pool the pickup nodes; cap simultaneous active pickups at 20 per encounter.
+
+### F7 — Enemy roles that change behavior *(category 8 — restates Phase 3.4 with the fun framing)*
+**Why fun:** every enemy demands a different mental model. Shield enemies → flank; chargers → dodge-time; healers → priority kill. Encounters become decisions rather than reflexes.
+- **Phase:** 3.4 (already planned; promoted)
+- **Axis:** P
+- **Smallest viable:** 4 roles for the existing roster: `swarm` (rat, current), `shield` (skeleton variant — directional damage reduction), `charger` (wolf — telegraphed dash that stuns on wall), `ranged` (bandit archer — maintains distance, kited).
+- **Depends on:** 3.0 (telegraph timeline) for charger / ranged.
+- **Acceptance:** each role meaningfully changes what the player does; videos of a 30-second encounter against each role look distinct.
+
+### F8 — Enemy vulnerabilities and openings *(category 9 — promoted)*
+**Why fun:** observation pays off. Missed enemy heavy → punish window. Shield broken after poise damage → flank window. Charger hits wall → stunned 1.5 s. These are the moments where players feel *smart*.
+- **Phase:** 3.5 (already planned; promoted with explicit list)
+- **Axis:** P + D
+- **Smallest viable:** add `vulnerability_window_ms` to `EnemyAttackTimingData` (Phase 3.0). After a heavy attack misses (or hits the player but didn't drain HP — they perfect-dodged), the enemy is vulnerable for that window. During vulnerability the enemy's `final_feedback` upgrades by one weight tier and HitReaction forces ELITE tier. Charger that hits a wall enters stunned state for 1500 ms.
+- **Depends on:** 3.0.
+- **Acceptance:** baiting a charger into a wall is a visible reward — they stagger, you punish, big damage.
+
+### F9 — Risk/reward attack variants *(category 10)*
+**Why fun:** hold-to-amplify creates "do I commit?" decisions. Low-HP berserker beats the safe build. These choices give playstyle expression.
+- **Phase:** 2.13
+- **Axis:** D
+- **Smallest viable:** add **hold-charge** to slam: holding the attack button at C-contact for +0.3 s grows slam radius from 80 → 140 px and doubles poise damage, but you can't dodge-cancel during the hold. Add **low-HP aggression**: at HP < 30%, basic-swing crit chance +20%.
+- **Depends on:** 2.1 (motion — to grow the slam radius cleanly).
+
+### F10 — Destructible / interactive arenas *(category 11)*
+**Why fun:** combat affects the world. Knocking an enemy into an explosive barrel feels great. Cover lets you reposition.
+- **Phase:** 7.0 (already planned) + 3.7 (shared hazards)
+- **Axis:** E
+- **Smallest viable:** `BreakableProp` scene + `ExplosiveBarrel` scene. Barrel takes damage from any attack, explodes at 0 HP dealing radial damage including to nearby enemies; can be detonated by knockback collision.
+- **Artifacts:** `scenes/props/breakable_prop.tscn`, `scenes/props/explosive_barrel.tscn`, `BreakableData` Resource.
+- **Acceptance:** an encounter near 2 barrels lets the player knock an enemy into one for free area damage.
+
+### F11 — Encounter modifiers *(category 12)*
+**Why fun:** changes what feels familiar. Shrine that buffs nearby enemies → priority kill it first. Arena hazard zones → keep moving.
+- **Phase:** 3.8
+- **Axis:** E + L
+- **Smallest viable:** `EncounterModifier` Resource on `EncounterData` (Phase 3.6). Two starting modifiers: `bloodthirst_shrine` (enemies within 200 px of shrine deal +20% damage — destroy shrine to disable), `darkness` (visibility radius shrinks until a torch is lit).
+- **Depends on:** 3.6.
+- **Acceptance:** at least one encounter visibly changes based on its modifier; players notice.
+
+### F12 — Challenge rooms *(category 13)*
+**Why fun:** opt-in optional content with focused rules. "Kill 8 enemies in 30 s for an upgrade." Hades-style modifier rewards.
+- **Phase:** 3.9
+- **Axis:** L
+- **Smallest viable:** one challenge type: **clear-time room** — 8 enemies, 45 s timer. Beat it → choice between 2 random upgrade modifiers (from F13). Lose → no penalty.
+- **Depends on:** 3.6 (encounter data), F13 (upgrade choices).
+
+### F13 — Behavior-changing upgrade choices *(category 14 — extends 6.2)*
+**Why fun:** every level-up offers 3 visibly distinct attack changes instead of "+5% damage." Build identity.
+- **Phase:** 6.2 (already planned; promoted)
+- **Axis:** B
+- **Smallest viable:** at level-up, present 3 choices drawn from a per-attack modifier pool. E.g.:
+  - "Slam creates a second shockwave"
+  - "Slam pulls enemies inward"
+  - "Slam leaves a damaging ground zone"
+- Choice persists to save. `AttackUpgrade` Resource per modifier.
+- **Save format:** `attack_upgrades: Array[String]` (already planned).
+- **Acceptance:** picking "slam second shockwave" measurably changes slam behavior. Three different builds play differently after 10 level-ups.
+
+### F14 — Weapon-style identity placeholder *(category 15)*
+**Why fun:** sword vs axe vs hammer feels like different *games*, not just stat re-skins. This is a Phase 4+ architectural concern.
+- **Phase:** 4.5 (note: weapon abstraction in AttackTimings + ComboData)
+- **Axis:** B
+- **Status:** planning only. Existing `AttackTimings` library is already structured per-attack-id so a new weapon = a new id set. Don't ship multiple weapons until Phase 2 is fully polished.
+
+### F15 — Adaptive intensity *(category 17)*
+**Why fun:** combat that rises and falls keeps it from being exhausting. Brief lulls after big encounters; high-momentum moments coordinate enemies more aggressively.
+- **Phase:** 3.10
+- **Axis:** P + E
+- **Smallest viable:** `EncounterIntensityTracker` on the per-encounter `AttackCoordinator` (Phase 3.3). High player momentum → coordinator allows +1 simultaneous attacker. Brief 2-second "breathe" pause after every clear before the next wave triggers.
+- **Depends on:** 3.3 coordinator.
+
+### F16 — Reactive music layers *(category 18)*
+**Why fun:** music that responds to combat state makes every fight feel scripted.
+- **Phase:** 5.5
+- **Axis:** I + E
+- **Smallest viable:** `MusicDirector` autoload reads (encounter active? boss present? player momentum? player HP %) → cross-fades between 4 stems on a fixed BPM grid. No track restarts.
+- **Depends on:** AudioManager (have).
+
+### F17 — Combat sandbox scene *(per "Dedicated combat sandbox")*
+**Why fun (for development):** lets us tune every system in seconds without grinding through level. **Massive multiplier on iteration speed for everything above.**
+- **Phase:** 0b (parallel to all phases — build this NEXT, before Phase 3)
+- **Axis:** dev tooling
+- **Smallest viable:** new scene `scenes/dev/combat_sandbox.tscn` with:
+  - F1 keys 1–9 to spawn enemies of varied tiers
+  - Buttons to refill HP / momentum / cooldowns
+  - Toggles for hit-stop / shake / reactions / telegraphs / juice layer
+  - On-screen readout of current momentum / combo / poise of last hit target
+  - Frame counter
+  - "Reset arena" hotkey
+- **Acceptance:** I can swap from "spawn 8 swarm" → "spawn 1 boss" → "test crit" in under 3 seconds.
+
+### Fun-axis dependency graph
+
+```
+Already shipped (R + I axes):
+  Phase 1 foundation → magnetism (2.1) → directional functions (2.2)
+  → dodge (2.3) → momentum (2.4) → perfect-dodge reward (2.5)
+  → status interactions (2.6/2.7) → juice layer (v0.85.0)
+
+NEXT — extends D axis on the existing systems:
+  2.8 F1 momentum thresholds + F2 variety bonus
+   └─► 2.9 F3 context-sensitive finishers
+        └─► 2.10 F4 kill-chain auto-retarget
+             └─► 2.11 F5 temporary overpowered states
+                  └─► 2.12 F6 combat pickups
+                       └─► 2.13 F9 risk/reward variants
+
+THEN — Phase 3 (P + E axes):
+  3.0 enemy attack timeline → 3.1 telegraphs → 3.2 migrate enemies
+   └─► 3.3 attack coordinator
+        ├─► 3.4 F7 enemy roles
+        │    └─► 3.5 F8 vulnerability windows
+        ├─► 3.6 EncounterData + SpawnDirector
+        │    └─► 3.7 hazards (+ F10 destructibles)
+        │         └─► 3.8 F11 encounter modifiers
+        │              └─► 3.9 F12 challenge rooms
+        └─► 3.10 F15 adaptive intensity
+
+PARALLEL TO ALL OF THIS — dev tooling:
+  0b F17 combat sandbox scene (build this NEXT — multiplier on iteration)
+
+LATER — Phase 4+:
+  4.5 F14 weapon-style identity
+  5.0 death feedback (system #11)
+  5.5 F16 reactive music
+  6.2 F13 behavior-changing upgrades
+```
+
+### Recommended Phase 2.x → 3.x execution order (revised)
+
+1. **0b — combat sandbox** ← build this NEXT so every following stage is testable in seconds
+2. **2.8 — momentum thresholds + variety bonus** ← makes the shipped Momentum *actually felt* in gameplay
+3. **2.9 — context-sensitive finishers** ← C-finisher already in place, this gives it variants
+4. **2.10 — kill-chain auto-retarget** ← biggest single "fun" win for crowd combat
+5. **2.11 — temporary overpowered states (Frenzy / Berserk)**
+6. **2.12 — combat pickups**
+7. **2.13 — risk/reward (slam hold-charge, low-HP aggression)**
+8. **Phase 3 begins:** enemy timelines + telegraphs (3.0–3.2)
+9. **3.3–3.5 — coordinator + roles + vulnerabilities**
+10. **3.6–3.10 — encounters + modifiers + adaptive intensity**
+
+### Architectural guard-rails (re-affirmed)
+
+- **No new global autoloads.** Sandbox is a scene; PickupSpawner is per-encounter or per-world; MusicDirector is the only candidate autoload (Phase 5.5) and replaces no existing one.
+- **No god-script growth.** Each new system is a component or Resource.
+- **Save additive only.** `attack_upgrades: Array[String]`, `cleared_encounters: Array[String]`, optionally `best_combo_streak: int`. All default to safe values.
+- **Performance:** F4 kill-chain adds one distance check per lethal hit. F6 pickups pooled and capped. F11 modifiers are encounter-local. F15 intensity is event-driven, not per-frame.
+
+### Why this answer's the "more fun" question
+
+The shipped Phase 2 work made combat *feel right* (input → contact → impact → reaction). The 17 systems above turn each fight into a sequence of **observed decisions with surprising rewards**:
+
+- F1/F2 reward varied play with felt mechanical benefits, not just numbers.
+- F3 makes C-finisher visually different against different enemy states.
+- F4 keeps the combo alive through the death of any individual target.
+- F5 gives rare "godmode" beats that punctuate normal play.
+- F6 pulls the player around the battlefield and rewards aggression.
+- F7/F8 demand different mental models per enemy.
+- F9 introduces opt-in commitment trades.
+- F10–F12 make the arena itself a combat element.
+- F13 makes level-ups change *what* you do, not how much damage you do.
+- F15/F16 make encounters feel scripted and dramatic without authored cutscenes.
+- F17 (sandbox) is the dev-side accelerator that makes every above stage 5× faster to tune.
+
+---
+
 ## 6. Phase 1 — staged execution plan
 
 Each stage is one or more discrete commits. Each leaves the game playable. Each ends with a behavioral checklist re-run.

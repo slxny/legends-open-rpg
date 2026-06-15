@@ -9,9 +9,23 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.85.0"
+const GAME_VERSION := "v0.85.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.85.1",
+		"title": "Combat plan — Fun & Combat Depth roadmap (docs only)",
+		"date": "2026-06-15",
+		"entries": [
+			"Docs only. No gameplay changes.",
+			"COMBAT_IMPROVEMENT_PLAN.md gains §5c — Fun & Combat Depth: 17 systems (F1–F17) that turn combat into observed decisions with surprising rewards, not just smoother responsiveness.",
+			"Cross-mapped against the user's 19 design categories. Identified what's already shipped (momentum, magnetism, dodge, perfect-dodge reward, status interactions, juice layer) vs what's genuinely new (context-sensitive finishers, kill-chain retarget, temporary OP states, combat pickups, encounter modifiers, challenge rooms, behavior-changing upgrade choices, weapon-style identity, adaptive intensity, reactive music, dev sandbox).",
+			"Re-tagged future phases with 7 design axes: Responsiveness, Impact, Decisions, Pressure, Build, Encounters, Replayability.",
+			"Revised execution order: 0b sandbox scene FIRST (dev iteration multiplier), then F1/F2 momentum thresholds + variety, F3 finisher variants, F4 kill-chain retarget, F5 Frenzy/Berserk, F6 pickups, F9 risk/reward. Then Phase 3 enemy timelines + roles + encounters.",
+			"For every system: why it makes combat MORE FUN (not just smoother), smallest viable, dependencies, required Resources/components/signals, acceptance criteria, performance risk, save-format impact.",
+			"Save additive only: best_combo_streak (optional), attack_upgrades, cleared_encounters. No new global autoloads (MusicDirector candidate in Phase 5.5 only).",
+		]
+	},
 	{
 		"version": "v0.85.0",
 		"title": "Combat juice — pop-up labels, combo counter, momentum aura, bigger slashes",

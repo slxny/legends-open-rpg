@@ -9,9 +9,21 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.85.4"
+const GAME_VERSION := "v0.85.5"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.85.5",
+		"title": "Combat overhaul — Phase 2.12 combat pickups (momentum / health / cooldown orbs)",
+		"date": "2026-06-15",
+		"entries": [
+			"ENEMIES NOW DROP PICKUPS. Kill them to find: momentum orbs (gold, ~14% rate, +15 momentum), health shards (red, ~6% rate, +20 HP), cooldown orbs (cyan, ~1.5% rate, instantly clears dodge cooldown).",
+			"Mini-bosses guarantee a momentum orb plus 50% health + 30% cooldown rolls.",
+			"Pickups bob in place, glow with a pulse loop, eject from the corpse with a small arc. Magnetize to you within ~90 px; auto-collect at ~14 px. Last 9 seconds, then fade out cleanly.",
+			"Collecting a momentum orb mid-combat can push you over the FOCUSED / HEATED / FRENZY threshold, triggering the empowered states without earning every point through hits. Cooldown orb gives you a free dodge mid-encounter — clutch.",
+			"Internal: scripts/components/combat_pickup.gd (Area2D, programmatic; no .tscn needed). enemy.gd._roll_combat_pickup independent rolls per type. Cleanup via lifetime expiry — no global cap because the natural drop rate keeps the field uncluttered.",
+		]
+	},
 	{
 		"version": "v0.85.4",
 		"title": "Combat overhaul — Phase 2.9 context-sensitive C-finisher variants",

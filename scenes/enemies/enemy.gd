@@ -7,6 +7,7 @@ const HitReactionDataCls = preload("res://scripts/data/hit_reaction_data.gd")
 const PoiseComponentCls = preload("res://scripts/components/poise_component.gd")
 const PoiseProfileCls = preload("res://scripts/data/poise_profile.gd")
 const StatusEffectComponentCls = preload("res://scripts/components/status_effect_component.gd")
+const CombatPickupCls = preload("res://scripts/components/combat_pickup.gd")
 
 signal died(enemy: Node2D, xp_reward: int, gold_reward: int)
 
@@ -811,6 +812,9 @@ func _die() -> void:
 		var item = ItemData.roll_item_drop(drop_table)
 		if not item.is_empty():
 			_spawn_item_drop_dict(item)
+	# Phase 2.12 — combat pickups on death. Roll types independently;
+	# elites/mini-bosses get slightly higher rolls.
+	_roll_combat_pickup()
 	hp_bar.visible = false
 	name_label.visible = false
 	if _shadow:
@@ -3113,6 +3117,45 @@ func _pick_reaction_tier() -> int:
 			return 1  # MEDIUM
 		_:
 			return 0  # LIGHT
+
+
+# Phase 2.12 — combat pickup drop roll. Rates are independent so one
+# enemy could drop multiple, but realistically you'll see one per ~6
+# kills. Mini-bosses get a guaranteed pickup.
+const _PICKUP_RATE_MOMENTUM: float = 0.14
+const _PICKUP_RATE_HEALTH: float = 0.06
+const _PICKUP_RATE_COOLDOWN: float = 0.015
+func _roll_combat_pickup() -> void:
+	var rate_mom: float = _PICKUP_RATE_MOMENTUM
+	var rate_hp: float = _PICKUP_RATE_HEALTH
+	var rate_cd: float = _PICKUP_RATE_COOLDOWN
+	if is_mini_boss:
+		rate_mom = 1.0
+		rate_hp = 0.5
+		rate_cd = 0.3
+	if randf() < rate_mom:
+		_spawn_pickup(&"momentum", 15.0)
+	if randf() < rate_hp:
+		_spawn_pickup(&"health", 20.0)
+	if randf() < rate_cd:
+		_spawn_pickup(&"cooldown_orb", 0.0)
+
+
+func _spawn_pickup(pickup_type: StringName, magnitude: float) -> void:
+	var pickup = CombatPickupCls.new()
+	pickup.pickup_type = pickup_type
+	pickup.magnitude = magnitude
+	var jitter := Vector2(randf_range(-10, 10), randf_range(-8, 4))
+	pickup.global_position = global_position + jitter
+	var world := _get_world_node()
+	if world == null:
+		queue_free()
+		return
+	world.add_child(pickup)
+	# Small spawn-arc tween so the pickup feels ejected from the corpse.
+	var dest: Vector2 = pickup.global_position + Vector2(randf_range(-20, 20), randf_range(-18, -4))
+	var t := pickup.create_tween()
+	t.tween_property(pickup, "global_position", dest, 0.25).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
 
 # Phase 2.6/2.7 — status effect visuals.

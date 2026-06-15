@@ -55,11 +55,18 @@ func _ready() -> void:
 	if Engine.has_singleton("CombatManager") or get_node_or_null("/root/CombatManager") != null:
 		CombatManager.hit_resolved.connect(_on_hit_resolved)
 
-	# Subscribe to player's momentum changes for the combo counter.
+	# Subscribe to player's momentum changes for the combo counter +
+	# threshold pop-ups + frenzy banner.
 	var mom = _player.get_node_or_null("MomentumComponent") if _player != null else null
 	if mom != null:
 		if mom.has_signal("combo_multiplier_changed"):
 			mom.combo_multiplier_changed.connect(_on_combo_multiplier_changed)
+		if mom.has_signal("threshold_entered"):
+			mom.threshold_entered.connect(_on_threshold_entered)
+		if mom.has_signal("frenzy_started"):
+			mom.frenzy_started.connect(_on_frenzy_started_juice)
+		if mom.has_signal("frenzy_ended"):
+			mom.frenzy_ended.connect(_on_frenzy_ended_juice)
 
 
 func _on_combo_multiplier_changed(value: float) -> void:
@@ -201,6 +208,72 @@ func _position_label_at_world(label: Label, world_pos: Vector2) -> void:
 	# Center label around screen_pos.
 	label.position = screen_pos - Vector2(60, 20)
 	label.size = Vector2(120, 40)
+
+
+# Phase 2.8 threshold pop-ups. Spawned center-top so player can't miss.
+var _frenzy_banner: Label = null
+func _on_threshold_entered(name: StringName) -> void:
+	var text: String = ""
+	var color: Color = Color(1.0, 0.85, 0.3)
+	match name:
+		&"focused":
+			text = "FOCUSED!"
+			color = Color(0.6, 1.2, 1.6)
+		&"heated":
+			text = "HEATED!"
+			color = Color(1.4, 0.65, 0.15)
+		&"frenzy":
+			text = "FRENZY!"
+			color = Color(1.5, 0.25, 0.15)
+	if text == "" or _player == null:
+		return
+	# Spawn at player position offset up.
+	_spawn_floating_text(_player.global_position + Vector2(0, -68), text, color, true)
+
+
+func _on_frenzy_started_juice(_duration_ms: int) -> void:
+	# Persistent banner during frenzy — sticks at top-center.
+	if _frenzy_banner != null and is_instance_valid(_frenzy_banner):
+		_frenzy_banner.queue_free()
+	_frenzy_banner = Label.new()
+	var settings := LabelSettings.new()
+	settings.font_size = 56
+	settings.font_color = Color(1.5, 0.3, 0.15)
+	settings.outline_size = 8
+	settings.outline_color = Color(0.05, 0.0, 0.0)
+	settings.shadow_color = Color(0.0, 0.0, 0.0, 0.7)
+	settings.shadow_size = 5
+	_frenzy_banner.label_settings = settings
+	_frenzy_banner.text = "FRENZY"
+	_frenzy_banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_frenzy_banner.anchor_left = 0.5
+	_frenzy_banner.anchor_right = 0.5
+	_frenzy_banner.anchor_top = 0.18
+	_frenzy_banner.anchor_bottom = 0.18
+	_frenzy_banner.offset_left = -180
+	_frenzy_banner.offset_right = 180
+	_frenzy_banner.offset_top = -10
+	_frenzy_banner.offset_bottom = 70
+	_frenzy_banner.modulate.a = 0.0
+	add_child(_frenzy_banner)
+	var t := _frenzy_banner.create_tween()
+	t.tween_property(_frenzy_banner, "modulate:a", 1.0, 0.15)
+	# Pulse loop on the banner so it feels alive.
+	var pulse := _frenzy_banner.create_tween().set_loops()
+	pulse.tween_property(_frenzy_banner, "scale", Vector2(1.06, 1.06), 0.35).set_trans(Tween.TRANS_SINE)
+	pulse.tween_property(_frenzy_banner, "scale", Vector2(1.0, 1.0), 0.35).set_trans(Tween.TRANS_SINE)
+
+
+func _on_frenzy_ended_juice() -> void:
+	if _frenzy_banner == null or not is_instance_valid(_frenzy_banner):
+		return
+	var t := _frenzy_banner.create_tween()
+	t.tween_property(_frenzy_banner, "modulate:a", 0.0, 0.3)
+	var banner_ref := _frenzy_banner
+	t.tween_callback(func() -> void:
+		if is_instance_valid(banner_ref):
+			banner_ref.queue_free())
+	_frenzy_banner = null
 
 
 # Impact ring drawn as a stretched gib sprite (we already use this trick

@@ -9,9 +9,22 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.85.1"
+const GAME_VERSION := "v0.85.2"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.85.2",
+		"title": "Combat overhaul — Phase 2.8 momentum thresholds + variety bonus",
+		"date": "2026-06-15",
+		"entries": [
+			"MOMENTUM NOW PAYS OFF. Three thresholds with real mechanical effects, not just visual aura.",
+			"FOCUSED (33+): attacks are 5% faster (clock duration × 0.95). Cool, controlled.",
+			"HEATED (66+): attacks are 10% faster AND every 4th hit fires a free shockwave at the impact — 14 damage + 6 poise + knockback to all enemies within 110 px. Expanding orange ring VFX, screen shake, impact audio.",
+			"FRENZY (100): for 6 SECONDS, attacks are 15% faster, all damage ×1.2, ambient momentum decay suppressed, the screen-edge aura goes full red, brief global Engine.time_scale dip on entry (0.25× for 130 ms), banner pulses 'FRENZY' top-center. The shockwave chain still fires every 4 hits. Frenzy ends → momentum capped to 66 so you have to earn it back.",
+			"VARIETY BONUS: spamming the same attack now gives diminishing momentum (÷1.4 per repeat in last 4). Using 4 different attacks in a row gives ×1.4 variety bonus. Encourages mixing A→B→C→branch / specials.",
+			"Internal: MomentumComponent gains threshold state machine, frenzy timer (wall-clock deadline), variety bonus (rolling window of last 4 attack_ids), heated_shockwave_ready signal. player.gd applies duration_mult to AttackClock + ability_multiplier × damage_mult; subscribes to threshold + shockwave + frenzy signals. Juice layer shows FOCUSED!/HEATED!/FRENZY! pop-ups and a persistent FRENZY banner during empowered state.",
+		]
+	},
 	{
 		"version": "v0.85.1",
 		"title": "Combat plan — Fun & Combat Depth roadmap (docs only)",

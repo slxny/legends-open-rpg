@@ -296,6 +296,13 @@ func _ready() -> void:
 		add_child(_momentum_aura)
 	if _momentum != null and _momentum.has_signal("momentum_changed"):
 		_momentum.momentum_changed.connect(_on_momentum_changed_for_aura)
+	# Phase 2.8 — threshold gameplay effects.
+	if _momentum != null and _momentum.has_signal("heated_shockwave_ready"):
+		_momentum.heated_shockwave_ready.connect(_on_heated_shockwave)
+	if _momentum != null and _momentum.has_signal("frenzy_started"):
+		_momentum.frenzy_started.connect(_on_frenzy_started)
+	if _momentum != null and _momentum.has_signal("frenzy_ended"):
+		_momentum.frenzy_ended.connect(_on_frenzy_ended)
 
 	var tex = SpriteGenerator.get_texture(hero_class)
 	if tex:
@@ -3038,7 +3045,11 @@ func _run_clocked_attack(timing: Resource, target: Node2D, dir: Vector2, ability
 	var contact_fired := [false]
 	var captured_target := target
 	var captured_dir := dir
-	var captured_mult := ability_mult
+	# Phase 2.8 — apply Momentum damage multiplier (frenzy = ×1.2).
+	var damage_mult: float = 1.0
+	if _momentum != null and _momentum.has_method("get_damage_mult"):
+		damage_mult = float(_momentum.get_damage_mult())
+	var captured_mult := ability_mult * damage_mult
 	var captured_on_contact := on_contact
 	clock.progress_changed.connect(func(p: float) -> void:
 		if contact_fired[0]:
@@ -3063,10 +3074,18 @@ func _run_clocked_attack(timing: Resource, target: Node2D, dir: Vector2, ability
 		_last_hit_direction = captured_dir
 		captured_on_contact.call(captured_target, captured_dir, result.was_crit)
 	)
-	clock.start(clock_tween, timing.duration_sec, max(0.1, stats.attack_speed), timing.attack_id)
+	# Phase 2.8 — momentum threshold makes attacks faster. Speed multiplier
+	# is 1.0 / duration_mult so the clock and cooldown both shorten.
+	var momentum_speed_mult: float = 1.0
+	if _momentum != null and _momentum.has_method("get_attack_duration_mult"):
+		var dm = float(_momentum.get_attack_duration_mult())
+		if dm > 0.01:
+			momentum_speed_mult = 1.0 / dm
+	var effective_speed: float = max(0.1, stats.attack_speed) * momentum_speed_mult
+	clock.start(clock_tween, timing.duration_sec, effective_speed, timing.attack_id)
 	# Cooldown derived from recovery_end (= duration_sec) and attack speed —
 	# replaces the legacy `0.5 / attack_speed` constant for this attack.
-	_attack_cooldown = timing.duration_sec / max(0.1, stats.attack_speed)
+	_attack_cooldown = timing.duration_sec / effective_speed
 
 
 # Per-swing wrappers — bespoke knockback / VFX / shake / freeze.
@@ -3983,6 +4002,7 @@ func _spawn_respawn_flash() -> void:
 
 
 # Phase 2.4 — momentum auto-credit on every confirmed hit landed by us.
+# Phase 2.8 — also pass victim world position (used for heated shockwave).
 func _on_hit_resolved_for_momentum(result: Resource) -> void:
 	if _is_dead or _momentum == null:
 		return
@@ -3993,7 +4013,10 @@ func _on_hit_resolved_for_momentum(result: Resource) -> void:
 		return
 	if int(result.damage_dealt) <= 0:
 		return
-	_momentum.on_hit_landed(result.event.attack_id, bool(result.was_crit))
+	var vpos: Vector2 = Vector2.ZERO
+	if is_instance_valid(result.event.victim):
+		vpos = result.event.victim.global_position
+	_momentum.on_hit_landed(result.event.attack_id, bool(result.was_crit), vpos)
 	# Kill grant.
 	if bool(result.was_lethal):
 		_momentum.on_kill()
@@ -4049,3 +4072,79 @@ func _on_momentum_changed_for_aura(value: float, capacity: int) -> void:
 	# Snappy alpha update so the visual responds to each hit.
 	var ta := _momentum_aura.create_tween()
 	ta.tween_property(_momentum_aura, "modulate:a", alpha, 0.18)
+
+
+# Phase 2.8 — heated chain shockwave. Every 4th hit while HEATED (or
+# during FRENZY) fires a small radial damage burst at the last impact
+# point. Free bonus damage that rewards staying aggressive.
+const _SHOCKWAVE_RADIUS_SQ: float = 110.0 * 110.0
+const _SHOCKWAVE_DAMAGE: int = 14
+const _SHOCKWAVE_POISE: float = 6.0
+func _on_heated_shockwave(world_pos: Vector2) -> void:
+	if _is_dead:
+		return
+	# VFX: a rapid expanding ring at the impact point.
+	var tex = SpriteGenerator.get_texture("ring_flash")
+	if tex == null:
+		tex = SpriteGenerator.get_texture("crystal_white")
+	if tex != null:
+		var world = _get_world_node()
+		var ring := Sprite2D.new()
+		ring.texture = tex
+		ring.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		ring.global_position = world_pos
+		ring.modulate = Color(1.6, 0.8, 0.2, 0.95)
+		ring.scale = Vector2(0.6, 0.6)
+		ring.z_index = 5
+		world.add_child(ring)
+		var t := ring.create_tween()
+		t.set_parallel(true)
+		t.tween_property(ring, "scale", Vector2(4.5, 4.5), 0.28).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		t.tween_property(ring, "modulate:a", 0.0, 0.30).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		t.set_parallel(false)
+		t.tween_callback(ring.queue_free)
+	# Apply damage + poise to enemies in range.
+	for enemy in _nearby_enemies:
+		if not is_instance_valid(enemy) or enemy.get("_is_dead"):
+			continue
+		if enemy.global_position.distance_squared_to(world_pos) > _SHOCKWAVE_RADIUS_SQ:
+			continue
+		if enemy.has_method("take_damage"):
+			enemy.take_damage(_SHOCKWAVE_DAMAGE, false)
+		var poise_node = enemy.get_node_or_null("PoiseComponent")
+		if poise_node != null and poise_node.has_method("take_poise_damage"):
+			poise_node.take_poise_damage(_SHOCKWAVE_POISE, true)
+		var to_e := (enemy.global_position - world_pos)
+		if to_e.length() > 0.01 and enemy.has_method("apply_knockback"):
+			enemy.apply_knockback(to_e.normalized(), 40.0)
+	# Shake + brief audio.
+	_do_screen_shake(3.0)
+	if AudioManager != null and AudioManager.has_method("play_sfx"):
+		AudioManager.play_sfx("hit_impact", 1.0)
+
+
+# Phase 2.8 — frenzy state. 6 s of free specials + ×1.2 damage + ×0.85
+# attack duration (handled in _run_clocked_attack). Visual: tint the
+# screen edges + persistent aura.
+func _on_frenzy_started(_duration_ms: int) -> void:
+	if _is_dead:
+		return
+	# Boost the momentum aura to maximum visibility.
+	if _momentum_aura != null and is_instance_valid(_momentum_aura):
+		_momentum_aura.modulate = Color(1.5, 0.4, 0.15, 0.9)
+		_momentum_aura.scale = Vector2(3.4, 3.4)
+	# Notify the camera shake — heavy punctuation on entry.
+	_do_screen_shake(8.0)
+	# Brief global dip into frenzy (cinematic moment).
+	if HitStopController != null and HitStopController.has_method("request_global_dip"):
+		HitStopController.request_global_dip(0.25, 130, 4, &"frenzy_start")
+	if AudioManager != null and AudioManager.has_method("play_sfx"):
+		AudioManager.play_sfx("charge_release", 3.0)
+
+
+func _on_frenzy_ended() -> void:
+	if _is_dead:
+		return
+	# Visual: aura back to gold pulse.
+	if _momentum_aura != null and is_instance_valid(_momentum_aura):
+		_momentum_aura.modulate = Color(1.0, 0.7, 0.2, 0.55)

@@ -16,6 +16,13 @@ signal momentum_changed(value: float, capacity: int)
 signal momentum_spent(amount: float, reason: StringName)
 signal combo_multiplier_changed(value: float)
 
+# Phase 2.8 — threshold + frenzy.
+signal threshold_entered(name: StringName)   # "focused" / "heated" / "frenzy"
+signal threshold_exited(name: StringName)
+signal frenzy_started(duration_ms: int)
+signal frenzy_ended()
+signal heated_shockwave_ready(world_position: Vector2)
+
 @export var capacity: int = 100
 @export var decay_per_sec: float = 8.0
 @export var damage_taken_drain: float = 25.0
@@ -57,19 +64,49 @@ var _current: float = 0.0
 var _combo: float = 1.0
 var _last_hit_usec: int = 0
 
+# Phase 2.8 — thresholds.
+const THRESHOLD_FOCUSED: int = 33
+const THRESHOLD_HEATED: int = 66
+const THRESHOLD_FRENZY: int = 100
+const FRENZY_DURATION_MS: int = 6000
+const HEATED_SHOCKWAVE_EVERY: int = 4
+
+# Phase 2.8 — variety bonus.
+const VARIETY_WINDOW: int = 4           # track last N attacks
+const VARIETY_BONUS_MULT: float = 1.4   # when last N are all unique
+const REPEAT_PENALTY_PER: float = 0.4   # base grant divided by (1 + repeats * this)
+
+var _current_threshold: StringName = &""  # "" / focused / heated / frenzy
+var _hits_in_heated: int = 0
+var _frenzy_until_usec: int = 0
+var _recent_attack_ids: Array[StringName] = []
+var _last_hit_world_pos: Vector2 = Vector2.ZERO
+
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_PAUSABLE
 
 
 func _process(delta: float) -> void:
+	# Frenzy auto-expire.
+	if _frenzy_until_usec > 0 and Time.get_ticks_usec() >= _frenzy_until_usec:
+		_frenzy_until_usec = 0
+		frenzy_ended.emit()
+		# Frenzy exit drains down to HEATED so the player feels the drop.
+		var prev_v = _current
+		_current = min(_current, float(THRESHOLD_HEATED))
+		if not is_equal_approx(prev_v, _current):
+			momentum_changed.emit(_current, int(capacity))
+		_check_thresholds()
+
 	# Slow ambient decay so a long pause without hits drains some momentum.
-	# Tuned low so a player who is mid-encounter doesn't feel punished.
-	if _current > 0.0:
+	# Frenzy suppresses ambient decay so the player can milk the empowerment.
+	if _current > 0.0 and _frenzy_until_usec == 0:
 		var prev = _current
 		_current = max(0.0, _current - float(decay_per_sec) * delta)
 		if not is_equal_approx(prev, _current):
 			momentum_changed.emit(_current, int(capacity))
+			_check_thresholds()
 
 	# Combo multiplier decay after no-hit window.
 	if _combo > 1.0:
@@ -83,11 +120,15 @@ func _process(delta: float) -> void:
 
 ## Owner calls this on each confirmed hit landed BY this entity. attack_id
 ## drives the per-attack grant; final_feedback can boost the grant on
-## CRIT (we apply 1.3x).
-func on_hit_landed(attack_id: StringName, was_crit: bool) -> void:
+## CRIT (we apply 1.3x). Phase 2.8: variety bonus / repeat penalty.
+func on_hit_landed(attack_id: StringName, was_crit: bool, world_pos: Vector2 = Vector2.ZERO) -> void:
+	_last_hit_world_pos = world_pos
 	var base: float = float(_grants.get(attack_id, 4.0))
-	var bonus: float = 1.3 if was_crit else 1.0
-	var amount: float = base * bonus
+	var crit_bonus: float = 1.3 if was_crit else 1.0
+	# Phase 2.8 — variety multiplier.
+	var variety_mult: float = _compute_variety_multiplier(attack_id)
+	_record_recent(attack_id)
+	var amount: float = base * crit_bonus * variety_mult
 	_credit(amount, attack_id)
 	# Bump combo multiplier — capped at max_combo.
 	var prev = _combo
@@ -95,6 +136,43 @@ func on_hit_landed(attack_id: StringName, was_crit: bool) -> void:
 	_last_hit_usec = Time.get_ticks_usec()
 	if not is_equal_approx(prev, _combo):
 		combo_multiplier_changed.emit(_combo)
+	# Phase 2.8 — heated chains a shockwave every Nth hit while heated.
+	if _current_threshold == &"heated" or _current_threshold == &"frenzy":
+		_hits_in_heated += 1
+		if _hits_in_heated >= HEATED_SHOCKWAVE_EVERY:
+			_hits_in_heated = 0
+			heated_shockwave_ready.emit(world_pos)
+	# Threshold check after credit.
+	_check_thresholds()
+
+
+# How many of the last N attacks were the same as `incoming`. 0 = first
+# time / fully unique window. variety_mult uses VARIETY_BONUS_MULT when
+# all recent slots are unique AND incoming is also unique.
+func _compute_variety_multiplier(incoming: StringName) -> float:
+	if _recent_attack_ids.is_empty():
+		return 1.0
+	var repeats: int = 0
+	for id in _recent_attack_ids:
+		if id == incoming:
+			repeats += 1
+	# Variety bonus: last 4 all unique AND incoming != any of them.
+	if repeats == 0 and _recent_attack_ids.size() >= VARIETY_WINDOW:
+		var uniques: Dictionary = {}
+		for id in _recent_attack_ids:
+			uniques[id] = true
+		if uniques.size() == _recent_attack_ids.size():
+			return VARIETY_BONUS_MULT
+	# Repeat penalty: 1.0 / (1.0 + repeats * 0.4)
+	if repeats > 0:
+		return 1.0 / (1.0 + float(repeats) * REPEAT_PENALTY_PER)
+	return 1.0
+
+
+func _record_recent(id: StringName) -> void:
+	_recent_attack_ids.append(id)
+	if _recent_attack_ids.size() > VARIETY_WINDOW:
+		_recent_attack_ids.pop_front()
 
 
 func on_kill() -> void:
@@ -151,8 +229,71 @@ func ratio() -> float:
 func force_reset() -> void:
 	_current = 0.0
 	_combo = 1.0
+	_hits_in_heated = 0
+	_recent_attack_ids.clear()
+	_frenzy_until_usec = 0
+	if _current_threshold != &"":
+		threshold_exited.emit(_current_threshold)
+	_current_threshold = &""
 	momentum_changed.emit(0.0, int(capacity))
 	combo_multiplier_changed.emit(1.0)
+
+
+# Phase 2.8 — threshold state machine. Called after every value change.
+func _check_thresholds() -> void:
+	var target: StringName = &""
+	if _current >= float(THRESHOLD_FRENZY):
+		target = &"frenzy"
+	elif _current >= float(THRESHOLD_HEATED):
+		target = &"heated"
+	elif _current >= float(THRESHOLD_FOCUSED):
+		target = &"focused"
+	if target == _current_threshold:
+		return
+	# Exit old.
+	if _current_threshold != &"":
+		threshold_exited.emit(_current_threshold)
+		# Heated → drop: reset chain counter.
+		if _current_threshold == &"heated" or _current_threshold == &"frenzy":
+			_hits_in_heated = 0
+	# Enter new.
+	_current_threshold = target
+	if target != &"":
+		threshold_entered.emit(target)
+		if target == &"frenzy" and _frenzy_until_usec == 0:
+			_frenzy_until_usec = Time.get_ticks_usec() + FRENZY_DURATION_MS * 1000
+			frenzy_started.emit(FRENZY_DURATION_MS)
+
+
+# Phase 2.8 — query helpers.
+func is_frenzy_active() -> bool:
+	return _frenzy_until_usec > 0
+
+
+func current_threshold_name() -> StringName:
+	return _current_threshold
+
+
+# Effects applied externally — owner reads these at attack-clock start.
+# Returns a multiplier on attack-clock duration (lower = faster).
+func get_attack_duration_mult() -> float:
+	if is_frenzy_active():
+		return 0.85
+	match _current_threshold:
+		&"focused":
+			return 0.95
+		&"heated":
+			return 0.90
+		&"frenzy":
+			return 0.85
+	return 1.0
+
+
+# Multiplier on outgoing damage during empowered states.
+func get_damage_mult() -> float:
+	if is_frenzy_active():
+		return 1.20
+	return 1.0
 
 
 func _credit(amount: float, reason: StringName) -> void:

@@ -3208,6 +3208,8 @@ func _start_overhead_chop_clock(timing: Resource, target: Node2D, dir: Vector2, 
 				_apply_slam_aoe(t.global_position, d, t)  # second pulse
 		# Phase 2.9 — apply the chosen finisher variant on top.
 		_apply_finisher_variant(variant, t, d)
+		# Phase 6.x — bigger zoom pulse on finisher hits.
+		_pulse_camera_zoom(0.94)
 	)
 
 
@@ -4199,6 +4201,25 @@ func _play_swing_punch(dir: Vector2) -> void:
 	var t := sprite.create_tween()
 	t.tween_property(sprite, "position", base_pos + punch_offset, 0.04).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	t.tween_property(sprite, "position", base_pos, 0.08).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	# Phase 6.x — camera zoom pulse: briefly zooms in 3% then restores.
+	# Tiny but makes every hit feel cinematic.
+	_pulse_camera_zoom(0.97)
+
+
+# Camera zoom pulse helper. tween writes camera.zoom directly; the
+# existing ZOOM_LERP_SPEED toward _target_zoom restores it naturally
+# after the tween releases. Generation guard via _zoom_pulse_tween.
+var _zoom_pulse_tween: Tween = null
+func _pulse_camera_zoom(scale_factor: float) -> void:
+	if camera == null or not is_instance_valid(camera):
+		return
+	if _zoom_pulse_tween != null and _zoom_pulse_tween.is_valid():
+		_zoom_pulse_tween.kill()
+	var base_zoom := _target_zoom if _target_zoom != Vector2.ZERO else camera.zoom
+	var pulsed := base_zoom * scale_factor
+	_zoom_pulse_tween = camera.create_tween()
+	_zoom_pulse_tween.tween_property(camera, "zoom", pulsed, 0.04).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	_zoom_pulse_tween.tween_property(camera, "zoom", base_zoom, 0.10).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 
 
 # Phase 2.13 — low-HP desperation. Activates when HP drops <= 25% of max.

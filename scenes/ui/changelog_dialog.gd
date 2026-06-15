@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.87.4"
+const GAME_VERSION := "v0.87.5"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.87.5",
+		"title": "Combat feel — camera ZOOM PULSE on every hit",
+		"date": "2026-06-15",
+		"entries": [
+			"Camera now PULSES IN on every basic-swing hit (0.97×) and snaps back. C-finisher contacts get a bigger pulse (0.94×). 40 ms in, 100 ms out.",
+			"Subtle but transformative — every hit reads as cinematic. The lerp toward _target_zoom restores natural follow zoom after the pulse so there's no drift.",
+			"Internal: player.gd _pulse_camera_zoom helper writes camera.zoom directly via Tween with generation guard (_zoom_pulse_tween). Called from _play_swing_punch (basic swings) and from the C-finisher closure (heavier 0.94×).",
+		]
+	},
 	{
 		"version": "v0.87.4",
 		"title": "Combat overhaul — Phase 6.2 BEHAVIOR-CHANGING UPGRADES (auto-granted on level up)",

@@ -3122,10 +3122,13 @@ func _start_basic_horizontal_clock(timing: Resource, target: Node2D, dir: Vector
 
 # Swing C — the A→B→C finisher. Audit: knockback 55, VFX scale 1.4, shake 2.0/5.0.
 # Phase 2.2: when this fires as branch_slam, also applies a radial AoE.
+# Phase 2.9: context-sensitive variants based on target state at impact.
 # Visual polish: finisher slash is bigger + fanned for dramatic impact.
 func _start_overhead_chop_clock(timing: Resource, target: Node2D, dir: Vector2, ability_mult: float = 1.0) -> void:
 	var rhythm_capture: int = int(timing.rhythm_class)
 	_run_clocked_attack(timing, target, dir, ability_mult, func(t: Node2D, d: Vector2, crit: bool) -> void:
+		# Phase 2.9 — determine finisher variant at the moment of contact.
+		var variant: StringName = _select_finisher_variant(t)
 		if is_instance_valid(t):
 			t.apply_knockback(d, 55.0)
 		# Beefier slash fan — main arc + two angled side arcs.
@@ -3134,18 +3137,26 @@ func _start_overhead_chop_clock(timing: Resource, target: Node2D, dir: Vector2, 
 		_spawn_slash_vfx(d.rotated(-0.22), 40.0, 1.4)
 		if is_instance_valid(t):
 			_spawn_impact_vfx(t.global_position, crit)
+		# Variant-modulated shake.
+		var base_shake: float = 5.0 if crit else 2.0
+		match variant:
+			&"execution":
+				base_shake += 4.0
+			&"ground_slam":
+				base_shake += 3.0
+			&"marked_burst":
+				base_shake += 2.0
+		_do_screen_shake(base_shake)
 		if crit:
-			_do_screen_shake(5.0)
 			_do_hit_freeze(true)
-		else:
-			_do_screen_shake(2.0)
 		# Phase 2.2 branch_slam: radial AoE knockback + extra poise damage
 		# to nearby enemies. Locked target was already hit; this affects
 		# everyone else within 80 px.
 		if rhythm_capture == AttackTimingDataCls.RhythmClass.BRANCH_SLAM and is_instance_valid(t):
 			_apply_slam_aoe(t.global_position, d, t)
-			# Slam visual: an extra impact ring at the ground point.
 			_spawn_impact_vfx(t.global_position, true)
+		# Phase 2.9 — apply the chosen finisher variant on top.
+		_apply_finisher_variant(variant, t, d)
 	)
 
 
@@ -4057,6 +4068,81 @@ func _on_perfect_dodge_executed(_against_attack_id: StringName) -> void:
 		if enemy.global_position.distance_squared_to(global_position) > _PERFECT_DODGE_RADIUS_SQ:
 			continue
 		HitStopController.freeze_target(enemy, _PERFECT_DODGE_FREEZE_MS, 1)  # VICTIM
+
+
+# Phase 2.9 — context-sensitive C-finisher variants.
+# Same input → different drama based on what the player set up.
+#   execution     — target HP < 25%: heavy ring, bonus damage, +momentum
+#   ground_slam   — target's poise is vulnerable / staggered: radial AoE
+#   marked_burst  — target has an EXPOSED-tier status: bigger ring + bonus
+#   default       — no variant, normal C
+func _select_finisher_variant(t: Node2D) -> StringName:
+	if not is_instance_valid(t):
+		return &"default"
+	# Marked burst — exposed status active.
+	var statuses = t.get_node_or_null("StatusEffectComponent")
+	if statuses != null and statuses.has_method("has") and statuses.has(&"exposed"):
+		return &"marked_burst"
+	# Ground slam — poise broken / vulnerable.
+	var poise = t.get_node_or_null("PoiseComponent")
+	if poise != null and poise.has_method("is_vulnerable") and poise.is_vulnerable():
+		return &"ground_slam"
+	# Execution — low HP.
+	if "stats" in t:
+		var s = t.get("stats")
+		if s != null and "current_hp" in s and "max_hp" in s:
+			var hp_ratio: float = float(s.current_hp) / max(1.0, float(s.max_hp))
+			if hp_ratio <= 0.25:
+				return &"execution"
+	return &"default"
+
+
+func _apply_finisher_variant(variant: StringName, t: Node2D, dir: Vector2) -> void:
+	if variant == &"default":
+		return
+	match variant:
+		&"execution":
+			_spawn_finisher_ring(t.global_position, Color(1.5, 0.15, 0.15), 5.5, 0.45)
+			if is_instance_valid(t) and "stats" in t:
+				var s = t.get("stats")
+				var bonus: int = int(min(60.0, float(s.max_hp) * 0.30))
+				if t.has_method("take_damage"):
+					t.take_damage(bonus, true)
+			if _momentum != null and _momentum.has_method("add_bonus"):
+				_momentum.add_bonus(8.0, &"execution")
+		&"ground_slam":
+			_spawn_finisher_ring(t.global_position, Color(1.4, 0.7, 0.18), 5.0, 0.4)
+			if is_instance_valid(t):
+				_apply_slam_aoe(t.global_position, dir, t)
+		&"marked_burst":
+			_spawn_finisher_ring(t.global_position, Color(1.6, 1.2, 0.35), 4.5, 0.35)
+			var poise2 = t.get_node_or_null("PoiseComponent") if is_instance_valid(t) else null
+			if poise2 != null and poise2.has_method("take_poise_damage"):
+				poise2.take_poise_damage(20.0, true)
+			if _momentum != null and _momentum.has_method("add_bonus"):
+				_momentum.add_bonus(5.0, &"marked_burst")
+
+
+func _spawn_finisher_ring(world_pos: Vector2, color: Color, final_scale: float, duration: float) -> void:
+	var tex = SpriteGenerator.get_texture("ring_flash")
+	if tex == null:
+		tex = SpriteGenerator.get_texture("crystal_white")
+	if tex == null:
+		return
+	var ring := Sprite2D.new()
+	ring.texture = tex
+	ring.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	ring.global_position = world_pos
+	ring.modulate = color
+	ring.scale = Vector2(0.6, 0.6)
+	ring.z_index = 6
+	_get_world_node().add_child(ring)
+	var t := ring.create_tween()
+	t.set_parallel(true)
+	t.tween_property(ring, "scale", Vector2(final_scale, final_scale), duration).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	t.tween_property(ring, "modulate:a", 0.0, duration * 1.1).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	t.set_parallel(false)
+	t.tween_callback(ring.queue_free)
 
 
 # Phase 2.10 — kill-chain auto-retarget.

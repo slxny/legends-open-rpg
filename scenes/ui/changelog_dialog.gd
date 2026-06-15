@@ -9,9 +9,22 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.85.3"
+const GAME_VERSION := "v0.85.4"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.85.4",
+		"title": "Combat overhaul — Phase 2.9 context-sensitive C-finisher variants",
+		"date": "2026-06-15",
+		"entries": [
+			"C-FINISHER NOW HAS VARIANTS. Same input → different drama based on what the player set up.",
+			"EXECUTION (target HP ≤ 25%): deep red ring expansion, +4 screen-shake, bonus damage = 30% of target's max HP (capped at 60), +8 momentum. Low-HP kills feel like a death blow, not just another swing.",
+			"GROUND_SLAM (target poise broken / vulnerable): orange ring + radial AoE knockback + poise on all enemies within 80 px. Punishes when you've just broken a tank — the finisher cleaves the group.",
+			"MARKED_BURST (target has EXPOSED status from a previous C/slam): gold ring + extra 20 poise damage + 5 momentum. Rewards the A→B→C → C combo chain.",
+			"Default C unchanged.",
+			"Internal: _select_finisher_variant inspects target.StatusEffectComponent (exposed), .PoiseComponent (is_vulnerable), and .stats (HP ratio). _apply_finisher_variant dispatches per-variant VFX/damage/momentum. Picked at the moment of contact so the variant reflects the actual hit state, not the swing-start state.",
+		]
+	},
 	{
 		"version": "v0.85.3",
 		"title": "Combat overhaul — Phase 2.10 kill-chain auto-retarget",

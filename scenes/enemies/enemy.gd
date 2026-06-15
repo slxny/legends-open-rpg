@@ -154,10 +154,37 @@ func _get_attack_pattern() -> StringName:
 # Default budget: 5 tokens shared globally → roughly 2 light + 1 heavy or
 # 2 medium + 1 light simultaneous attackers. Tunable.
 static var _attack_tokens_used: int = 0
-const _ATTACK_TOKEN_BUDGET: int = 5
+const _ATTACK_TOKEN_BUDGET_BASE: int = 5
+const _ATTACK_TOKEN_BUDGET_HEATED: int = 7   # +2 when player is HEATED
+const _ATTACK_TOKEN_BUDGET_FRENZY: int = 9   # +4 when player is FRENZY
+
+
+# Phase 3.10 — adaptive intensity. The coordinator budget rises when
+# the player is on a high-momentum run so enemies apply MORE pressure
+# when the player is dominating. Drops back to base after they cool.
+static func _current_attack_budget() -> int:
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree == null:
+		return _ATTACK_TOKEN_BUDGET_BASE
+	var players: Array = tree.get_nodes_in_group("player")
+	if players.is_empty():
+		return _ATTACK_TOKEN_BUDGET_BASE
+	var player = players[0]
+	if not is_instance_valid(player):
+		return _ATTACK_TOKEN_BUDGET_BASE
+	var mom = player.get_node_or_null("MomentumComponent")
+	if mom == null or not mom.has_method("current_threshold_name"):
+		return _ATTACK_TOKEN_BUDGET_BASE
+	var thr: StringName = mom.current_threshold_name()
+	if thr == &"frenzy":
+		return _ATTACK_TOKEN_BUDGET_FRENZY
+	if thr == &"heated":
+		return _ATTACK_TOKEN_BUDGET_HEATED
+	return _ATTACK_TOKEN_BUDGET_BASE
+
 
 static func _try_reserve_attack_token(cost: int) -> bool:
-	if _attack_tokens_used + cost > _ATTACK_TOKEN_BUDGET:
+	if _attack_tokens_used + cost > _current_attack_budget():
 		return false
 	_attack_tokens_used += cost
 	return true
@@ -919,6 +946,10 @@ func _die() -> void:
 	# Phase 2.12 — combat pickups on death. Roll types independently;
 	# elites/mini-bosses get slightly higher rolls.
 	_roll_combat_pickup()
+	# Phase 3.10 — LAST-ENEMY CINEMATIC. If this was the last awake
+	# enemy near the player, trigger a brief slow-mo so the kill feels
+	# like the finale of an encounter.
+	_maybe_play_last_enemy_cinematic()
 	hp_bar.visible = false
 	name_label.visible = false
 	if _shadow:
@@ -3317,6 +3348,47 @@ func _die_universal_mega_explode() -> void:
 		HitStopController.request_global_dip(0.25, 90, 2, &"universal_mega")
 	if AudioManager != null and AudioManager.has_method("play_sfx"):
 		AudioManager.play_sfx("crit_hit", 4.0)
+
+
+# Phase 3.10 — last-enemy cinematic. After this enemy dies, check for
+# other AWAKE non-dead enemies within encounter radius of the player.
+# If none, request a brief global time dip via HitStopController for a
+# satisfying "fight is over" beat. Skipped during boss fights so the
+# boss doesn't trigger it every time their last grunt dies.
+const _LAST_ENEMY_RADIUS_SQ: float = 700.0 * 700.0
+const _LAST_ENEMY_DIP_MS: int = 180
+func _maybe_play_last_enemy_cinematic() -> void:
+	# Don't fire for mini-boss death — too much overlap with boss dramatic
+	# death animation. Don't fire if the player isn't around.
+	if is_mini_boss:
+		return
+	var player := _get_player()
+	if player == null or not is_instance_valid(player):
+		return
+	# Count awake non-dead enemies near the player (excluding self).
+	var others := get_tree().get_nodes_in_group("enemies")
+	var survivor_count: int = 0
+	for e in others:
+		if e == self or not is_instance_valid(e):
+			continue
+		if e.get("_is_dead"):
+			continue
+		if e.get("_is_sleeping"):
+			continue
+		if e.global_position.distance_squared_to(player.global_position) > _LAST_ENEMY_RADIUS_SQ:
+			continue
+		survivor_count += 1
+		if survivor_count >= 1:
+			break  # only need to know there's at least one
+	if survivor_count > 0:
+		return
+	# We're the last one. Dramatic finale.
+	if HitStopController != null and HitStopController.has_method("request_global_dip"):
+		HitStopController.request_global_dip(0.28, _LAST_ENEMY_DIP_MS, 3, &"last_enemy_cinematic")
+	# Small bonus to player momentum as a "well fought" pat on the back.
+	var mom = player.get_node_or_null("MomentumComponent")
+	if mom != null and mom.has_method("add_bonus"):
+		mom.add_bonus(10.0, &"encounter_clear")
 
 
 # Phase 2.12 — combat pickup drop roll. Rates are independent so one

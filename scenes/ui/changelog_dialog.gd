@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.86.4"
+const GAME_VERSION := "v0.86.5"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.86.5",
+		"title": "Combat overhaul — Phase 3.10 adaptive intensity + last-enemy cinematic",
+		"date": "2026-06-15",
+		"entries": [
+			"ADAPTIVE INTENSITY: the AttackCoordinator budget now SCALES with player momentum. At rest / FOCUSED: 5 tokens. At HEATED: 7. At FRENZY: 9. When you're dominating, enemies apply more simultaneous pressure — when you're cautious, the budget shrinks back. Combat rises and falls with your aggression.",
+			"LAST-ENEMY CINEMATIC: the killing blow on the last awake enemy within 700 px of you now triggers a brief global slow-mo (0.28× for 180 ms) for a satisfying 'fight is over' beat. +10 momentum bonus as a 'well fought' reward. Skipped on mini-boss deaths (their death animation handles its own drama).",
+			"Internal: _current_attack_budget static helper reads player.MomentumComponent.current_threshold_name to scale the budget per check. _try_reserve_attack_token now uses the dynamic budget. _maybe_play_last_enemy_cinematic enumerates enemies group; if no awake survivors within radius, dispatches HitStopController.request_global_dip + adds 10 momentum to player.",
+		]
+	},
 	{
 		"version": "v0.86.4",
 		"title": "Combat overhaul — Phase 3.4 per-enemy attack PATTERNS (rat triple-stab, troll/ogre ground slam)",

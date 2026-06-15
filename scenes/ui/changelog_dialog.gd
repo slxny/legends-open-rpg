@@ -9,9 +9,22 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.84.3"
+const GAME_VERSION := "v0.84.4"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.84.4",
+		"title": "Combat overhaul — Phase 2.4/2.5 Momentum + perfect-dodge reward",
+		"date": "2026-06-14",
+		"entries": [
+			"COMBAT FEEL: combat is now a build-and-spend rhythm. Every confirmed hit credits momentum; varied attacks (A→B→C, branches, specials) build it fast. Taking damage drains 25 and resets your combo multiplier. Kills refund 5. Capacity 100.",
+			"Per-attack grants: A=5, B=8, C-finisher=15, slam=20, uppercut=15, spin=12, D-thrust=12, E-spin=10, power_strike=15, whirlwind=8/target, charged_slash=25, sniper_shot=22, dash_strike=10. Crits multiply grants by 1.3×.",
+			"Combo multiplier sits in [1.0, 2.0]: +0.1 per hit, decays after 1.2 s no-hit window. Resets on damage.",
+			"PERFECT-DODGE REWARD (2.5): a perfect dodge (hit landed in the first 80 ms of dodge) now refunds 40 momentum AND freezes every enemy within 130 px for 220 ms via HitStopController. Plenty of room to counter-attack into a free combo.",
+			"Internal: MomentumComponent on player. CombatManager.hit_resolved subscriptions credit grants when WE are the attacker, kill credit on result.was_lethal. take_damage drains. UI bar deferred to Phase 6.1. Specials NOT yet gated on momentum — we want to feel the curve before adding friction.",
+			"Smoke: +21 momentum checks covering per-attack grants, crit bonus, damage drain + combo reset, kill credit, perfect-dodge grant, try_spend gating, capacity + combo caps.",
+		]
+	},
 	{
 		"version": "v0.84.3",
 		"title": "Combat overhaul — Phase 2.3 dodge action with i-frames + perfect-dodge detection",

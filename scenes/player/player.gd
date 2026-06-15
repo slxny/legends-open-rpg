@@ -9,6 +9,7 @@ const CameraShake2DCls = preload("res://scripts/combat/camera_shake_2d.gd")
 const AttackMotionDataCls = preload("res://scripts/data/attack_motion_data.gd")
 const DodgeControllerCls = preload("res://scenes/player/dodge_controller.gd")
 const DodgeDataCls = preload("res://scripts/data/dodge_data.gd")
+const MomentumComponentCls = preload("res://scripts/components/momentum_component.gd")
 
 signal attacked(target: Node2D)
 
@@ -176,6 +177,8 @@ var _last_hit_direction: Vector2 = Vector2.ZERO
 # i-frames + perfect-dodge detection. Player remains the sole writer of
 # CharacterBody2D.velocity; the controller provides a velocity overlay.
 var _dodge: Node = null
+# Phase 2.4 — momentum (build-and-spend resource).
+var _momentum: Node = null
 var _shake_time_left: float = 0.0
 const SHAKE_DURATION: float = 0.11
 
@@ -247,6 +250,24 @@ func _ready() -> void:
 	_dodge.dodge_ended.connect(func() -> void:
 		if not _is_dead:
 			sprite.modulate = Color.WHITE)
+
+	# Phase 2.4 — momentum component. Subscribes to hit_resolved to
+	# auto-credit; player's take_damage will drain on hit; kills credit
+	# via the enemy.died signal (subscribed lazily on first damage taken
+	# or via _on_attack_area_body_entered—wired below).
+	_momentum = MomentumComponentCls.new()
+	_momentum.name = "MomentumComponent"
+	add_child(_momentum)
+	if CombatManager.has_signal("hit_resolved"):
+		CombatManager.hit_resolved.connect(_on_hit_resolved_for_momentum)
+
+	# Phase 2.5 — perfect-dodge reward.
+	# Refunds momentum + briefly freezes nearby enemies so the player
+	# gets a window to counter-attack. Per plan: "Do not add the reward
+	# until dodge timing and enemy telegraphs are reliable." Enemy
+	# telegraphs ship in Phase 3; this reward is timing-safe today
+	# because the local freeze is short (220 ms).
+	_dodge.perfect_dodge_executed.connect(_on_perfect_dodge_executed)
 
 	var tex = SpriteGenerator.get_texture(hero_class)
 	if tex:
@@ -3525,6 +3546,7 @@ func take_damage(amount: int, is_crit: bool = false) -> void:
 	# landed in the perfect window (subscribed by Phase 2.5 reward).
 	if _dodge != null and _dodge.has_method("on_incoming_hit"):
 		if _dodge.on_incoming_hit(&""):
+			# Phase 2.4 — i-frame absorb does NOT drain momentum.
 			# Cheap "dodged!" feedback — a brief modulate flicker.
 			sprite.modulate = Color(0.7, 0.9, 1.0)
 			get_tree().create_timer(0.08).timeout.connect(func() -> void:
@@ -3535,6 +3557,9 @@ func take_damage(amount: int, is_crit: bool = false) -> void:
 	_spawn_damage_number(amount, is_crit)
 	_do_hit_flash()
 	AudioManager.play_sfx("player_hurt", -4.0)
+	# Phase 2.4 — damage drains momentum and breaks the combo.
+	if _momentum != null and _momentum.has_method("on_damage_taken"):
+		_momentum.on_damage_taken()
 
 func _spawn_damage_number(amount: int, is_crit: bool) -> void:
 	var label: Label
@@ -3918,3 +3943,43 @@ func _spawn_respawn_flash() -> void:
 			t.tween_property(flash, "modulate:a", 0.0, 0.55).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 			t.set_parallel(false)
 			t.tween_callback(flash.queue_free)
+
+
+# Phase 2.4 — momentum auto-credit on every confirmed hit landed by us.
+func _on_hit_resolved_for_momentum(result: Resource) -> void:
+	if _is_dead or _momentum == null:
+		return
+	if result == null or result.event == null:
+		return
+	# Only credit when WE are the attacker.
+	if result.event.attacker != self:
+		return
+	if int(result.damage_dealt) <= 0:
+		return
+	_momentum.on_hit_landed(result.event.attack_id, bool(result.was_crit))
+	# Kill grant.
+	if bool(result.was_lethal):
+		_momentum.on_kill()
+
+
+# Phase 2.5 — perfect-dodge reward.
+# Refund a chunk of momentum and briefly freeze the nearest enemies so
+# the player has a counter-attack window. The freeze is short (220 ms)
+# and goes through HitStopController; TimeManager is not invoked here so
+# this stays safe with the existing time-scale ownership.
+const _PERFECT_DODGE_FREEZE_MS: int = 220
+const _PERFECT_DODGE_RADIUS_SQ: float = 130.0 * 130.0
+func _on_perfect_dodge_executed(_against_attack_id: StringName) -> void:
+	if _is_dead or _momentum == null:
+		return
+	_momentum.on_perfect_dodge()
+	if HitStopController == null:
+		return
+	for enemy in _nearby_enemies:
+		if not is_instance_valid(enemy):
+			continue
+		if enemy.get("_is_dead"):
+			continue
+		if enemy.global_position.distance_squared_to(global_position) > _PERFECT_DODGE_RADIUS_SQ:
+			continue
+		HitStopController.freeze_target(enemy, _PERFECT_DODGE_FREEZE_MS, 1)  # VICTIM

@@ -32,6 +32,7 @@ const PoiseComponentCls := preload("res://scripts/components/poise_component.gd"
 const PoiseProfileCls := preload("res://scripts/data/poise_profile.gd")
 const DodgeControllerCls := preload("res://scenes/player/dodge_controller.gd")
 const DodgeDataCls := preload("res://scripts/data/dodge_data.gd")
+const MomentumComponentCls := preload("res://scripts/components/momentum_component.gd")
 
 var _errors: Array[String] = []
 
@@ -90,6 +91,7 @@ func _ready() -> void:
 	_test_feedback_profiles()
 	await _test_poise()
 	await _test_dodge_controller()
+	_test_momentum()
 
 	if _errors.is_empty():
 		print("[combat_smoke] OK")
@@ -706,6 +708,84 @@ func _test_dodge_controller() -> void:
 	_check("force_reset clears active", not dc.is_active())
 
 	dc.queue_free()
+
+
+func _test_momentum() -> void:
+	var m = MomentumComponentCls.new()
+	add_child(m)
+	# No process() yet — no decay possible.
+	_check("momentum starts at 0", m.current() == 0.0)
+	_check("combo starts at 1.0", abs(m.combo_multiplier() - 1.0) < 0.001)
+	_check("ratio starts at 0", m.ratio() == 0.0)
+
+	m.on_hit_landed(&"swing_a", false)
+	_check("swing_a grants ~5", abs(m.current() - 5.0) < 0.01)
+	_check("combo > 1 after hit", m.combo_multiplier() > 1.001)
+
+	m.on_hit_landed(&"swing_c", false)
+	_check("swing_c finisher grants more", m.current() >= 20.0)  # 5 + 15
+
+	# Crit gives 1.3x bonus.
+	m.on_hit_landed(&"swing_b", true)
+	_check("crit grants more than base", m.current() >= 20.0 + 8.0 * 1.3 - 0.5)
+
+	# Branch slam grants 20.
+	m.force_reset()
+	m.on_hit_landed(&"branch_slam", false)
+	_check("branch_slam grants 20", abs(m.current() - 20.0) < 0.01)
+
+	# Charged slash grants 25.
+	m.force_reset()
+	m.on_hit_landed(&"charged_slash", false)
+	_check("charged_slash grants 25", abs(m.current() - 25.0) < 0.01)
+
+	# Unknown attack_id gives default fallback.
+	m.force_reset()
+	m.on_hit_landed(&"unknown_attack", false)
+	_check("unknown attack still credits", m.current() > 0.0)
+
+	# Damage drain.
+	m.force_reset()
+	m.on_hit_landed(&"swing_c", false)  # +15
+	m.on_hit_landed(&"swing_c", false)  # +15 = 30
+	var spent_signal_fired := [false]
+	m.momentum_spent.connect(func(_amt, _r): spent_signal_fired[0] = true)
+	m.on_damage_taken()
+	_check("damage drains some momentum", m.current() < 30.0)
+	_check("momentum_spent signal fired on damage", spent_signal_fired[0])
+	_check("combo reset to 1 on damage", abs(m.combo_multiplier() - 1.0) < 0.001)
+
+	# Kill credit.
+	m.force_reset()
+	m.on_kill()
+	_check("kill grants 5", abs(m.current() - 5.0) < 0.01)
+
+	# Perfect dodge — big chunk.
+	m.force_reset()
+	m.on_perfect_dodge()
+	_check("perfect dodge grants 40", abs(m.current() - 40.0) < 0.01)
+
+	# try_spend fails without enough momentum.
+	m.force_reset()
+	m.on_hit_landed(&"swing_c", false)  # 15
+	_check("try_spend(30) on 15 fails", not m.try_spend(30.0, &"test"))
+	_check("try_spend keeps current after fail", abs(m.current() - 15.0) < 0.01)
+	_check("try_spend(10) on 15 succeeds", m.try_spend(10.0, &"test"))
+	_check("after spend current is 5", abs(m.current() - 5.0) < 0.01)
+
+	# Cap at capacity.
+	m.force_reset()
+	for i in range(20):
+		m.on_hit_landed(&"swing_c", false)  # 15 × 20 — way over capacity
+	_check("momentum capped at capacity", abs(m.current() - float(m.capacity)) < 0.01)
+
+	# Combo multiplier caps at max_combo.
+	m.force_reset()
+	for i in range(20):
+		m.on_hit_landed(&"swing_a", false)
+	_check("combo capped at max_combo", m.combo_multiplier() <= float(m.max_combo) + 0.001)
+
+	m.queue_free()
 
 
 func _check(label: String, ok: bool) -> void:

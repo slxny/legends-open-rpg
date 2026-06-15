@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.89.0"
+const GAME_VERSION := "v0.89.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.89.1",
+		"title": "Combat feel — enemy HP BAR FLASH on damage",
+		"date": "2026-06-15",
+		"entries": [
+			"Enemy HP bars now FLASH WHITE briefly each time they take damage. modulate *= 2.0 instantly, then tween back over 140 ms EASE_OUT. The HP change becomes visible at a glance even in chaotic fights.",
+			"Combined with the poise bar (v0.88.5), status icons (v0.87.9), and damage number stacking (v0.86.6), every enemy now has full tactical readability — HP%, poise%, active statuses, recent damage — all at a glance.",
+			"Internal: enemy.gd _update_hp_bar appends modulate flash logic — captures previous modulate, sets to 2x white, tweens back over 140 ms. Runs on every damage call.",
+		]
+	},
 	{
 		"version": "v0.89.0",
 		"title": "Combat feel — RED SCREEN FLASH on damage taken",

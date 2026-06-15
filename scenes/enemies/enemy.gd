@@ -3336,6 +3336,12 @@ func _update_hp_bar() -> void:
 		hp_bar.set_value(stats.current_hp, stats.max_hp)
 		if not _is_selected:
 			hp_bar.visible = stats.current_hp < stats.max_hp
+		# Phase 6.x — brief white flash on HP bar when damage is taken so
+		# the change is visible at a glance.
+		var prev_mod := hp_bar.modulate
+		hp_bar.modulate = Color(2.0, 2.0, 2.0, prev_mod.a)
+		var t := hp_bar.create_tween()
+		t.tween_property(hp_bar, "modulate", prev_mod, 0.14).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
 func get_stats_dict() -> Dictionary:
 	return stats.get_stats_dict()

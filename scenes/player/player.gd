@@ -2753,25 +2753,31 @@ func _do_melee_attack(target: Node2D, result: Dictionary, attack_dir: Vector2 = 
 			dir = _apply_attack_motion(target, dir, AttackTimingDataCls.RhythmClass.CORE_B)
 			_anim_swing_horizontal(tween, frames, base_pos, dir, perp, target, result, -1.0, true)
 			_start_basic_horizontal_clock(AttackTimingsCls.swing_b(), target, dir, -1.0)
-		2:  # C: overhead chop — MIGRATED (Phase 1A.5c). FINISHER_C rhythm class.
-			dir = _apply_attack_motion(target, dir, AttackTimingDataCls.RhythmClass.FINISHER_C)
+		2:  # C overhead chop (natural finisher) OR branch_slam (Phase 2.2)
+			var c_attack_id := _resolve_attack_id(2, _last_dir_category, _get_dir_category(dir))
+			var c_timing := AttackTimingsCls.by_id(c_attack_id)
+			dir = _apply_attack_motion(target, dir, int(c_timing.rhythm_class))
 			_anim_overhead_chop(tween, frames, base_pos, dir, target, result, true)
-			_start_overhead_chop_clock(AttackTimingsCls.swing_c(), target, dir)
-			# Phase 1A.6: C is the finisher — reset combo so next press is A again.
+			_start_overhead_chop_clock(c_timing, target, dir)
+			# Phase 1A.6: C / slam is a finisher — reset combo so next press is A again.
 			_combo_index = 0
 			_last_dir_category = ""
-		3:  # D: upward thrust — MIGRATED (Phase 1A.5d). EXTENSION_D.
-			dir = _apply_attack_motion(target, dir, AttackTimingDataCls.RhythmClass.EXTENSION_D)
+		3:  # D upward thrust (extension) OR branch_uppercut (Phase 2.2)
+			var d_attack_id := _resolve_attack_id(3, _last_dir_category, _get_dir_category(dir))
+			var d_timing := AttackTimingsCls.by_id(d_attack_id)
+			dir = _apply_attack_motion(target, dir, int(d_timing.rhythm_class))
 			_anim_upward_thrust(tween, frames, base_pos, dir, target, result, true)
-			_start_upward_thrust_clock(AttackTimingsCls.swing_d(), target, dir)
-			# Phase 1A.6: D is a higher-commitment extension — reset combo.
+			_start_upward_thrust_clock(d_timing, target, dir)
+			# Phase 1A.6: higher-commitment extension — reset combo.
 			_combo_index = 0
 			_last_dir_category = ""
-		4:  # E: spin slash — MIGRATED (Phase 1A.5e). EXTENSION_E (wide attack).
-			dir = _apply_attack_motion(target, dir, AttackTimingDataCls.RhythmClass.EXTENSION_E)
+		4:  # E spin slash (extension) OR branch_spin (Phase 2.2)
+			var e_attack_id := _resolve_attack_id(4, _last_dir_category, _get_dir_category(dir))
+			var e_timing := AttackTimingsCls.by_id(e_attack_id)
+			dir = _apply_attack_motion(target, dir, int(e_timing.rhythm_class))
 			_anim_spin_slash(tween, frames, base_pos, dir, target, result, true)
-			_start_spin_slash_clock(AttackTimingsCls.swing_e(), target, dir)
-			# Phase 1A.6: E is a higher-commitment extension — reset combo.
+			_start_spin_slash_clock(e_timing, target, dir)
+			# Phase 1A.6: higher-commitment extension — reset combo.
 			_combo_index = 0
 			_last_dir_category = ""
 
@@ -2809,6 +2815,86 @@ func _anim_swing_horizontal(tween: Tween, frames: Array, base_pos: Vector2,
 	# Return to idle
 	tween.tween_interval(0.05)
 	_anim_return_to_idle(tween, base_pos)
+
+
+# Phase 2.2 — resolve the attack_id from swing_idx + directional context so
+# A→B→C uses swing_c() (natural finisher), but ["horizontal","down"] uses
+# branch_slam() (with BRANCH_SLAM rhythm and its own mechanical role).
+func _resolve_attack_id(swing_idx: int, prev_cat: String, cur_cat: String) -> StringName:
+	match swing_idx:
+		4:
+			# Spin: explicit diagonal OR vertical→horizontal transition.
+			if cur_cat == "diagonal" or prev_cat == "up" or prev_cat == "down":
+				return &"branch_spin"
+			return &"swing_e"
+		3:
+			if cur_cat == "up":
+				return &"branch_uppercut"
+			return &"swing_d"
+		2:
+			if cur_cat == "down":
+				return &"branch_slam"
+			return &"swing_c"  # natural A→B→C finisher
+		1:
+			return &"swing_b"
+		_:
+			return &"swing_a"
+
+
+# Phase 2.2 — directional-branch mechanical functions.
+# Slam: radial knockback + extra poise damage to nearby enemies.
+# Uppercut: vertical lift via HitReactionComponent (forced upward recoil).
+# Spin: poise chip across nearby enemies (crowd-control).
+const _SLAM_AOE_RADIUS_SQ: float = 80.0 * 80.0
+const _SLAM_AOE_KNOCKBACK: float = 60.0
+const _SLAM_AOE_POISE: float = 6.0
+const _SPIN_RADIUS_SQ: float = 100.0 * 100.0
+const _SPIN_POISE: float = 8.0
+
+
+func _apply_slam_aoe(impact_pos: Vector2, _dir: Vector2, exclude: Node2D) -> void:
+	for enemy in _nearby_enemies:
+		if not is_instance_valid(enemy) or enemy == exclude:
+			continue
+		if enemy.get("_is_dead"):
+			continue
+		var to_e: Vector2 = enemy.global_position - impact_pos
+		if to_e.length_squared() > _SLAM_AOE_RADIUS_SQ:
+			continue
+		if to_e.length() < 0.01:
+			continue
+		enemy.apply_knockback(to_e.normalized(), _SLAM_AOE_KNOCKBACK)
+		var poise_node = enemy.get_node_or_null("PoiseComponent")
+		if poise_node != null and poise_node.has_method("take_poise_damage"):
+			poise_node.take_poise_damage(_SLAM_AOE_POISE, true)
+
+
+func _apply_uppercut_lift(target: Node2D) -> void:
+	# The uppercut reaction is vertical regardless of facing — feed the
+	# HitReactionComponent a direction biased upward so the recoil pose
+	# reads as a launch.
+	if not is_instance_valid(target):
+		return
+	var hr = target.get_node_or_null("HitReactionComponent")
+	if hr == null or not hr.has_method("react"):
+		return
+	# Upward direction lifts the sprite via recoil_distance × y. force = 0
+	# so we don't stack on top of the existing apply_knockback path.
+	hr.react(Vector2(0, -1), 0.0, true, true)
+
+
+func _apply_spin_radial(impact_pos: Vector2, exclude: Node2D) -> void:
+	for enemy in _nearby_enemies:
+		if not is_instance_valid(enemy) or enemy == exclude:
+			continue
+		if enemy.get("_is_dead"):
+			continue
+		var to_e: Vector2 = enemy.global_position - impact_pos
+		if to_e.length_squared() > _SPIN_RADIUS_SQ:
+			continue
+		var poise_node = enemy.get_node_or_null("PoiseComponent")
+		if poise_node != null and poise_node.has_method("take_poise_damage"):
+			poise_node.take_poise_damage(_SPIN_POISE, false)
 
 
 # Phase 2.1 — apply magnetism (aim bias) + lean-in motion at swing start.
@@ -2924,7 +3010,9 @@ func _start_basic_horizontal_clock(timing: Resource, target: Node2D, dir: Vector
 
 
 # Swing C — the A→B→C finisher. Audit: knockback 55, VFX scale 1.4, shake 2.0/5.0.
+# Phase 2.2: when this fires as branch_slam, also applies a radial AoE.
 func _start_overhead_chop_clock(timing: Resource, target: Node2D, dir: Vector2, ability_mult: float = 1.0) -> void:
+	var rhythm_capture: int = int(timing.rhythm_class)
 	_run_clocked_attack(timing, target, dir, ability_mult, func(t: Node2D, d: Vector2, crit: bool) -> void:
 		if is_instance_valid(t):
 			t.apply_knockback(d, 55.0)
@@ -2936,11 +3024,20 @@ func _start_overhead_chop_clock(timing: Resource, target: Node2D, dir: Vector2, 
 			_do_hit_freeze(true)
 		else:
 			_do_screen_shake(2.0)
+		# Phase 2.2 branch_slam: radial AoE knockback + extra poise damage
+		# to nearby enemies. Locked target was already hit; this affects
+		# everyone else within 80 px.
+		if rhythm_capture == AttackTimingDataCls.RhythmClass.BRANCH_SLAM and is_instance_valid(t):
+			_apply_slam_aoe(t.global_position, d, t)
+			# Slam visual: an extra impact ring at the ground point.
+			_spawn_impact_vfx(t.global_position, true)
 	)
 
 
 # Swing D — optional thrust extension. Audit: knockback 30, VFX rotated -0.4, shake 1.5/5.0.
+# Phase 2.2: when this fires as branch_uppercut, also applies vertical lift via HitReaction.
 func _start_upward_thrust_clock(timing: Resource, target: Node2D, dir: Vector2, ability_mult: float = 1.0) -> void:
+	var rhythm_capture: int = int(timing.rhythm_class)
 	_run_clocked_attack(timing, target, dir, ability_mult, func(t: Node2D, d: Vector2, crit: bool) -> void:
 		if is_instance_valid(t):
 			t.apply_knockback(d, 30.0)
@@ -2952,11 +3049,17 @@ func _start_upward_thrust_clock(timing: Resource, target: Node2D, dir: Vector2, 
 			_do_hit_freeze(true)
 		else:
 			_do_screen_shake(1.5)
+		# Phase 2.2 branch_uppercut: visible vertical launch via heavier
+		# upward recoil on HitReactionComponent.
+		if rhythm_capture == AttackTimingDataCls.RhythmClass.BRANCH_UPPERCUT:
+			_apply_uppercut_lift(t)
 	)
 
 
 # Swing E — wide spin extension. Audit: knockback 60, three slash arcs, shake 2.0/6.0.
+# Phase 2.2: when this fires as branch_spin, also chips poise across nearby enemies.
 func _start_spin_slash_clock(timing: Resource, target: Node2D, dir: Vector2, ability_mult: float = 1.0) -> void:
+	var rhythm_capture: int = int(timing.rhythm_class)
 	_run_clocked_attack(timing, target, dir, ability_mult, func(t: Node2D, d: Vector2, crit: bool) -> void:
 		if is_instance_valid(t):
 			t.apply_knockback(d, 60.0)
@@ -2970,6 +3073,10 @@ func _start_spin_slash_clock(timing: Resource, target: Node2D, dir: Vector2, abi
 			_do_hit_freeze(true)
 		else:
 			_do_screen_shake(2.0)
+		# Phase 2.2 branch_spin: crowd-control poise chip across nearby
+		# enemies — locked target already hit; this softens up the group.
+		if rhythm_capture == AttackTimingDataCls.RhythmClass.BRANCH_SPIN and is_instance_valid(t):
+			_apply_spin_radial(t.global_position, t)
 	)
 
 

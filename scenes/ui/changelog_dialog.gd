@@ -9,9 +9,22 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.84.1"
+const GAME_VERSION := "v0.84.2"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.84.2",
+		"title": "Combat overhaul — Phase 2.2 directional attacks have real mechanical roles",
+		"date": "2026-06-14",
+		"entries": [
+			"COMBAT FEEL: directional branches now do something distinct beyond just animation variation.",
+			"SLAM (horizontal→down or up→down): plus a radial AoE — every enemy within 80 px of the impact takes knockback 60 + 6 poise damage. Adds a satisfying ground hit visual.",
+			"UPPERCUT (down→up or anything→up): visible vertical lift on the locked target via HitReactionComponent (recoil pushed straight up).",
+			"SPIN (any→diagonal, vertical→horizontal): chips 8 poise damage off every enemy within 100 px — crowd-control softener that sets up the rest of your combo to break the group.",
+			"Internal: _resolve_attack_id maps swing_idx + directional context to branch_slam / branch_uppercut / branch_spin vs the underlying swing_c / swing_d / swing_e. The clock wrappers capture rhythm_class and run branch effects after the main contact callback. AttackTimings.branch_slam (+20 poise base), branch_uppercut (+15), branch_spin (+10) already shipped in 2.0; this commit makes them actually fire.",
+			"Specials and natural A→B→C finisher unchanged — directional functions only fire when a directional branch was actually picked.",
+		]
+	},
 	{
 		"version": "v0.84.1",
 		"title": "Combat overhaul — Phase 2.1 attack magnetism + lean-in motion",

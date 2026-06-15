@@ -9,9 +9,23 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.87.8"
+const GAME_VERSION := "v0.87.9"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.87.9",
+		"title": "Combat overhaul — Phase 5.2 STATUS EFFECT ICONS above enemies",
+		"date": "2026-06-15",
+		"entries": [
+			"Status effects are now READABLE in a crowded fight. Small colored icons hover above each enemy showing their active statuses.",
+			"EXPOSED — orange icon. Tells you 'special on this guy for +50% damage!'",
+			"BLEED — red icon (when bleed status framework activates from upgrades / future content).",
+			"MARK — purple icon.",
+			"Multiple statuses on the same enemy fan out 10 px apart horizontally.",
+			"Each icon bobs up/down 4 px over 0.4 s for visibility. Fades out on expire over 0.18 s. Removed automatically on enemy death.",
+			"Internal: enemy.gd _status_icons Dictionary keyed by status id. _spawn_status_icon called from _on_status_applied; _remove_status_icon from _on_status_expired. Uses crystal_white texture tinted per status type. Position offset by existing icon count for fan-out.",
+		]
+	},
 	{
 		"version": "v0.87.8",
 		"title": "Combat overhaul — Phase 5.5 F16 REACTIVE MUSIC INTENSITY",

@@ -3848,7 +3848,11 @@ func _spawn_pickup(pickup_type: StringName, magnitude: float) -> void:
 # When "exposed" is applied, give the sprite a subtle warm tint that
 # pulses slightly so the player can see the special damage bonus is
 # available. On expire, restore the original modulate.
+# Phase 5.2 — also spawn a floating status ICON above the enemy so the
+# player can spot active statuses across a crowded fight at a glance.
 var _exposed_pulse_tween: Tween = null
+var _status_icons: Dictionary = {}  # StringName -> Sprite2D
+
 func _on_status_applied(id: StringName, _source: Node, _stacks: int) -> void:
 	if _is_dead:
 		return
@@ -3856,6 +3860,7 @@ func _on_status_applied(id: StringName, _source: Node, _stacks: int) -> void:
 		_exposed_pulse_tween = sprite.create_tween().set_loops()
 		_exposed_pulse_tween.tween_property(sprite, "modulate", Color(1.25, 1.05, 0.85), 0.5)
 		_exposed_pulse_tween.tween_property(sprite, "modulate", Color.WHITE, 0.5)
+	_spawn_status_icon(id)
 
 
 func _on_status_expired(id: StringName) -> void:
@@ -3865,6 +3870,56 @@ func _on_status_expired(id: StringName) -> void:
 		_exposed_pulse_tween = null
 		if not _is_dead and is_instance_valid(sprite):
 			sprite.modulate = Color.WHITE
+	_remove_status_icon(id)
+
+
+# Phase 5.2 — status icon above enemy. Bobs up/down + pulses. Per-status
+# color so multiple statuses are readable.
+func _spawn_status_icon(id: StringName) -> void:
+	if _is_dead:
+		return
+	if _status_icons.has(id) and is_instance_valid(_status_icons[id]):
+		return  # already showing
+	var icon_color: Color = Color.WHITE
+	match id:
+		&"exposed":
+			icon_color = Color(1.5, 0.8, 0.2)
+		&"bleed":
+			icon_color = Color(1.5, 0.2, 0.2)
+		&"mark":
+			icon_color = Color(1.0, 0.6, 1.5)
+		_:
+			icon_color = Color(0.9, 0.9, 1.0)
+	var icon := Sprite2D.new()
+	var tex = SpriteGenerator.get_texture("crystal_white")
+	if tex == null:
+		tex = SpriteGenerator.get_texture("rat_gib")
+	icon.texture = tex
+	icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	icon.modulate = icon_color
+	icon.scale = Vector2(0.4, 0.4)
+	# Position above the sprite, offset by the count of already-shown icons.
+	var x_offset: float = -8.0 + float(_status_icons.size()) * 10.0
+	icon.position = Vector2(x_offset, -34.0)
+	icon.z_index = 5
+	add_child(icon)
+	# Bob up/down loop.
+	var bob := icon.create_tween().set_loops()
+	bob.tween_property(icon, "position:y", icon.position.y - 4.0, 0.4).set_trans(Tween.TRANS_SINE)
+	bob.tween_property(icon, "position:y", icon.position.y, 0.4).set_trans(Tween.TRANS_SINE)
+	_status_icons[id] = icon
+
+
+func _remove_status_icon(id: StringName) -> void:
+	if not _status_icons.has(id):
+		return
+	var icon = _status_icons[id]
+	_status_icons.erase(id)
+	if not is_instance_valid(icon):
+		return
+	var fade_tween: Tween = icon.create_tween()
+	fade_tween.tween_property(icon, "modulate:a", 0.0, 0.18)
+	fade_tween.tween_callback(icon.queue_free)
 
 
 # Phase 2.0 — poise break handler. Poise break is bigger than stagger:

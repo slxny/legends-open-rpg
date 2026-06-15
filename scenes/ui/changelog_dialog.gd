@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.88.9"
+const GAME_VERSION := "v0.89.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.89.0",
+		"title": "Combat feel — RED SCREEN FLASH on damage taken",
+		"date": "2026-06-15",
+		"entries": [
+			"TAKING DAMAGE now flashes the whole screen RED briefly. Alpha scales with damage: a 10-damage poke gets a 0.22 alpha flash, a 60+ damage hit gets the full 0.45. Quick 140 ms decay so it doesn't linger.",
+			"Critical hit on you = bright red wash. Light scratch = subtle hint. Visceral and proportional.",
+			"Internal: player.gd _spawn_world_red_flash(damage_amount) creates CanvasLayer (layer 94) + ColorRect with damage_intensity-scaled alpha. Tween fades to 0 over 140 ms EASE_OUT. Called from take_damage after _do_hit_flash + player_hurt audio.",
+		]
+	},
 	{
 		"version": "v0.88.9",
 		"title": "Combat feel — LEVEL UP BURST (full screen flash + gold explosion + sparks + text)",

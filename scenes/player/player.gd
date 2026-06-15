@@ -3758,6 +3758,9 @@ func take_damage(amount: int, is_crit: bool = false) -> void:
 	_spawn_damage_number(amount, is_crit)
 	_do_hit_flash()
 	AudioManager.play_sfx("player_hurt", -4.0)
+	# Phase 5.x — red screen edge flash on damage taken for visceral
+	# feedback. Quick fade so it doesn't linger.
+	_spawn_world_red_flash(amount)
 	# Phase 2.4 — damage drains momentum and breaks the combo.
 	if _momentum != null and _momentum.has_method("on_damage_taken"):
 		_momentum.on_damage_taken()
@@ -4436,6 +4439,27 @@ func _report_music_intensity() -> void:
 	if _low_hp_active:
 		intensity += 0.15
 	AudioManager.set_music_intensity(clamp(intensity, 0.0, 1.0))
+
+
+# Phase 5.x — red screen tint flash when player takes damage. Alpha
+# scales with damage taken so big hits flash brighter. Quick decay
+# (~140 ms) so it doesn't linger.
+func _spawn_world_red_flash(damage_amount: int) -> void:
+	var layer := CanvasLayer.new()
+	layer.layer = 94
+	add_child(layer)
+	var rect := ColorRect.new()
+	# Alpha 0.18 baseline + scaling with damage up to 0.45.
+	var damage_intensity: float = clamp(float(damage_amount) / 60.0, 0.0, 1.0)
+	var alpha: float = 0.18 + damage_intensity * 0.27
+	rect.color = Color(0.9, 0.1, 0.1, alpha)
+	rect.anchor_right = 1.0
+	rect.anchor_bottom = 1.0
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(rect)
+	var t := rect.create_tween()
+	t.tween_property(rect, "color:a", 0.0, 0.14).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	t.tween_callback(layer.queue_free)
 
 
 # Phase 5.x — full-screen white flash. CanvasLayer above HUD that fades

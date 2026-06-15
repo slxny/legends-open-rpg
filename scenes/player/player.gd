@@ -502,6 +502,13 @@ func _physics_process(delta: float) -> void:
 	# Phase 5.x — XP popup detection (XP delta > 0 = enemy killed).
 	_check_xp_popup()
 
+	# Phase 5.x — dust puffs while running fast (Stardew-like polish).
+	if velocity.length() > 130.0:
+		_dust_puff_timer -= delta
+		if _dust_puff_timer <= 0.0:
+			_dust_puff_timer = _DUST_PUFF_INTERVAL
+			_spawn_running_dust_puff()
+
 	# Heal beacon immunity visual feedback — detect transitions
 	if is_on_heal_beacon and not _was_on_heal_beacon:
 		_start_immunity_vfx()
@@ -4299,6 +4306,9 @@ var _heal_popup_until_msec: int = 0
 var _last_known_xp: int = -1
 var _xp_popup_accum: int = 0
 var _xp_popup_until_msec: int = 0
+# Phase 5.x — running dust puff timer.
+var _dust_puff_timer: float = 0.0
+const _DUST_PUFF_INTERVAL: float = 0.16
 # Phase 5.5 — reactive music intensity tick.
 var _music_intensity_tick: float = 0.0
 const _MUSIC_INTENSITY_INTERVAL: float = 0.3
@@ -4564,6 +4574,31 @@ func _show_xp_popup(amount: int) -> void:
 		return
 	var label: String = "+%d XP" % amount
 	_juice._spawn_floating_text(global_position + Vector2(randf_range(-8, 8), -52), label, Color(0.7, 1.4, 1.6), false)
+
+
+# Phase 5.x — running dust puff. Small brown sprite that drifts behind +
+# fades. Stardew-style polish.
+func _spawn_running_dust_puff() -> void:
+	var tex = SpriteGenerator.get_texture("crystal_white")
+	if tex == null:
+		return
+	# Spawn behind the player based on movement direction.
+	var move_dir: Vector2 = velocity.normalized() if velocity.length() > 0.01 else Vector2.RIGHT
+	var puff := Sprite2D.new()
+	puff.texture = tex
+	puff.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	puff.global_position = global_position + Vector2(0, 8) - move_dir * 8.0
+	puff.modulate = Color(0.55, 0.45, 0.30, 0.55)  # warm brown dust
+	puff.scale = Vector2(randf_range(0.45, 0.7), randf_range(0.4, 0.65))
+	puff.z_index = -1
+	_get_world_node().add_child(puff)
+	var t := puff.create_tween()
+	t.set_parallel(true)
+	t.tween_property(puff, "scale", puff.scale * 1.6, 0.28).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	t.tween_property(puff, "global_position", puff.global_position - move_dir * 6.0 + Vector2(0, 3), 0.28)
+	t.tween_property(puff, "modulate:a", 0.0, 0.30).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	t.set_parallel(false)
+	t.tween_callback(puff.queue_free)
 
 
 func _spawn_dodge_afterimage() -> void:

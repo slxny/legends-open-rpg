@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.89.4"
+const GAME_VERSION := "v0.89.5"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.89.5",
+		"title": "World feel — RUNNING DUST PUFFS behind the player",
+		"date": "2026-06-15",
+		"entries": [
+			"PLAYER FEET KICK UP DUST when running fast (velocity > 130 px/s). Small warm-brown puffs spawn behind the player every 160 ms, drift backward + grow + fade over 280 ms.",
+			"Subtle Stardew-style polish that makes movement feel grounded — the world reacts to your feet.",
+			"Internal: player.gd _dust_puff_timer + _DUST_PUFF_INTERVAL = 0.16s. _physics_process: if velocity.length() > 130, decrement timer; on <= 0, fire _spawn_running_dust_puff and reset. _spawn_running_dust_puff creates Sprite2D using crystal_white texture, brown modulate (0.55/0.45/0.30/0.55), scale 0.45–0.7, position behind player based on -velocity direction. Tweens scale × 1.6, drift backward, alpha fade over 280 ms, queue_free.",
+		]
+	},
 	{
 		"version": "v0.89.4",
 		"title": "Combat feel — DODGED! popup when i-frames absorb damage",

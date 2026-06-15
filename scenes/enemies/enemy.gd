@@ -128,6 +128,20 @@ var _vulnerability_glow_tween: Tween = null
 func _is_in_vulnerability_window() -> bool:
 	return _vulnerable_until_usec > 0 and Time.get_ticks_usec() < _vulnerable_until_usec
 
+# Phase 3.4 — per-enemy attack PATTERNS.
+#   "standard"    — single strike (default)
+#   "triple_stab" — rat: 3 quick stabs, lower damage each
+#   "slam"        — troll/ogre/golem: radial AoE around enemy
+var _stabs_remaining: int = 0
+var _slam_telegraph: Sprite2D = null
+
+func _get_attack_pattern() -> StringName:
+	if sprite_type == "rat":
+		return &"triple_stab"
+	if sprite_type == "troll" or sprite_type == "ogre" or sprite_type == "ancient_golem":
+		return &"slam"
+	return &"standard"
+
 # Phase 3.3 — global ATTACK COORDINATOR (danger budget).
 # Limits how many enemies can be in attack wind-up at any time so groups
 # apply pressure without all swinging at once. Static so all enemies
@@ -758,8 +772,21 @@ func _process_attack(delta: float) -> void:
 			# telegraph (medium enemies too, briefer). Punish window opens.
 			_trigger_vulnerability_window(&"whiff")
 			return
-		if dist_sq <= hit_range_sq and target.has_method("take_damage"):
-			# Roll for special attack (15% chance, type-specific)
+		if target.has_method("take_damage"):
+			var pattern: StringName = _get_attack_pattern()
+			# SLAM: radial AoE around enemy regardless of facing. Damages
+			# anyone within slam_radius. Big telegraph already shown.
+			if pattern == &"slam":
+				_resolve_slam_strike(dist_sq <= hit_range_sq)
+				return
+			# Skip non-slam if out of range — already handled above as whiff.
+			if dist_sq > hit_range_sq:
+				return
+			# TRIPLE STAB: 3 quick hits per attack cycle, lower per-hit damage.
+			if pattern == &"triple_stab":
+				_resolve_stab_strike()
+				return
+			# STANDARD: one strike + 15% special chance.
 			var is_special = randf() < 0.15
 			var dmg_mult = 1.0
 			if is_special:
@@ -768,8 +795,6 @@ func _process_attack(delta: float) -> void:
 			var result = CombatManager.calculate_damage(get_stats_dict(), target.get_stats_dict(), dmg_mult)
 			target.take_damage(result["damage"], result["is_crit"])
 			_do_attack_lunge(is_special)
-			if sprite_type == "rat" and randf() < 0.3:
-				_try_rat_squeal()
 			# Rare effect proc
 			if _effect_chance > 0.0 and randf() < _effect_chance:
 				_apply_effect_to_target(target)
@@ -3513,9 +3538,13 @@ func _begin_attack_windup() -> void:
 	_windup_tween.tween_property(sprite, "scale", squash, windup * 0.75)
 	_windup_tween.tween_property(sprite, "modulate", sprite_tint, windup * 0.6)
 	_windup_tween.tween_property(sprite, "position", back_dir * lean_dist, windup * 0.8)
-	# Floor arc telegraph pointing toward target, colored by severity.
+	# Floor telegraph. Slam pattern uses a radial circle; others use the
+	# directional arc.
 	if is_instance_valid(target):
-		_spawn_telegraph_arc(target.global_position)
+		if _get_attack_pattern() == &"slam":
+			_spawn_slam_telegraph()
+		else:
+			_spawn_telegraph_arc(target.global_position)
 
 
 # Striking phase: snap forward, normal colour. _end_attack_windup runs
@@ -3530,6 +3559,7 @@ func _end_attack_windup() -> void:
 	t.tween_property(sprite, "modulate", Color.WHITE, 0.10)
 	t.tween_property(sprite, "position", Vector2.ZERO, 0.09)
 	_clear_telegraph_arc()
+	_clear_slam_telegraph()
 
 
 # Cancel: restore the sprite immediately (no strike happens).
@@ -3541,6 +3571,7 @@ func _cancel_attack_windup() -> void:
 		sprite.modulate = Color.WHITE
 		sprite.position = Vector2.ZERO
 	_clear_telegraph_arc()
+	_clear_slam_telegraph()
 
 
 func _spawn_telegraph_arc(toward_pos: Vector2) -> void:
@@ -3609,6 +3640,95 @@ func _trigger_vulnerability_window(_reason: StringName) -> void:
 	get_tree().create_timer(float(dur_ms) / 1000.0).timeout.connect(func() -> void:
 		if is_instance_valid(owner_ref) and not owner_ref._is_dead:
 			owner_ref._clear_vulnerability_window())
+
+
+# Phase 3.4 — TRIPLE STAB. Rat fires 3 quick stabs per attack cycle.
+# Each stab does ~60% of normal damage, total ~180%. Between stabs the
+# windup is very short so the player needs to dodge once but cleanly.
+const _STAB_TOTAL: int = 3
+const _STAB_DAMAGE_MULT: float = 0.60
+const _STAB_GAP_SEC: float = 0.22
+func _resolve_stab_strike() -> void:
+	if _stabs_remaining <= 0:
+		_stabs_remaining = _STAB_TOTAL
+	# Deal damage.
+	var result = CombatManager.calculate_damage(get_stats_dict(), target.get_stats_dict(), _STAB_DAMAGE_MULT)
+	target.take_damage(result["damage"], result["is_crit"])
+	_do_attack_lunge(false)
+	if randf() < 0.3:
+		_try_rat_squeal()
+	_stabs_remaining -= 1
+	if _stabs_remaining > 0:
+		# Schedule next stab quickly — shorter wind-up, no token re-reserve.
+		_attack_timer = _STAB_GAP_SEC
+	else:
+		# Full combo recovery.
+		_attack_timer = attack_cooldown * 1.4
+
+
+# Phase 3.4 — SLAM. Troll/ogre fires a radial AoE that hits anyone in
+# slam_radius regardless of facing. The telegraph is a big yellow circle
+# on the ground around the enemy. Players must MOVE AWAY, not just dodge
+# the direction. Heavy damage but slow recovery.
+const _SLAM_RADIUS: float = 95.0
+const _SLAM_DAMAGE_MULT: float = 1.5
+func _resolve_slam_strike(_target_in_range: bool) -> void:
+	_clear_slam_telegraph()
+	# Visual: large white-orange impact ring.
+	var world := _get_world_node()
+	var ring_tex = SpriteGenerator.get_texture("ring_flash")
+	if ring_tex == null:
+		ring_tex = SpriteGenerator.get_texture("crystal_white")
+	if ring_tex != null:
+		var ring := Sprite2D.new()
+		ring.texture = ring_tex
+		ring.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		ring.global_position = global_position
+		ring.modulate = Color(1.7, 0.7, 0.2, 0.95)
+		ring.scale = Vector2(0.6, 0.6)
+		ring.z_index = -1
+		world.add_child(ring)
+		var t := ring.create_tween()
+		t.set_parallel(true)
+		t.tween_property(ring, "scale", Vector2(_SLAM_RADIUS / 16.0, _SLAM_RADIUS / 16.0), 0.30).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		t.tween_property(ring, "modulate:a", 0.0, 0.40).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		t.set_parallel(false)
+		t.tween_callback(ring.queue_free)
+	# Damage anyone within radius.
+	var slam_radius_sq: float = _SLAM_RADIUS * _SLAM_RADIUS
+	if is_instance_valid(target) and target.has_method("take_damage"):
+		if global_position.distance_squared_to(target.global_position) <= slam_radius_sq:
+			var result = CombatManager.calculate_damage(get_stats_dict(), target.get_stats_dict(), _SLAM_DAMAGE_MULT)
+			target.take_damage(result["damage"], result["is_crit"])
+	_do_attack_lunge(true)
+	_attack_timer = attack_cooldown * 1.5  # Longer recovery after slam.
+
+
+func _spawn_slam_telegraph() -> void:
+	_clear_slam_telegraph()
+	var tex = SpriteGenerator.get_texture("ring_flash")
+	if tex == null:
+		tex = SpriteGenerator.get_texture("crystal_white")
+	if tex == null:
+		return
+	_slam_telegraph = Sprite2D.new()
+	_slam_telegraph.texture = tex
+	_slam_telegraph.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_slam_telegraph.global_position = global_position
+	# Big circle indicating the slam radius.
+	_slam_telegraph.scale = Vector2(_SLAM_RADIUS / 24.0, _SLAM_RADIUS / 24.0)
+	_slam_telegraph.modulate = Color(1.6, 0.6, 0.15, 0.4)
+	_slam_telegraph.z_index = -2
+	_get_world_node().add_child(_slam_telegraph)
+	var windup: float = _get_windup_sec()
+	var t := _slam_telegraph.create_tween()
+	t.tween_property(_slam_telegraph, "modulate:a", 0.85, windup * 0.8).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+
+
+func _clear_slam_telegraph() -> void:
+	if _slam_telegraph != null and is_instance_valid(_slam_telegraph):
+		_slam_telegraph.queue_free()
+	_slam_telegraph = null
 
 
 func _clear_vulnerability_window() -> void:

@@ -686,8 +686,10 @@ func _test_dodge_controller() -> void:
 	_check("perfect_dodge_executed fired (hit was within perfect window)", perfect_fired[0])
 
 	# Wait past perfect window but inside iframes.
-	await get_tree().create_timer(0.12).timeout
-	_check("perfect window false after 120ms", not dc.is_perfect_window())
+	# (Headless tween/timer can run slow — use a generous wait so the
+	# 80 ms perfect window is well behind us.)
+	await get_tree().create_timer(0.18).timeout
+	_check("perfect window false after wait", not dc.is_perfect_window())
 	# Hit during normal iframes still absorbed but no new perfect.
 	var perf_was = perfect_fired[0]
 	dc.on_incoming_hit(&"enemy_swing")

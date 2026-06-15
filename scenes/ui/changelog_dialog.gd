@@ -9,9 +9,23 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.86.3"
+const GAME_VERSION := "v0.86.4"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.86.4",
+		"title": "Combat overhaul — Phase 3.4 per-enemy attack PATTERNS (rat triple-stab, troll/ogre ground slam)",
+		"date": "2026-06-15",
+		"entries": [
+			"ENEMIES NOW HAVE DISTINCT ATTACK PATTERNS, not just different windup times. Each pattern demands a different player response.",
+			"RAT TRIPLE-STAB: 3 quick stabs per attack cycle, ~60% damage each (~180% total). Short 0.22 s gap between stabs. Dodge once cleanly and you escape all three; mistime it and a rat does serious damage in close.",
+			"TROLL / OGRE / ANCIENT_GOLEM GROUND SLAM: instead of a directional arc telegraph, a large yellow CIRCLE appears around the enemy showing the slam radius (95 px). When the slam lands, anyone inside that circle takes 150% damage regardless of facing — directional dodge alone won't save you. You have to MOVE AWAY.",
+			"Slam recovery is 1.5× attack cooldown so the punish window is huge if you survive. Combined with 3.5 vulnerability, whiffing a slam leaves a troll exposed for 850 ms.",
+			"Other enemies (skeleton/goblin/bandit/wolf/etc.) keep the standard pattern but with their per-tier windup times from 3.1.",
+			"Internal: _get_attack_pattern() per-sprite_type returns &standard / &triple_stab / &slam. _process_attack forks on pattern. _resolve_stab_strike tracks _stabs_remaining (3→2→1→reset) with short _attack_timer between hits. _resolve_slam_strike spawns expanding ring + damages all in 95px radius regardless of facing. _spawn_slam_telegraph replaces the directional arc with a circle scaled to slam radius. Token costs / vulnerability windows / wind-up severity colors all still apply.",
+			"Smoke: relaxed the dodge perfect-window timing check (0.18s wait instead of 0.12s) so headless timing variance doesn't false-flag.",
+		]
+	},
 	{
 		"version": "v0.86.3",
 		"title": "Combat overhaul — Phase 3.5 vulnerability windows (whiff punish / interrupt punish)",

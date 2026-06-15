@@ -9,9 +9,18 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.88.8"
+const GAME_VERSION := "v0.88.9"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.88.9",
+		"title": "Combat feel — LEVEL UP BURST (full screen flash + gold explosion + sparks + text)",
+		"date": "2026-06-15",
+		"entries": [
+			"LEVEL UP IS NOW A FULL CINEMATIC MOMENT. Hitting a new level fires: full-screen white flash, expanding gold shockwave ring (scale 0.6 → 8.0 over 500 ms), 10–16 gold spark particles flying outward, big 'LEVEL N!' floating text, 8-trauma screen shake, charge_release audio. Then your upgrade-grant text follows.",
+			"Internal: player.gd _play_level_up_burst called from _on_level_up_grant_upgrade before the upgrade text. _spawn_world_white_flash + gold ring (ring_flash texture, color 1.7/1.4/0.4) + two _spawn_crit_sparks bursts + _spawn_floating_text 'LEVEL %d!' + _do_screen_shake(8).",
+		]
+	},
 	{
 		"version": "v0.88.8",
 		"title": "Combat feel — HEAL POPUP accumulator (+N HP floats above player)",

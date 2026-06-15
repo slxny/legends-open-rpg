@@ -4358,19 +4358,54 @@ func _enter_low_hp() -> void:
 		AudioManager.play_sfx("charge_release", 2.0)
 
 
-func _on_level_up_grant_upgrade(_new_level: int) -> void:
+func _on_level_up_grant_upgrade(new_level: int) -> void:
+	# Phase 5.x — big LEVEL UP burst before the upgrade-grant block.
+	_play_level_up_burst(new_level)
 	if _upgrades == null:
 		return
 	var granted: StringName = _upgrades.grant_random_unowned()
 	if granted == &"":
 		return
-	# Big banner via juice layer.
+	# Big banner via juice layer — slightly offset from the LEVEL UP text.
 	if _juice != null and _juice.has_method("_spawn_floating_text"):
 		var display: String = UpgradeManagerCls.display_name(granted)
-		_juice._spawn_floating_text(global_position + Vector2(0, -90), display + "!", Color(1.4, 1.2, 0.4), true)
+		_juice._spawn_floating_text(global_position + Vector2(0, -60), display + "!", Color(1.4, 1.2, 0.4), true)
 	# Audio cue.
 	if AudioManager != null and AudioManager.has_method("play_sfx"):
 		AudioManager.play_sfx("charge_release", 0.0)
+
+
+# Phase 5.x — celebratory level-up burst: white flash + expanding gold
+# ring + spark fan + LEVEL UP text + audio + shake.
+func _play_level_up_burst(new_level: int) -> void:
+	_spawn_world_white_flash()
+	# Big gold ring at player position.
+	var tex = SpriteGenerator.get_texture("ring_flash")
+	if tex == null:
+		tex = SpriteGenerator.get_texture("crystal_white")
+	if tex != null:
+		var ring := Sprite2D.new()
+		ring.texture = tex
+		ring.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		ring.global_position = global_position
+		ring.modulate = Color(1.7, 1.4, 0.4, 0.95)
+		ring.scale = Vector2(0.6, 0.6)
+		ring.z_index = 5
+		_get_world_node().add_child(ring)
+		var t := ring.create_tween()
+		t.set_parallel(true)
+		t.tween_property(ring, "scale", Vector2(8.0, 8.0), 0.50).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		t.tween_property(ring, "modulate:a", 0.0, 0.55).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		t.set_parallel(false)
+		t.tween_callback(ring.queue_free)
+	# Fan of gold sparks.
+	_spawn_crit_sparks(global_position)
+	_spawn_crit_sparks(global_position + Vector2(0, -10))
+	# Big LEVEL UP text.
+	if _juice != null and _juice.has_method("_spawn_floating_text"):
+		_juice._spawn_floating_text(global_position + Vector2(0, -110), "LEVEL %d!" % new_level, Color(1.6, 1.3, 0.3), true)
+	# Heavy shake.
+	_do_screen_shake(8.0)
 
 
 # Phase 5.5 — compute combat intensity 0..1 and report to AudioManager.

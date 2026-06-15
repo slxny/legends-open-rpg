@@ -5,6 +5,7 @@ const HitResultCls := preload("res://scripts/combat/hit_result.gd")
 const AttackTimingsCls := preload("res://scripts/data/attack_timings.gd")
 const AttackTimingDataCls := preload("res://scripts/data/attack_timing_data.gd")
 const CombatFeedbackProfileCls := preload("res://scripts/data/combat_feedback_profile.gd")
+const StatusEffectComponentCls := preload("res://scripts/components/status_effect_component.gd")
 
 # Phase 1B.6d feedback dispatch — profile per weight class. Cached so we
 # don't allocate a Resource per hit.
@@ -86,7 +87,21 @@ func resolve_hit(event: Resource, attacker_stats: Dictionary, defender_stats: Di
 		return result
 
 	var ability_mult: float = float(event.get("ability_multiplier"))
-	var calc := calculate_damage(attacker_stats, defender_stats, ability_mult)
+
+	# Phase 2.7 — consume_status: some specials (power_strike, charged_slash,
+	# dash_strike) check for "exposed" status (applied by C-finisher /
+	# branch_slam) and deal +50% damage if found, consuming it.
+	var consume_mult: float = 1.0
+	var timing_lookup: Resource = AttackTimingsCls.by_id(event.attack_id) if event.attack_id != &"" else null
+	if timing_lookup != null and is_instance_valid(event.victim):
+		var consume_tier: StringName = StringName(timing_lookup.get("consume_status_tier"))
+		if consume_tier != &"":
+			var status_comp = event.victim.get_node_or_null("StatusEffectComponent")
+			if status_comp != null and status_comp.has_method("consume_first_tier"):
+				var consumed = StringName(status_comp.consume_first_tier(consume_tier, event.attack_id))
+				if consumed != &"":
+					consume_mult = float(timing_lookup.get("consume_damage_mult"))
+	var calc := calculate_damage(attacker_stats, defender_stats, ability_mult * consume_mult)
 	var damage: int = calc["damage"]
 	var rolled_crit: bool = calc["is_crit"]
 	var forced_crit: bool = bool(event.get("force_crit"))
@@ -109,6 +124,17 @@ func resolve_hit(event: Resource, attacker_stats: Dictionary, defender_stats: Di
 		victim.take_damage(damage, is_crit)
 		if hp_before > 0 and stats_node != null and "current_hp" in stats_node:
 			result.was_lethal = int(stats_node.get("current_hp")) <= 0
+
+	# Phase 2.6 — apply_status: C-finisher / branch_slam apply "exposed"
+	# (or whatever StringName the attack carries). Skipped if the victim
+	# died from the hit.
+	if timing_lookup != null and is_instance_valid(event.victim):
+		var apply_id: StringName = StringName(timing_lookup.get("apply_status"))
+		if apply_id != &"" and not bool(result.was_lethal):
+			var status_comp2 = event.victim.get_node_or_null("StatusEffectComponent")
+			if status_comp2 != null and status_comp2.has_method("apply"):
+				var status_data = StatusEffectComponentCls.preset(apply_id)
+				status_comp2.apply(status_data, event.attacker)
 
 	# Phase 1B.6d: profile-driven feedback dispatch. Weight is derived from
 	# the attack's rhythm class (lookup via AttackTimings.by_id) and crit

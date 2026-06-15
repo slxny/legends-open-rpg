@@ -73,6 +73,15 @@ enum RhythmClass {
 ## that hit multiple targets deal this per-target.
 @export var poise_damage: int = 5
 
+## Phase 2.6/2.7 — status effects this attack applies + consumes.
+## `apply_status` is a preset id ("exposed", "bleed", "mark"). Empty = none.
+## `consume_status_tier` is a tier label ("exposed") this attack consumes
+## from the target before damage compute. If the tier is found, the
+## attack gets `consume_damage_mult` damage scaling.
+@export var apply_status: StringName = &""
+@export var consume_status_tier: StringName = &""
+@export var consume_damage_mult: float = 1.0
+
 
 func is_in_active_window(progress: float) -> bool:
 	return progress >= active_window_start and progress < active_window_end

@@ -57,12 +57,12 @@ static func swing_b() -> Resource:
 
 
 static func swing_c() -> Resource:
-	# Overhead chop — A→B→C finisher. Strong poise damage so the rhythm
-	# is *the* engine of break: A+B+C = ~25 poise → breaks light enemies
-	# in one combo.
-	return _make(&"swing_c", AttackTimingDataCls.RhythmClass.FINISHER_C,
+	# Overhead chop — A→B→C finisher. Applies "exposed" status (Phase 2.7).
+	var t := _make(&"swing_c", AttackTimingDataCls.RhythmClass.FINISHER_C,
 		0.33, 0.58, 0.50, 0.65, 0.62, 1.0, 0.78, 0.88,
 		1, false, false, 15)
+	t.apply_status = &"exposed"
+	return t
 
 
 # ---- Optional extensions -------------------------------------------------
@@ -85,9 +85,12 @@ static func swing_e() -> Resource:
 
 static func branch_slam() -> Resource:
 	# horizontal -> down replacement. Plan §2.2: slam = strong poise damage.
-	return _make(&"branch_slam", AttackTimingDataCls.RhythmClass.BRANCH_SLAM,
+	# Phase 2.7 — also applies "exposed".
+	var t := _make(&"branch_slam", AttackTimingDataCls.RhythmClass.BRANCH_SLAM,
 		0.33, 0.58, 0.50, 0.65, 0.62, 1.0, 0.78, 0.88,
 		1, false, false, 20)
+	t.apply_status = &"exposed"
+	return t
 
 
 static func branch_uppercut() -> Resource:
@@ -108,9 +111,12 @@ static func branch_spin() -> Resource:
 
 static func power_strike() -> Resource:
 	# Heavy poise damage per cone target — meant to break.
+	# Phase 2.7 — consumes "exposed" for +50% damage.
 	var t := _make(&"power_strike", AttackTimingDataCls.RhythmClass.SPECIAL,
 		0.30, 0.50, 0.45, 0.62, 0.65, 0.95, 0.80, 0.90,
 		5, true, true, 25)
+	t.consume_status_tier = &"exposed"
+	t.consume_damage_mult = 1.5
 	return t
 
 
@@ -124,16 +130,22 @@ static func whirlwind() -> Resource:
 
 static func charged_slash() -> Resource:
 	# Heaviest single-target poise — primary boss-break tool.
+	# Phase 2.7 — consumes "exposed" for +50% damage.
 	var t := _make(&"charged_slash", AttackTimingDataCls.RhythmClass.CHARGED,
 		0.45, 0.65, 0.50, 0.78, 0.75, 0.95, 0.85, 0.92,
 		3, true, true, 40)
+	t.consume_status_tier = &"exposed"
+	t.consume_damage_mult = 1.5
 	return t
 
 
 static func dash_strike() -> Resource:
+	# Phase 2.7 — consumes "exposed".
 	var t := _make(&"dash_strike", AttackTimingDataCls.RhythmClass.SPECIAL,
 		0.37, 0.55, 0.50, 0.65, 0.65, 0.95, 0.80, 0.90,
 		3, true, true, 15)
+	t.consume_status_tier = &"exposed"
+	t.consume_damage_mult = 1.5
 	return t
 
 

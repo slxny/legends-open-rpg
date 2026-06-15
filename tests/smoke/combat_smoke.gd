@@ -33,6 +33,8 @@ const PoiseProfileCls := preload("res://scripts/data/poise_profile.gd")
 const DodgeControllerCls := preload("res://scenes/player/dodge_controller.gd")
 const DodgeDataCls := preload("res://scripts/data/dodge_data.gd")
 const MomentumComponentCls := preload("res://scripts/components/momentum_component.gd")
+const StatusEffectComponentCls := preload("res://scripts/components/status_effect_component.gd")
+const StatusEffectDataCls := preload("res://scripts/data/status_effect_data.gd")
 
 var _errors: Array[String] = []
 
@@ -92,6 +94,7 @@ func _ready() -> void:
 	await _test_poise()
 	await _test_dodge_controller()
 	_test_momentum()
+	await _test_status_effects()
 
 	if _errors.is_empty():
 		print("[combat_smoke] OK")
@@ -786,6 +789,64 @@ func _test_momentum() -> void:
 	_check("combo capped at max_combo", m.combo_multiplier() <= float(m.max_combo) + 0.001)
 
 	m.queue_free()
+
+
+func _test_status_effects() -> void:
+	# Preset sanity.
+	var exposed: Resource = StatusEffectDataCls.new().apply_preset(&"exposed")
+	var bleed: Resource = StatusEffectDataCls.new().apply_preset(&"bleed")
+	_check("exposed preset has id", StringName(exposed.id) == &"exposed")
+	_check("exposed tier is exposed", StringName(exposed.tier) == &"exposed")
+	_check("exposed has no DoT", int(exposed.tick_interval_ms) == 0)
+	_check("bleed has DoT tick", int(bleed.tick_interval_ms) > 0)
+	_check("bleed stacks", StringName(bleed.stack_rule) == &"stack")
+
+	# Component apply / has / consume.
+	var sec = StatusEffectComponentCls.new()
+	add_child(sec)
+	await get_tree().process_frame
+	_check("sec has no active statuses at start", not sec.has(&"exposed"))
+
+	var applied_fired := [false]
+	var consumed_fired := [false]
+	sec.status_applied.connect(func(_id, _src, _s): applied_fired[0] = true)
+	sec.status_consumed.connect(func(_id, _by): consumed_fired[0] = true)
+
+	sec.apply(StatusEffectDataCls.new().apply_preset(&"exposed"), null)
+	_check("apply triggers status_applied", applied_fired[0])
+	_check("has exposed after apply", sec.has(&"exposed"))
+	_check("stacks_of exposed = 1", sec.stacks_of(&"exposed") == 1)
+
+	# consume_first_tier finds and consumes.
+	var consumed_id: StringName = sec.consume_first_tier(&"exposed", &"power_strike")
+	_check("consume_first_tier returns matching id", consumed_id == &"exposed")
+	_check("status_consumed fired", consumed_fired[0])
+	_check("not has exposed after consume", not sec.has(&"exposed"))
+
+	# Stack rule: bleed stacks up to cap.
+	var bleed_data: Resource = StatusEffectDataCls.new().apply_preset(&"bleed")
+	sec.apply(bleed_data, null)
+	sec.apply(bleed_data, null)
+	sec.apply(bleed_data, null)
+	_check("bleed stacked to 3", sec.stacks_of(&"bleed") == 3)
+
+	# clear_all empties.
+	sec.clear_all()
+	_check("clear_all empties statuses", sec.active_ids().is_empty())
+
+	# Static preset helper.
+	var p: Resource = StatusEffectComponentCls.preset(&"exposed")
+	_check("static preset returns Resource", p != null)
+	_check("static preset has matching id", StringName(p.id) == &"exposed")
+
+	# AttackTimingData carries apply / consume fields.
+	var c: Resource = AttackTimingsCls.swing_c()
+	_check("swing_c applies exposed", StringName(c.apply_status) == &"exposed")
+	var ps: Resource = AttackTimingsCls.power_strike()
+	_check("power_strike consumes exposed", StringName(ps.consume_status_tier) == &"exposed")
+	_check("power_strike has 1.5x bonus on exposed", abs(float(ps.consume_damage_mult) - 1.5) < 0.001)
+
+	sec.queue_free()
 
 
 func _check(label: String, ok: bool) -> void:

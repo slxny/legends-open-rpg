@@ -6,6 +6,7 @@ const HitReactionComponentCls = preload("res://scripts/components/hit_reaction_c
 const HitReactionDataCls = preload("res://scripts/data/hit_reaction_data.gd")
 const PoiseComponentCls = preload("res://scripts/components/poise_component.gd")
 const PoiseProfileCls = preload("res://scripts/data/poise_profile.gd")
+const StatusEffectComponentCls = preload("res://scripts/components/status_effect_component.gd")
 
 signal died(enemy: Node2D, xp_reward: int, gold_reward: int)
 
@@ -115,6 +116,8 @@ var _hit_reaction: Node = null
 # Phase 2.0 — poise component. Created in _ready; tier preset mirrors
 # the HitReaction tier so light enemies break easily, bosses don't.
 var _poise: Node = null
+# Phase 2.6 — status effects on this enemy.
+var _statuses: Node = null
 
 func _ready() -> void:
 	add_to_group("enemies")
@@ -159,6 +162,17 @@ func _ready() -> void:
 		_poise.poise_broken.connect(_on_poise_broken)
 	if _poise.has_signal("poise_recovered"):
 		_poise.poise_recovered.connect(_on_poise_recovered)
+
+	# Phase 2.6 — status effects.
+	_statuses = StatusEffectComponentCls.new()
+	_statuses.name = "StatusEffectComponent"
+	add_child(_statuses)
+	# Visual: pulse the sprite slightly while "exposed" is active so the
+	# player sees they earned a damage bonus. Hooked via signals.
+	if _statuses.has_signal("status_applied"):
+		_statuses.status_applied.connect(_on_status_applied)
+	if _statuses.has_signal("status_expired"):
+		_statuses.status_expired.connect(_on_status_expired)
 	# Detect mobile for font scaling
 	var vp_size = get_viewport().get_visible_rect().size
 	var is_mobile = GameManager.is_mobile_device()
@@ -2925,6 +2939,29 @@ func _pick_reaction_tier() -> int:
 			return 1  # MEDIUM
 		_:
 			return 0  # LIGHT
+
+
+# Phase 2.6/2.7 — status effect visuals.
+# When "exposed" is applied, give the sprite a subtle warm tint that
+# pulses slightly so the player can see the special damage bonus is
+# available. On expire, restore the original modulate.
+var _exposed_pulse_tween: Tween = null
+func _on_status_applied(id: StringName, _source: Node, _stacks: int) -> void:
+	if _is_dead:
+		return
+	if id == &"exposed":
+		_exposed_pulse_tween = sprite.create_tween().set_loops()
+		_exposed_pulse_tween.tween_property(sprite, "modulate", Color(1.25, 1.05, 0.85), 0.5)
+		_exposed_pulse_tween.tween_property(sprite, "modulate", Color.WHITE, 0.5)
+
+
+func _on_status_expired(id: StringName) -> void:
+	if id == &"exposed":
+		if _exposed_pulse_tween != null and _exposed_pulse_tween.is_valid():
+			_exposed_pulse_tween.kill()
+		_exposed_pulse_tween = null
+		if not _is_dead and is_instance_valid(sprite):
+			sprite.modulate = Color.WHITE
 
 
 # Phase 2.0 — poise break handler. Poise break is bigger than stagger:

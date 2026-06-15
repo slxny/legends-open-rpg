@@ -9,9 +9,22 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.84.4"
+const GAME_VERSION := "v0.84.5"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.84.5",
+		"title": "Combat overhaul — Phase 2.6/2.7 status effects + apply→consume interaction (Phase 2 COMPLETE)",
+		"date": "2026-06-14",
+		"entries": [
+			"NEW COMBAT LOOP: A→B→C-finisher (or slam) now applies EXPOSED to the target — a 3-second vulnerability marker. The enemy pulses warm orange while exposed. Any special (power strike, charged slash, dash strike) hitting an exposed enemy CONSUMES the mark for +50% damage.",
+			"The full rhythm: build with A/B, finisher applies exposed, IMMEDIATELY follow up with a special for the empowered hit. This is the satisfying 'set up the kill' loop the design has been building toward.",
+			"Charged slash on exposed boss enemies deals roughly 60 base + 90 (50% bonus) = 150 damage — meaningfully bigger than spamming basics.",
+			"Internal: StatusEffectData Resource (id, duration, tick_interval, per_tick_damage, stack_rule, stack_cap, tier). Presets baked in: exposed, bleed, mark. StatusEffectComponent on every enemy: apply / consume / consume_first_tier / stack stacking up to cap / DoT tick processing via wall-clock. AttackTimingData gains apply_status and consume_status_tier + consume_damage_mult fields. CombatManager.resolve_hit consumes BEFORE damage compute (so multiplier scales) and applies AFTER take_damage (so dead targets aren't marked).",
+			"Phase 2 COMPLETE: poise → magnetism → directional functions → dodge + i-frames → momentum → perfect-dodge reward → status interactions. Phase 3 (enemy attack timelines + telegraphs + coordinator) is next.",
+			"Smoke: +20 status checks (presets, apply/has/consume, stacking, clear_all, AttackTimingData fields).",
+		]
+	},
 	{
 		"version": "v0.84.4",
 		"title": "Combat overhaul — Phase 2.4/2.5 Momentum + perfect-dodge reward",

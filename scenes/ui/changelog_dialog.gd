@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.89.1"
+const GAME_VERSION := "v0.89.2"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.89.2",
+		"title": "Combat feel — XP GAIN POPUP above player",
+		"date": "2026-06-15",
+		"entries": [
+			"KILLING ENEMIES now shows a cyan '+N XP' popup above the player. Accumulates within an 800 ms window so a kill streak displays one '+45 XP' label instead of N separate popups.",
+			"Filters out level-up XP resets (delta < 5000 sanity check) so the popup tracks actual gains, not bookkeeping.",
+			"Internal: player.gd _check_xp_popup in _physics_process compares stats.xp to last frame. On positive delta, adds to _xp_popup_accum and extends window. When window expires with accumulator > 0, calls juice _spawn_floating_text with cyan color (0.7/1.4/1.6) at -52 y offset (above the heal popup at -40).",
+		]
+	},
 	{
 		"version": "v0.89.1",
 		"title": "Combat feel — enemy HP BAR FLASH on damage",

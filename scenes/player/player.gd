@@ -499,6 +499,8 @@ func _physics_process(delta: float) -> void:
 
 	# Phase 5.x — heal popup detection (HP delta > 0 = healing).
 	_check_heal_popup()
+	# Phase 5.x — XP popup detection (XP delta > 0 = enemy killed).
+	_check_xp_popup()
 
 	# Heal beacon immunity visual feedback — detect transitions
 	if is_on_heal_beacon and not _was_on_heal_beacon:
@@ -4290,6 +4292,10 @@ const _DODGE_TRAIL_INTERVAL: float = 0.04
 var _last_known_hp: int = -1
 var _heal_popup_accum: int = 0
 var _heal_popup_until_msec: int = 0
+# Phase 5.x — XP popup accumulator.
+var _last_known_xp: int = -1
+var _xp_popup_accum: int = 0
+var _xp_popup_until_msec: int = 0
 # Phase 5.5 — reactive music intensity tick.
 var _music_intensity_tick: float = 0.0
 const _MUSIC_INTENSITY_INTERVAL: float = 0.3
@@ -4525,6 +4531,36 @@ func _show_heal_popup(amount: int) -> void:
 		return
 	var label: String = "+%d HP" % amount
 	_juice._spawn_floating_text(global_position + Vector2(randf_range(-8, 8), -40), label, Color(0.4, 1.5, 0.5), false)
+
+
+# Phase 5.x — XP popup accumulation. Aggregates XP gains within a window
+# so a kill streak shows ONE pop instead of N pops.
+func _check_xp_popup() -> void:
+	if _is_dead or stats == null:
+		return
+	var cur: int = int(stats.xp) if "xp" in stats else 0
+	if _last_known_xp < 0:
+		_last_known_xp = cur
+		return
+	# Skip level-up resets (XP drops). Only count positive deltas.
+	if cur > _last_known_xp:
+		var delta: int = cur - _last_known_xp
+		# Skip absurd jumps (level-ups that grant bonus xp).
+		if delta < 5000:
+			_xp_popup_accum += delta
+			_xp_popup_until_msec = Time.get_ticks_msec() + 800
+	_last_known_xp = cur
+	if _xp_popup_accum > 0 and Time.get_ticks_msec() >= _xp_popup_until_msec:
+		_show_xp_popup(_xp_popup_accum)
+		_xp_popup_accum = 0
+		_xp_popup_until_msec = 0
+
+
+func _show_xp_popup(amount: int) -> void:
+	if _juice == null or not _juice.has_method("_spawn_floating_text"):
+		return
+	var label: String = "+%d XP" % amount
+	_juice._spawn_floating_text(global_position + Vector2(randf_range(-8, 8), -52), label, Color(0.7, 1.4, 1.6), false)
 
 
 func _spawn_dodge_afterimage() -> void:

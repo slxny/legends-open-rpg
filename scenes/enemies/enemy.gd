@@ -3983,6 +3983,27 @@ func _on_poise_broken(vulnerability_ms: int) -> void:
 		_attack_timer = attack_cooldown
 	if HitStopController != null and vulnerability_ms > 0:
 		HitStopController.freeze_target(self, vulnerability_ms, 1)  # VICTIM
+	# Phase 6.x — POISE BREAK VISUAL: yellow flash ring + BREAK! pop above
+	# the enemy so the player sees the satisfying moment clearly.
+	var ring_tex = SpriteGenerator.get_texture("ring_flash")
+	if ring_tex != null:
+		var ring := Sprite2D.new()
+		ring.texture = ring_tex
+		ring.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		ring.global_position = global_position
+		ring.modulate = Color(1.7, 1.4, 0.3, 0.95)
+		ring.scale = Vector2(0.5, 0.5)
+		ring.z_index = 5
+		_get_world_node().add_child(ring)
+		var t: Tween = ring.create_tween()
+		t.set_parallel(true)
+		t.tween_property(ring, "scale", Vector2(5.5, 5.5), 0.4).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		t.tween_property(ring, "modulate:a", 0.0, 0.45).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		t.set_parallel(false)
+		t.tween_callback(ring.queue_free)
+	# Quick audio cue at peak.
+	if AudioManager != null and AudioManager.has_method("play_sfx"):
+		AudioManager.play_sfx("crit_hit", -2.0)
 	# Strong visual: instant deeper recoil pose via the reaction component.
 	# We synthesize a reaction with no incoming force (already frozen) but
 	# strong visual tier by temporarily swapping the profile to ELITE for

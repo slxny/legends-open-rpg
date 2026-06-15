@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.89.2"
+const GAME_VERSION := "v0.89.3"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.89.3",
+		"title": "Combat feel — POISE BREAK yellow flash ring + audio cue",
+		"date": "2026-06-15",
+		"entries": [
+			"POISE BREAK NOW LOOKS LIKE A REAL MOMENT. When an enemy's poise hits 0, a bright yellow ring expands from them (scale 0.5 → 5.5 over 400 ms) and a crit-tier audio cue plays.",
+			"Combined with the existing vulnerability glow + AI freeze + heavier reaction tier, breaking poise now reads as a 'big moment' the player can feel.",
+			"Internal: enemy.gd _on_poise_broken extension. Spawns ring_flash sprite at enemy's global_position with color 1.7/1.4/0.3 (warm yellow), tween scale + fade-out over 400 ms EASE_OUT. Plays crit_hit audio at -2 dB.",
+		]
+	},
 	{
 		"version": "v0.89.2",
 		"title": "Combat feel — XP GAIN POPUP above player",

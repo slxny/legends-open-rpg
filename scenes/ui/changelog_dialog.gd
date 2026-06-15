@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.84.5"
+const GAME_VERSION := "v0.84.6"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.84.6",
+		"title": "🐀💥 RATS EXPLODE",
+		"date": "2026-06-14",
+		"entries": [
+			"12% chance per rat death: full mega-explosion. 15–22 chunky gibs flying outward with arcing physics, 4–6 blood splatters, expanding red shockwave ring, bright white pop into deep red wash, big screen shake (only if a player is nearby), and a brief global time dip (70 ms @ 0.35×) routed through HitStopController so concurrent rat explosions coalesce into one dip.",
+			"Independent of the crit-explode roll — even a tiny tap can trigger it. Rare cathartic moment, not every-rat-stutter.",
+			"Internal: _die_rat_mega_explode + _spawn_rat_gibs_mega. Reuses existing SpriteGenerator textures (ring_flash with rat_gib fallback) and HitStopController's attack_id dedupe so a swarm wipeout still produces ONE dip.",
+		]
+	},
 	{
 		"version": "v0.84.5",
 		"title": "Combat overhaul — Phase 2.6/2.7 status effects + apply→consume interaction (Phase 2 COMPLETE)",

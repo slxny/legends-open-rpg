@@ -993,6 +993,11 @@ func _die_crumble() -> void:
 	tween.tween_callback(queue_free)
 
 func _die_rat_select_variant() -> void:
+	# 12% MEGA EXPLODE — independent of crit roll, takes priority over
+	# everything because rats are tiny meatbags and this is hilarious.
+	if randf() < 0.12:
+		_die_rat_mega_explode()
+		return
 	if _last_hit_was_crit or _overkill_ratio > 0.5:
 		_die_rat_crit_explode()
 	else:
@@ -1003,6 +1008,108 @@ func _die_rat_select_variant() -> void:
 			_die_rat_fling()
 		else:
 			_die_rat_squish()
+
+
+# RATS EXPLODE. Many gibs, many splatters, screen shake, brief time dip,
+# red flash ring, bright white pop, optional wet-impact audio. Designed
+# to be a rare cathartic moment, not a constant interruption — gated to
+# 12% in _die_rat_select_variant.
+func _die_rat_mega_explode() -> void:
+	# 4-6 blood splatters scattered around the corpse.
+	for _i in range(randi_range(4, 6)):
+		_spawn_blood_splatter()
+	# 15-22 gibs flying outward with high force + spin.
+	_spawn_rat_gibs_mega()
+
+	# Bright white flash then red wash on the sprite itself.
+	var tween := create_tween()
+	tween.tween_property(sprite, "modulate", Color(3.0, 3.0, 3.0), 0.04)
+	tween.parallel().tween_property(sprite, "scale", _base_scale * 3.0, 0.04)
+	tween.tween_property(sprite, "modulate", Color(2.5, 0.5, 0.5), 0.03)
+	tween.parallel().tween_property(sprite, "scale", Vector2(_base_scale.x * 3.5, _base_scale.y * 0.15), 0.03)
+	tween.tween_property(sprite, "modulate:a", 0.0, 0.04)
+	tween.tween_callback(queue_free)
+
+	# Expanding red shockwave ring via a pooled VFX sprite (uses the
+	# existing slash-arc texture stretched into a ring).
+	var world := _get_world_node()
+	var ring := Sprite2D.new()
+	var ring_tex = SpriteGenerator.get_texture("ring_flash")
+	if ring_tex == null:
+		# Fallback: rat_gib stretched works visually.
+		ring_tex = SpriteGenerator.get_texture("rat_gib")
+	if ring_tex != null:
+		ring.texture = ring_tex
+		ring.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		ring.global_position = global_position
+		ring.modulate = Color(1.6, 0.15, 0.15, 0.95)
+		ring.scale = Vector2(0.4, 0.4)
+		ring.z_index = -2
+		world.add_child(ring)
+		var rt := ring.create_tween()
+		rt.set_parallel(true)
+		rt.tween_property(ring, "scale", Vector2(6.0, 6.0), 0.4).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		rt.tween_property(ring, "modulate:a", 0.0, 0.45).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		rt.set_parallel(false)
+		rt.tween_callback(ring.queue_free)
+
+	# Big screen shake — but only if there's a player nearby so we don't
+	# rattle the camera over a far-off rat death.
+	var player := _get_player()
+	if player and is_instance_valid(player):
+		var dist_sq: float = player.global_position.distance_squared_to(global_position)
+		if dist_sq < 600.0 * 600.0:
+			if player.has_method("_do_screen_shake"):
+				player._do_screen_shake(7.5)
+
+	# Brief global time dip — extra-dramatic punctuation. Routes through
+	# HitStopController so attack_id dedupe coalesces concurrent explosions
+	# into one dip (no machine-gun stutter when a swarm goes off at once).
+	if HitStopController != null and HitStopController.has_method("request_global_dip"):
+		HitStopController.request_global_dip(0.35, 70, 2, &"rat_mega_explode")
+
+	# Wet-impact audio. Tries rat-specific sfx first then falls back.
+	if AudioManager != null and AudioManager.has_method("play_sfx"):
+		AudioManager.play_sfx("crit_hit", 2.0)
+
+
+func _spawn_rat_gibs_mega() -> void:
+	var gib_tex = SpriteGenerator.get_texture("rat_gib")
+	if not gib_tex:
+		return
+	var world = _get_world_node()
+	var count: int = randi_range(15, 22)
+	for _i in range(count):
+		var gib = Sprite2D.new()
+		gib.texture = gib_tex
+		gib.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		gib.global_position = global_position + Vector2(randf_range(-6, 6), randf_range(-8, 4))
+		gib.rotation = randf() * TAU
+		gib.scale = Vector2(randf_range(0.7, 1.6), randf_range(0.7, 1.6))
+		gib.z_index = -1
+		# Deeper, juicier reds with occasional brighter highlight chunks.
+		gib.modulate = Color(
+			randf_range(0.9, 1.4),
+			randf_range(0.3, 0.7),
+			randf_range(0.3, 0.6),
+			randf_range(0.85, 1.0)
+		)
+		world.add_child(gib)
+		var dir = Vector2(randf_range(-1, 1), randf_range(-1, 1)).normalized()
+		var force = randf_range(45, 95)  # Much higher than the regular gib explosion.
+		# Arc upward then settle — feels like real chunks flying off.
+		var apex = gib.global_position + dir * force * 0.6 + Vector2(0, -randf_range(8, 22))
+		var dest = gib.global_position + dir * force + Vector2(0, randf_range(8, 18))
+		var t = gib.create_tween()
+		t.set_parallel(true)
+		t.tween_property(gib, "global_position", apex, randf_range(0.10, 0.18)).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		t.tween_property(gib, "rotation", gib.rotation + randf_range(-10.0, 10.0), 0.45)
+		t.set_parallel(false)
+		# Fall to the ground.
+		t.tween_property(gib, "global_position", dest, randf_range(0.16, 0.24)).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		t.tween_interval(randf_range(1.5, 3.0))
+		t.tween_property(gib, "modulate:a", 0.0, 0.7)
+		t.tween_callback(gib.queue_free)
 
 func _die_rat_explode() -> void:
 	# Normal pop: quick swell, pop flash, gibs scatter

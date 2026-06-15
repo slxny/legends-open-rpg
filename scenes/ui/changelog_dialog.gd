@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.88.5"
+const GAME_VERSION := "v0.88.6"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.88.6",
+		"title": "Combat feel — GOLDEN CRIT SPARKS on critical hits",
+		"date": "2026-06-15",
+		"entries": [
+			"CRITICAL HITS now spawn 5–8 golden spark particles flying outward from the impact point. Bright gold (modulate r 1.4–1.9, g 1.0–1.3) with brief arc + rotation + shrink + fade over ~320 ms.",
+			"Reinforces the crit moment visually — combined with the existing crit camera shake, hit-freeze, audio cue, and damage number, crits now read as TRULY important.",
+			"Internal: player.gd _spawn_crit_sparks creates Sprite2D children of the world node using crystal_white texture. Per-spark random direction, scale 0.35–0.7, position tween + rotation tween + scale shrink + alpha fade. Called from the _run_clocked_attack progress_changed callback when result.was_crit is true.",
+		]
+	},
 	{
 		"version": "v0.88.5",
 		"title": "Combat overhaul — Phase 6.x ENEMY POISE BAR visualization",

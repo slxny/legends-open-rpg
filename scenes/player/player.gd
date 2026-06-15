@@ -3104,6 +3104,37 @@ func _apply_attack_motion(target: Node2D, raw_dir: Vector2, rhythm_class: int) -
 # replaces it with CombatFeedbackProfile-driven behavior.
 # Lock-target preserved: damage targets the `target` captured at
 # attack start.
+# Phase 5.x — golden critical-hit particle burst. 5-8 small gold sparks
+# that fly outward from impact point with brief arc + fade.
+func _spawn_crit_sparks(world_pos: Vector2) -> void:
+	var tex = SpriteGenerator.get_texture("crystal_white")
+	if tex == null:
+		tex = SpriteGenerator.get_texture("rat_gib")
+	if tex == null:
+		return
+	var world := _get_world_node()
+	for _i in range(randi_range(5, 8)):
+		var spark := Sprite2D.new()
+		spark.texture = tex
+		spark.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		spark.global_position = world_pos
+		spark.modulate = Color(randf_range(1.4, 1.9), randf_range(1.0, 1.3), randf_range(0.2, 0.5), 1.0)
+		spark.scale = Vector2(randf_range(0.35, 0.7), randf_range(0.35, 0.7))
+		spark.rotation = randf() * TAU
+		spark.z_index = 6
+		world.add_child(spark)
+		var dir: Vector2 = Vector2(randf_range(-1, 1), randf_range(-1, 1)).normalized()
+		var dest: Vector2 = world_pos + dir * randf_range(28, 55)
+		var t := spark.create_tween()
+		t.set_parallel(true)
+		t.tween_property(spark, "global_position", dest, randf_range(0.18, 0.30)).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		t.tween_property(spark, "rotation", spark.rotation + randf_range(-6.0, 6.0), 0.30)
+		t.tween_property(spark, "scale", spark.scale * 0.2, 0.30).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		t.tween_property(spark, "modulate:a", 0.0, 0.32)
+		t.set_parallel(false)
+		t.tween_callback(spark.queue_free)
+
+
 func _run_clocked_attack(timing: Resource, target: Node2D, dir: Vector2, ability_mult: float, on_contact: Callable) -> void:
 	if not is_instance_valid(target):
 		return
@@ -3145,6 +3176,9 @@ func _run_clocked_attack(timing: Resource, target: Node2D, dir: Vector2, ability
 		# trauma vector toward the enemy — shake feels "pushed" rather than
 		# radially symmetric.
 		_last_hit_direction = captured_dir
+		# Phase 5.x — crit hits spawn extra golden sparks.
+		if result.was_crit and is_instance_valid(captured_target):
+			_spawn_crit_sparks(captured_target.global_position)
 		captured_on_contact.call(captured_target, captured_dir, result.was_crit)
 	)
 	# Phase 2.8 — momentum threshold makes attacks faster. Speed multiplier

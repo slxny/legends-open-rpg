@@ -118,6 +118,16 @@ var _windup_tween: Tween = null
 var _telegraph_arc: Sprite2D = null
 var _reserved_token_cost: int = 0  # 0 = not holding a token
 
+# Phase 3.5 — VULNERABILITY WINDOW. When a heavy enemy whiffs their big
+# telegraphed attack OR gets staggered mid-windup, they're exposed for a
+# brief moment. Taking damage during this window deals +50% and the
+# reaction tier is forced one step heavier so the punish reads as huge.
+var _vulnerable_until_usec: int = 0
+var _vulnerability_glow_tween: Tween = null
+
+func _is_in_vulnerability_window() -> bool:
+	return _vulnerable_until_usec > 0 and Time.get_ticks_usec() < _vulnerable_until_usec
+
 # Phase 3.3 — global ATTACK COORDINATOR (danger budget).
 # Limits how many enemies can be in attack wind-up at any time so groups
 # apply pressure without all swinging at once. Static so all enemies
@@ -743,6 +753,11 @@ func _process_attack(delta: float) -> void:
 		_end_attack_windup()
 		# Only deal damage if still close enough to actually hit
 		var hit_range_sq = stats.attack_range * stats.attack_range * 2.25  # 1.5x range
+		if dist_sq > hit_range_sq:
+			# Phase 3.5 — WHIFF! Heavy enemies are vulnerable after a missed
+			# telegraph (medium enemies too, briefer). Punish window opens.
+			_trigger_vulnerability_window(&"whiff")
+			return
 		if dist_sq <= hit_range_sq and target.has_method("take_damage"):
 			# Roll for special attack (15% chance, type-specific)
 			var is_special = randf() < 0.15
@@ -822,6 +837,12 @@ func take_damage(amount: int, is_crit: bool = false) -> void:
 	if _is_sleeping:
 		_is_sleeping = false
 		visible = true
+	# Phase 3.5 — vulnerability window: +50% damage taken + force-crit
+	# visual reaction. Consumes the vulnerability on first hit landed.
+	if _is_in_vulnerability_window():
+		amount = int(float(amount) * 1.5)
+		is_crit = true  # promote to crit-tier feedback regardless of roll
+		_clear_vulnerability_window()
 	_last_hit_was_crit = is_crit
 	var hp_before = stats.current_hp
 	stats.take_damage(amount)
@@ -3400,6 +3421,9 @@ func _on_stagger_requested(duration_ms: int) -> void:
 		_release_attack_token(_reserved_token_cost)
 		_reserved_token_cost = 0
 		_cancel_attack_windup()
+		# Phase 3.5 — interrupted heavy attacks leave the enemy vulnerable.
+		# Players punish them HARD.
+		_trigger_vulnerability_window(&"interrupted")
 	if HitStopController != null and duration_ms > 0:
 		HitStopController.freeze_target(self, duration_ms, 1)  # VICTIM
 
@@ -3552,6 +3576,48 @@ func _clear_telegraph_arc() -> void:
 	if _telegraph_arc != null and is_instance_valid(_telegraph_arc):
 		_telegraph_arc.queue_free()
 	_telegraph_arc = null
+
+
+# Phase 3.5 — open the vulnerability window. Heavier enemies stay open
+# longer (they over-committed). Visual: warm yellow glow on the sprite
+# + slight slump tilt that reads as "off-balance".
+const _VULN_DURATION_LIGHT_MS: int = 350
+const _VULN_DURATION_MEDIUM_MS: int = 550
+const _VULN_DURATION_HEAVY_MS: int = 850
+const _VULN_DURATION_BOSS_MS: int = 1200
+func _trigger_vulnerability_window(_reason: StringName) -> void:
+	if _is_dead:
+		return
+	var cost: int = _get_token_cost()
+	var dur_ms: int = _VULN_DURATION_LIGHT_MS
+	if is_mini_boss:
+		dur_ms = _VULN_DURATION_BOSS_MS
+	elif cost >= 3:
+		dur_ms = _VULN_DURATION_HEAVY_MS
+	elif cost == 2:
+		dur_ms = _VULN_DURATION_MEDIUM_MS
+	_vulnerable_until_usec = Time.get_ticks_usec() + dur_ms * 1000
+	# Visual: warm yellow pulse on the sprite + small downward droop.
+	if is_instance_valid(sprite):
+		if _vulnerability_glow_tween != null and _vulnerability_glow_tween.is_valid():
+			_vulnerability_glow_tween.kill()
+		_vulnerability_glow_tween = sprite.create_tween().set_loops()
+		_vulnerability_glow_tween.tween_property(sprite, "modulate", Color(1.4, 1.25, 0.55), 0.18).set_trans(Tween.TRANS_SINE)
+		_vulnerability_glow_tween.tween_property(sprite, "modulate", Color.WHITE, 0.18).set_trans(Tween.TRANS_SINE)
+	# Schedule auto-clear so the glow stops even if the player never hits.
+	var owner_ref := self
+	get_tree().create_timer(float(dur_ms) / 1000.0).timeout.connect(func() -> void:
+		if is_instance_valid(owner_ref) and not owner_ref._is_dead:
+			owner_ref._clear_vulnerability_window())
+
+
+func _clear_vulnerability_window() -> void:
+	_vulnerable_until_usec = 0
+	if _vulnerability_glow_tween != null and _vulnerability_glow_tween.is_valid():
+		_vulnerability_glow_tween.kill()
+		_vulnerability_glow_tween = null
+	if is_instance_valid(sprite):
+		sprite.modulate = Color.WHITE
 
 
 # Plan corr. 10: after stagger, re-evaluate state from CURRENT conditions

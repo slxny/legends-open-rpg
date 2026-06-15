@@ -9,9 +9,22 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.86.2"
+const GAME_VERSION := "v0.86.3"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.86.3",
+		"title": "Combat overhaul — Phase 3.5 vulnerability windows (whiff punish / interrupt punish)",
+		"date": "2026-06-15",
+		"entries": [
+			"VULNERABILITY WINDOWS — enemies that miss their telegraphed attack OR get interrupted mid-windup are now LEFT OPEN for a punish.",
+			"Triggers: enemy completes wind-up but you moved out of range (WHIFF); enemy gets staggered/heavy-hit during their wind-up (INTERRUPTED).",
+			"During vulnerability the enemy pulses warm yellow + tilts off-balance. Your next hit deals +50% damage AND is force-promoted to crit-tier feedback (camera shake, ring, audio). Vulnerability consumes on first landed hit.",
+			"Duration by enemy tier: LIGHT 350 ms, MEDIUM 550 ms, HEAVY 850 ms (troll/ogre/golem), MINI-BOSS 1200 ms. Heavies stay open longest because they over-committed to their big swing.",
+			"This is the moment 'dodge the telegraph → punish' becomes the central skill expression in combat. Combined with perfect-dodge counter window (×1.6) and high momentum (×1.2), a perfect read on a troll's heavy attack can output massive damage.",
+			"Internal: _vulnerable_until_usec on enemy. _trigger_vulnerability_window(reason) called from whiff branch in _process_attack and from _on_stagger_requested. take_damage multiplies amount × 1.5 and force-sets is_crit when window active, then _clear_vulnerability_window consumes. Auto-clear timer ensures the glow stops even if the player never lands a hit.",
+		]
+	},
 	{
 		"version": "v0.86.2",
 		"title": "Combat overhaul — Phase 3.1/3.3 telegraph polish + AttackCoordinator danger budget + per-enemy variety",

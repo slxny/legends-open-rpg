@@ -189,6 +189,18 @@ const _KILL_CHAIN_WINDOW_MS: int = 400
 var _counter_window_until_usec: int = 0
 const _COUNTER_WINDOW_MS: int = 1000
 const _COUNTER_DAMAGE_MULT: float = 1.6
+
+# Phase 2.13 — LOW-HP DESPERATION. When player HP drops to <= 25%, an
+# adrenaline state activates: +25% outgoing damage, +1 HP per hit (on
+# top of momentum lifesteal), red edge tint via juice layer. State
+# exits when HP recovers above 40% (hysteresis prevents flicker).
+const _LOW_HP_ENTER_RATIO: float = 0.25
+const _LOW_HP_EXIT_RATIO: float = 0.40
+const _LOW_HP_DAMAGE_MULT: float = 1.25
+const _LOW_HP_LIFESTEAL: int = 1
+var _low_hp_active: bool = false
+var _low_hp_vignette: ColorRect = null
+var _low_hp_vignette_tween: Tween = null
 # Phase 2.3 — dodge component. Created in _ready, owns dodge state +
 # i-frames + perfect-dodge detection. Player remains the sole writer of
 # CharacterBody2D.velocity; the controller provides a velocity overlay.
@@ -446,6 +458,9 @@ func _physics_process(delta: float) -> void:
 
 	# Process status effects
 	_process_status_effects(delta)
+
+	# Phase 2.13 — LOW-HP DESPERATION state check with hysteresis.
+	_update_low_hp_state()
 
 	# Heal beacon immunity visual feedback — detect transitions
 	if is_on_heal_beacon and not _was_on_heal_beacon:
@@ -3073,6 +3088,9 @@ func _run_clocked_attack(timing: Resource, target: Node2D, dir: Vector2, ability
 	# Phase 2.x — perfect-dodge counter window adds +60% damage.
 	if _is_counter_window_active():
 		damage_mult *= _COUNTER_DAMAGE_MULT
+	# Phase 2.13 — low-HP desperation adds +25% damage.
+	if _low_hp_active:
+		damage_mult *= _LOW_HP_DAMAGE_MULT
 	var captured_mult := ability_mult * damage_mult
 	var captured_on_contact := on_contact
 	clock.progress_changed.connect(func(p: float) -> void:
@@ -4064,6 +4082,9 @@ func _on_hit_resolved_for_momentum(result: Resource) -> void:
 			heal_amt = 2
 		if heal_amt > 0 and "current_hp" in stats and "max_hp" in stats:
 			stats.current_hp = min(int(stats.max_hp), int(stats.current_hp) + heal_amt)
+	# Phase 2.13 — desperation lifesteal: +1 HP per landed hit when low.
+	if _low_hp_active and "current_hp" in stats and "max_hp" in stats:
+		stats.current_hp = min(int(stats.max_hp), int(stats.current_hp) + _LOW_HP_LIFESTEAL)
 	# Kill grant + kill-chain auto-retarget (Phase 2.10).
 	if bool(result.was_lethal):
 		_momentum.on_kill()
@@ -4125,6 +4146,64 @@ func _on_perfect_dodge_executed(_against_attack_id: StringName) -> void:
 # ability multiplier of any active swing.
 func _is_counter_window_active() -> bool:
 	return _counter_window_until_usec > 0 and Time.get_ticks_usec() < _counter_window_until_usec
+
+
+# Phase 2.13 — low-HP desperation. Activates when HP drops <= 25% of max.
+# Deactivates when HP recovers above 40% (hysteresis prevents flicker).
+# Side effects: +25% outgoing damage, +1 HP per landed hit, red edge
+# vignette on the screen for cinematic urgency.
+func _update_low_hp_state() -> void:
+	if _is_dead:
+		if _low_hp_active:
+			_exit_low_hp()
+		return
+	if not ("current_hp" in stats and "max_hp" in stats):
+		return
+	if int(stats.max_hp) <= 0:
+		return
+	var ratio: float = float(stats.current_hp) / float(stats.max_hp)
+	if not _low_hp_active and ratio <= _LOW_HP_ENTER_RATIO:
+		_enter_low_hp()
+	elif _low_hp_active and ratio > _LOW_HP_EXIT_RATIO:
+		_exit_low_hp()
+
+
+func _enter_low_hp() -> void:
+	_low_hp_active = true
+	# Red edge vignette via a ColorRect on a CanvasLayer.
+	if _low_hp_vignette == null:
+		var layer := CanvasLayer.new()
+		layer.layer = 70  # above HUD, below juice pop-ups
+		add_child(layer)
+		_low_hp_vignette = ColorRect.new()
+		_low_hp_vignette.color = Color(0.9, 0.1, 0.1, 0.0)
+		_low_hp_vignette.anchor_right = 1.0
+		_low_hp_vignette.anchor_bottom = 1.0
+		_low_hp_vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		# Hollow effect: a thick red border. Using a Material would be
+		# cleaner but a translucent rect with low alpha + pulse reads as
+		# urgency without needing a shader.
+		layer.add_child(_low_hp_vignette)
+	if _low_hp_vignette_tween != null and _low_hp_vignette_tween.is_valid():
+		_low_hp_vignette_tween.kill()
+	_low_hp_vignette_tween = _low_hp_vignette.create_tween().set_loops()
+	_low_hp_vignette_tween.tween_property(_low_hp_vignette, "color:a", 0.22, 0.6).set_trans(Tween.TRANS_SINE)
+	_low_hp_vignette_tween.tween_property(_low_hp_vignette, "color:a", 0.08, 0.6).set_trans(Tween.TRANS_SINE)
+	# Pop "ADRENALINE!" via juice layer.
+	if _juice != null and _juice.has_method("_spawn_floating_text"):
+		_juice._spawn_floating_text(global_position + Vector2(0, -60), "ADRENALINE!", Color(1.5, 0.3, 0.3), true)
+	# Audio cue.
+	if AudioManager != null and AudioManager.has_method("play_sfx"):
+		AudioManager.play_sfx("charge_release", 2.0)
+
+
+func _exit_low_hp() -> void:
+	_low_hp_active = false
+	if _low_hp_vignette_tween != null and _low_hp_vignette_tween.is_valid():
+		_low_hp_vignette_tween.kill()
+	if _low_hp_vignette != null and is_instance_valid(_low_hp_vignette):
+		var t := _low_hp_vignette.create_tween()
+		t.tween_property(_low_hp_vignette, "color:a", 0.0, 0.3)
 
 
 # Phase 2.9 — context-sensitive C-finisher variants.

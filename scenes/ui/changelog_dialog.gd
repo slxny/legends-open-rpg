@@ -9,9 +9,21 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.86.8"
+const GAME_VERSION := "v0.86.9"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.86.9",
+		"title": "Combat overhaul — Phase 2.13 LOW-HP DESPERATION (risk/reward adrenaline mode)",
+		"date": "2026-06-15",
+		"entries": [
+			"ADRENALINE MODE. When your HP drops to ≤ 25% of max, you enter LOW-HP DESPERATION. The screen tints red around the edges with a pulse, an 'ADRENALINE!' label flashes, and every attack hits harder.",
+			"DESPERATION EFFECTS: +25% outgoing damage on all swings (stacks multiplicatively with FRENZY ×1.2, COUNTER WINDOW ×1.6, and HEATED+ momentum). +1 HP per landed hit (lifesteal on top of the momentum lifesteal — so HEATED + low HP = +3 HP per hit, FRENZY + low HP = +5).",
+			"Exits when HP recovers above 40% — hysteresis prevents flicker if you bounce around the threshold.",
+			"With everything combined, a low-HP FRENZY perfect-dodge counter on an EXPOSED enemy now lands a hit at base × 1.5 (consume) × 1.6 (counter) × 1.2 (frenzy) × 1.25 (desperation) = ×3.6 damage. That's a real 'snatch victory from defeat' moment.",
+			"Internal: _low_hp_active state with enter/exit hysteresis check in _physics_process. _enter_low_hp creates a CanvasLayer with a translucent red ColorRect that pulses (loops 0.08 ↔ 0.22 alpha over 0.6 s). _exit_low_hp fades it cleanly. Damage mult applied in _run_clocked_attack alongside momentum + counter. Lifesteal added in _on_hit_resolved_for_momentum.",
+		]
+	},
 	{
 		"version": "v0.86.8",
 		"title": "Combat overhaul — Phase 3.4 WOLF CHARGER pattern (dash attack + wall stun)",

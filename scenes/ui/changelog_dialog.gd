@@ -9,9 +9,26 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.86.6"
+const GAME_VERSION := "v0.86.7"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.86.7",
+		"title": "Combat overhaul — Phase 3.4b ELITE MODIFIERS (Hasted / Armored / Volatile / Berserker / Vampiric / Shocking)",
+		"date": "2026-06-15",
+		"entries": [
+			"ENEMIES ARE NOW INTERESTINGLY DIVERSE. ~8.5% of regular (non-boss) enemies spawn as ELITES with one of 6 random modifiers. Each elite wears a colored pulsing aura so you can spot them at a glance.",
+			"HASTED (cyan): attacks 30% faster, moves 20% faster. Pressures you to react quickly.",
+			"ARMORED (light gray): takes 35% less damage. Demands you commit to bigger combos / specials.",
+			"VOLATILE (orange): EXPLODES on death dealing 25 damage to player + 15 damage to other enemies within 90 px. Friendly fire creates chain reactions in packs.",
+			"BERSERKER (deep red): only 70% HP but deals 40% MORE damage. Glass cannon. Kill fast or eat heavy hits.",
+			"VAMPIRIC (green): regenerates ~4 HP/sec. Forces you to commit damage faster than they heal.",
+			"SHOCKING (purple): chain-lightning placeholder — will electrify after death feedback in v0.87 (this commit ships the spawn + aura + name prefix; effect on hit lands next).",
+			"Elite enemies grant ×1.5 XP and gold to make taking them on rewarding. Name label gets prefixed (e.g. 'Hasted Skeleton').",
+			"Combined with: attack patterns, vulnerability windows, momentum thresholds, finisher variants — encounters now have meaningful texture. Encountering a Volatile Wolf in a pack of skeletons feels completely different from a Hasted Bandit alone.",
+			"Internal: _elite_modifier on enemy; ELITE_MODIFIERS array sampled in _ready (skipped for mini-bosses). _roll_elite_modifier applies stat tweaks (attack_cooldown, move_speed, max_hp) and spawns _elite_aura (ring_flash texture with pulse loop). _elite_damage_taken_mult / _elite_damage_dealt_mult applied at take_damage / attack-resolve. _elite_exploder_burst on death for Volatile. _healer_tick_accum in _physics_process for Vampiric. Aura fades on death.",
+		]
+	},
 	{
 		"version": "v0.86.6",
 		"title": "Combat overhaul — Phase 6.0a damage number combo accumulation",

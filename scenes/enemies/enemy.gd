@@ -108,6 +108,16 @@ static var _last_global_death_msec: int = 0
 # Killing blow info for death animation selection
 var _last_hit_was_crit: bool = false
 var _overkill_ratio: float = 0.0
+
+# Phase 3.4b — ELITE MODIFIERS. Random regular enemies become elites with
+# a modifier that changes their combat behavior, giving encounters
+# variety without authoring new enemy types. Mini-bosses never become
+# additional elites (they're already special).
+const ELITE_CHANCE: float = 0.085  # ~8.5% of regular enemies become elite
+var _elite_modifier: StringName = &""   # "" / haste / armored / exploder / berserker / healer / shocking
+var _elite_aura: Sprite2D = null
+var _elite_aura_tween: Tween = null
+var _healer_tick_accum: float = 0.0
 # Phase 6.0a — damage number COMBO ACCUMULATION. Hits within
 # DMG_STACK_WINDOW_MS on this enemy merge into the existing floating
 # label, growing the number rather than cluttering with new labels.
@@ -259,6 +269,10 @@ func _ready() -> void:
 	_statuses = StatusEffectComponentCls.new()
 	_statuses.name = "StatusEffectComponent"
 	add_child(_statuses)
+
+	# Phase 3.4b — roll for elite modifier on regular (non-boss) enemies.
+	if not is_mini_boss and randf() < ELITE_CHANCE:
+		_roll_elite_modifier()
 	# Visual: pulse the sprite slightly while "exposed" is active so the
 	# player sees they earned a damage bonus. Hooked via signals.
 	if _statuses.has_signal("status_applied"):
@@ -488,6 +502,14 @@ func _get_zoom_compensation() -> float:
 func _physics_process(delta: float) -> void:
 	if _is_dead:
 		return
+
+	# Phase 3.4b — Vampiric (healer) elite regen: ~4 HP/sec.
+	if _elite_modifier == &"healer" and stats.current_hp < stats.max_hp:
+		_healer_tick_accum += delta
+		while _healer_tick_accum >= 0.25:
+			_healer_tick_accum -= 0.25
+			stats.current_hp = min(stats.max_hp, stats.current_hp + 1)
+			_update_hp_bar()
 
 	# Phase 1B.6c: hit-stop. Skip AI + movement while frozen so the
 	# impact has weight. Knockback is intentionally NOT skipped — the
@@ -827,7 +849,7 @@ func _process_attack(delta: float) -> void:
 			if is_special:
 				dmg_mult = _get_special_attack_mult()
 				_attack_timer = attack_cooldown * 1.3  # Slightly longer recovery after special
-			var result = CombatManager.calculate_damage(get_stats_dict(), target.get_stats_dict(), dmg_mult)
+			var result = CombatManager.calculate_damage(get_stats_dict(), target.get_stats_dict(), dmg_mult * _elite_damage_dealt_mult())
 			target.take_damage(result["damage"], result["is_crit"])
 			_do_attack_lunge(is_special)
 			# Rare effect proc
@@ -897,6 +919,9 @@ func take_damage(amount: int, is_crit: bool = false) -> void:
 	if _is_sleeping:
 		_is_sleeping = false
 		visible = true
+	# Phase 3.4b — armored elite reduces incoming damage.
+	if _elite_modifier != &"":
+		amount = int(float(amount) * _elite_damage_taken_mult())
 	# Phase 3.5 — vulnerability window: +50% damage taken + force-crit
 	# visual reaction. Consumes the vulnerability on first hit landed.
 	if _is_in_vulnerability_window():
@@ -938,6 +963,17 @@ func _die() -> void:
 		_reserved_token_cost = 0
 		_windup_started = false
 		_cancel_attack_windup()
+	# Phase 3.4b — exploder elite detonates on death.
+	if _elite_modifier == &"exploder":
+		_elite_exploder_burst()
+	# Stop the elite aura pulse + free the aura sprite.
+	if _elite_aura_tween != null and _elite_aura_tween.is_valid():
+		_elite_aura_tween.kill()
+	if _elite_aura != null and is_instance_valid(_elite_aura):
+		var ta := _elite_aura.create_tween()
+		ta.tween_property(_elite_aura, "modulate:a", 0.0, 0.25)
+		ta.tween_callback(_elite_aura.queue_free)
+		_elite_aura = null
 	if sprite:
 		sprite.material = null
 	var death_sfx = "death_" + sprite_type
@@ -3403,6 +3439,161 @@ func _die_universal_mega_explode() -> void:
 		HitStopController.request_global_dip(0.25, 90, 2, &"universal_mega")
 	if AudioManager != null and AudioManager.has_method("play_sfx"):
 		AudioManager.play_sfx("crit_hit", 4.0)
+
+
+# Phase 3.4b — Elite modifier system.
+# Picks a random modifier, applies stat changes, and spawns a colored
+# aura sprite that follows the enemy so the player can recognize them
+# at a glance.
+#
+# Modifiers:
+#   haste     — attacks 30% faster, moves 20% faster (cyan aura)
+#   armored   — takes 35% less damage (gray aura)
+#   exploder  — detonates on death dealing radial damage (orange aura)
+#   berserker — 70% HP, +40% damage (deep red aura)
+#   healer    — regenerates HP slowly while alive (green aura)
+#   shocking  — every 3rd hit chains lightning to a nearby enemy (purple aura)
+const _ELITE_MODIFIERS: Array[StringName] = [
+	&"haste", &"armored", &"exploder", &"berserker", &"healer", &"shocking"
+]
+func _roll_elite_modifier() -> void:
+	_elite_modifier = _ELITE_MODIFIERS[randi() % _ELITE_MODIFIERS.size()]
+	# Apply stat tweaks.
+	match _elite_modifier:
+		&"haste":
+			attack_cooldown = attack_cooldown * 0.70
+			stats.move_speed = stats.move_speed * 1.20
+		&"armored":
+			# Damage reduction applied at take_damage time.
+			pass
+		&"exploder":
+			pass  # Effect on death.
+		&"berserker":
+			stats.max_hp = int(stats.max_hp * 0.70)
+			stats.current_hp = stats.max_hp
+			# Damage applied at attack-resolve via _get_special_attack_mult-like
+			# adjustment — see _process_attack callers.
+		&"healer":
+			pass  # Regen handled in _physics_process.
+		&"shocking":
+			pass  # Effect on hit landed by player (via signals later) — for
+			# simplicity, we use a counter on take_damage.
+	# Visual aura.
+	_spawn_elite_aura(_get_elite_color())
+	# Promote name with [E:Modifier] suffix.
+	if name_label != null:
+		var prefix := _get_elite_prefix()
+		if prefix != "":
+			name_label.text = prefix + " " + enemy_name
+	# Bump XP / gold reward for the extra effort.
+	xp_reward = int(float(xp_reward) * 1.5)
+	gold_reward = int(float(gold_reward) * 1.5)
+
+
+func _get_elite_color() -> Color:
+	match _elite_modifier:
+		&"haste":
+			return Color(0.4, 1.4, 1.6, 0.6)
+		&"armored":
+			return Color(0.9, 0.9, 1.0, 0.6)
+		&"exploder":
+			return Color(1.7, 0.6, 0.15, 0.65)
+		&"berserker":
+			return Color(1.8, 0.2, 0.2, 0.65)
+		&"healer":
+			return Color(0.3, 1.7, 0.5, 0.6)
+		&"shocking":
+			return Color(1.3, 0.5, 1.7, 0.65)
+	return Color(1.5, 1.2, 0.4, 0.6)
+
+
+func _get_elite_prefix() -> String:
+	match _elite_modifier:
+		&"haste":
+			return "Hasted"
+		&"armored":
+			return "Armored"
+		&"exploder":
+			return "Volatile"
+		&"berserker":
+			return "Berserker"
+		&"healer":
+			return "Vampiric"
+		&"shocking":
+			return "Shocking"
+	return ""
+
+
+func _spawn_elite_aura(color: Color) -> void:
+	var tex = SpriteGenerator.get_texture("ring_flash")
+	if tex == null:
+		tex = SpriteGenerator.get_texture("crystal_white")
+	if tex == null:
+		return
+	_elite_aura = Sprite2D.new()
+	_elite_aura.texture = tex
+	_elite_aura.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_elite_aura.modulate = color
+	_elite_aura.scale = Vector2(1.6, 1.6)
+	_elite_aura.z_index = -2
+	add_child(_elite_aura)
+	# Slow pulse loop so it reads as "alive".
+	_elite_aura_tween = _elite_aura.create_tween().set_loops()
+	_elite_aura_tween.tween_property(_elite_aura, "scale", Vector2(2.0, 2.0), 0.7).set_trans(Tween.TRANS_SINE)
+	_elite_aura_tween.tween_property(_elite_aura, "scale", Vector2(1.6, 1.6), 0.7).set_trans(Tween.TRANS_SINE)
+
+
+# Damage modifier from elite (applied in player damage path via override).
+func _elite_damage_taken_mult() -> float:
+	if _elite_modifier == &"armored":
+		return 0.65
+	return 1.0
+
+
+func _elite_damage_dealt_mult() -> float:
+	if _elite_modifier == &"berserker":
+		return 1.40
+	return 1.0
+
+
+# Phase 3.4b — exploder death AoE. Called from _die before the death
+# animation when applicable.
+const _EXPLODER_RADIUS: float = 90.0
+const _EXPLODER_DAMAGE: int = 25
+func _elite_exploder_burst() -> void:
+	# Visual ring like a small bomb.
+	var tex = SpriteGenerator.get_texture("ring_flash")
+	if tex == null:
+		return
+	var ring := Sprite2D.new()
+	ring.texture = tex
+	ring.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	ring.global_position = global_position
+	ring.modulate = Color(1.7, 0.6, 0.1, 0.95)
+	ring.scale = Vector2(0.5, 0.5)
+	ring.z_index = 5
+	_get_world_node().add_child(ring)
+	var t := ring.create_tween()
+	t.set_parallel(true)
+	t.tween_property(ring, "scale", Vector2(_EXPLODER_RADIUS / 14.0, _EXPLODER_RADIUS / 14.0), 0.35).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	t.tween_property(ring, "modulate:a", 0.0, 0.40).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	t.set_parallel(false)
+	t.tween_callback(ring.queue_free)
+	# Damage the player if in range.
+	var player := _get_player()
+	if player != null and is_instance_valid(player):
+		if player.global_position.distance_squared_to(global_position) <= _EXPLODER_RADIUS * _EXPLODER_RADIUS:
+			if player.has_method("take_damage"):
+				player.take_damage(_EXPLODER_DAMAGE, false)
+	# Damage other enemies too (friendly fire on volatile).
+	for e in get_tree().get_nodes_in_group("enemies"):
+		if e == self or not is_instance_valid(e) or e.get("_is_dead"):
+			continue
+		if e.global_position.distance_squared_to(global_position) <= _EXPLODER_RADIUS * _EXPLODER_RADIUS:
+			if e.has_method("take_damage"):
+				e.take_damage(int(_EXPLODER_DAMAGE * 0.6), false)
+	if AudioManager != null and AudioManager.has_method("play_sfx"):
+		AudioManager.play_sfx("crit_hit", 1.0)
 
 
 # Phase 3.10 — last-enemy cinematic. After this enemy dies, check for

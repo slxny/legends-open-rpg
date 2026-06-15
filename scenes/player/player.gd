@@ -4165,6 +4165,9 @@ func _on_perfect_dodge_executed(_against_attack_id: StringName) -> void:
 	# _run_clocked_attack; visual signal via short blue tint on sprite.
 	_counter_window_until_usec = Time.get_ticks_usec() + _COUNTER_WINDOW_MS * 1000
 	sprite.modulate = Color(0.7, 1.1, 1.8)
+	# Phase 5.x — world WHITE FLASH at the moment of perfect dodge.
+	# Big satisfaction beat — clear visual confirmation you nailed it.
+	_spawn_world_white_flash()
 	# Brief sprite tint flash so the player sees the counter window open.
 	var counter_tween := sprite.create_tween()
 	counter_tween.tween_property(sprite, "modulate", Color.WHITE, float(_COUNTER_WINDOW_MS) / 1000.0).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
@@ -4347,6 +4350,23 @@ func _report_music_intensity() -> void:
 	if _low_hp_active:
 		intensity += 0.15
 	AudioManager.set_music_intensity(clamp(intensity, 0.0, 1.0))
+
+
+# Phase 5.x — full-screen white flash. CanvasLayer above HUD that fades
+# quickly. Reused on perfect dodge and other major satisfaction beats.
+func _spawn_world_white_flash() -> void:
+	var layer := CanvasLayer.new()
+	layer.layer = 95
+	add_child(layer)
+	var rect := ColorRect.new()
+	rect.color = Color(1.0, 1.0, 1.0, 0.55)
+	rect.anchor_right = 1.0
+	rect.anchor_bottom = 1.0
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(rect)
+	var t := rect.create_tween()
+	t.tween_property(rect, "color:a", 0.0, 0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	t.tween_callback(layer.queue_free)
 
 
 func _spawn_frenzy_afterimage() -> void:
@@ -4670,6 +4690,8 @@ func _on_frenzy_started(_duration_ms: int) -> void:
 		HitStopController.request_global_dip(0.25, 130, 4, &"frenzy_start")
 	if AudioManager != null and AudioManager.has_method("play_sfx"):
 		AudioManager.play_sfx("charge_release", 3.0)
+	# Big cinematic white flash on FRENZY entry.
+	_spawn_world_white_flash()
 
 
 func _on_frenzy_ended() -> void:

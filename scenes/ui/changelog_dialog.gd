@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.88.3"
+const GAME_VERSION := "v0.88.4"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.88.4",
+		"title": "Combat feel — WORLD WHITE FLASH on perfect dodge and FRENZY entry",
+		"date": "2026-06-15",
+		"entries": [
+			"Successfully nailing a PERFECT DODGE now flashes the whole screen white at 55% alpha for 180 ms then fades. Unmissable confirmation that you timed it right.",
+			"Entering FRENZY also gets the white flash on top of the existing screen-edge tint and global time dip. Cinematic punctuation for the empowered moment.",
+			"Internal: player.gd _spawn_world_white_flash creates a CanvasLayer (layer 95, above HUD) with a ColorRect filling the screen at white 0.55 alpha. Tween fades alpha to 0 over 180 ms EASE_OUT then queue_frees the layer. Called from _on_perfect_dodge_executed and _on_frenzy_started.",
+		]
+	},
 	{
 		"version": "v0.88.3",
 		"title": "Combat overhaul — HALLOWED GROUND on clustered kills (heal zones)",

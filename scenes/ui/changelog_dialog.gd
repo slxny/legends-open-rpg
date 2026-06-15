@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.86.7"
+const GAME_VERSION := "v0.86.8"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.86.8",
+		"title": "Combat overhaul — Phase 3.4 WOLF CHARGER pattern (dash attack + wall stun)",
+		"date": "2026-06-15",
+		"entries": [
+			"WOLVES NOW CHARGE. During their wind-up, the wolf dashes forward at 320 px/sec straight at you, leaving a cyan afterimage trail. CharacterBody2D physics applies — they collide with walls.",
+			"On hit: 130% damage + 90 knockback. On miss / wall collision: WALL-CHARGE STUN. Wolf is immediately vulnerable (their tier's vulnerability window), recovers 2× slower than a normal attack. You can lure them into a wall for a free punish.",
+			"Combined with elite modifiers: a HASTED VOLATILE WOLF is now a real threat — fast charge that detonates on death.",
+			"Internal: _get_attack_pattern returns &charge for wolf. _process_attack overrides movement to velocity = dir_to_target × CHARGE_SPEED while windup is in progress. _resolve_charge_strike checks final dist_sq — hit → big damage + knockback; miss → _trigger_vulnerability_window(&wall_charge) + 2× recovery + stumble visual. _spawn_charge_afterimage drops a 40% chance per physics frame for cyan ghosts.",
+		]
+	},
 	{
 		"version": "v0.86.7",
 		"title": "Combat overhaul — Phase 3.4b ELITE MODIFIERS (Hasted / Armored / Volatile / Berserker / Vampiric / Shocking)",

@@ -158,7 +158,13 @@ func _get_attack_pattern() -> StringName:
 		return &"triple_stab"
 	if sprite_type == "troll" or sprite_type == "ogre" or sprite_type == "ancient_golem":
 		return &"slam"
+	if sprite_type == "wolf":
+		return &"charge"
 	return &"standard"
+
+const _CHARGE_SPEED: float = 320.0
+const _CHARGE_DAMAGE_MULT: float = 1.30
+const _CHARGE_KNOCKBACK: float = 90.0
 
 # Phase 3.3 — global ATTACK COORDINATOR (danger budget).
 # Limits how many enemies can be in attack wind-up at any time so groups
@@ -797,8 +803,21 @@ func _process_attack(delta: float) -> void:
 			var perp = Vector2(-dir_to_target.y, dir_to_target.x)
 			sep = perp * sep.dot(perp)
 
-	velocity = move_toward + sep
-	move_and_slide()
+	# Phase 3.4 — CHARGE pattern: during windup, the wolf dashes toward the
+	# target at high speed instead of maintaining ideal distance. Body
+	# physics still respects collision, so charging into a wall stops
+	# them — perfect for vulnerability punish.
+	if _windup_started and _get_attack_pattern() == &"charge" and is_instance_valid(target):
+		var dir_to_t: Vector2 = (target.global_position - global_position).normalized()
+		velocity = dir_to_t * _CHARGE_SPEED
+		move_and_slide()
+		# Optional: spawn a brief afterimage every couple frames for
+		# motion-blur readability.
+		if randf() < 0.4:
+			_spawn_charge_afterimage()
+	else:
+		velocity = move_toward + sep
+		move_and_slide()
 
 	_attack_timer -= delta
 	# Phase 3.0a — telegraph wind-up. As the attack timer drops past the
@@ -836,7 +855,13 @@ func _process_attack(delta: float) -> void:
 			if pattern == &"slam":
 				_resolve_slam_strike(dist_sq <= hit_range_sq)
 				return
-			# Skip non-slam if out of range — already handled above as whiff.
+			# CHARGE: high-speed dash already happened during windup. Now
+			# resolve the impact. If the wolf reached the target → big
+			# damage + knockback. If it didn't → wall collision, vulnerability.
+			if pattern == &"charge":
+				_resolve_charge_strike(dist_sq)
+				return
+			# Skip non-slam/charge if out of range — already handled above as whiff.
 			if dist_sq > hit_range_sq:
 				return
 			# TRIPLE STAB: 3 quick hits per attack cycle, lower per-hit damage.
@@ -3982,6 +4007,51 @@ func _resolve_stab_strike() -> void:
 	else:
 		# Full combo recovery.
 		_attack_timer = attack_cooldown * 1.4
+
+
+# Phase 3.4 — CHARGE STRIKE. Wolf dashed during windup; resolve impact
+# now. dist_sq is the current distance to player. If in melee range,
+# bigger hit + knockback. If they got blocked by a wall (charge speed
+# > 0 but distance never closed) → vulnerability window opens auto.
+func _resolve_charge_strike(dist_sq: float) -> void:
+	var hit_range_sq: float = stats.attack_range * stats.attack_range * 2.25
+	if dist_sq <= hit_range_sq and is_instance_valid(target) and target.has_method("take_damage"):
+		var result = CombatManager.calculate_damage(get_stats_dict(), target.get_stats_dict(), _CHARGE_DAMAGE_MULT * _elite_damage_dealt_mult())
+		target.take_damage(result["damage"], result["is_crit"])
+		# Big knockback away from the wolf.
+		if target.has_method("apply_knockback"):
+			var kb_dir: Vector2 = (target.global_position - global_position)
+			if kb_dir.length() > 0.01:
+				target.apply_knockback(kb_dir.normalized(), _CHARGE_KNOCKBACK)
+		_do_attack_lunge(true)
+		_attack_timer = attack_cooldown * 1.6
+	else:
+		# WALL-CHARGE / MISS — wolf is stunned and vulnerable.
+		_trigger_vulnerability_window(&"wall_charge")
+		_attack_timer = attack_cooldown * 2.0
+		# Visual: brief knock-back stumble.
+		if is_instance_valid(sprite):
+			var st := sprite.create_tween()
+			st.tween_property(sprite, "position", Vector2(-6, 0), 0.08)
+			st.tween_property(sprite, "position", Vector2.ZERO, 0.14)
+
+
+# Phase 3.4 — afterimage during charge for motion-blur readability.
+func _spawn_charge_afterimage() -> void:
+	if not is_instance_valid(sprite) or sprite.texture == null:
+		return
+	var ghost := Sprite2D.new()
+	ghost.texture = sprite.texture
+	ghost.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	ghost.global_position = global_position
+	ghost.flip_h = sprite.flip_h
+	ghost.scale = sprite.scale
+	ghost.modulate = Color(0.4, 1.2, 1.5, 0.45)  # cyan ghost
+	ghost.z_index = -1
+	_get_world_node().add_child(ghost)
+	var t := ghost.create_tween()
+	t.tween_property(ghost, "modulate:a", 0.0, 0.22)
+	t.tween_callback(ghost.queue_free)
 
 
 # Phase 3.4 — SLAM. Troll/ogre fires a radial AoE that hits anyone in

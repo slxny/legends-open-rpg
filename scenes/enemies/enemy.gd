@@ -4087,6 +4087,22 @@ func _begin_attack_windup() -> void:
 		else:
 			_spawn_telegraph_arc(target.global_position)
 
+	# Phase 5.1 — telegraph audio cue. Heavy/boss attacks get a low
+	# warning sound so the player notices even if they're not looking.
+	if AudioManager != null and AudioManager.has_method("play_sfx"):
+		var cost: int = _get_token_cost()
+		if is_mini_boss:
+			AudioManager.play_sfx("charge_release", -6.0)
+		elif cost >= 3:
+			AudioManager.play_sfx("crit_hit", -10.0)
+		elif cost == 2:
+			AudioManager.play_sfx("hit_impact", -16.0)
+
+	# Phase 5.1 — schedule apex flash just before strike lands. The flash
+	# is a brief expanding ring at the enemy's position that peaks right
+	# before the strike resolves, giving a visible "about to attack" beat.
+	_schedule_telegraph_apex_flash()
+
 
 # Striking phase: snap forward, normal colour. _end_attack_windup runs
 # even if the strike misses (range check fails), so visuals always reset.
@@ -4148,6 +4164,42 @@ func _clear_telegraph_arc() -> void:
 	if _telegraph_arc != null and is_instance_valid(_telegraph_arc):
 		_telegraph_arc.queue_free()
 	_telegraph_arc = null
+
+
+# Phase 5.1 — schedule a brief apex flash 70% through the wind-up so the
+# player sees an unmissable "about to strike" cue. Different intensity
+# per enemy tier.
+func _schedule_telegraph_apex_flash() -> void:
+	var windup: float = _get_windup_sec()
+	var delay: float = windup * 0.7
+	var owner_ref := self
+	var sev: Color = _get_telegraph_severity_color()
+	get_tree().create_timer(delay).timeout.connect(func() -> void:
+		if not is_instance_valid(owner_ref) or owner_ref._is_dead:
+			return
+		if not owner_ref._windup_started:
+			return  # wind-up was cancelled mid-flight
+		owner_ref._spawn_apex_flash(sev))
+
+
+func _spawn_apex_flash(severity: Color) -> void:
+	var tex = SpriteGenerator.get_texture("ring_flash")
+	if tex == null:
+		return
+	var flash := Sprite2D.new()
+	flash.texture = tex
+	flash.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	flash.global_position = global_position
+	flash.modulate = Color(severity.r * 1.4, severity.g * 1.4, severity.b * 1.4, 0.85)
+	flash.scale = Vector2(0.4, 0.4)
+	flash.z_index = 4
+	_get_world_node().add_child(flash)
+	var t: Tween = flash.create_tween()
+	t.set_parallel(true)
+	t.tween_property(flash, "scale", Vector2(2.5, 2.5), 0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	t.tween_property(flash, "modulate:a", 0.0, 0.20).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	t.set_parallel(false)
+	t.tween_callback(flash.queue_free)
 
 
 # Phase 3.5 — open the vulnerability window. Heavier enemies stay open

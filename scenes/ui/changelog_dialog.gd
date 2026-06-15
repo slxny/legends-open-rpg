@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.87.9"
+const GAME_VERSION := "v0.88.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.88.0",
+		"title": "Combat overhaul — Phase 5.1 telegraph audio + apex flash",
+		"date": "2026-06-15",
+		"entries": [
+			"TELEGRAPH AUDIO CUE on wind-up start. Heavy enemies (cost ≥3) get a low 'crit_hit' rumble at -10 dB. Mini-bosses get 'charge_release' at -6 dB. Medium enemies a soft 'hit_impact' tick at -16 dB. Light enemies silent (would be too much spam with 8+ on screen).",
+			"APEX FLASH at 70% through the wind-up: a brief expanding severity-colored ring at the enemy's position scales 0.4 → 2.5 over 180 ms and fades. Unmissable 'about to strike' cue. Color matches the telegraph severity (yellow / orange / red / magenta).",
+			"Skipped if wind-up was cancelled (staggered enemies don't flash). Cleans up automatically.",
+			"Internal: _begin_attack_windup plays per-tier SFX + calls _schedule_telegraph_apex_flash. Apex flash is timer-scheduled at windup × 0.7 and checks _windup_started before firing.",
+		]
+	},
 	{
 		"version": "v0.87.9",
 		"title": "Combat overhaul — Phase 5.2 STATUS EFFECT ICONS above enemies",

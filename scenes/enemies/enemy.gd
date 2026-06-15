@@ -1010,67 +1010,77 @@ func _die_rat_select_variant() -> void:
 			_die_rat_squish()
 
 
-# RATS EXPLODE. Many gibs, many splatters, screen shake, brief time dip,
-# red flash ring, bright white pop, optional wet-impact audio. Designed
-# to be a rare cathartic moment, not a constant interruption — gated to
-# 12% in _die_rat_select_variant.
+# RATS EXPLODE. CRANKED 10×. Massive cloud of gibs, multiple splatters,
+# huge shockwave, big shake, brief time dip — AND a hail of gore that
+# flies directly at the player and STICKS to them for several seconds.
+# Gated to 12% in _die_rat_select_variant so this is a rare cathartic
+# moment, not a constant stutter.
 func _die_rat_mega_explode() -> void:
-	# 4-6 blood splatters scattered around the corpse.
-	for _i in range(randi_range(4, 6)):
+	# 25-40 blood splatters scattered around the corpse (was 4-6).
+	for _i in range(randi_range(25, 40)):
 		_spawn_blood_splatter()
-	# 15-22 gibs flying outward with high force + spin.
+	# 150-220 gibs in a cloud (was 15-22).
 	_spawn_rat_gibs_mega()
+	# Player gore-coat: extra gibs that fly TO the player and stick.
+	_spray_gore_on_player()
 
-	# Bright white flash then red wash on the sprite itself.
+	# Bright white flash then red wash on the sprite itself — bigger pop.
 	var tween := create_tween()
-	tween.tween_property(sprite, "modulate", Color(3.0, 3.0, 3.0), 0.04)
-	tween.parallel().tween_property(sprite, "scale", _base_scale * 3.0, 0.04)
-	tween.tween_property(sprite, "modulate", Color(2.5, 0.5, 0.5), 0.03)
-	tween.parallel().tween_property(sprite, "scale", Vector2(_base_scale.x * 3.5, _base_scale.y * 0.15), 0.03)
+	tween.tween_property(sprite, "modulate", Color(4.0, 4.0, 4.0), 0.04)
+	tween.parallel().tween_property(sprite, "scale", _base_scale * 6.0, 0.04)
+	tween.tween_property(sprite, "modulate", Color(3.0, 0.4, 0.4), 0.03)
+	tween.parallel().tween_property(sprite, "scale", Vector2(_base_scale.x * 7.0, _base_scale.y * 0.18), 0.03)
 	tween.tween_property(sprite, "modulate:a", 0.0, 0.04)
 	tween.tween_callback(queue_free)
 
-	# Expanding red shockwave ring via a pooled VFX sprite (uses the
-	# existing slash-arc texture stretched into a ring).
+	# Expanding red shockwave ring — much bigger and longer.
 	var world := _get_world_node()
-	var ring := Sprite2D.new()
 	var ring_tex = SpriteGenerator.get_texture("ring_flash")
 	if ring_tex == null:
-		# Fallback: rat_gib stretched works visually.
 		ring_tex = SpriteGenerator.get_texture("rat_gib")
 	if ring_tex != null:
-		ring.texture = ring_tex
-		ring.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		ring.global_position = global_position
-		ring.modulate = Color(1.6, 0.15, 0.15, 0.95)
-		ring.scale = Vector2(0.4, 0.4)
-		ring.z_index = -2
-		world.add_child(ring)
-		var rt := ring.create_tween()
-		rt.set_parallel(true)
-		rt.tween_property(ring, "scale", Vector2(6.0, 6.0), 0.4).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-		rt.tween_property(ring, "modulate:a", 0.0, 0.45).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-		rt.set_parallel(false)
-		rt.tween_callback(ring.queue_free)
+		# Spawn a primary fast ring and a slower secondary ring for depth.
+		for ring_idx in range(2):
+			var ring := Sprite2D.new()
+			ring.texture = ring_tex
+			ring.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			ring.global_position = global_position
+			ring.modulate = Color(1.8, 0.18, 0.18, 0.95 if ring_idx == 0 else 0.65)
+			ring.scale = Vector2(0.4, 0.4)
+			ring.z_index = -2
+			world.add_child(ring)
+			var rt := ring.create_tween()
+			rt.set_parallel(true)
+			var final_scale: float = 24.0 if ring_idx == 0 else 32.0
+			var duration: float = 0.7 if ring_idx == 0 else 1.1
+			rt.tween_property(ring, "scale", Vector2(final_scale, final_scale), duration).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+			rt.tween_property(ring, "modulate:a", 0.0, duration + 0.1).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+			rt.set_parallel(false)
+			rt.tween_callback(ring.queue_free)
 
-	# Big screen shake — but only if there's a player nearby so we don't
-	# rattle the camera over a far-off rat death.
+	# Massive screen shake — only if a player is nearby (don't rattle the
+	# camera over a far-off rat death).
 	var player := _get_player()
 	if player and is_instance_valid(player):
 		var dist_sq: float = player.global_position.distance_squared_to(global_position)
-		if dist_sq < 600.0 * 600.0:
+		if dist_sq < 900.0 * 900.0:
 			if player.has_method("_do_screen_shake"):
-				player._do_screen_shake(7.5)
+				player._do_screen_shake(18.0)
 
-	# Brief global time dip — extra-dramatic punctuation. Routes through
-	# HitStopController so attack_id dedupe coalesces concurrent explosions
-	# into one dip (no machine-gun stutter when a swarm goes off at once).
+	# Brief global time dip — slower + slightly longer than before for a
+	# heavier punctuation. Routes through HitStopController so attack_id
+	# dedupe coalesces concurrent explosions into ONE dip.
 	if HitStopController != null and HitStopController.has_method("request_global_dip"):
-		HitStopController.request_global_dip(0.35, 70, 2, &"rat_mega_explode")
+		HitStopController.request_global_dip(0.20, 110, 3, &"rat_mega_explode")
 
-	# Wet-impact audio. Tries rat-specific sfx first then falls back.
+	# Audio: louder + double-tap for "BOOM-splat" feel.
 	if AudioManager != null and AudioManager.has_method("play_sfx"):
-		AudioManager.play_sfx("crit_hit", 2.0)
+		AudioManager.play_sfx("crit_hit", 5.0)
+		# Tiny delayed wet impact for the splatter.
+		var splat_call := func() -> void:
+			if AudioManager != null and AudioManager.has_method("play_sfx"):
+				AudioManager.play_sfx("hit_impact", 3.0)
+		get_tree().create_timer(0.06).timeout.connect(splat_call)
 
 
 func _spawn_rat_gibs_mega() -> void:
@@ -1078,38 +1088,95 @@ func _spawn_rat_gibs_mega() -> void:
 	if not gib_tex:
 		return
 	var world = _get_world_node()
-	var count: int = randi_range(15, 22)
+	var count: int = randi_range(150, 220)  # was 15-22
 	for _i in range(count):
 		var gib = Sprite2D.new()
 		gib.texture = gib_tex
 		gib.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		gib.global_position = global_position + Vector2(randf_range(-6, 6), randf_range(-8, 4))
+		gib.global_position = global_position + Vector2(randf_range(-10, 10), randf_range(-14, 6))
 		gib.rotation = randf() * TAU
-		gib.scale = Vector2(randf_range(0.7, 1.6), randf_range(0.7, 1.6))
+		# Varied chunk sizes — some big juicy ones, some tiny bits.
+		gib.scale = Vector2(randf_range(0.6, 2.4), randf_range(0.6, 2.4))
 		gib.z_index = -1
-		# Deeper, juicier reds with occasional brighter highlight chunks.
 		gib.modulate = Color(
-			randf_range(0.9, 1.4),
-			randf_range(0.3, 0.7),
-			randf_range(0.3, 0.6),
+			randf_range(0.9, 1.5),
+			randf_range(0.25, 0.7),
+			randf_range(0.25, 0.6),
 			randf_range(0.85, 1.0)
 		)
 		world.add_child(gib)
 		var dir = Vector2(randf_range(-1, 1), randf_range(-1, 1)).normalized()
-		var force = randf_range(45, 95)  # Much higher than the regular gib explosion.
-		# Arc upward then settle — feels like real chunks flying off.
-		var apex = gib.global_position + dir * force * 0.6 + Vector2(0, -randf_range(8, 22))
-		var dest = gib.global_position + dir * force + Vector2(0, randf_range(8, 18))
+		var force = randf_range(120, 320)  # 10x reach — was 45-95
+		# Arc upward then settle.
+		var apex = gib.global_position + dir * force * 0.55 + Vector2(0, -randf_range(20, 70))
+		var dest = gib.global_position + dir * force + Vector2(0, randf_range(12, 35))
 		var t = gib.create_tween()
 		t.set_parallel(true)
-		t.tween_property(gib, "global_position", apex, randf_range(0.10, 0.18)).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-		t.tween_property(gib, "rotation", gib.rotation + randf_range(-10.0, 10.0), 0.45)
+		t.tween_property(gib, "global_position", apex, randf_range(0.14, 0.26)).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		t.tween_property(gib, "rotation", gib.rotation + randf_range(-16.0, 16.0), 0.55)
 		t.set_parallel(false)
-		# Fall to the ground.
-		t.tween_property(gib, "global_position", dest, randf_range(0.16, 0.24)).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-		t.tween_interval(randf_range(1.5, 3.0))
-		t.tween_property(gib, "modulate:a", 0.0, 0.7)
+		t.tween_property(gib, "global_position", dest, randf_range(0.20, 0.35)).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		t.tween_interval(randf_range(2.5, 5.0))  # Linger on the ground longer.
+		t.tween_property(gib, "modulate:a", 0.0, 1.0)
 		t.tween_callback(gib.queue_free)
+
+
+# Splatter a hail of gibs DIRECTLY onto the player and stick them there.
+# The gibs reparent to the player sprite (so they follow movement) and
+# fade after a few seconds. Tasteful, not screen-blocking — distributed
+# over the sprite bounds.
+func _spray_gore_on_player() -> void:
+	var player := _get_player()
+	if player == null or not is_instance_valid(player):
+		return
+	if player.global_position.distance_squared_to(global_position) > 900.0 * 900.0:
+		return  # Too far — don't gore-coat from across the map.
+	var gib_tex = SpriteGenerator.get_texture("rat_gib")
+	if gib_tex == null:
+		return
+	var splat_count: int = randi_range(20, 32)
+	for _i in range(splat_count):
+		var gib := Sprite2D.new()
+		gib.texture = gib_tex
+		gib.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		# Spawn at the rat (so we see it fly) and tween toward player.
+		gib.global_position = global_position + Vector2(randf_range(-6, 6), randf_range(-6, 6))
+		gib.rotation = randf() * TAU
+		gib.scale = Vector2(randf_range(0.5, 1.4), randf_range(0.5, 1.4))
+		gib.z_index = 5  # In front of the player sprite.
+		gib.modulate = Color(
+			randf_range(0.9, 1.4),
+			randf_range(0.25, 0.55),
+			randf_range(0.25, 0.55),
+			randf_range(0.85, 1.0)
+		)
+		# Add to world first so the flight is visible.
+		var world := _get_world_node()
+		world.add_child(gib)
+		# Random landing spot on the player's body — clustered near center.
+		var landing_offset := Vector2(randf_range(-14, 14), randf_range(-22, 6))
+		var flight := gib.create_tween()
+		flight.set_parallel(true)
+		flight.tween_property(gib, "global_position", player.global_position + landing_offset, randf_range(0.08, 0.16)).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		flight.tween_property(gib, "rotation", gib.rotation + randf_range(-8.0, 8.0), 0.2)
+		flight.set_parallel(false)
+		# On landing, reparent to player so we stick + follow movement.
+		var stick_call := func() -> void:
+			if not is_instance_valid(gib):
+				return
+			if not is_instance_valid(player):
+				return
+			# Reparent to player while preserving global pos via offset.
+			var local_offset: Vector2 = gib.global_position - player.global_position
+			gib.get_parent().remove_child(gib)
+			player.add_child(gib)
+			gib.position = local_offset
+			# Linger for 3-5 sec then fade.
+			var fade := gib.create_tween()
+			fade.tween_interval(randf_range(3.0, 5.0))
+			fade.tween_property(gib, "modulate:a", 0.0, 1.2)
+			fade.tween_callback(gib.queue_free)
+		flight.tween_callback(stick_call)
 
 func _die_rat_explode() -> void:
 	# Normal pop: quick swell, pop flash, gibs scatter

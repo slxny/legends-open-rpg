@@ -9,9 +9,23 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.84.6"
+const GAME_VERSION := "v0.84.7"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.84.7",
+		"title": "🐀💥💥 RATS EXPLODE × 10, gore now sticks to the player",
+		"date": "2026-06-14",
+		"entries": [
+			"10× the carnage. 150–220 gibs (was 15–22), force 120–320 px reach (was 45–95), 25–40 blood splatters scattered (was 4–6).",
+			"DOUBLE shockwave ring — fast primary scaling to 24× then slower secondary to 32× for depth.",
+			"Player gore-coat: 20–32 extra gibs fly directly to the player when nearby, REPARENT to the player sprite on impact, and stick / follow movement for 3–5 seconds before fading. You will look like you murdered a rat king with your bare hands.",
+			"Screen shake bumped to 18.0 (was 7.5) with 900 px range (was 600).",
+			"Time dip: 0.20× for 110 ms (was 0.35× for 70 ms) — heavier punctuation. Still attack_id-deduped via HitStopController so swarm wipeouts don't stutter.",
+			"Audio: louder crit_hit at +5 dB followed by a 60 ms later hit_impact for the wet 'BOOM-splat' feel.",
+			"Sprite explosion scales 6× then stretches flat at 7× before vanishing.",
+		]
+	},
 	{
 		"version": "v0.84.6",
 		"title": "🐀💥 RATS EXPLODE",

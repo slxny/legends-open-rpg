@@ -23,6 +23,9 @@ var _last_combo_pulse_msec: int = 0
 var _momentum_bar_bg: ColorRect = null
 var _momentum_bar_fill: ColorRect = null
 var _momentum_threshold_label: Label = null
+# Phase 6.3 — upgrade list UI.
+var _upgrade_panel: ColorRect = null
+var _upgrade_list_label: Label = null
 
 var _player: Node2D = null  # parent player
 
@@ -58,6 +61,8 @@ func _ready() -> void:
 
 	# Phase 6.1 — momentum bar at bottom-center of screen.
 	_build_momentum_bar()
+	# Phase 6.3 — upgrade list panel.
+	_build_upgrade_panel()
 
 	# Subscribe to combat events.
 	if Engine.has_singleton("CombatManager") or get_node_or_null("/root/CombatManager") != null:
@@ -77,6 +82,10 @@ func _ready() -> void:
 			mom.frenzy_ended.connect(_on_frenzy_ended_juice)
 		if mom.has_signal("momentum_changed"):
 			mom.momentum_changed.connect(_on_momentum_changed_juice)
+	# Phase 6.3 — upgrade list subscriber.
+	var upg = _player.get_node_or_null("UpgradeManager") if _player != null else null
+	if upg != null and upg.has_signal("upgrade_granted"):
+		upg.upgrade_granted.connect(_on_upgrade_granted_refresh)
 
 
 func _on_combo_multiplier_changed(value: float) -> void:
@@ -358,6 +367,73 @@ func _on_momentum_changed_juice(value: float, capacity: int) -> void:
 	_momentum_bar_fill.color = c
 	if _momentum_threshold_label != null:
 		_momentum_threshold_label.text = label
+
+
+# Phase 6.3 — upgrade list panel. Top-right corner. Updates on grant.
+const _UPGRADE_PANEL_WIDTH: float = 240.0
+func _build_upgrade_panel() -> void:
+	_upgrade_panel = ColorRect.new()
+	_upgrade_panel.color = Color(0.05, 0.04, 0.03, 0.55)
+	_upgrade_panel.anchor_left = 1.0
+	_upgrade_panel.anchor_right = 1.0
+	_upgrade_panel.anchor_top = 0.16
+	_upgrade_panel.anchor_bottom = 0.16
+	_upgrade_panel.offset_left = -_UPGRADE_PANEL_WIDTH - 12
+	_upgrade_panel.offset_right = -12
+	_upgrade_panel.offset_top = 0
+	_upgrade_panel.offset_bottom = 100  # auto-fits via label
+	_upgrade_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_upgrade_panel.visible = false  # only show when at least 1 upgrade owned
+	add_child(_upgrade_panel)
+
+	_upgrade_list_label = Label.new()
+	var ls := LabelSettings.new()
+	ls.font_size = 13
+	ls.font_color = Color(1.0, 0.9, 0.7)
+	ls.outline_size = 2
+	ls.outline_color = Color(0.05, 0.04, 0.02)
+	_upgrade_list_label.label_settings = ls
+	_upgrade_list_label.anchor_left = 0.0
+	_upgrade_list_label.anchor_right = 1.0
+	_upgrade_list_label.anchor_top = 0.0
+	_upgrade_list_label.anchor_bottom = 1.0
+	_upgrade_list_label.offset_left = 8
+	_upgrade_list_label.offset_right = -8
+	_upgrade_list_label.offset_top = 6
+	_upgrade_list_label.offset_bottom = -6
+	_upgrade_list_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_upgrade_list_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_upgrade_panel.add_child(_upgrade_list_label)
+
+
+func _on_upgrade_granted_refresh(_upgrade_id: StringName) -> void:
+	_refresh_upgrade_panel()
+
+
+func _refresh_upgrade_panel() -> void:
+	if _player == null or _upgrade_panel == null or _upgrade_list_label == null:
+		return
+	var upg = _player.get_node_or_null("UpgradeManager")
+	if upg == null:
+		return
+	var owned: Array = upg.owned_list()
+	if owned.is_empty():
+		_upgrade_panel.visible = false
+		return
+	_upgrade_panel.visible = true
+	var lines: Array[String] = ["⚡ UPGRADES"]
+	for id in owned:
+		var display: String = UpgradeManagerCls.display_name(StringName(id))
+		lines.append("• " + display)
+	_upgrade_list_label.text = "\n".join(lines)
+	# Resize panel to fit content.
+	var line_count: int = lines.size()
+	var height: float = 18.0 + float(line_count) * 18.0
+	_upgrade_panel.offset_bottom = height
+
+
+# Need a reference to UpgradeManagerCls for display_name. Preload mirror.
+const UpgradeManagerCls := preload("res://scripts/components/upgrade_manager.gd")
 
 
 # Impact ring drawn as a stretched gib sprite (we already use this trick

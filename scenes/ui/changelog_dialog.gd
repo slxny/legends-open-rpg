@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.88.1"
+const GAME_VERSION := "v0.88.2"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.88.2",
+		"title": "Combat overhaul — Phase 6.3 UPGRADE LIST UI",
+		"date": "2026-06-15",
+		"entries": [
+			"OWNED UPGRADES NOW VISIBLE. Small dark panel in the top-right corner of screen lists every upgrade you've earned. Bulleted list with the upgrade display names ('⚡ UPGRADES / • Slam Shockwave / • Crit: Adrenaline Surge / ...').",
+			"Panel hidden until at least one upgrade owned. Updates instantly whenever a new upgrade is granted via stats.leveled_up. Auto-resizes to fit the line count.",
+			"Internal: combat_juice_layer.gd _build_upgrade_panel creates a ColorRect background with a Label child. Subscribes to UpgradeManager.upgrade_granted. _refresh_upgrade_panel reads owned_list, formats with display_name, sets the Label text, resizes the panel.",
+		]
+	},
 	{
 		"version": "v0.88.1",
 		"title": "Combat overhaul — KILL STREAK REWARD (5 kills in 6s)",

@@ -4041,6 +4041,18 @@ func _on_hit_resolved_for_momentum(result: Resource) -> void:
 	if is_instance_valid(result.event.victim):
 		vpos = result.event.victim.global_position
 	_momentum.on_hit_landed(result.event.attack_id, bool(result.was_crit), vpos)
+	# Phase 2.x — lifesteal at high momentum. HEATED restores 2 HP per
+	# confirmed hit; FRENZY restores 4. Sustains aggressive play but stays
+	# small enough that you still have to choose your fights.
+	if _momentum.has_method("current_threshold_name"):
+		var thr: StringName = _momentum.current_threshold_name()
+		var heal_amt: int = 0
+		if thr == &"frenzy":
+			heal_amt = 4
+		elif thr == &"heated":
+			heal_amt = 2
+		if heal_amt > 0 and "current_hp" in stats and "max_hp" in stats:
+			stats.current_hp = min(int(stats.max_hp), int(stats.current_hp) + heal_amt)
 	# Kill grant + kill-chain auto-retarget (Phase 2.10).
 	if bool(result.was_lethal):
 		_momentum.on_kill()

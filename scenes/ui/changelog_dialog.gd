@@ -9,9 +9,21 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.85.5"
+const GAME_VERSION := "v0.86.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.86.0",
+		"title": "Combat overhaul — Phase 3.0a enemy attack telegraphs + momentum lifesteal",
+		"date": "2026-06-15",
+		"entries": [
+			"BIGGEST GAMEPLAY UPGRADE YET. Enemies no longer attack instantly — every melee attack now has a 0.35 s anticipation phase before the strike resolves.",
+			"During wind-up the enemy sprite leans back, squashes (1.18 × 0.85 scale), turns warning red, and a thin red ground arc grows toward you showing the strike path. Plenty of time to dodge or interrupt with a heavy hit.",
+			"Staggering an enemy mid-wind-up cancels the strike entirely — no damage. This is the moment perfect-dodge and dodge-time become real skills, not just reaction reflexes.",
+			"LIFESTEAL AT HIGH MOMENTUM: every confirmed hit while HEATED restores +2 HP; while FRENZY, +4 HP. Aggressive play actively sustains you. Encourages keeping the combo going instead of disengaging to heal.",
+			"Internal: enemy.gd's _process_attack now splits into anticipation → strike → recovery via _WINDUP_SEC threshold check on the existing _attack_timer. _begin/_end/_cancel_attack_windup helpers manage sprite tween + ground telegraph arc. Cancel hook wired to stagger so staggered enemies drop their wind-up cleanly. Lifesteal: _on_hit_resolved_for_momentum reads MomentumComponent.current_threshold_name and increments stats.current_hp.",
+		]
+	},
 	{
 		"version": "v0.85.5",
 		"title": "Combat overhaul — Phase 2.12 combat pickups (momentum / health / cooldown orbs)",

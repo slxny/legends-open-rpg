@@ -108,6 +108,14 @@ static var _last_global_death_msec: int = 0
 # Killing blow info for death animation selection
 var _last_hit_was_crit: bool = false
 var _overkill_ratio: float = 0.0
+# Phase 3.0a — enemy attack telegraph. Tracks whether the wind-up visual
+# has fired for the current attack cycle. The actual damage still applies
+# when _attack_timer hits 0; this just adds a visible anticipation phase
+# so the player can read incoming attacks and dodge / counter.
+const _WINDUP_SEC: float = 0.35
+var _windup_started: bool = false
+var _windup_tween: Tween = null
+var _telegraph_arc: Sprite2D = null
 # Phase 1B.6b — visual hit-reaction component. Created in _ready, profile
 # selected from enemy tier (mini_boss / heavy sprites → tougher reaction
 # tier). Knockback/stagger emissions are intentionally NOT connected this
@@ -688,8 +696,15 @@ func _process_attack(delta: float) -> void:
 	move_and_slide()
 
 	_attack_timer -= delta
+	# Phase 3.0a — telegraph wind-up. As the attack timer drops past
+	# _WINDUP_SEC, fire the anticipation visual so the player can read it.
+	if not _windup_started and _attack_timer <= _WINDUP_SEC and _attack_timer > 0.0:
+		_windup_started = true
+		_begin_attack_windup()
 	if _attack_timer <= 0:
 		_attack_timer = attack_cooldown
+		_windup_started = false
+		_end_attack_windup()
 		# Only deal damage if still close enough to actually hit
 		var hit_range_sq = stats.attack_range * stats.attack_range * 2.25  # 1.5x range
 		if dist_sq <= hit_range_sq and target.has_method("take_damage"):
@@ -3238,8 +3253,91 @@ func _on_stagger_requested(duration_ms: int) -> void:
 	# resume (plan corr. 10: don't blindly restore prior state).
 	if current_state == State.ATTACK:
 		_attack_timer = attack_cooldown * 0.5
+	# Phase 3.0a — cancel any in-flight attack wind-up so a staggered
+	# enemy doesn't keep their telegraph mid-air.
+	if _windup_started:
+		_windup_started = false
+		_cancel_attack_windup()
 	if HitStopController != null and duration_ms > 0:
 		HitStopController.freeze_target(self, duration_ms, 1)  # VICTIM
+
+
+# Phase 3.0a — enemy attack telegraph.
+# Anticipation: sprite squashes + tilts back, red modulate tint, brief
+# floor arc towards the target. Lasts roughly _WINDUP_SEC before damage
+# resolves. Skilled players can dodge / interrupt during this window.
+func _begin_attack_windup() -> void:
+	if _is_dead or not is_instance_valid(sprite):
+		return
+	# Kill any leftover wind-up tween.
+	if _windup_tween != null and _windup_tween.is_valid():
+		_windup_tween.kill()
+	# Wind-up pose: lean back + warning red tint + squash.
+	var back_dir: Vector2 = Vector2.RIGHT
+	if is_instance_valid(target):
+		back_dir = (global_position - target.global_position).normalized()
+	_windup_tween = sprite.create_tween().set_parallel(true)
+	_windup_tween.tween_property(sprite, "scale", Vector2(1.18, 0.85), _WINDUP_SEC * 0.75)
+	_windup_tween.tween_property(sprite, "modulate", Color(1.6, 0.55, 0.4), _WINDUP_SEC * 0.6)
+	_windup_tween.tween_property(sprite, "position", back_dir * 4.0, _WINDUP_SEC * 0.8)
+	# Floor arc telegraph (red) pointing toward target.
+	if is_instance_valid(target):
+		_spawn_telegraph_arc(target.global_position)
+
+
+# Striking phase: snap forward, normal colour. _end_attack_windup runs
+# even if the strike misses (range check fails), so visuals always reset.
+func _end_attack_windup() -> void:
+	if not is_instance_valid(sprite):
+		return
+	if _windup_tween != null and _windup_tween.is_valid():
+		_windup_tween.kill()
+	var t := sprite.create_tween().set_parallel(true)
+	t.tween_property(sprite, "scale", _base_scale, 0.09)
+	t.tween_property(sprite, "modulate", Color.WHITE, 0.10)
+	t.tween_property(sprite, "position", Vector2.ZERO, 0.09)
+	_clear_telegraph_arc()
+
+
+# Cancel: restore the sprite immediately (no strike happens).
+func _cancel_attack_windup() -> void:
+	if _windup_tween != null and _windup_tween.is_valid():
+		_windup_tween.kill()
+	if is_instance_valid(sprite):
+		sprite.scale = _base_scale
+		sprite.modulate = Color.WHITE
+		sprite.position = Vector2.ZERO
+	_clear_telegraph_arc()
+
+
+func _spawn_telegraph_arc(toward_pos: Vector2) -> void:
+	var tex = SpriteGenerator.get_texture("slash_arc")
+	if tex == null:
+		tex = SpriteGenerator.get_texture("ring_flash")
+	if tex == null:
+		return
+	_clear_telegraph_arc()
+	_telegraph_arc = Sprite2D.new()
+	_telegraph_arc.texture = tex
+	_telegraph_arc.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	var to_t: Vector2 = toward_pos - global_position
+	if to_t.length() < 1.0:
+		return
+	_telegraph_arc.global_position = global_position + to_t.normalized() * (to_t.length() * 0.55)
+	_telegraph_arc.rotation = to_t.angle()
+	# Thin red bar that grows over the wind-up.
+	_telegraph_arc.scale = Vector2(to_t.length() / 70.0, 0.30)
+	_telegraph_arc.modulate = Color(1.5, 0.2, 0.2, 0.5)
+	_telegraph_arc.z_index = -1  # on the ground beneath sprites
+	_get_world_node().add_child(_telegraph_arc)
+	var t := _telegraph_arc.create_tween()
+	t.tween_property(_telegraph_arc, "modulate:a", 0.9, _WINDUP_SEC * 0.7).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+
+
+func _clear_telegraph_arc() -> void:
+	if _telegraph_arc != null and is_instance_valid(_telegraph_arc):
+		_telegraph_arc.queue_free()
+	_telegraph_arc = null
 
 
 # Plan corr. 10: after stagger, re-evaluate state from CURRENT conditions

@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.87.0"
+const GAME_VERSION := "v0.87.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.87.1",
+		"title": "Combat overhaul — Phase 6.1 MOMENTUM BAR UI",
+		"date": "2026-06-15",
+		"entries": [
+			"VISIBLE MOMENTUM BAR. Slim 280×14 px bar near the bottom-center of screen shows your current momentum / 100. Fill color shifts with the threshold — gray (rest) → cyan (FOCUSED) → orange (HEATED) → red (FRENZY) — with the threshold name in a small label above the bar.",
+			"Subscribes to MomentumComponent.momentum_changed so it updates every hit. Pairs with the existing combo counter, threshold pop-ups, and FRENZY banner — the system that was hidden behind aura+effect is now READABLE while you fight.",
+			"Internal: scripts/components/combat_juice_layer.gd _build_momentum_bar creates a ColorRect bg + ColorRect fill + Label, anchored bottom-center. _on_momentum_changed_juice updates fill width and color per threshold. No new pools / no save changes / no autoload.",
+		]
+	},
 	{
 		"version": "v0.87.0",
 		"title": "Combat feel pass — basic swing impact + SFX anti-grating + Stardew-style organic ground",

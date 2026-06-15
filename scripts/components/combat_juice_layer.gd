@@ -19,6 +19,11 @@ var _combo_settings: LabelSettings = null
 var _combo_visible_combo: float = 1.0
 var _last_combo_pulse_msec: int = 0
 
+# Phase 6.1 — momentum bar UI.
+var _momentum_bar_bg: ColorRect = null
+var _momentum_bar_fill: ColorRect = null
+var _momentum_threshold_label: Label = null
+
 var _player: Node2D = null  # parent player
 
 
@@ -51,6 +56,9 @@ func _ready() -> void:
 	# Player parent (juice layer lives under player).
 	_player = get_parent() as Node2D
 
+	# Phase 6.1 — momentum bar at bottom-center of screen.
+	_build_momentum_bar()
+
 	# Subscribe to combat events.
 	if Engine.has_singleton("CombatManager") or get_node_or_null("/root/CombatManager") != null:
 		CombatManager.hit_resolved.connect(_on_hit_resolved)
@@ -67,6 +75,8 @@ func _ready() -> void:
 			mom.frenzy_started.connect(_on_frenzy_started_juice)
 		if mom.has_signal("frenzy_ended"):
 			mom.frenzy_ended.connect(_on_frenzy_ended_juice)
+		if mom.has_signal("momentum_changed"):
+			mom.momentum_changed.connect(_on_momentum_changed_juice)
 
 
 func _on_combo_multiplier_changed(value: float) -> void:
@@ -274,6 +284,80 @@ func _on_frenzy_ended_juice() -> void:
 		if is_instance_valid(banner_ref):
 			banner_ref.queue_free())
 	_frenzy_banner = null
+
+
+# Phase 6.1 — momentum bar UI. Bottom-center, slim and unobtrusive.
+# Color shifts: gray < FOCUSED, cyan FOCUSED, orange HEATED, red FRENZY.
+const _MOMENTUM_BAR_WIDTH: float = 280.0
+const _MOMENTUM_BAR_HEIGHT: float = 14.0
+func _build_momentum_bar() -> void:
+	_momentum_bar_bg = ColorRect.new()
+	_momentum_bar_bg.color = Color(0.05, 0.04, 0.03, 0.7)
+	_momentum_bar_bg.anchor_left = 0.5
+	_momentum_bar_bg.anchor_right = 0.5
+	_momentum_bar_bg.anchor_top = 1.0
+	_momentum_bar_bg.anchor_bottom = 1.0
+	_momentum_bar_bg.offset_left = -_MOMENTUM_BAR_WIDTH / 2.0
+	_momentum_bar_bg.offset_right = _MOMENTUM_BAR_WIDTH / 2.0
+	_momentum_bar_bg.offset_top = -130.0
+	_momentum_bar_bg.offset_bottom = -130.0 + _MOMENTUM_BAR_HEIGHT
+	_momentum_bar_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_momentum_bar_bg)
+	# Fill rect — anchored full to the bg, width adjusted on update.
+	_momentum_bar_fill = ColorRect.new()
+	_momentum_bar_fill.color = Color(0.5, 0.6, 0.7, 0.85)
+	_momentum_bar_fill.anchor_right = 0.0  # we'll set offset_right based on ratio
+	_momentum_bar_fill.anchor_bottom = 1.0
+	_momentum_bar_fill.offset_left = 2.0
+	_momentum_bar_fill.offset_top = 2.0
+	_momentum_bar_fill.offset_right = 2.0
+	_momentum_bar_fill.offset_bottom = -2.0
+	_momentum_bar_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_momentum_bar_bg.add_child(_momentum_bar_fill)
+	# Threshold marker label.
+	_momentum_threshold_label = Label.new()
+	var ts := LabelSettings.new()
+	ts.font_size = 12
+	ts.font_color = Color(0.9, 0.85, 0.7)
+	ts.outline_size = 3
+	ts.outline_color = Color(0.05, 0.04, 0.02)
+	_momentum_threshold_label.label_settings = ts
+	_momentum_threshold_label.text = ""
+	_momentum_threshold_label.anchor_left = 0.0
+	_momentum_threshold_label.anchor_right = 1.0
+	_momentum_threshold_label.anchor_top = -0.8
+	_momentum_threshold_label.anchor_bottom = -0.8
+	_momentum_threshold_label.offset_top = -14
+	_momentum_threshold_label.offset_bottom = 2
+	_momentum_threshold_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_momentum_threshold_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_momentum_bar_bg.add_child(_momentum_threshold_label)
+
+
+func _on_momentum_changed_juice(value: float, capacity: int) -> void:
+	if _momentum_bar_fill == null:
+		return
+	var ratio: float = clamp(value / max(1.0, float(capacity)), 0.0, 1.0)
+	var fill_w: float = (_MOMENTUM_BAR_WIDTH - 4.0) * ratio
+	_momentum_bar_fill.offset_right = 2.0 + fill_w
+	# Color by threshold.
+	var c: Color
+	var label: String = ""
+	if value >= 100.0:
+		c = Color(1.5, 0.25, 0.15, 0.95)
+		label = "FRENZY"
+	elif value >= 66.0:
+		c = Color(1.4, 0.65, 0.15, 0.92)
+		label = "HEATED"
+	elif value >= 33.0:
+		c = Color(0.5, 1.2, 1.6, 0.88)
+		label = "FOCUSED"
+	else:
+		c = Color(0.7, 0.7, 0.75, 0.85)
+		label = ""
+	_momentum_bar_fill.color = c
+	if _momentum_threshold_label != null:
+		_momentum_threshold_label.text = label
 
 
 # Impact ring drawn as a stretched gib sprite (we already use this trick

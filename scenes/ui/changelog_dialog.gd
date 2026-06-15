@@ -9,9 +9,21 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.88.2"
+const GAME_VERSION := "v0.88.3"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.88.3",
+		"title": "Combat overhaul — HALLOWED GROUND on clustered kills (heal zones)",
+		"date": "2026-06-15",
+		"entries": [
+			"KILL 3+ ENEMIES IN A TIGHT CLUSTER (within 180 px in last 5 s) and a golden HALLOWED GROUND zone spawns at the centroid. Pulsing aura sprite visible from a distance.",
+			"While standing inside (95 px radius), the player is HEALED +4 HP/sec. Lasts 8 seconds with a 1.5 s fade tail.",
+			"12 s cooldown after each spawn so the screen doesn't fill with healing zones.",
+			"Encourages aggressive cluster-clearing — pull enemies into a tight group, drop them all, get a free heal moment + recover.",
+			"Internal: scripts/components/hallowed_ground.gd extends Node2D with ring_flash aura pulsing scale 7.5 ↔ 8.5 over 0.6 s sine. _physics_process heals player while inside HEAL_RADIUS_SQ. player.gd _track_kill_for_hallowed_ground in _on_hit_resolved_for_momentum on was_lethal. Spawns at centroid when 3+ kills cluster.",
+		]
+	},
 	{
 		"version": "v0.88.2",
 		"title": "Combat overhaul — Phase 6.3 UPGRADE LIST UI",

@@ -12,6 +12,7 @@ const DodgeDataCls = preload("res://scripts/data/dodge_data.gd")
 const MomentumComponentCls = preload("res://scripts/components/momentum_component.gd")
 const CombatJuiceLayerCls = preload("res://scripts/components/combat_juice_layer.gd")
 const UpgradeManagerCls = preload("res://scripts/components/upgrade_manager.gd")
+const HallowedGroundCls = preload("res://scripts/components/hallowed_ground.gd")
 
 signal attacked(target: Node2D)
 
@@ -4145,6 +4146,8 @@ func _on_hit_resolved_for_momentum(result: Resource) -> void:
 	if bool(result.was_lethal):
 		_momentum.on_kill()
 		_set_kill_chain_target(vpos, result.event.victim)
+		# Phase 3.x — Hallowed Ground cluster check.
+		_track_kill_for_hallowed_ground(vpos)
 
 
 # Phase 2.5 — perfect-dodge reward.
@@ -4233,6 +4236,13 @@ const _FRENZY_TRAIL_INTERVAL: float = 0.06
 # Phase 5.5 — reactive music intensity tick.
 var _music_intensity_tick: float = 0.0
 const _MUSIC_INTENSITY_INTERVAL: float = 0.3
+# Phase 3.x — Hallowed Ground cluster tracking.
+const _HALLOWED_KILL_COUNT: int = 3
+const _HALLOWED_RADIUS_SQ: float = 180.0 * 180.0
+const _HALLOWED_WINDOW_MS: int = 5000
+const _HALLOWED_COOLDOWN_MS: int = 12000
+var _recent_kill_pos: Array = []  # Array[Dictionary{pos: Vector2, msec: int}]
+var _hallowed_cooldown_until_msec: int = 0
 func _pulse_camera_zoom(scale_factor: float) -> void:
 	if camera == null or not is_instance_valid(camera):
 		return
@@ -4491,6 +4501,49 @@ func _consume_kill_chain_target() -> Node2D:
 	_kill_chain_target = null
 	_kill_chain_expires_usec = 0
 	return t
+
+
+# Phase 3.x — Hallowed Ground tracker. Prune kills > window; if 3+ kills
+# within HALLOWED_RADIUS in the window, spawn a heal zone at the centroid.
+func _track_kill_for_hallowed_ground(world_pos: Vector2) -> void:
+	var now_msec: int = Time.get_ticks_msec()
+	# Honor cooldown.
+	if now_msec < _hallowed_cooldown_until_msec:
+		return
+	# Prune.
+	var threshold: int = now_msec - _HALLOWED_WINDOW_MS
+	while _recent_kill_pos.size() > 0 and int(_recent_kill_pos[0]["msec"]) < threshold:
+		_recent_kill_pos.pop_front()
+	_recent_kill_pos.append({"pos": world_pos, "msec": now_msec})
+	# Need at least KILL_COUNT entries clustered within HALLOWED_RADIUS_SQ.
+	if _recent_kill_pos.size() < _HALLOWED_KILL_COUNT:
+		return
+	# Find a cluster of KILL_COUNT entries within radius of the new kill.
+	var cluster: Array[Vector2] = [world_pos]
+	for entry in _recent_kill_pos:
+		var p: Vector2 = entry["pos"]
+		if p == world_pos:
+			continue
+		if p.distance_squared_to(world_pos) <= _HALLOWED_RADIUS_SQ:
+			cluster.append(p)
+	if cluster.size() < _HALLOWED_KILL_COUNT:
+		return
+	# Centroid.
+	var centroid: Vector2 = Vector2.ZERO
+	for p in cluster:
+		centroid += p
+	centroid /= float(cluster.size())
+	# Spawn.
+	var hallowed = HallowedGroundCls.new()
+	hallowed.position = centroid
+	_get_world_node().add_child(hallowed)
+	_hallowed_cooldown_until_msec = now_msec + _HALLOWED_COOLDOWN_MS
+	_recent_kill_pos.clear()
+	# Pop above player.
+	if _juice != null and _juice.has_method("_spawn_floating_text"):
+		_juice._spawn_floating_text(global_position + Vector2(0, -65), "HALLOWED GROUND!", Color(1.5, 1.2, 0.3), true)
+	if AudioManager != null and AudioManager.has_method("play_sfx"):
+		AudioManager.play_sfx("charge_release", 0.0)
 
 
 func _spawn_kill_chain_arc(from_pos: Vector2, to_pos: Vector2) -> void:

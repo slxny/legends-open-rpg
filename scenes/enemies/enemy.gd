@@ -108,6 +108,14 @@ static var _last_global_death_msec: int = 0
 # Killing blow info for death animation selection
 var _last_hit_was_crit: bool = false
 var _overkill_ratio: float = 0.0
+# Phase 6.0a — damage number COMBO ACCUMULATION. Hits within
+# DMG_STACK_WINDOW_MS on this enemy merge into the existing floating
+# label, growing the number rather than cluttering with new labels.
+const DMG_STACK_WINDOW_MS: int = 450
+var _active_dmg_label: Label = null
+var _active_dmg_value: int = 0
+var _active_dmg_label_until_msec: int = 0
+var _active_dmg_label_tween: Tween = null
 # Phase 3.0a — enemy attack telegraph. Tracks whether the wind-up visual
 # has fired for the current attack cycle. The actual damage still applies
 # when _attack_timer hits 0; this just adds a visible anticipation phase
@@ -3162,18 +3170,53 @@ func _spawn_item_drop_dict(item: Dictionary) -> void:
 		GameManager.game_message.emit("%s %s dropped!" % [rarity_name, item.get("name", "Item")], color)
 
 func _spawn_damage_number(amount: int, is_crit: bool) -> void:
+	var _zc = _get_zoom_compensation()
+	var now_msec: int = Time.get_ticks_msec()
+	# Phase 6.0a — combo accumulation: stack into existing active label
+	# if we're inside the stacking window.
+	if _active_dmg_label != null and is_instance_valid(_active_dmg_label) and now_msec < _active_dmg_label_until_msec:
+		_active_dmg_value += amount
+		_active_dmg_label.text = str(_active_dmg_value) + ("!" if is_crit else "")
+		# Promote to crit settings if this hit was a crit.
+		if is_crit:
+			_active_dmg_label.label_settings = _dmg_settings_crit
+		# Kill old fade tween and restart with a fresh window. Each stack
+		# grows the label by 12% for a satisfying escalation.
+		if _active_dmg_label_tween != null and _active_dmg_label_tween.is_valid():
+			_active_dmg_label_tween.kill()
+		_active_dmg_label.modulate.a = 1.0
+		_active_dmg_label.scale = _active_dmg_label.scale * 1.12
+		# Cap growth so the label doesn't fill the screen.
+		var max_s: float = _zc * (2.0 if is_crit else 1.7)
+		if _active_dmg_label.scale.x > max_s:
+			_active_dmg_label.scale = Vector2(max_s, max_s)
+		# Brief "pop" tween then fresh fade.
+		var stack_tween := create_tween()
+		stack_tween.tween_property(_active_dmg_label, "scale", _active_dmg_label.scale * 1.05, 0.04).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		stack_tween.tween_property(_active_dmg_label, "scale", _active_dmg_label.scale, 0.04)
+		stack_tween.set_parallel(true)
+		stack_tween.tween_property(_active_dmg_label, "position:y", _active_dmg_label.position.y - 8, 0.5)
+		stack_tween.tween_property(_active_dmg_label, "modulate:a", 0.0, 0.55).set_delay(0.2)
+		stack_tween.set_parallel(false)
+		stack_tween.tween_callback(_finalize_stack_label.bind(_active_dmg_label))
+		_active_dmg_label_until_msec = now_msec + DMG_STACK_WINDOW_MS
+		_active_dmg_label_tween = stack_tween
+		return
+	# No active label — spawn a fresh one and record it for future stacks.
 	var label: Label
 	if _dmg_label_pool.size() > 0:
 		label = _dmg_label_pool.pop_back()
 	else:
 		label = Label.new()
-	var _zc = _get_zoom_compensation()
 	label.text = str(amount) + ("!" if is_crit else "")
 	label.position = Vector2(randf_range(-10, 10) if not is_crit else randf_range(-6, 6), -30)
 	label.label_settings = _dmg_settings_crit if is_crit else _dmg_settings_normal
 	label.modulate.a = 1.0
 	label.scale = Vector2(_zc, _zc)
 	add_child(label)
+	_active_dmg_label = label
+	_active_dmg_value = amount
+	_active_dmg_label_until_msec = now_msec + DMG_STACK_WINDOW_MS
 	var tween = create_tween()
 	if is_crit:
 		label.scale = Vector2(0.4 * _zc, 0.4 * _zc)
@@ -3188,7 +3231,19 @@ func _spawn_damage_number(amount: int, is_crit: bool) -> void:
 		tween.tween_property(label, "position:y", label.position.y - 28, 0.55)
 		tween.tween_property(label, "modulate:a", 0.0, 0.55).set_delay(0.15)
 		tween.set_parallel(false)
-	tween.tween_callback(_recycle_dmg_label.bind(label))
+	_active_dmg_label_tween = tween
+	tween.tween_callback(_finalize_stack_label.bind(label))
+
+
+# Phase 6.0a — finalize a damage label. Clears the active reference
+# (if this was the active one) and recycles into the pool.
+func _finalize_stack_label(label: Label) -> void:
+	if _active_dmg_label == label:
+		_active_dmg_label = null
+		_active_dmg_value = 0
+		_active_dmg_label_tween = null
+	_recycle_dmg_label(label)
+
 
 static func _recycle_dmg_label(label: Label) -> void:
 	if is_instance_valid(label):

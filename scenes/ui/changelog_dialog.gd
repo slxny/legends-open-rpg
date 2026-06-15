@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.86.5"
+const GAME_VERSION := "v0.86.6"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.86.6",
+		"title": "Combat overhaul — Phase 6.0a damage number combo accumulation",
+		"date": "2026-06-15",
+		"entries": [
+			"DAMAGE NUMBERS NOW STACK. Hits on the same enemy within 450 ms merge into one growing label instead of cluttering with separate numbers. Land A→B→C-finisher in 0.6 s and watch '8 → 14 → 32 → 70!' inflate above the enemy.",
+			"Each stack grows the label by 12% (capped at 1.7× normal or 2× crit). Brief 'pop' tween on each accumulation for satisfying escalation feel. Crit settings auto-promote if any hit in the stack was a crit — the whole stack reads as crit.",
+			"Pairs perfectly with the kill-chain, finisher variants, and FRENZY. A 7-hit FRENZY combo on one enemy now reads as a single rising number rather than 7 separate small ones.",
+			"Internal: enemy.gd tracks _active_dmg_label / _active_dmg_value / _active_dmg_label_until_msec / _active_dmg_label_tween. _spawn_damage_number stacks into the existing label when inside the window, else spawns fresh. _finalize_stack_label clears the active reference + recycles via the pool.",
+		]
+	},
 	{
 		"version": "v0.86.5",
 		"title": "Combat overhaul — Phase 3.10 adaptive intensity + last-enemy cinematic",

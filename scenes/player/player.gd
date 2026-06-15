@@ -3755,6 +3755,9 @@ func take_damage(amount: int, is_crit: bool = false) -> void:
 			get_tree().create_timer(0.08).timeout.connect(func() -> void:
 				if not _is_dead:
 					sprite.modulate = Color.WHITE)
+			# Phase 5.x — DODGED! floating text via juice layer.
+			if _juice != null and _juice.has_method("_spawn_floating_text"):
+				_juice._spawn_floating_text(global_position + Vector2(randf_range(-6, 6), -52), "DODGED!", Color(0.6, 1.2, 1.7), false)
 			return
 	stats.take_damage(amount)
 	_spawn_damage_number(amount, is_crit)

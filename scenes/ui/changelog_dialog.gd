@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.89.3"
+const GAME_VERSION := "v0.89.4"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.89.4",
+		"title": "Combat feel — DODGED! popup when i-frames absorb damage",
+		"date": "2026-06-15",
+		"entries": [
+			"When dodge i-frames absorb incoming damage, a cyan 'DODGED!' popup floats above the player. Clear confirmation that the dodge timing worked.",
+			"Pairs with the existing sprite blue-flicker on absorb + the perfect-dodge counter window + the world white flash on perfect dodges. Dodge skill expression now has full visual feedback layered properly.",
+			"Internal: player.gd take_damage — after _dodge.on_incoming_hit returns true and sprite tint flicker, calls juice _spawn_floating_text with 'DODGED!' label, cyan color (0.6/1.2/1.7), small size, at -52 y offset.",
+		]
+	},
 	{
 		"version": "v0.89.3",
 		"title": "Combat feel — POISE BREAK yellow flash ring + audio cue",

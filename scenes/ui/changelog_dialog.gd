@@ -9,9 +9,21 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.86.0"
+const GAME_VERSION := "v0.86.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.86.1",
+		"title": "Combat overhaul — perfect-dodge COUNTER WINDOW + universal mega-explode",
+		"date": "2026-06-15",
+		"entries": [
+			"PERFECT-DODGE COUNTER WINDOW: nailing a perfect dodge now opens a 1-second counter window. ALL damage during the window is ×1.6, the kill-chain auto-targets the attacker for free retarget, sprite tints cyan, gold 'COUNTER!' floats above the player, and a brief global Engine.time_scale dip (0.35× for 90 ms) cinematically punctuates the moment. Stacks with momentum thresholds and frenzy — a perfect-dodge counter in Frenzy is monstrous.",
+			"UNIVERSAL MEGA-EXPLODE: every non-rat enemy now has a chance to detonate on death. Base 4% rate, +8% on crit kill, +12% on overkill (so a big hit at low enemy HP can hit 24% chance).",
+			"On trigger: 8-14 blood splatters, 40-70 gibs flying outward with arcing physics, sprite white-flash → deep red wash + 4.5× scale → flatten and explode, expanding red shockwave ring to 18× scale, screen shake 14, brief global time dip (0.25× for 90 ms). Smaller than the rat MEGA (which keeps its 10× signature spectacle) but big enough to make ANY kill potentially memorable.",
+			"Combined gameplay loop: perfect-dodge → counter window opens → land an EXECUTION variant C-finisher at ×1.6 → universal mega-explode triggers → cascading carnage. The kind of moment players replay clips of.",
+			"Internal: player.gd _counter_window_until_usec / _is_counter_window_active(); _on_perfect_dodge_executed sets the window + locks kill_chain to nearest attacker + tints sprite + spawns counter pop + dispatches global dip. _run_clocked_attack multiplies damage_mult by 1.6 when window active. enemy.gd _play_death_animation rolls universal_mega_chance before the per-sprite death table.",
+		]
+	},
 	{
 		"version": "v0.86.0",
 		"title": "Combat overhaul — Phase 3.0a enemy attack telegraphs + momentum lifesteal",

@@ -181,6 +181,14 @@ var _kill_chain_target: Node2D = null
 var _kill_chain_expires_usec: int = 0
 const _KILL_CHAIN_RADIUS_SQ: float = 160.0 * 160.0
 const _KILL_CHAIN_WINDOW_MS: int = 400
+
+# Phase 2.x — perfect-dodge COUNTER WINDOW. After a successful perfect
+# dodge, the next 1.0 s of attacks score a counter bonus: +60% damage
+# multiplier and the kill-chain auto-retarget locks to the attacker so
+# the player snaps back into combat with maximum impact.
+var _counter_window_until_usec: int = 0
+const _COUNTER_WINDOW_MS: int = 1000
+const _COUNTER_DAMAGE_MULT: float = 1.6
 # Phase 2.3 — dodge component. Created in _ready, owns dodge state +
 # i-frames + perfect-dodge detection. Player remains the sole writer of
 # CharacterBody2D.velocity; the controller provides a velocity overlay.
@@ -3062,6 +3070,9 @@ func _run_clocked_attack(timing: Resource, target: Node2D, dir: Vector2, ability
 	var damage_mult: float = 1.0
 	if _momentum != null and _momentum.has_method("get_damage_mult"):
 		damage_mult = float(_momentum.get_damage_mult())
+	# Phase 2.x — perfect-dodge counter window adds +60% damage.
+	if _is_counter_window_active():
+		damage_mult *= _COUNTER_DAMAGE_MULT
 	var captured_mult := ability_mult * damage_mult
 	var captured_on_contact := on_contact
 	clock.progress_changed.connect(func(p: float) -> void:
@@ -4070,6 +4081,34 @@ func _on_perfect_dodge_executed(_against_attack_id: StringName) -> void:
 	if _is_dead or _momentum == null:
 		return
 	_momentum.on_perfect_dodge()
+	# Phase 2.x — counter window opens for 1 s. Damage mult applies inside
+	# _run_clocked_attack; visual signal via short blue tint on sprite.
+	_counter_window_until_usec = Time.get_ticks_usec() + _COUNTER_WINDOW_MS * 1000
+	sprite.modulate = Color(0.7, 1.1, 1.8)
+	# Brief sprite tint flash so the player sees the counter window open.
+	var counter_tween := sprite.create_tween()
+	counter_tween.tween_property(sprite, "modulate", Color.WHITE, float(_COUNTER_WINDOW_MS) / 1000.0).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	# Lock kill-chain to the nearest staggerable attacker so the next swing
+	# snaps onto them without the player needing to aim.
+	var nearest: Node2D = null
+	var nearest_d_sq: float = _PERFECT_DODGE_RADIUS_SQ
+	for enemy in _nearby_enemies:
+		if not is_instance_valid(enemy) or enemy.get("_is_dead"):
+			continue
+		var d_sq: float = enemy.global_position.distance_squared_to(global_position)
+		if d_sq <= nearest_d_sq:
+			nearest_d_sq = d_sq
+			nearest = enemy
+	if nearest != null:
+		_kill_chain_target = nearest
+		_kill_chain_expires_usec = Time.get_ticks_usec() + _COUNTER_WINDOW_MS * 1000
+	# Brief gold pop-up via existing juice layer's floating text.
+	if _juice != null and _juice.has_method("_spawn_floating_text"):
+		_juice._spawn_floating_text(global_position + Vector2(0, -50), "COUNTER!", Color(1.5, 1.2, 0.4), true)
+	# Quick global dip — punctuates the perfect dodge cinematically.
+	if HitStopController != null and HitStopController.has_method("request_global_dip"):
+		HitStopController.request_global_dip(0.35, 90, 3, &"perfect_dodge")
+	# Freeze nearby enemies (existing behavior).
 	if HitStopController == null:
 		return
 	for enemy in _nearby_enemies:
@@ -4080,6 +4119,12 @@ func _on_perfect_dodge_executed(_against_attack_id: StringName) -> void:
 		if enemy.global_position.distance_squared_to(global_position) > _PERFECT_DODGE_RADIUS_SQ:
 			continue
 		HitStopController.freeze_target(enemy, _PERFECT_DODGE_FREEZE_MS, 1)  # VICTIM
+
+
+# Phase 2.x — apply counter-window damage multiplier into the captured
+# ability multiplier of any active swing.
+func _is_counter_window_active() -> bool:
+	return _counter_window_until_usec > 0 and Time.get_ticks_usec() < _counter_window_until_usec
 
 
 # Phase 2.9 — context-sensitive C-finisher variants.

@@ -852,6 +852,17 @@ func _play_death_animation() -> void:
 		_spawn_blood_splatter()
 		_die_boss()
 		return
+	# Universal MEGA-DEATH chance — extends the rat-explode pattern to
+	# any enemy. 4% base rate, +crit/overkill chance, so big hits feel
+	# rewarding even against tougher targets.
+	var mega_chance: float = 0.04
+	if _last_hit_was_crit:
+		mega_chance += 0.08
+	if _overkill_ratio > 0.5:
+		mega_chance += 0.12
+	if sprite_type != "rat" and randf() < mega_chance:
+		_die_universal_mega_explode()
+		return
 	match sprite_type:
 		"skeleton":
 			_die_crumble()
@@ -3132,6 +3143,91 @@ func _pick_reaction_tier() -> int:
 			return 1  # MEDIUM
 		_:
 			return 0  # LIGHT
+
+
+# Universal mega-explode: smaller scale of the rat MEGA but applies to
+# ANY enemy. Triggered with low-but-real chance from _play_death_animation.
+# Cranks the existing blood splatter + rat-gib texture into a big fan +
+# ring + shake regardless of sprite type. Player still gets a brief gore
+# coat (reduced from rat scale).
+func _die_universal_mega_explode() -> void:
+	# Blood splatters — scaled to enemy size.
+	for _i in range(randi_range(8, 14)):
+		_spawn_blood_splatter()
+	# Generic gib cloud using the rat_gib texture (universal red chunk).
+	var gib_tex = SpriteGenerator.get_texture("rat_gib")
+	if gib_tex != null:
+		var world = _get_world_node()
+		var count: int = randi_range(40, 70)
+		for _i in range(count):
+			var gib = Sprite2D.new()
+			gib.texture = gib_tex
+			gib.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			gib.global_position = global_position + Vector2(randf_range(-8, 8), randf_range(-10, 4))
+			gib.rotation = randf() * TAU
+			gib.scale = Vector2(randf_range(0.7, 1.8), randf_range(0.7, 1.8))
+			gib.z_index = -1
+			gib.modulate = Color(
+				randf_range(0.9, 1.3),
+				randf_range(0.3, 0.65),
+				randf_range(0.3, 0.55),
+				randf_range(0.85, 1.0)
+			)
+			world.add_child(gib)
+			var dir = Vector2(randf_range(-1, 1), randf_range(-1, 1)).normalized()
+			var force = randf_range(70, 180)
+			var apex = gib.global_position + dir * force * 0.55 + Vector2(0, -randf_range(15, 45))
+			var dest = gib.global_position + dir * force + Vector2(0, randf_range(8, 25))
+			var t = gib.create_tween()
+			t.set_parallel(true)
+			t.tween_property(gib, "global_position", apex, randf_range(0.12, 0.20)).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+			t.tween_property(gib, "rotation", gib.rotation + randf_range(-12.0, 12.0), 0.45)
+			t.set_parallel(false)
+			t.tween_property(gib, "global_position", dest, randf_range(0.18, 0.28)).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+			t.tween_interval(randf_range(2.0, 4.0))
+			t.tween_property(gib, "modulate:a", 0.0, 0.8)
+			t.tween_callback(gib.queue_free)
+
+	# Sprite goes white-flash then deep red wash and explodes outward.
+	var tween := create_tween()
+	tween.tween_property(sprite, "modulate", Color(3.5, 3.5, 3.5), 0.04)
+	tween.parallel().tween_property(sprite, "scale", _base_scale * 4.5, 0.04)
+	tween.tween_property(sprite, "modulate", Color(2.8, 0.4, 0.4), 0.03)
+	tween.parallel().tween_property(sprite, "scale", Vector2(_base_scale.x * 5.5, _base_scale.y * 0.15), 0.03)
+	tween.tween_property(sprite, "modulate:a", 0.0, 0.04)
+	tween.tween_callback(queue_free)
+
+	# Shockwave ring.
+	var world := _get_world_node()
+	var ring_tex = SpriteGenerator.get_texture("ring_flash")
+	if ring_tex == null:
+		ring_tex = SpriteGenerator.get_texture("rat_gib")
+	if ring_tex != null:
+		var ring := Sprite2D.new()
+		ring.texture = ring_tex
+		ring.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		ring.global_position = global_position
+		ring.modulate = Color(1.7, 0.2, 0.2, 0.9)
+		ring.scale = Vector2(0.4, 0.4)
+		ring.z_index = -2
+		world.add_child(ring)
+		var rt := ring.create_tween()
+		rt.set_parallel(true)
+		rt.tween_property(ring, "scale", Vector2(18.0, 18.0), 0.55).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		rt.tween_property(ring, "modulate:a", 0.0, 0.60).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		rt.set_parallel(false)
+		rt.tween_callback(ring.queue_free)
+
+	# Screen shake + global dip — punchy but smaller than rat MEGA.
+	var player := _get_player()
+	if player and is_instance_valid(player):
+		if player.global_position.distance_squared_to(global_position) < 700.0 * 700.0:
+			if player.has_method("_do_screen_shake"):
+				player._do_screen_shake(14.0)
+	if HitStopController != null and HitStopController.has_method("request_global_dip"):
+		HitStopController.request_global_dip(0.25, 90, 2, &"universal_mega")
+	if AudioManager != null and AudioManager.has_method("play_sfx"):
+		AudioManager.play_sfx("crit_hit", 4.0)
 
 
 # Phase 2.12 — combat pickup drop roll. Rates are independent so one

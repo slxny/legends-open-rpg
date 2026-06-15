@@ -275,6 +275,10 @@ func _ready() -> void:
 		_poise.poise_broken.connect(_on_poise_broken)
 	if _poise.has_signal("poise_recovered"):
 		_poise.poise_recovered.connect(_on_poise_recovered)
+	if _poise.has_signal("poise_changed"):
+		_poise.poise_changed.connect(_on_poise_changed)
+	# Phase 6.x — build the poise bar (hidden until first damage).
+	_build_poise_bar()
 
 	# Phase 2.6 — status effects.
 	_statuses = StatusEffectComponentCls.new()
@@ -3852,6 +3856,10 @@ func _spawn_pickup(pickup_type: StringName, magnitude: float) -> void:
 # player can spot active statuses across a crowded fight at a glance.
 var _exposed_pulse_tween: Tween = null
 var _status_icons: Dictionary = {}  # StringName -> Sprite2D
+# Phase 6.x — visible poise bar above the enemy.
+var _poise_bar_bg: ColorRect = null
+var _poise_bar_fill: ColorRect = null
+var _poise_bar_hide_timer: float = 0.0
 
 func _on_status_applied(id: StringName, _source: Node, _stacks: int) -> void:
 	if _is_dead:
@@ -3908,6 +3916,41 @@ func _spawn_status_icon(id: StringName) -> void:
 	bob.tween_property(icon, "position:y", icon.position.y - 4.0, 0.4).set_trans(Tween.TRANS_SINE)
 	bob.tween_property(icon, "position:y", icon.position.y, 0.4).set_trans(Tween.TRANS_SINE)
 	_status_icons[id] = icon
+
+
+# Phase 6.x — poise bar visualization above enemy.
+const _POISE_BAR_WIDTH: float = 32.0
+const _POISE_BAR_HEIGHT: float = 3.0
+func _build_poise_bar() -> void:
+	_poise_bar_bg = ColorRect.new()
+	_poise_bar_bg.color = Color(0.06, 0.04, 0.05, 0.75)
+	_poise_bar_bg.position = Vector2(-_POISE_BAR_WIDTH / 2.0, -42.0)
+	_poise_bar_bg.size = Vector2(_POISE_BAR_WIDTH, _POISE_BAR_HEIGHT)
+	_poise_bar_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_poise_bar_bg.visible = false
+	add_child(_poise_bar_bg)
+	_poise_bar_fill = ColorRect.new()
+	_poise_bar_fill.color = Color(0.4, 0.8, 1.0, 0.95)
+	_poise_bar_fill.position = Vector2(1.0, 0.5)
+	_poise_bar_fill.size = Vector2(_POISE_BAR_WIDTH - 2.0, _POISE_BAR_HEIGHT - 1.0)
+	_poise_bar_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_poise_bar_bg.add_child(_poise_bar_fill)
+
+
+func _on_poise_changed(current: float, max_poise: int) -> void:
+	if _is_dead or _poise_bar_bg == null or _poise_bar_fill == null:
+		return
+	var ratio: float = clamp(current / max(1.0, float(max_poise)), 0.0, 1.0)
+	_poise_bar_fill.size.x = max(0.0, (_POISE_BAR_WIDTH - 2.0) * ratio)
+	# Color shifts by remaining poise.
+	if ratio > 0.66:
+		_poise_bar_fill.color = Color(0.4, 0.8, 1.0, 0.95)
+	elif ratio > 0.33:
+		_poise_bar_fill.color = Color(1.0, 0.8, 0.3, 0.95)
+	else:
+		_poise_bar_fill.color = Color(1.4, 0.35, 0.2, 0.95)
+	# Hide when full (no damage taken yet); show otherwise.
+	_poise_bar_bg.visible = ratio < 0.99
 
 
 func _remove_status_icon(id: StringName) -> void:

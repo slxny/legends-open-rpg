@@ -9,9 +9,21 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.88.4"
+const GAME_VERSION := "v0.88.5"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.88.5",
+		"title": "Combat overhaul — Phase 6.x ENEMY POISE BAR visualization",
+		"date": "2026-06-15",
+		"entries": [
+			"POISE BAR ABOVE EACH ENEMY. Slim 32×3 px bar appears above the enemy when they take their first hit. Shows you exactly how close they are to a break.",
+			"COLOR by remaining poise: cyan/blue when >66%, gold when 33–66%, red when <33% — about to break.",
+			"Hidden when at full poise (so a quiet enemy doesn't have a UI element). Shows up immediately on any damage.",
+			"Pairs with status icons (5.2) for full tactical readability — you can see which enemies are EXPOSED and which are about to BREAK at a glance.",
+			"Internal: enemy.gd _build_poise_bar creates ColorRect bg + fill child as enemy children (so they follow position). Subscribes to PoiseComponent.poise_changed in _ready after _poise instantiation. _on_poise_changed updates fill width and color, toggles visibility based on ratio < 0.99.",
+		]
+	},
 	{
 		"version": "v0.88.4",
 		"title": "Combat feel — WORLD WHITE FLASH on perfect dodge and FRENZY entry",

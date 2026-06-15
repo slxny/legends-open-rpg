@@ -179,6 +179,11 @@ func on_kill() -> void:
 	_credit(float(kill_grant), &"kill")
 
 
+# Phase 2.10 — bonus grant from kill chain or other external systems.
+func add_bonus(amount: float, reason: StringName) -> void:
+	_credit(amount, reason)
+
+
 func on_perfect_dodge() -> void:
 	_credit(float(perfect_dodge_grant), &"perfect_dodge")
 

@@ -174,6 +174,13 @@ var _camera_shake: Node2D = null
 # Captured at the moment a swing's contact callback fires so radial trauma
 # becomes directional shake. Cleared each time the player attacks.
 var _last_hit_direction: Vector2 = Vector2.ZERO
+# Phase 2.10 — kill-chain auto-retarget. On a lethal hit we lock onto the
+# nearest remaining enemy for the next swing so combos don't die with the
+# enemy that just took the killing blow.
+var _kill_chain_target: Node2D = null
+var _kill_chain_expires_usec: int = 0
+const _KILL_CHAIN_RADIUS_SQ: float = 160.0 * 160.0
+const _KILL_CHAIN_WINDOW_MS: int = 400
 # Phase 2.3 — dodge component. Created in _ready, owns dodge state +
 # i-frames + perfect-dodge detection. Player remains the sole writer of
 # CharacterBody2D.velocity; the controller provides a velocity overlay.
@@ -1187,12 +1194,18 @@ func _try_manual_attack() -> void:
 
 	_enemies_in_range = _enemies_in_range.filter(func(e): return is_instance_valid(e) and not e.get("_is_dead"))
 
+	# Phase 2.10 — kill-chain auto-retarget. If we killed an enemy within
+	# the chain window, the next swing prefers the nearest survivor so
+	# combos keep flowing through a pack.
+	var hit_target: Node2D = _consume_kill_chain_target()
+	if hit_target != null and not (hit_target in _enemies_in_range):
+		hit_target = null  # Out of range now — fall through to normal picking.
+
 	# Find the best target in the attack direction
-	var hit_target: Node2D = null
 	var mouse_target = _get_enemy_at_mouse()
-	if mouse_target and mouse_target in _enemies_in_range:
+	if hit_target == null and mouse_target and mouse_target in _enemies_in_range:
 		hit_target = mouse_target
-	else:
+	if hit_target == null:
 		var best_score := -INF
 		for enemy in _enemies_in_range:
 			var to_enemy = (enemy.global_position - global_position)
@@ -4017,9 +4030,10 @@ func _on_hit_resolved_for_momentum(result: Resource) -> void:
 	if is_instance_valid(result.event.victim):
 		vpos = result.event.victim.global_position
 	_momentum.on_hit_landed(result.event.attack_id, bool(result.was_crit), vpos)
-	# Kill grant.
+	# Kill grant + kill-chain auto-retarget (Phase 2.10).
 	if bool(result.was_lethal):
 		_momentum.on_kill()
+		_set_kill_chain_target(vpos, result.event.victim)
 
 
 # Phase 2.5 — perfect-dodge reward.
@@ -4043,6 +4057,83 @@ func _on_perfect_dodge_executed(_against_attack_id: StringName) -> void:
 		if enemy.global_position.distance_squared_to(global_position) > _PERFECT_DODGE_RADIUS_SQ:
 			continue
 		HitStopController.freeze_target(enemy, _PERFECT_DODGE_FREEZE_MS, 1)  # VICTIM
+
+
+# Phase 2.10 — kill-chain auto-retarget.
+# After a lethal hit, find the nearest other enemy within radius and
+# lock it in as the next attack target. Window is short (400 ms) so it
+# only catches "the swing right after a kill" — not an indefinite lock.
+# Also grants +5 bonus momentum and draws a brief arc from corpse to
+# next target so the chain is readable.
+func _set_kill_chain_target(from_pos: Vector2, killed: Node2D) -> void:
+	if _is_dead:
+		return
+	var best: Node2D = null
+	var best_d_sq: float = _KILL_CHAIN_RADIUS_SQ
+	for enemy in _nearby_enemies:
+		if not is_instance_valid(enemy) or enemy == killed:
+			continue
+		if enemy.get("_is_dead"):
+			continue
+		var d_sq: float = enemy.global_position.distance_squared_to(from_pos)
+		if d_sq <= best_d_sq:
+			best_d_sq = d_sq
+			best = enemy
+	if best == null:
+		return
+	_kill_chain_target = best
+	_kill_chain_expires_usec = Time.get_ticks_usec() + _KILL_CHAIN_WINDOW_MS * 1000
+	# Momentum chain bonus.
+	if _momentum != null and _momentum.has_method("add_bonus"):
+		_momentum.add_bonus(5.0, &"kill_chain")
+	# Visual: stretched slash arc from corpse → next target as the chain link.
+	_spawn_kill_chain_arc(from_pos, best.global_position)
+
+
+# Returns the chain target if still valid; null otherwise. Always clears
+# the slot after consume so a single chain triggers exactly one retarget.
+func _consume_kill_chain_target() -> Node2D:
+	if _kill_chain_target == null:
+		return null
+	if not is_instance_valid(_kill_chain_target) or _kill_chain_target.get("_is_dead"):
+		_kill_chain_target = null
+		return null
+	if Time.get_ticks_usec() > _kill_chain_expires_usec:
+		_kill_chain_target = null
+		return null
+	var t := _kill_chain_target
+	_kill_chain_target = null
+	_kill_chain_expires_usec = 0
+	return t
+
+
+func _spawn_kill_chain_arc(from_pos: Vector2, to_pos: Vector2) -> void:
+	var tex = SpriteGenerator.get_texture("slash_arc")
+	if tex == null:
+		tex = SpriteGenerator.get_texture("ring_flash")
+	if tex == null:
+		return
+	var arc := Sprite2D.new()
+	arc.texture = tex
+	arc.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	var mid: Vector2 = (from_pos + to_pos) * 0.5
+	arc.global_position = mid
+	var dir: Vector2 = (to_pos - from_pos)
+	var dist: float = dir.length()
+	if dist < 1.0:
+		return
+	arc.rotation = dir.angle()
+	# Stretched along the chain so it reads as a connecting bolt.
+	arc.scale = Vector2(dist / 60.0, 0.6)
+	arc.modulate = Color(1.7, 0.6, 0.1, 0.9)
+	arc.z_index = 6
+	_get_world_node().add_child(arc)
+	var t := arc.create_tween()
+	t.set_parallel(true)
+	t.tween_property(arc, "scale", arc.scale * Vector2(1.1, 1.8), 0.18)
+	t.tween_property(arc, "modulate:a", 0.0, 0.22).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	t.set_parallel(false)
+	t.tween_callback(arc.queue_free)
 
 
 # Momentum-aura update. Fades in over 60 momentum; max intensity at

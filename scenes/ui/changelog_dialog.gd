@@ -9,9 +9,21 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.85.2"
+const GAME_VERSION := "v0.85.3"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.85.3",
+		"title": "Combat overhaul — Phase 2.10 kill-chain auto-retarget",
+		"date": "2026-06-15",
+		"entries": [
+			"COMBAT FEEL: combos no longer die when their target dies. Kill an enemy and the next swing within 400 ms automatically locks onto the nearest survivor within 160 px.",
+			"On the killing blow, a brief orange chain-arc draws from the corpse to the next target so the link is readable. Bonus +5 momentum on the chain.",
+			"Combined with magnetism (2.1), this means: swing → kill → swing again → next kill → swing again → … the combo keeps flowing through a pack without manual retargeting.",
+			"Window is short (400 ms) so it ONLY catches 'the next swing'. It doesn't lock indefinitely — if you delay, the next attack picks the normal directional target.",
+			"Internal: player.gd gains _kill_chain_target / _kill_chain_expires_usec, _set_kill_chain_target / _consume_kill_chain_target / _spawn_kill_chain_arc. MomentumComponent adds public add_bonus(amount, reason). _try_manual_attack consults the chain target before the mouse target / directional scoring fallback.",
+		]
+	},
 	{
 		"version": "v0.85.2",
 		"title": "Combat overhaul — Phase 2.8 momentum thresholds + variety bonus",

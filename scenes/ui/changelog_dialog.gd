@@ -9,9 +9,21 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.86.1"
+const GAME_VERSION := "v0.86.2"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.86.2",
+		"title": "Combat overhaul — Phase 3.1/3.3 telegraph polish + AttackCoordinator danger budget + per-enemy variety",
+		"date": "2026-06-15",
+		"entries": [
+			"ATTACK COORDINATOR. The global danger budget caps simultaneous attackers at 5 tokens. Light enemies (rat/skeleton/goblin) cost 1; medium (bandit/wolf/spider) cost 2; heavy (troll/ogre) cost 3; mini-bosses cost 4. A pack of 8 enemies can now apply real pressure WITHOUT all swinging at you at once — most circle and threaten while 2-3 wind up.",
+			"PER-ENEMY ATTACK VARIETY. Wind-up time now encodes enemy identity: rat 0.18s (jab), skeleton/goblin 0.32s, bandit/wolf 0.40s, dark_mage/lich 0.50s, troll/ogre 0.65s (huge telegraph), mini-boss 0.75s. Heavies also lean back further (lean_dist 8 vs 4) and squash more dramatically (1.25 × 0.78 vs 1.18 × 0.85).",
+			"TELEGRAPH SEVERITY COLOR. Yellow for light enemies (you'll react fine), orange for medium (be careful), deep red for heavy (the BIG one), magenta for mini-bosses (boss-tier visual). Telegraph bar thickness also scales with cost so heavy attacks LOOK wide on the ground. Glance-readable in a busy fight.",
+			"Tokens release on: attack complete, stagger (heavy hit interrupt), enemy death mid-windup. Nothing leaks. If denied a token, the enemy defers half a cooldown and tries again — keeps them mobile instead of frozen.",
+			"Internal: static var _attack_tokens_used on Enemy class (shared state, no autoload). _try_reserve_attack_token / _release_attack_token. _get_windup_sec / _get_token_cost / _get_telegraph_severity_color return per-sprite_type values. _process_attack consults the coordinator before _begin_attack_windup.",
+		]
+	},
 	{
 		"version": "v0.86.1",
 		"title": "Combat overhaul — perfect-dodge COUNTER WINDOW + universal mega-explode",

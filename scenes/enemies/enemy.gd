@@ -112,10 +112,34 @@ var _overkill_ratio: float = 0.0
 # has fired for the current attack cycle. The actual damage still applies
 # when _attack_timer hits 0; this just adds a visible anticipation phase
 # so the player can read incoming attacks and dodge / counter.
-const _WINDUP_SEC: float = 0.35
+const _WINDUP_BASE_SEC: float = 0.35  # default; per-sprite override
 var _windup_started: bool = false
 var _windup_tween: Tween = null
 var _telegraph_arc: Sprite2D = null
+var _reserved_token_cost: int = 0  # 0 = not holding a token
+
+# Phase 3.3 — global ATTACK COORDINATOR (danger budget).
+# Limits how many enemies can be in attack wind-up at any time so groups
+# apply pressure without all swinging at once. Static so all enemies
+# share state without a new autoload.
+# Token costs per enemy tier:
+#   LIGHT (rat, skeleton, goblin)         — 1
+#   MEDIUM (bandit, wolf, spider)         — 2
+#   HEAVY (troll, ogre, ancient_golem)    — 3
+#   ELITE / mini_boss                     — 4
+# Default budget: 5 tokens shared globally → roughly 2 light + 1 heavy or
+# 2 medium + 1 light simultaneous attackers. Tunable.
+static var _attack_tokens_used: int = 0
+const _ATTACK_TOKEN_BUDGET: int = 5
+
+static func _try_reserve_attack_token(cost: int) -> bool:
+	if _attack_tokens_used + cost > _ATTACK_TOKEN_BUDGET:
+		return false
+	_attack_tokens_used += cost
+	return true
+
+static func _release_attack_token(cost: int) -> void:
+	_attack_tokens_used = max(0, _attack_tokens_used - cost)
 # Phase 1B.6b — visual hit-reaction component. Created in _ready, profile
 # selected from enemy tier (mini_boss / heavy sprites → tougher reaction
 # tier). Knockback/stagger emissions are intentionally NOT connected this
@@ -696,14 +720,26 @@ func _process_attack(delta: float) -> void:
 	move_and_slide()
 
 	_attack_timer -= delta
-	# Phase 3.0a — telegraph wind-up. As the attack timer drops past
-	# _WINDUP_SEC, fire the anticipation visual so the player can read it.
-	if not _windup_started and _attack_timer <= _WINDUP_SEC and _attack_timer > 0.0:
-		_windup_started = true
-		_begin_attack_windup()
+	# Phase 3.0a — telegraph wind-up. As the attack timer drops past the
+	# enemy's wind-up threshold, request a danger token from the global
+	# coordinator. If granted, fire the anticipation visual; if denied,
+	# keep ticking (we'll try again at the next wind-up boundary).
+	var windup_sec: float = _get_windup_sec()
+	if not _windup_started and _attack_timer <= windup_sec and _attack_timer > 0.0:
+		var token_cost: int = _get_token_cost()
+		if _try_reserve_attack_token(token_cost):
+			_reserved_token_cost = token_cost
+			_windup_started = true
+			_begin_attack_windup()
+		else:
+			# No budget — defer this attack by half a cooldown so the
+			# enemy circles / postures instead of clogging the queue.
+			_attack_timer = attack_cooldown * 0.5
 	if _attack_timer <= 0:
 		_attack_timer = attack_cooldown
 		_windup_started = false
+		_release_attack_token(_reserved_token_cost)
+		_reserved_token_cost = 0
 		_end_attack_windup()
 		# Only deal damage if still close enough to actually hit
 		var hit_range_sq = stats.attack_range * stats.attack_range * 2.25  # 1.5x range
@@ -814,6 +850,13 @@ func _die() -> void:
 	collision_layer = 0
 	collision_mask = 0
 	input_pickable = false
+	# Phase 3.3 — release any held coordinator token so the budget frees
+	# up immediately when this attacker dies mid-windup.
+	if _reserved_token_cost > 0:
+		_release_attack_token(_reserved_token_cost)
+		_reserved_token_cost = 0
+		_windup_started = false
+		_cancel_attack_windup()
 	if sprite:
 		sprite.material = null
 	var death_sfx = "death_" + sprite_type
@@ -3350,17 +3393,77 @@ func _on_stagger_requested(duration_ms: int) -> void:
 	if current_state == State.ATTACK:
 		_attack_timer = attack_cooldown * 0.5
 	# Phase 3.0a — cancel any in-flight attack wind-up so a staggered
-	# enemy doesn't keep their telegraph mid-air.
+	# enemy doesn't keep their telegraph mid-air. Phase 3.3 — release
+	# the coordinator token so other enemies get to attack.
 	if _windup_started:
 		_windup_started = false
+		_release_attack_token(_reserved_token_cost)
+		_reserved_token_cost = 0
 		_cancel_attack_windup()
 	if HitStopController != null and duration_ms > 0:
 		HitStopController.freeze_target(self, duration_ms, 1)  # VICTIM
 
 
+# Phase 3.0a/3.1 — per-enemy wind-up duration. Rats jab fast; trolls
+# telegraph a long heavy. Encodes enemy identity at attack time without
+# needing a separate Resource per type.
+func _get_windup_sec() -> float:
+	if is_mini_boss:
+		return 0.75
+	match sprite_type:
+		"rat":
+			return 0.18
+		"skeleton", "goblin":
+			return 0.32
+		"bandit", "wolf", "spider", "ghoul":
+			return 0.40
+		"dark_mage", "shadow_wraith", "lich", "vampire_bat":
+			return 0.50
+		"troll", "ogre", "ancient_golem", "crypt_knight", "demon_knight":
+			return 0.65
+		"dragon_whelp", "infernal":
+			return 0.55
+		_:
+			return _WINDUP_BASE_SEC
+
+
+# Phase 3.3 — coordinator token cost by enemy tier.
+func _get_token_cost() -> int:
+	if is_mini_boss:
+		return 4
+	match sprite_type:
+		"rat", "skeleton", "goblin", "dungeon_bat":
+			return 1
+		"bandit", "wolf", "spider", "ghoul", "cave_snake":
+			return 2
+		"troll", "ogre", "ancient_golem", "crypt_knight", "demon_knight":
+			return 3
+		"dragon_whelp", "infernal", "lich":
+			return 3
+		_:
+			return 2
+
+
+# Phase 3.1 — telegraph severity. Yellow for light, orange for medium,
+# red for heavy / mini-boss. Lets the player visually triage incoming
+# attacks in a busy fight.
+func _get_telegraph_severity_color() -> Color:
+	if is_mini_boss:
+		return Color(1.7, 0.15, 0.55, 0.5)  # magenta — boss-tier
+	match sprite_type:
+		"rat", "skeleton", "goblin", "dungeon_bat":
+			return Color(1.6, 1.4, 0.3, 0.45)  # yellow — light
+		"bandit", "wolf", "spider", "ghoul", "cave_snake":
+			return Color(1.6, 0.8, 0.2, 0.5)   # orange — medium
+		"troll", "ogre", "ancient_golem", "crypt_knight", "demon_knight":
+			return Color(1.7, 0.25, 0.2, 0.55) # deep red — heavy
+		_:
+			return Color(1.5, 0.5, 0.3, 0.5)
+
+
 # Phase 3.0a — enemy attack telegraph.
 # Anticipation: sprite squashes + tilts back, red modulate tint, brief
-# floor arc towards the target. Lasts roughly _WINDUP_SEC before damage
+# floor arc towards the target. Lasts roughly windup_sec before damage
 # resolves. Skilled players can dodge / interrupt during this window.
 func _begin_attack_windup() -> void:
 	if _is_dead or not is_instance_valid(sprite):
@@ -3368,15 +3471,25 @@ func _begin_attack_windup() -> void:
 	# Kill any leftover wind-up tween.
 	if _windup_tween != null and _windup_tween.is_valid():
 		_windup_tween.kill()
-	# Wind-up pose: lean back + warning red tint + squash.
+	var windup: float = _get_windup_sec()
+	# Wind-up pose: lean back + warning tint + squash. Heavier enemies
+	# lean back further as part of their identity.
+	var lean_dist: float = 4.0
+	var squash := Vector2(1.18, 0.85)
+	if _get_token_cost() >= 3:
+		lean_dist = 8.0
+		squash = Vector2(1.25, 0.78)
 	var back_dir: Vector2 = Vector2.RIGHT
 	if is_instance_valid(target):
 		back_dir = (global_position - target.global_position).normalized()
+	var tint: Color = _get_telegraph_severity_color()
+	# Sprite modulate uses the severity color tinted toward white.
+	var sprite_tint := Color(min(2.5, tint.r * 1.0), tint.g * 0.7 + 0.2, tint.b * 0.7 + 0.2, 1.0)
 	_windup_tween = sprite.create_tween().set_parallel(true)
-	_windup_tween.tween_property(sprite, "scale", Vector2(1.18, 0.85), _WINDUP_SEC * 0.75)
-	_windup_tween.tween_property(sprite, "modulate", Color(1.6, 0.55, 0.4), _WINDUP_SEC * 0.6)
-	_windup_tween.tween_property(sprite, "position", back_dir * 4.0, _WINDUP_SEC * 0.8)
-	# Floor arc telegraph (red) pointing toward target.
+	_windup_tween.tween_property(sprite, "scale", squash, windup * 0.75)
+	_windup_tween.tween_property(sprite, "modulate", sprite_tint, windup * 0.6)
+	_windup_tween.tween_property(sprite, "position", back_dir * lean_dist, windup * 0.8)
+	# Floor arc telegraph pointing toward target, colored by severity.
 	if is_instance_valid(target):
 		_spawn_telegraph_arc(target.global_position)
 
@@ -3421,13 +3534,18 @@ func _spawn_telegraph_arc(toward_pos: Vector2) -> void:
 		return
 	_telegraph_arc.global_position = global_position + to_t.normalized() * (to_t.length() * 0.55)
 	_telegraph_arc.rotation = to_t.angle()
-	# Thin red bar that grows over the wind-up.
-	_telegraph_arc.scale = Vector2(to_t.length() / 70.0, 0.30)
-	_telegraph_arc.modulate = Color(1.5, 0.2, 0.2, 0.5)
+	# Bar thickness scales with token cost (= danger). Heavy attacks look
+	# WIDE and stay on screen longer.
+	var thickness: float = 0.30 + 0.10 * float(_get_token_cost())
+	_telegraph_arc.scale = Vector2(to_t.length() / 70.0, thickness)
+	var sev: Color = _get_telegraph_severity_color()
+	_telegraph_arc.modulate = sev
 	_telegraph_arc.z_index = -1  # on the ground beneath sprites
 	_get_world_node().add_child(_telegraph_arc)
 	var t := _telegraph_arc.create_tween()
-	t.tween_property(_telegraph_arc, "modulate:a", 0.9, _WINDUP_SEC * 0.7).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	# Telegraph alpha ramps to peak just before the strike lands.
+	var windup: float = _get_windup_sec()
+	t.tween_property(_telegraph_arc, "modulate:a", sev.a + 0.4, windup * 0.7).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 
 
 func _clear_telegraph_arc() -> void:

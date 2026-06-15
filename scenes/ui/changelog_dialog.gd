@@ -9,9 +9,21 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.87.2"
+const GAME_VERSION := "v0.87.3"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.87.3",
+		"title": "Combat overhaul — Phase 7 DESTRUCTIBLE EXPLOSIVE BARRELS",
+		"date": "2026-06-15",
+		"entries": [
+			"EXPLOSIVE BARRELS scattered around enemy camps in Haven's Rest. ~24 placed per region, biased toward camp positions (75%) with the rest sprinkled across the wilds.",
+			"Wooden brown barrels with 18 HP. Hit them with any attack to break — explode in a 110 px radius dealing 28 damage to enemies + 130 knockback, half damage to player if standing inside. 10–16 wooden chunks fly outward with arc physics. Big orange shockwave ring, screen shake 7, audio cue.",
+			"CHAIN REACTIONS: barrels are in 'enemies' group so the explosion damages other barrels too. A line of barrels near a camp = one big chain detonation.",
+			"TACTICAL USE: knock enemies into barrels with branch_slam, branch_uppercut, or knockback from any attack. Cleanest way to clear a tough enemy group is to set them up against a barrel and pop it.",
+			"Internal: scripts/components/destructible_barrel.gd extends Node2D with Sprite + Area2D (programmatic, no .tscn). Stub _BarrelStats RefCounted for damage-pipeline compatibility (get_stats_dict, current_hp, etc.). take_damage / apply_knockback / _explode mirror the enemy interface so player code needs no changes. Auto-spawn in havens_rest.gd _spawn_destructible_barrels with rng placement biased to camp proximity.",
+		]
+	},
 	{
 		"version": "v0.87.2",
 		"title": "Combat overhaul — Phase 5.0 DEATH REACTIONS by killing attack",

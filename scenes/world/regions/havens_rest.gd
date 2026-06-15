@@ -499,6 +499,34 @@ func _generate_terrain_async() -> void:
 	_scatter_small_decor(rng, "flowers", 140, 0.7, 1.2, -7)
 	_scatter_small_decor(rng, "mushroom_cluster", 60, 0.7, 1.1, -7)
 
+	# Phase 7 — destructible explosive barrels scattered around enemy
+	# camp areas. Hit them to chain damage; knock enemies into them.
+	_spawn_destructible_barrels(rng, 24)
+
+
+const _BarrelCls = preload("res://scripts/components/destructible_barrel.gd")
+func _spawn_destructible_barrels(rng: RandomNumberGenerator, count: int) -> void:
+	var placed: int = 0
+	var tries: int = 0
+	while placed < count and tries < count * 6:
+		tries += 1
+		var pos := Vector2(rng.randf_range(-4500, 4500), rng.randf_range(-3500, 3500))
+		# Avoid town and immediate spawn area.
+		if pos.length() < 700:
+			continue
+		# Prefer placements within ~200px of a camp position for tactical use.
+		var near_camp: bool = false
+		for camp_pos in _camp_positions:
+			if pos.distance_squared_to(camp_pos) < 360.0 * 360.0:
+				near_camp = true
+				break
+		if not near_camp and rng.randf() > 0.25:
+			continue  # only spawn off-camp 25% of the time
+		var barrel = _BarrelCls.new()
+		barrel.position = pos
+		add_child(barrel)
+		placed += 1
+
 
 # Scatter a decoration sprite type across the map. Each call awaits per
 # BATCH so we don't drop frames during generation.

@@ -503,6 +503,33 @@ func _generate_terrain_async() -> void:
 	# camp areas. Hit them to chain damage; knock enemies into them.
 	_spawn_destructible_barrels(rng, 24)
 
+	# Phase 3.8 F11 — bloodthirst shrines (encounter modifiers). Sparse.
+	# Each buffs nearby enemies +25% damage. Break for momentum reward.
+	_spawn_bloodthirst_shrines(rng, 6)
+
+
+const _ShrineCls = preload("res://scripts/components/bloodthirst_shrine.gd")
+func _spawn_bloodthirst_shrines(rng: RandomNumberGenerator, count: int) -> void:
+	var placed: int = 0
+	var tries: int = 0
+	while placed < count and tries < count * 10:
+		tries += 1
+		var pos := Vector2(rng.randf_range(-4500, 4500), rng.randf_range(-3500, 3500))
+		if pos.length() < 1200:  # No shrines near town.
+			continue
+		# Bias placement toward camp clusters so the shrine actually buffs
+		# something meaningful.
+		var nearby_camps: int = 0
+		for camp_pos in _camp_positions:
+			if pos.distance_squared_to(camp_pos) < 300.0 * 300.0:
+				nearby_camps += 1
+		if nearby_camps == 0 and rng.randf() > 0.18:
+			continue
+		var shrine = _ShrineCls.new()
+		shrine.position = pos
+		add_child(shrine)
+		placed += 1
+
 
 const _BarrelCls = preload("res://scripts/components/destructible_barrel.gd")
 func _spawn_destructible_barrels(rng: RandomNumberGenerator, count: int) -> void:

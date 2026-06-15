@@ -9,9 +9,21 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.87.5"
+const GAME_VERSION := "v0.87.6"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.87.6",
+		"title": "Combat overhaul — Phase 3.8 F11 BLOODTHIRST SHRINES (encounter modifiers)",
+		"date": "2026-06-15",
+		"entries": [
+			"NEW WORLD ELEMENT: BLOODTHIRST SHRINES. 6 sparse tall red crystals placed in the wilds, biased toward enemy camp clusters. Each has a pulsing 220 px red aura.",
+			"WHILE INTACT: every enemy within the aura deals +25% damage. Walk into a camp with a shrine and the enemies hit you HARDER — priority target the shrine.",
+			"WHEN BROKEN (24 HP, ~3-4 hits): you get +25 momentum, big screen shake, expanding red shockwave ring + crystal shatter. The buff drops instantly from any nearby enemies.",
+			"This creates real tactical decisions — do you ignore the shrine and brute-force the camp, or take it down first?",
+			"Internal: scripts/components/bloodthirst_shrine.gd extends Node2D with pulse-loop aura sprite (ring_flash) + tall red crystal_white sprite + Area2D. Joins 'enemies' group + 'bloodthirst_shrines' group. enemy.gd standard attack-resolve multiplies dmg_mult by BloodthirstShrineCls.get_active_buff_multiplier(global_position, tree) — a static helper that iterates the group and checks AURA_RADIUS_SQ distance. Auto-spawn in havens_rest.gd _spawn_bloodthirst_shrines with rng placement biased toward camp proximity.",
+		]
+	},
 	{
 		"version": "v0.87.5",
 		"title": "Combat feel — camera ZOOM PULSE on every hit",

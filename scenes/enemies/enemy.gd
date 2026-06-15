@@ -8,6 +8,7 @@ const PoiseComponentCls = preload("res://scripts/components/poise_component.gd")
 const PoiseProfileCls = preload("res://scripts/data/poise_profile.gd")
 const StatusEffectComponentCls = preload("res://scripts/components/status_effect_component.gd")
 const CombatPickupCls = preload("res://scripts/components/combat_pickup.gd")
+const BloodthirstShrineCls = preload("res://scripts/components/bloodthirst_shrine.gd")
 
 signal died(enemy: Node2D, xp_reward: int, gold_reward: int)
 
@@ -878,7 +879,9 @@ func _process_attack(delta: float) -> void:
 			if is_special:
 				dmg_mult = _get_special_attack_mult()
 				_attack_timer = attack_cooldown * 1.3  # Slightly longer recovery after special
-			var result = CombatManager.calculate_damage(get_stats_dict(), target.get_stats_dict(), dmg_mult * _elite_damage_dealt_mult())
+			# Phase 3.8 — bloodthirst shrine aura: +25% damage if inside.
+			var shrine_mult: float = BloodthirstShrineCls.get_active_buff_multiplier(global_position, get_tree())
+			var result = CombatManager.calculate_damage(get_stats_dict(), target.get_stats_dict(), dmg_mult * _elite_damage_dealt_mult() * shrine_mult)
 			target.take_damage(result["damage"], result["is_crit"])
 			_do_attack_lunge(is_special)
 			# Rare effect proc

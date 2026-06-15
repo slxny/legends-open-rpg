@@ -8,7 +8,19 @@
       "mcp__godot__run_project",
       "mcp__godot__get_debug_output",
       "mcp__godot__get_project_info",
-      "Bash(mdfind -name \"Godot\")"
+      "Bash(mdfind -name \"Godot\")",
+      "mcp__godot__stop_project",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Read(//Applications/Godot.app/Contents/MacOS/**)",
+      "Read(//Applications/**)",
+      "Bash(/Applications/Godot.app/Contents/MacOS/Godot --headless --path /Users/steve/Code/legends-open-rpg res://tests/smoke/combat_smoke.tscn)",
+      "Bash(wait)",
+      "Bash(echo \"EXIT=$?\")",
+      "Read(//tmp/**)",
+      "Read(//private/tmp/**)",
+      "Bash(echo \"---grep exit $?---\")"
     ]
   }
 }

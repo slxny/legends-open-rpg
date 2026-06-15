@@ -509,6 +509,9 @@ func _physics_process(delta: float) -> void:
 			_dust_puff_timer = _DUST_PUFF_INTERVAL
 			_spawn_running_dust_puff()
 
+	# Phase 5.x — magnetize nearby gold/item drops toward player (Diablo-style).
+	_magnetize_nearby_drops(delta)
+
 	# Heal beacon immunity visual feedback — detect transitions
 	if is_on_heal_beacon and not _was_on_heal_beacon:
 		_start_immunity_vfx()
@@ -3612,6 +3615,24 @@ func _on_pickup_area_area_entered(area: Area2D) -> void:
 			_free_drop(area)
 
 const _EnemyScript = preload("res://scenes/enemies/enemy.gd")
+
+const _MAGNET_RADIUS_SQ: float = 105.0 * 105.0
+const _MAGNET_PICKUP_RADIUS_SQ: float = 14.0 * 14.0
+const _MAGNET_SPEED: float = 480.0
+
+func _magnetize_nearby_drops(delta: float) -> void:
+	var step: float = _MAGNET_SPEED * delta
+	for d in get_tree().get_nodes_in_group("ground_items"):
+		if not (d is Node2D):
+			continue
+		var node: Node2D = d
+		var to_player: Vector2 = global_position - node.global_position
+		var dist_sq: float = to_player.length_squared()
+		if dist_sq > _MAGNET_RADIUS_SQ:
+			continue
+		if dist_sq <= _MAGNET_PICKUP_RADIUS_SQ:
+			continue
+		node.global_position += to_player.normalized() * step
 
 func _free_drop(area: Area2D) -> void:
 	# Recycle pooled drops (have "Visual" child), queue_free others

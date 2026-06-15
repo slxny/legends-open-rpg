@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.89.6"
+const GAME_VERSION := "v0.89.7"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.89.7",
+		"title": "Combat feel — GOLD & ITEM MAGNET (Diablo-style auto-pickup pull)",
+		"date": "2026-06-15",
+		"entries": [
+			"Gold coins and dropped items within 105 px of the player now MAGNETIZE toward you, sweeping in fast (480 px/s) until your pickup area scoops them up.",
+			"No more leaving loot scattered on the battlefield — kills feel instantly rewarding and cleanup is automatic.",
+			"Internal: player.gd _magnetize_nearby_drops(delta) called each _physics_process. Iterates ground_items group; for each Node2D within _MAGNET_RADIUS_SQ (105²) and outside _MAGNET_PICKUP_RADIUS_SQ (14²), translates its position along (player - drop).normalized() * _MAGNET_SPEED * delta. Existing pickup area handles the final collision/consume.",
+		]
+	},
 	{
 		"version": "v0.89.6",
 		"title": "World feel — BLOOD PUDDLES on enemy death (persistent battle scars)",

@@ -9,9 +9,21 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.83.35"
+const GAME_VERSION := "v0.84.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.84.0",
+		"title": "Combat overhaul — Phase 2.0 Poise & stagger break",
+		"date": "2026-06-14",
+		"entries": [
+			"COMBAT FEEL MILESTONE — Phase 2 begins. The A→B→C combo and charged slash now feel like they're WORKING on the enemy, not just dealing damage. Hits build toward a satisfying break.",
+			"Every enemy now has a poise pool (LIGHT 15, MEDIUM 40, HEAVY 80, ELITE 120, BOSS 300). Attacks chip poise. When it hits zero the enemy enters a brief vulnerability window — visibly deeper recoil, AI frozen, can't attack — before recovering with brief post-break immunity so chained attacks can't perma-stagger.",
+			"Poise damage per attack: A=5, B=6, C-finisher=15, D=12, E=10/hit, branch_slam=20, branch_uppercut=15, power_strike=25/target, whirlwind=8/target, charged_slash=40 (boss-break tool), sniper_shot=30. Crits multiply poise damage by 1.5.",
+			"Tier behaviors: LIGHT enemies break to a single A→B→C combo (~26 poise vs 15 cap). MEDIUM needs A→B→C + a heavy or 2 combos. HEAVY needs heavy attacks or charged. ELITE shrugs off light attacks entirely (heavy_only). BOSS has 300 pool, 60% poise resistance, takes ~6+ heavy hits to break (vulnerability windows).",
+			"Internal: PoiseComponent (wall-clock regen + monotonic break window + post-break immunity), PoiseProfile Resource with tier presets, poise_damage field on AttackTimingData. CombatManager.resolve_hit routes poise damage to victim's PoiseComponent automatically. Smoke now covers 16 poise scenarios.",
+		]
+	},
 	{
 		"version": "v0.83.35",
 		"title": "Combat plan — expanded roadmap for Phases 2/3/5/6 (docs only)",

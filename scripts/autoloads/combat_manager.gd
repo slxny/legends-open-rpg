@@ -116,6 +116,19 @@ func resolve_hit(event: Resource, attacker_stats: Dictionary, defender_stats: Di
 	var profile: Resource = _select_profile_for(event, result)
 	result.final_feedback = profile
 
+	# Phase 2.0: poise damage. Looked up from the attack's AttackTimingData;
+	# crits multiply by 1.5; routed to the victim's PoiseComponent if it
+	# has one. Heavy/finisher/crit hits count as "heavy" for boss tier
+	# heavy_only gate.
+	if is_instance_valid(event.victim):
+		var timing: Resource = AttackTimingsCls.by_id(event.attack_id)
+		if timing != null and int(timing.poise_damage) > 0:
+			var poise_node = event.victim.get_node_or_null("PoiseComponent")
+			if poise_node != null and poise_node.has_method("take_poise_damage"):
+				var amt: float = float(timing.poise_damage) * (1.5 if is_crit else 1.0)
+				var is_heavy: bool = int(profile.weight) >= 2  # HEAVY/FINISHER/CRIT/ELITE/BOSS
+				poise_node.take_poise_damage(amt, is_heavy)
+
 	emit_signal("hit_resolved", result)
 
 	if profile != null and HitStopController != null:

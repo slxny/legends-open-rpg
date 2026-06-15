@@ -4,6 +4,8 @@ extends CharacterBody2D
 # autoload boot order safe).
 const HitReactionComponentCls = preload("res://scripts/components/hit_reaction_component.gd")
 const HitReactionDataCls = preload("res://scripts/data/hit_reaction_data.gd")
+const PoiseComponentCls = preload("res://scripts/components/poise_component.gd")
+const PoiseProfileCls = preload("res://scripts/data/poise_profile.gd")
 
 signal died(enemy: Node2D, xp_reward: int, gold_reward: int)
 
@@ -110,6 +112,9 @@ var _overkill_ratio: float = 0.0
 # stage — the existing apply_knockback path stays the sole writer of
 # _knockback_velocity. 1B.7 reconciles the dual paths.
 var _hit_reaction: Node = null
+# Phase 2.0 — poise component. Created in _ready; tier preset mirrors
+# the HitReaction tier so light enemies break easily, bosses don't.
+var _poise: Node = null
 
 func _ready() -> void:
 	add_to_group("enemies")
@@ -143,6 +148,17 @@ func _ready() -> void:
 		_hit_reaction.stagger_requested.connect(_on_stagger_requested)
 	if _hit_reaction.has_signal("stagger_ended"):
 		_hit_reaction.stagger_ended.connect(_on_stagger_ended)
+
+	# Phase 2.0 — poise component. Same tier mapping as HitReaction so
+	# the heaviest enemies are also the toughest to break.
+	_poise = PoiseComponentCls.new()
+	_poise.name = "PoiseComponent"
+	_poise.profile = PoiseProfileCls.new().apply_preset(tier_int)
+	add_child(_poise)
+	if _poise.has_signal("poise_broken"):
+		_poise.poise_broken.connect(_on_poise_broken)
+	if _poise.has_signal("poise_recovered"):
+		_poise.poise_recovered.connect(_on_poise_recovered)
 	# Detect mobile for font scaling
 	var vp_size = get_viewport().get_visible_rect().size
 	var is_mobile = GameManager.is_mobile_device()
@@ -2909,6 +2925,49 @@ func _pick_reaction_tier() -> int:
 			return 1  # MEDIUM
 		_:
 			return 0  # LIGHT
+
+
+# Phase 2.0 — poise break handler. Poise break is bigger than stagger:
+#   - cancels current attack like stagger does
+#   - extends freeze for the full vulnerability window
+#   - feeds back into HitReaction as a forced "heavy" reaction visually
+# enemy.gd does NOT respond to small poise hits — only break and recovery.
+func _on_poise_broken(vulnerability_ms: int) -> void:
+	if _is_dead:
+		return
+	if current_state == State.ATTACK:
+		_attack_timer = attack_cooldown
+	if HitStopController != null and vulnerability_ms > 0:
+		HitStopController.freeze_target(self, vulnerability_ms, 1)  # VICTIM
+	# Strong visual: instant deeper recoil pose via the reaction component.
+	# We synthesize a reaction with no incoming force (already frozen) but
+	# strong visual tier by temporarily swapping the profile to ELITE for
+	# one react() call.
+	if _hit_reaction != null and is_instance_valid(_hit_reaction):
+		var prev_profile = _hit_reaction.profile
+		_hit_reaction.profile = HitReactionDataCls.new().apply_preset(3)  # ELITE
+		# Use the existing facing as the recoil direction.
+		var d := -velocity.normalized() if velocity.length() > 0.01 else Vector2.RIGHT
+		_hit_reaction.react(d, 0.0, true, true)
+		# Restore tier-appropriate profile on next idle frame.
+		var owner_ref := self
+		var restore_call := func() -> void:
+			if is_instance_valid(_hit_reaction):
+				_hit_reaction.profile = prev_profile
+		# A short SceneTreeTimer ensures restoration outlives the freeze.
+		get_tree().create_timer(0.4).timeout.connect(restore_call)
+
+
+# Poise window ended — pool restored, post-break immunity now active for
+# a moment. Plan §2.0 acceptance criterion.
+func _on_poise_recovered() -> void:
+	if _is_dead:
+		return
+	# After break, switch to CHASE so the enemy doesn't immediately swing
+	# without re-evaluating the situation (plan corr. 10).
+	if current_state == State.ATTACK:
+		current_state = State.CHASE
+		_attack_timer = max(_attack_timer, attack_cooldown * 0.6)
 
 
 # Phase 1B.6e — stagger handlers.

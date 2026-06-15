@@ -18,7 +18,7 @@ static func _make(id: StringName, rhythm: int, dur: float, contact: float,
 		combo_start: float, combo_end: float,
 		dodge_cancel: float, move_cancel: float,
 		max_hits: int = 1, wide: bool = false,
-		unstoppable: bool = false) -> Resource:
+		unstoppable: bool = false, poise: int = 5) -> Resource:
 	var t: Resource = AttackTimingDataCls.new()
 	t.attack_id = id
 	t.rhythm_class = rhythm
@@ -36,100 +36,104 @@ static func _make(id: StringName, rhythm: int, dur: float, contact: float,
 	t.max_hits_per_target = max_hits
 	t.wide_attack = wide
 	t.unstoppable = unstoppable
+	t.poise_damage = poise
 	return t
 
 
 # ---- Core A -> B -> C ----------------------------------------------------
 
 static func swing_a() -> Resource:
-	# Horizontal left-to-right. Audit: damage @ 0.55 of 0.31s.
+	# Horizontal left-to-right. Audit: damage @ 0.55 of 0.31s. Light poise chip.
 	return _make(&"swing_a", AttackTimingDataCls.RhythmClass.CORE_A,
-		0.31, 0.55, 0.48, 0.62, 0.55, 0.95, 0.70, 0.85)
+		0.31, 0.55, 0.48, 0.62, 0.55, 0.95, 0.70, 0.85,
+		1, false, false, 5)
 
 
 static func swing_b() -> Resource:
 	# Horizontal backhand. Audit: damage @ 0.55 of 0.31s.
 	return _make(&"swing_b", AttackTimingDataCls.RhythmClass.CORE_B,
-		0.31, 0.55, 0.48, 0.62, 0.55, 0.95, 0.70, 0.85)
+		0.31, 0.55, 0.48, 0.62, 0.55, 0.95, 0.70, 0.85,
+		1, false, false, 6)
 
 
 static func swing_c() -> Resource:
-	# Overhead chop — Phase 1 finisher (plan corr. 1).
-	# Slightly slower, longer combo window, late dodge-cancel (commitment).
-	# Audit: damage @ 0.58 of 0.33s. Knockback 55 (vs 40 baseline).
+	# Overhead chop — A→B→C finisher. Strong poise damage so the rhythm
+	# is *the* engine of break: A+B+C = ~25 poise → breaks light enemies
+	# in one combo.
 	return _make(&"swing_c", AttackTimingDataCls.RhythmClass.FINISHER_C,
-		0.33, 0.58, 0.50, 0.65, 0.62, 1.0, 0.78, 0.88)
+		0.33, 0.58, 0.50, 0.65, 0.62, 1.0, 0.78, 0.88,
+		1, false, false, 15)
 
 
 # ---- Optional extensions -------------------------------------------------
 
 static func swing_d() -> Resource:
-	# Upward thrust extension. Audit: damage @ 0.55 of 0.29s. Higher commitment.
+	# Upward thrust extension. Higher commitment → more poise damage.
 	return _make(&"swing_d", AttackTimingDataCls.RhythmClass.EXTENSION_D,
-		0.29, 0.55, 0.48, 0.62, 0.55, 0.95, 0.75, 0.88)
+		0.29, 0.55, 0.48, 0.62, 0.55, 0.95, 0.75, 0.88,
+		1, false, false, 12)
 
 
 static func swing_e() -> Resource:
-	# Spin slash extension — wide attack, multi-hit. Audit: 0.60 of 0.40s.
+	# Spin slash extension — wide attack, multi-hit. Per-target poise low.
 	return _make(&"swing_e", AttackTimingDataCls.RhythmClass.EXTENSION_E,
 		0.40, 0.60, 0.45, 0.78, 0.62, 0.95, 0.80, 0.90,
-		3, true)  # max 3 hits per target across spin
+		3, true, false, 10)
 
 
 # ---- Directional branches ------------------------------------------------
 
 static func branch_slam() -> Resource:
-	# horizontal -> down replacement (becomes overhead-like slam variant).
+	# horizontal -> down replacement. Plan §2.2: slam = strong poise damage.
 	return _make(&"branch_slam", AttackTimingDataCls.RhythmClass.BRANCH_SLAM,
-		0.33, 0.58, 0.50, 0.65, 0.62, 1.0, 0.78, 0.88)
+		0.33, 0.58, 0.50, 0.65, 0.62, 1.0, 0.78, 0.88,
+		1, false, false, 20)
 
 
 static func branch_uppercut() -> Resource:
-	# down -> up replacement (launching-ish).
+	# down -> up replacement. Plan §2.2: uppercut = launch + poise.
 	return _make(&"branch_uppercut", AttackTimingDataCls.RhythmClass.BRANCH_UPPERCUT,
-		0.29, 0.55, 0.48, 0.62, 0.55, 0.95, 0.75, 0.88)
+		0.29, 0.55, 0.48, 0.62, 0.55, 0.95, 0.75, 0.88,
+		1, false, false, 15)
 
 
 static func branch_spin() -> Resource:
-	# any -> diagonal replacement. Wide.
+	# any -> diagonal replacement. Wide CC, per-target poise low.
 	return _make(&"branch_spin", AttackTimingDataCls.RhythmClass.BRANCH_SPIN,
 		0.40, 0.60, 0.45, 0.78, 0.62, 0.95, 0.80, 0.90,
-		3, true)
+		3, true, false, 10)
 
 
 # ---- Specials ------------------------------------------------------------
 
 static func power_strike() -> Resource:
-	# Audit: 0.25 lunge + impact callbacks. ~0.30 total. Hits a cone.
-	# Stronger commitment — late dodge cancel, no special branch.
+	# Heavy poise damage per cone target — meant to break.
 	var t := _make(&"power_strike", AttackTimingDataCls.RhythmClass.SPECIAL,
 		0.30, 0.50, 0.45, 0.62, 0.65, 0.95, 0.80, 0.90,
-		5, true, true)  # max 5 enemies, wide, unstoppable
+		5, true, true, 25)
 	return t
 
 
 static func whirlwind() -> Resource:
-	# Audit: 0.50s with 720° spin midpoint. Hits all in range.
+	# Many targets, modest per-target poise so it doesn't perma-stagger a group.
 	var t := _make(&"whirlwind", AttackTimingDataCls.RhythmClass.SPECIAL,
 		0.50, 0.55, 0.30, 0.78, 0.70, 0.95, 0.85, 0.92,
-		3, true, true)
+		3, true, true, 8)
 	return t
 
 
 static func charged_slash() -> Resource:
-	# Variable dash. Use a representative total of 0.45s (windup + 0.25 dash + recover).
-	# Contact occurs post-dash at ~0.65.
+	# Heaviest single-target poise — primary boss-break tool.
 	var t := _make(&"charged_slash", AttackTimingDataCls.RhythmClass.CHARGED,
 		0.45, 0.65, 0.50, 0.78, 0.75, 0.95, 0.85, 0.92,
-		3, true, true)
+		3, true, true, 40)
 	return t
 
 
 static func dash_strike() -> Resource:
-	# Audit: 0.37s. Contact post-dash.
 	var t := _make(&"dash_strike", AttackTimingDataCls.RhythmClass.SPECIAL,
 		0.37, 0.55, 0.50, 0.65, 0.65, 0.95, 0.80, 0.90,
-		3, true, true)
+		3, true, true, 15)
 	return t
 
 
@@ -137,25 +141,26 @@ static func dash_strike() -> Resource:
 
 static func piercing_shot() -> Resource:
 	return _make(&"piercing_shot", AttackTimingDataCls.RhythmClass.SPECIAL,
-		0.32, 0.45, 0.40, 0.55, 0.55, 0.95, 0.70, 0.85)
+		0.32, 0.45, 0.40, 0.55, 0.55, 0.95, 0.70, 0.85,
+		1, false, false, 12)
 
 
 static func arrow_rain() -> Resource:
 	return _make(&"arrow_rain", AttackTimingDataCls.RhythmClass.SPECIAL,
 		0.55, 0.40, 0.35, 0.85, 0.70, 0.95, 0.85, 0.92,
-		5, true, true)
+		5, true, true, 6)
 
 
 static func sniper_shot() -> Resource:
 	return _make(&"sniper_shot", AttackTimingDataCls.RhythmClass.CHARGED,
 		0.42, 0.65, 0.60, 0.75, 0.70, 0.95, 0.80, 0.90,
-		1, false, true)
+		1, false, true, 30)
 
 
 static func shadow_step() -> Resource:
 	return _make(&"shadow_step", AttackTimingDataCls.RhythmClass.SPECIAL,
 		0.40, 0.55, 0.50, 0.65, 0.65, 0.95, 0.80, 0.90,
-		3, true, true)
+		3, true, true, 10)
 
 
 ## Look up by attack_id. Returns null if unknown.

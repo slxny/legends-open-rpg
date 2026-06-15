@@ -28,6 +28,8 @@ const HitReactionDataCls := preload("res://scripts/data/hit_reaction_data.gd")
 const HitReactionComponentCls := preload("res://scripts/components/hit_reaction_component.gd")
 const CombatFeedbackProfileCls := preload("res://scripts/data/combat_feedback_profile.gd")
 const CombatAudioComponentCls := preload("res://scripts/components/combat_audio_component.gd")
+const PoiseComponentCls := preload("res://scripts/components/poise_component.gd")
+const PoiseProfileCls := preload("res://scripts/data/poise_profile.gd")
 
 var _errors: Array[String] = []
 
@@ -84,6 +86,7 @@ func _ready() -> void:
 	await _test_camera_shake()
 	await _test_hit_reaction()
 	_test_feedback_profiles()
+	await _test_poise()
 
 	if _errors.is_empty():
 		print("[combat_smoke] OK")
@@ -562,6 +565,80 @@ func _test_feedback_profiles() -> void:
 	audio.play_impact(null, &"body")
 	audio.play_kill(null)
 	_check("CombatAudio handles null profile without crash", true)
+
+
+func _test_poise() -> void:
+	# Tier presets: LIGHT=0..BOSS=4.
+	var light_profile = PoiseProfileCls.new().apply_preset(0)
+	var boss_profile = PoiseProfileCls.new().apply_preset(4)
+	_check("light poise capacity 15", light_profile.capacity == 15)
+	_check("boss poise capacity 300", boss_profile.capacity == 300)
+	_check("boss is heavy_only", boss_profile.heavy_only)
+	_check("light is not heavy_only", not light_profile.heavy_only)
+	_check("boss has poise resistance", boss_profile.poise_resistance > 0.4)
+
+	# Build a component + run it.
+	var comp = PoiseComponentCls.new()
+	comp.profile = PoiseProfileCls.new().apply_preset(0)  # LIGHT
+	add_child(comp)
+	await get_tree().process_frame
+	_check("poise starts at capacity", abs(comp.current() - 15.0) < 0.01)
+	_check("poise not vulnerable at start", not comp.is_vulnerable())
+
+	var broken_fired := [false]
+	var recovered_fired := [false]
+	comp.poise_broken.connect(func(_ms): broken_fired[0] = true)
+	comp.poise_recovered.connect(func(): recovered_fired[0] = true)
+
+	# Light attack chips poise.
+	var did_break = comp.take_poise_damage(5.0, false)
+	_check("small damage does not break", not did_break)
+	_check("poise reduced after damage", comp.current() < 15.0)
+
+	# Heavy break.
+	did_break = comp.take_poise_damage(20.0, true)
+	_check("heavy damage breaks light enemy", did_break)
+	_check("poise_broken signal fired", broken_fired[0])
+	_check("is_vulnerable while broken", comp.is_vulnerable())
+
+	# Further damage during break is ignored (already broken).
+	var ignored = comp.take_poise_damage(50.0, true)
+	_check("damage during break ignored", not ignored)
+
+	# Wait for vulnerability to end (600 ms + headless slack).
+	await get_tree().create_timer(1.2).timeout
+	_check("poise_recovered signal fired", recovered_fired[0])
+	_check("not vulnerable after recovery", not comp.is_vulnerable())
+	_check("poise restored to capacity after break", abs(comp.current() - 15.0) < 0.01)
+
+	# Post-break immunity: another big hit shouldn't break instantly.
+	did_break = comp.take_poise_damage(50.0, true)
+	_check("post-break immunity blocks new break", not did_break)
+	_check("post-break immunity preserves capacity", abs(comp.current() - 15.0) < 0.01)
+
+	# Boss tier: light hits ignored entirely.
+	var boss_comp = PoiseComponentCls.new()
+	boss_comp.profile = PoiseProfileCls.new().apply_preset(4)
+	add_child(boss_comp)
+	await get_tree().process_frame
+	var boss_blocked = boss_comp.take_poise_damage(10.0, false)  # not heavy
+	_check("boss ignores light poise damage", not boss_blocked)
+	_check("boss poise unchanged", abs(boss_comp.current() - 300.0) < 0.01)
+	# Heavy hit chips but doesn't break in one.
+	boss_comp.take_poise_damage(50.0, true)
+	_check("boss takes some damage from heavy hits", boss_comp.current() < 300.0)
+	_check("boss not yet broken", not boss_comp.is_vulnerable())
+
+	# AttackTimingData.poise_damage field present and per-attack varied.
+	var swing_a_poise: int = int(AttackTimingsCls.swing_a().poise_damage)
+	var swing_c_poise: int = int(AttackTimingsCls.swing_c().poise_damage)
+	var charged_poise: int = int(AttackTimingsCls.charged_slash().poise_damage)
+	_check("swing_a poise damage > 0", swing_a_poise > 0)
+	_check("swing_c poise damage > swing_a (finisher)", swing_c_poise > swing_a_poise)
+	_check("charged_slash poise highest single-target", charged_poise >= swing_c_poise)
+
+	comp.queue_free()
+	boss_comp.queue_free()
 
 
 func _check(label: String, ok: bool) -> void:

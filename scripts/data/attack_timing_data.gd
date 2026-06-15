@@ -68,6 +68,11 @@ enum RhythmClass {
 ## If true, hit reactions cannot interrupt this attack.
 @export var unstoppable: bool = false
 
+## Phase 2.0 — base poise damage dealt by a single confirmed hit of this
+## attack. Multiplied by 1.5 on a crit by CombatManager. Wide attacks
+## that hit multiple targets deal this per-target.
+@export var poise_damage: int = 5
+
 
 func is_in_active_window(progress: float) -> bool:
 	return progress >= active_window_start and progress < active_window_end

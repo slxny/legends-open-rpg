@@ -9,9 +9,24 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.87.1"
+const GAME_VERSION := "v0.87.2"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.87.2",
+		"title": "Combat overhaul — Phase 5.0 DEATH REACTIONS by killing attack",
+		"date": "2026-06-15",
+		"entries": [
+			"ENEMIES DIE DIFFERENTLY based on WHICH attack killed them. Same enemy, same HP, but visibly different death depending on your finishing blow.",
+			"GROUND PRESS (C-finisher / branch_slam): sprite squashes flat with a bounce-back, orange ground impact ring.",
+			"UPPERCUT LAUNCH (branch_uppercut): sprite jumps up 40 px, spins once, falls and fades. Gold ring.",
+			"SPIN COLLAPSE (branch_spin / whirlwind): sprite spins 2.5× while shrinking. Purple ring.",
+			"DIRECTIONAL FLING (charged_slash / sniper_shot): sprite launches 70 px in hit direction, spinning. Yellow ring.",
+			"KNOCKBACK TUMBLE (power_strike / dash_strike): sprite launches 55 px, tumbles, shrinks. Orange ring.",
+			"Default per-sprite_type death still fires for basic A/B / unknown attacks. Rats keep their existing variants (already wild enough). Mini-bosses keep _die_boss.",
+			"Internal: enemy.gd _killing_attack_id + _killing_hit_direction stored in _on_hit_resolved_for_reaction when result.was_lethal. _try_play_killing_attack_death called from _play_death_animation before per-sprite_type match. Each variant tweens scale/rotation/position differently and spawns _spawn_dramatic_death_ring of distinct color.",
+		]
+	},
 	{
 		"version": "v0.87.1",
 		"title": "Combat overhaul — Phase 6.1 MOMENTUM BAR UI",

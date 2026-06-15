@@ -114,6 +114,10 @@ var _overkill_ratio: float = 0.0
 # variety without authoring new enemy types. Mini-bosses never become
 # additional elites (they're already special).
 const ELITE_CHANCE: float = 0.085  # ~8.5% of regular enemies become elite
+# Phase 5.0 — killing attack id, set by hit_resolved before the death
+# animation runs. Drives death-by-attack-type variants.
+var _killing_attack_id: StringName = &""
+var _killing_hit_direction: Vector2 = Vector2.ZERO
 var _elite_modifier: StringName = &""   # "" / haste / armored / exploder / berserker / healer / shocking
 var _elite_aura: Sprite2D = null
 var _elite_aura_tween: Tween = null
@@ -1051,6 +1055,12 @@ func _play_death_animation() -> void:
 		mega_chance += 0.12
 	if sprite_type != "rat" and randf() < mega_chance:
 		_die_universal_mega_explode()
+		return
+	# Phase 5.0 — death-by-killing-attack variants. Reads
+	# _killing_attack_id set by _on_hit_resolved_for_reaction. Skipped
+	# for rats (their own pattern is louder anyway) and for unknown ids
+	# (falls through to per-sprite_type match).
+	if sprite_type != "rat" and _try_play_killing_attack_death():
 		return
 	match sprite_type:
 		"skeleton":
@@ -3381,6 +3391,136 @@ func _pick_reaction_tier() -> int:
 			return 0  # LIGHT
 
 
+# Phase 5.0 — death reactions per killing-attack-type.
+# Returns true if a custom death variant fired; false to fall through to
+# the standard per-sprite_type death.
+func _try_play_killing_attack_death() -> bool:
+	match _killing_attack_id:
+		&"swing_c", &"branch_slam":
+			_die_ground_press()
+			return true
+		&"branch_uppercut":
+			_die_uppercut_launch()
+			return true
+		&"branch_spin", &"whirlwind":
+			_die_spin_collapse()
+			return true
+		&"charged_slash", &"sniper_shot":
+			_die_directional_fling()
+			return true
+		&"power_strike", &"dash_strike":
+			_die_knockback_tumble()
+			return true
+	return false
+
+
+# Ground press: sprite squashes flat with a small bounce-back and an
+# extra dust/ring at the impact point.
+func _die_ground_press() -> void:
+	_spawn_blood_splatter()
+	if is_instance_valid(sprite):
+		var t := sprite.create_tween()
+		t.tween_property(sprite, "scale", Vector2(_base_scale.x * 1.5, _base_scale.y * 0.10), 0.09).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		t.tween_property(sprite, "scale", Vector2(_base_scale.x * 1.3, _base_scale.y * 0.18), 0.10)
+		t.tween_property(sprite, "modulate:a", 0.0, 0.25)
+		t.tween_callback(queue_free)
+	# Ground impact ring.
+	_spawn_dramatic_death_ring(Color(1.5, 0.7, 0.15, 0.9), 5.0, 0.32)
+
+
+# Uppercut launch: sprite jumps up, spins once, then falls.
+func _die_uppercut_launch() -> void:
+	_spawn_blood_splatter()
+	if is_instance_valid(sprite):
+		var base_pos := sprite.position
+		var t := sprite.create_tween()
+		t.set_parallel(true)
+		t.tween_property(sprite, "position:y", base_pos.y - 40.0, 0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		t.tween_property(sprite, "rotation", TAU, 0.30)
+		t.set_parallel(false)
+		t.tween_property(sprite, "position:y", base_pos.y + 8.0, 0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		t.tween_property(sprite, "modulate:a", 0.0, 0.15)
+		t.tween_callback(queue_free)
+	_spawn_dramatic_death_ring(Color(1.3, 0.85, 0.4, 0.85), 4.2, 0.28)
+
+
+# Spin collapse: sprite spins multiple times while shrinking.
+func _die_spin_collapse() -> void:
+	_spawn_blood_splatter()
+	if is_instance_valid(sprite):
+		var t := sprite.create_tween()
+		t.set_parallel(true)
+		t.tween_property(sprite, "rotation", TAU * 2.5, 0.40)
+		t.tween_property(sprite, "scale", _base_scale * 0.15, 0.40).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		t.tween_property(sprite, "modulate:a", 0.0, 0.40)
+		t.set_parallel(false)
+		t.tween_callback(queue_free)
+	_spawn_dramatic_death_ring(Color(0.85, 0.5, 1.3, 0.85), 4.5, 0.30)
+
+
+# Directional fling: sprite launches away from attacker, spinning.
+func _die_directional_fling() -> void:
+	_spawn_blood_splatter()
+	if is_instance_valid(sprite):
+		var fling_dir: Vector2 = _killing_hit_direction
+		if fling_dir.length() < 0.01:
+			fling_dir = Vector2.RIGHT
+		var base_pos := sprite.position
+		var dest: Vector2 = base_pos + fling_dir.normalized() * 70.0 + Vector2(0, -10)
+		var t := sprite.create_tween()
+		t.set_parallel(true)
+		t.tween_property(sprite, "position", dest, 0.35).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		t.tween_property(sprite, "rotation", TAU * 1.5 * sign(fling_dir.x + 0.01), 0.35)
+		t.tween_property(sprite, "scale", _base_scale * 0.25, 0.35).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		t.tween_property(sprite, "modulate:a", 0.0, 0.40)
+		t.set_parallel(false)
+		t.tween_callback(queue_free)
+	_spawn_dramatic_death_ring(Color(1.5, 1.3, 0.3, 0.85), 4.0, 0.28)
+
+
+# Knockback tumble: launch away + tumble + shrink.
+func _die_knockback_tumble() -> void:
+	_spawn_blood_splatter()
+	if is_instance_valid(sprite):
+		var fling_dir: Vector2 = _killing_hit_direction
+		if fling_dir.length() < 0.01:
+			fling_dir = Vector2.RIGHT
+		var base_pos := sprite.position
+		var dest: Vector2 = base_pos + fling_dir.normalized() * 55.0 + Vector2(0, -4)
+		var t := sprite.create_tween()
+		t.set_parallel(true)
+		t.tween_property(sprite, "position", dest, 0.30).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		t.tween_property(sprite, "rotation", TAU * 0.8 * sign(fling_dir.x + 0.01), 0.30)
+		t.tween_property(sprite, "scale", _base_scale * Vector2(1.4, 0.55), 0.10)
+		t.set_parallel(false)
+		t.tween_property(sprite, "scale", _base_scale * 0.2, 0.20)
+		t.tween_property(sprite, "modulate:a", 0.0, 0.25)
+		t.tween_callback(queue_free)
+	_spawn_dramatic_death_ring(Color(1.4, 0.5, 0.15, 0.85), 4.2, 0.30)
+
+
+func _spawn_dramatic_death_ring(color: Color, final_scale: float, duration: float) -> void:
+	var tex = SpriteGenerator.get_texture("ring_flash")
+	if tex == null:
+		tex = SpriteGenerator.get_texture("crystal_white")
+	if tex == null:
+		return
+	var ring := Sprite2D.new()
+	ring.texture = tex
+	ring.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	ring.global_position = global_position
+	ring.modulate = color
+	ring.scale = Vector2(0.5, 0.5)
+	ring.z_index = -1
+	_get_world_node().add_child(ring)
+	var t := ring.create_tween()
+	t.set_parallel(true)
+	t.tween_property(ring, "scale", Vector2(final_scale, final_scale), duration).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	t.tween_property(ring, "modulate:a", 0.0, duration * 1.1).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	t.set_parallel(false)
+	t.tween_callback(ring.queue_free)
+
+
 # Universal mega-explode: smaller scale of the rat MEGA but applies to
 # ANY enemy. Triggered with low-but-real chance from _play_death_animation.
 # Cranks the existing blood splatter + rat-gib texture into a big fan +
@@ -4151,6 +4291,10 @@ func _on_hit_resolved_for_reaction(result: Resource) -> void:
 	if _hit_reaction == null or not is_instance_valid(_hit_reaction):
 		return
 	var dir: Vector2 = event.direction
+	# Phase 5.0 — store killing attack info for death animation routing.
+	if bool(result.was_lethal):
+		_killing_attack_id = StringName(event.attack_id)
+		_killing_hit_direction = dir
 	# force = 0 → component skips emitting knockback_requested (still
 	# disconnected this stage anyway). Visual flinch + flash still runs.
 	# Note (1B.6d): victim freeze is now dispatched by CombatManager from

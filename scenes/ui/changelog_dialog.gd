@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.87.6"
+const GAME_VERSION := "v0.87.7"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.87.7",
+		"title": "Combat feel — player FRENZY afterimage trail + zoom pulse on heavy specials",
+		"date": "2026-06-15",
+		"entries": [
+			"FRENZY VISUAL TRAIL: while in FRENZY state and moving above 80 px/sec, the player drops red afterimage ghosts every 60 ms behind them. Makes the empowered state feel super-powered to LOOK AT, not just to play.",
+			"Ghosts fade over 350 ms with EASE_OUT. Free use of existing sprite texture / scale / flip — no new asset.",
+			"Internal: _spawn_frenzy_afterimage helper on player. _physics_process checks _momentum.is_frenzy_active() + velocity.length() > 80, ticks _frenzy_trail_timer with _FRENZY_TRAIL_INTERVAL = 0.06s.",
+		]
+	},
 	{
 		"version": "v0.87.6",
 		"title": "Combat overhaul — Phase 3.8 F11 BLOODTHIRST SHRINES (encounter modifiers)",

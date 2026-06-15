@@ -473,6 +473,13 @@ func _physics_process(delta: float) -> void:
 	# Phase 2.13 — LOW-HP DESPERATION state check with hysteresis.
 	_update_low_hp_state()
 
+	# Phase 6.x — frenzy afterimage trail while moving fast.
+	if _momentum != null and _momentum.has_method("is_frenzy_active") and _momentum.is_frenzy_active() and velocity.length() > 80.0:
+		_frenzy_trail_timer -= delta
+		if _frenzy_trail_timer <= 0.0:
+			_frenzy_trail_timer = _FRENZY_TRAIL_INTERVAL
+			_spawn_frenzy_afterimage()
+
 	# Heal beacon immunity visual feedback — detect transitions
 	if is_on_heal_beacon and not _was_on_heal_beacon:
 		_start_immunity_vfx()
@@ -4210,6 +4217,10 @@ func _play_swing_punch(dir: Vector2) -> void:
 # existing ZOOM_LERP_SPEED toward _target_zoom restores it naturally
 # after the tween releases. Generation guard via _zoom_pulse_tween.
 var _zoom_pulse_tween: Tween = null
+# Phase 6.x — frenzy afterimage trail. While the player is in FRENZY
+# state, dropping red ghosts behind them creates a "super-powered" look.
+var _frenzy_trail_timer: float = 0.0
+const _FRENZY_TRAIL_INTERVAL: float = 0.06
 func _pulse_camera_zoom(scale_factor: float) -> void:
 	if camera == null or not is_instance_valid(camera):
 		return
@@ -4284,6 +4295,24 @@ func _on_level_up_grant_upgrade(_new_level: int) -> void:
 	# Audio cue.
 	if AudioManager != null and AudioManager.has_method("play_sfx"):
 		AudioManager.play_sfx("charge_release", 0.0)
+
+
+func _spawn_frenzy_afterimage() -> void:
+	if not is_instance_valid(sprite) or sprite.texture == null:
+		return
+	var ghost := Sprite2D.new()
+	ghost.texture = sprite.texture
+	ghost.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	ghost.global_position = global_position
+	ghost.flip_h = sprite.flip_h
+	ghost.scale = sprite.scale
+	ghost.rotation = sprite.rotation
+	ghost.modulate = Color(1.6, 0.25, 0.15, 0.55)  # red ghost for frenzy
+	ghost.z_index = -1
+	_get_world_node().add_child(ghost)
+	var t := ghost.create_tween()
+	t.tween_property(ghost, "modulate:a", 0.0, 0.35).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	t.tween_callback(ghost.queue_free)
 
 
 func _exit_low_hp() -> void:

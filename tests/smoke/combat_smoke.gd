@@ -605,8 +605,9 @@ func _test_poise() -> void:
 	var ignored = comp.take_poise_damage(50.0, true)
 	_check("damage during break ignored", not ignored)
 
-	# Wait for vulnerability to end (600 ms + headless slack).
-	await get_tree().create_timer(1.2).timeout
+	# Wait past vulnerability (600 ms) but stay inside the post-break
+	# immunity window (also 600 ms). Test the immunity gate next.
+	await get_tree().create_timer(0.85).timeout
 	_check("poise_recovered signal fired", recovered_fired[0])
 	_check("not vulnerable after recovery", not comp.is_vulnerable())
 	_check("poise restored to capacity after break", abs(comp.current() - 15.0) < 0.01)

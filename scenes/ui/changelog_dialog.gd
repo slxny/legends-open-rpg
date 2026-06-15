@@ -9,9 +9,21 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.84.0"
+const GAME_VERSION := "v0.84.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.84.1",
+		"title": "Combat overhaul — Phase 2.1 attack magnetism + lean-in motion",
+		"date": "2026-06-14",
+		"entries": [
+			"COMBAT FEEL: every basic swing (A/B/C/D/E) now leans the player slightly toward the locked target on contact, and biases the swing direction toward the enemy. No more swings that 'stop just outside contact range'.",
+			"Aim bias: 0.45 for A/B, 0.55 for C-finisher/D/uppercut/slam — the swing arcs onto the enemy even if the stick / mouse was a few degrees off. Spin (E) only 0.30 — spins are meant to pivot, not lock.",
+			"Lean-in motion: 18 px for A/B, 22–30 px for C/D/uppercut/slam. Only fires when the target is at least 18 px beyond contact range (no slide-past). Raycast against walls — never pushes the player through geometry.",
+			"Specials and charged slash unchanged — they already do their own physics-aware movement.",
+			"Internal: AttackMotionData Resource per rhythm class. player.gd's _apply_attack_motion runs at the start of each basic swing in _do_melee_attack and returns the biased direction. Uses a short Tween on global_position with collision raycast. CharacterBody2D.velocity / move_and_slide() ownership unchanged.",
+		]
+	},
 	{
 		"version": "v0.84.0",
 		"title": "Combat overhaul — Phase 2.0 Poise & stagger break",

@@ -3,8 +3,10 @@ extends CharacterBody2D
 # Phase 1A.5 — typed combat foundation (no class_name to keep autoload boot order safe).
 const AttackClockCls = preload("res://scripts/combat/attack_clock.gd")
 const AttackTimingsCls = preload("res://scripts/data/attack_timings.gd")
+const AttackTimingDataCls = preload("res://scripts/data/attack_timing_data.gd")
 const HitEventCls = preload("res://scripts/combat/hit_event.gd")
 const CameraShake2DCls = preload("res://scripts/combat/camera_shake_2d.gd")
+const AttackMotionDataCls = preload("res://scripts/data/attack_motion_data.gd")
 
 signal attacked(target: Node2D)
 
@@ -2744,24 +2746,29 @@ func _do_melee_attack(target: Node2D, result: Dictionary, attack_dir: Vector2 = 
 	var tween = create_tween()
 	match swing_idx:
 		0:  # A: left-to-right slash — MIGRATED (Phase 1A.5a): AttackClock drives contact timing
+			dir = _apply_attack_motion(target, dir, AttackTimingDataCls.RhythmClass.CORE_A)
 			_anim_swing_horizontal(tween, frames, base_pos, dir, perp, target, result, 1.0, true)
 			_start_basic_horizontal_clock(AttackTimingsCls.swing_a(), target, dir, 1.0)
 		1:  # B: right-to-left backhand — MIGRATED (Phase 1A.5b)
+			dir = _apply_attack_motion(target, dir, AttackTimingDataCls.RhythmClass.CORE_B)
 			_anim_swing_horizontal(tween, frames, base_pos, dir, perp, target, result, -1.0, true)
 			_start_basic_horizontal_clock(AttackTimingsCls.swing_b(), target, dir, -1.0)
 		2:  # C: overhead chop — MIGRATED (Phase 1A.5c). FINISHER_C rhythm class.
+			dir = _apply_attack_motion(target, dir, AttackTimingDataCls.RhythmClass.FINISHER_C)
 			_anim_overhead_chop(tween, frames, base_pos, dir, target, result, true)
 			_start_overhead_chop_clock(AttackTimingsCls.swing_c(), target, dir)
 			# Phase 1A.6: C is the finisher — reset combo so next press is A again.
 			_combo_index = 0
 			_last_dir_category = ""
 		3:  # D: upward thrust — MIGRATED (Phase 1A.5d). EXTENSION_D.
+			dir = _apply_attack_motion(target, dir, AttackTimingDataCls.RhythmClass.EXTENSION_D)
 			_anim_upward_thrust(tween, frames, base_pos, dir, target, result, true)
 			_start_upward_thrust_clock(AttackTimingsCls.swing_d(), target, dir)
 			# Phase 1A.6: D is a higher-commitment extension — reset combo.
 			_combo_index = 0
 			_last_dir_category = ""
 		4:  # E: spin slash — MIGRATED (Phase 1A.5e). EXTENSION_E (wide attack).
+			dir = _apply_attack_motion(target, dir, AttackTimingDataCls.RhythmClass.EXTENSION_E)
 			_anim_spin_slash(tween, frames, base_pos, dir, target, result, true)
 			_start_spin_slash_clock(AttackTimingsCls.swing_e(), target, dir)
 			# Phase 1A.6: E is a higher-commitment extension — reset combo.
@@ -2802,6 +2809,52 @@ func _anim_swing_horizontal(tween: Tween, frames: Array, base_pos: Vector2,
 	# Return to idle
 	tween.tween_interval(0.05)
 	_anim_return_to_idle(tween, base_pos)
+
+
+# Phase 2.1 — apply magnetism (aim bias) + lean-in motion at swing start.
+# Returns the (possibly biased) attack direction. Spawns a small Tween on
+# self.global_position for the lean-in. Honors raycast wall check so the
+# player never slides through geometry.
+func _apply_attack_motion(target: Node2D, raw_dir: Vector2, rhythm_class: int) -> Vector2:
+	if not is_instance_valid(target):
+		return raw_dir
+	var motion = AttackMotionDataCls.new().apply_preset(rhythm_class)
+	var dir := raw_dir
+	# Aim bias toward target — slight steering so the swing arcs onto the
+	# enemy even if the player's stick / mouse was a bit off.
+	if float(motion.aim_bias) > 0.001:
+		var to_target := (target.global_position - global_position)
+		if to_target.length() > 1.0:
+			var aim_to := to_target.normalized()
+			# Lerp then renormalize — preserves length 1.
+			dir = raw_dir.lerp(aim_to, float(motion.aim_bias)).normalized()
+
+	# Lean-in motion. Skipped when the swing has its own physics movement
+	# (specials / charged) or when the player is already in contact range.
+	if float(motion.motion_distance) <= 0.01:
+		return dir
+	var gap: float = global_position.distance_to(target.global_position)
+	if gap <= float(motion.motion_min_gap):
+		return dir
+	var lean_dist: float = min(float(motion.motion_distance), gap - float(motion.motion_min_gap))
+	if lean_dist <= 1.0:
+		return dir
+	var end_pos := global_position + dir * lean_dist
+	# Wall check — abort motion if the lean-in would push us into geometry.
+	if bool(motion.raycast_check_walls):
+		var space := get_world_2d().direct_space_state
+		var query := PhysicsRayQueryParameters2D.create(global_position, end_pos)
+		query.collision_mask = collision_mask
+		query.exclude = [self]
+		var hit = space.intersect_ray(query)
+		if not hit.is_empty():
+			return dir
+	# Move the player body with a short Tween. _physics_process keeps
+	# running so collision, knockback, and movement input remain coherent.
+	var lean_tween := create_tween()
+	lean_tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	lean_tween.tween_property(self, "global_position", end_pos, float(motion.motion_duration_sec))
+	return dir
 
 
 # Phase 1A.5 — generic AttackClock runner.

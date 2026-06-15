@@ -1030,6 +1030,9 @@ func _die() -> void:
 	# enemy near the player, trigger a brief slow-mo so the kill feels
 	# like the finale of an encounter.
 	_maybe_play_last_enemy_cinematic()
+	# Phase 5.x — leave a blood puddle on the ground. Persistent reminder
+	# of battles fought. Fades over LIFETIME_SEC.
+	_spawn_blood_puddle()
 	hp_bar.visible = false
 	name_label.visible = false
 	if _shadow:
@@ -3772,6 +3775,31 @@ func _elite_exploder_burst() -> void:
 				e.take_damage(int(_EXPLODER_DAMAGE * 0.6), false)
 	if AudioManager != null and AudioManager.has_method("play_sfx"):
 		AudioManager.play_sfx("crit_hit", 1.0)
+
+
+# Phase 5.x — persistent blood puddle on the ground at the death site.
+# Fades over 25 seconds. Uses existing crystal_white texture tinted dark
+# red so no new asset needed.
+const _BLOOD_PUDDLE_LIFETIME_SEC: float = 25.0
+func _spawn_blood_puddle() -> void:
+	var tex = SpriteGenerator.get_texture("crystal_white")
+	if tex == null:
+		return
+	var puddle := Sprite2D.new()
+	puddle.texture = tex
+	puddle.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	# Multiple small ellipses overlap for organic shape.
+	puddle.global_position = global_position + Vector2(randf_range(-3, 3), 6)
+	puddle.modulate = Color(0.35, 0.05, 0.05, 0.75)
+	puddle.scale = Vector2(randf_range(1.4, 2.2), randf_range(0.6, 1.0))
+	puddle.rotation = randf() * TAU
+	puddle.z_index = -2  # ground level
+	_get_world_node().add_child(puddle)
+	# Fade tween.
+	var t: Tween = puddle.create_tween()
+	t.tween_interval(_BLOOD_PUDDLE_LIFETIME_SEC - 3.0)
+	t.tween_property(puddle, "modulate:a", 0.0, 3.0)
+	t.tween_callback(puddle.queue_free)
 
 
 # Phase 3.10 — last-enemy cinematic. After this enemy dies, check for

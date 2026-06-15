@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.89.5"
+const GAME_VERSION := "v0.89.6"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.89.6",
+		"title": "World feel — BLOOD PUDDLES on enemy death (persistent battle scars)",
+		"date": "2026-06-15",
+		"entries": [
+			"Every enemy death now leaves a dark red BLOOD PUDDLE on the ground at the site. Random rotation + scale + slight position jitter for organic look.",
+			"Persists for 22 seconds at full opacity, then fades over 3 seconds. Walking through cleared territory now shows visible signs of your past battles.",
+			"Internal: enemy.gd _spawn_blood_puddle called in _die after _maybe_play_last_enemy_cinematic. Uses crystal_white texture with dark red modulate (0.35/0.05/0.05/0.75), scale 1.4–2.2 × 0.6–1.0, random rotation. z_index -2 so it sits at ground level under sprites. Tween: tween_interval(22) then alpha → 0 over 3s then queue_free.",
+		]
+	},
 	{
 		"version": "v0.89.5",
 		"title": "World feel — RUNNING DUST PUFFS behind the player",

@@ -484,6 +484,13 @@ func _physics_process(delta: float) -> void:
 			_frenzy_trail_timer = _FRENZY_TRAIL_INTERVAL
 			_spawn_frenzy_afterimage()
 
+	# Phase 5.x — dodge afterimage trail while i-frames active.
+	if _dodge != null and _dodge.has_method("is_active") and _dodge.is_active():
+		_dodge_trail_timer -= delta
+		if _dodge_trail_timer <= 0.0:
+			_dodge_trail_timer = _DODGE_TRAIL_INTERVAL
+			_spawn_dodge_afterimage()
+
 	# Phase 5.5 — reactive music intensity tick (every 0.3s).
 	_music_intensity_tick -= delta
 	if _music_intensity_tick <= 0.0:
@@ -4270,6 +4277,9 @@ var _zoom_pulse_tween: Tween = null
 # state, dropping red ghosts behind them creates a "super-powered" look.
 var _frenzy_trail_timer: float = 0.0
 const _FRENZY_TRAIL_INTERVAL: float = 0.06
+# Phase 5.x — dodge afterimage trail timer.
+var _dodge_trail_timer: float = 0.0
+const _DODGE_TRAIL_INTERVAL: float = 0.04
 # Phase 5.5 — reactive music intensity tick.
 var _music_intensity_tick: float = 0.0
 const _MUSIC_INTENSITY_INTERVAL: float = 0.3
@@ -4418,6 +4428,25 @@ func _spawn_frenzy_afterimage() -> void:
 	_get_world_node().add_child(ghost)
 	var t := ghost.create_tween()
 	t.tween_property(ghost, "modulate:a", 0.0, 0.35).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	t.tween_callback(ghost.queue_free)
+
+
+# Phase 5.x — dodge afterimage. Cyan ghost trail during i-frames.
+func _spawn_dodge_afterimage() -> void:
+	if not is_instance_valid(sprite) or sprite.texture == null:
+		return
+	var ghost := Sprite2D.new()
+	ghost.texture = sprite.texture
+	ghost.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	ghost.global_position = global_position
+	ghost.flip_h = sprite.flip_h
+	ghost.scale = sprite.scale
+	ghost.rotation = sprite.rotation
+	ghost.modulate = Color(0.5, 1.3, 1.7, 0.65)  # cyan ghost for dodge
+	ghost.z_index = -1
+	_get_world_node().add_child(ghost)
+	var t := ghost.create_tween()
+	t.tween_property(ghost, "modulate:a", 0.0, 0.28).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	t.tween_callback(ghost.queue_free)
 
 

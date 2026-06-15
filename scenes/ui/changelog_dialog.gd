@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.88.6"
+const GAME_VERSION := "v0.88.7"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.88.7",
+		"title": "Combat feel — DODGE AFTERIMAGE trail (cyan ghosts during i-frames)",
+		"date": "2026-06-15",
+		"entries": [
+			"DODGE NOW LEAVES CYAN AFTERIMAGES. While dodge is active (and i-frames are protecting you), the player drops cyan ghost sprites behind them every 40 ms.",
+			"Pairs with the existing 'sprite tints cyan' flash on perfect-dodge — the whole dodge sequence now reads as a clean dash of motion blur.",
+			"Internal: player.gd _dodge_trail_timer + _DODGE_TRAIL_INTERVAL = 0.04. _physics_process: if _dodge.is_active() and timer <= 0, fires _spawn_dodge_afterimage. Same structure as _spawn_frenzy_afterimage but cyan modulate (0.5/1.3/1.7/0.65) and 280 ms fade.",
+		]
+	},
 	{
 		"version": "v0.88.6",
 		"title": "Combat feel — GOLDEN CRIT SPARKS on critical hits",

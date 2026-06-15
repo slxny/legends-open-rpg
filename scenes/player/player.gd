@@ -480,6 +480,12 @@ func _physics_process(delta: float) -> void:
 			_frenzy_trail_timer = _FRENZY_TRAIL_INTERVAL
 			_spawn_frenzy_afterimage()
 
+	# Phase 5.5 — reactive music intensity tick (every 0.3s).
+	_music_intensity_tick -= delta
+	if _music_intensity_tick <= 0.0:
+		_music_intensity_tick = _MUSIC_INTENSITY_INTERVAL
+		_report_music_intensity()
+
 	# Heal beacon immunity visual feedback — detect transitions
 	if is_on_heal_beacon and not _was_on_heal_beacon:
 		_start_immunity_vfx()
@@ -4221,6 +4227,9 @@ var _zoom_pulse_tween: Tween = null
 # state, dropping red ghosts behind them creates a "super-powered" look.
 var _frenzy_trail_timer: float = 0.0
 const _FRENZY_TRAIL_INTERVAL: float = 0.06
+# Phase 5.5 — reactive music intensity tick.
+var _music_intensity_tick: float = 0.0
+const _MUSIC_INTENSITY_INTERVAL: float = 0.3
 func _pulse_camera_zoom(scale_factor: float) -> void:
 	if camera == null or not is_instance_valid(camera):
 		return
@@ -4295,6 +4304,36 @@ func _on_level_up_grant_upgrade(_new_level: int) -> void:
 	# Audio cue.
 	if AudioManager != null and AudioManager.has_method("play_sfx"):
 		AudioManager.play_sfx("charge_release", 0.0)
+
+
+# Phase 5.5 — compute combat intensity 0..1 and report to AudioManager.
+# Sources: nearby awake enemies, player momentum threshold, low-HP state.
+func _report_music_intensity() -> void:
+	if AudioManager == null or not AudioManager.has_method("set_music_intensity"):
+		return
+	var intensity: float = 0.0
+	# Awake nearby enemies contribute up to 0.5.
+	var count: int = 0
+	for e in _nearby_enemies:
+		if not is_instance_valid(e) or e.get("_is_dead") or e.get("_is_sleeping"):
+			continue
+		count += 1
+		if count >= 6:
+			break
+	intensity += clamp(float(count) / 6.0, 0.0, 1.0) * 0.5
+	# Momentum threshold contributes up to 0.35.
+	if _momentum != null and _momentum.has_method("current_threshold_name"):
+		var thr: StringName = _momentum.current_threshold_name()
+		if thr == &"frenzy":
+			intensity += 0.35
+		elif thr == &"heated":
+			intensity += 0.22
+		elif thr == &"focused":
+			intensity += 0.10
+	# Low-HP adds 0.15.
+	if _low_hp_active:
+		intensity += 0.15
+	AudioManager.set_music_intensity(clamp(intensity, 0.0, 1.0))
 
 
 func _spawn_frenzy_afterimage() -> void:

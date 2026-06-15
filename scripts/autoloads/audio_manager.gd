@@ -13,6 +13,13 @@ var _music_player: AudioStreamPlayer
 var _music_volume_db: float = -10.0
 var _sfx_volume_db: float = 0.0
 
+# Phase 5.5 — reactive music intensity. Player calls
+# set_music_intensity(0..1) periodically; music volume ducks slightly
+# during high intensity so SFX punch through.
+var _music_intensity: float = 0.0
+var _music_intensity_target: float = 0.0
+const _MUSIC_DUCK_MAX_DB: float = -5.0  # max additional duck during peak intensity
+
 # Music rotation system
 var _rotation_tracks: Array[String] = []
 var _rotation_index: int = 0
@@ -26,6 +33,21 @@ var _music_gen_queued: String = ""
 func _ready() -> void:
 	_create_players()
 	_pregenerate_async()
+
+
+func _process(delta: float) -> void:
+	# Smooth music intensity toward target and apply ducking to music
+	# player volume so it stays slightly quieter while combat is intense.
+	if not is_equal_approx(_music_intensity, _music_intensity_target):
+		var lerp_speed: float = 2.0  # 0.5s to settle
+		_music_intensity = lerp(_music_intensity, _music_intensity_target, clampf(lerp_speed * delta, 0.0, 1.0))
+		if _music_player != null:
+			_music_player.volume_db = _music_volume_db + _music_intensity * _MUSIC_DUCK_MAX_DB
+
+
+# Phase 5.5 — called by player ~3 Hz with combat intensity 0..1.
+func set_music_intensity(value: float) -> void:
+	_music_intensity_target = clamp(value, 0.0, 1.0)
 
 # ============================================================
 # PUBLIC API

@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.87.7"
+const GAME_VERSION := "v0.87.8"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.87.8",
+		"title": "Combat overhaul — Phase 5.5 F16 REACTIVE MUSIC INTENSITY",
+		"date": "2026-06-15",
+		"entries": [
+			"MUSIC NOW REACTS to combat. During intense moments — many enemies present, FRENZY active, low HP — the music ducks up to -5 dB so SFX punch through with clarity. As intensity drops, music returns to baseline.",
+			"Smooth crossfade lerp (0.5 s settle) — no jarring jumps. Plays nicely with the existing music rotation / track switching.",
+			"Intensity formula: nearby_awake_enemies/6 × 0.5 + momentum_threshold contribution (frenzy 0.35, heated 0.22, focused 0.10) + low_hp 0.15. Total clamped 0–1.",
+			"Internal: AudioManager gets _music_intensity / _music_intensity_target + set_music_intensity(value). _process lerps the actual value toward target and writes _music_player.volume_db = baseline + intensity × -5. player.gd _report_music_intensity computes from _nearby_enemies + _momentum.current_threshold_name + _low_hp_active, called every 0.3 s.",
+		]
+	},
 	{
 		"version": "v0.87.7",
 		"title": "Combat feel — player FRENZY afterimage trail + zoom pulse on heavy specials",

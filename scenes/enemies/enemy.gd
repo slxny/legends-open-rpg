@@ -387,8 +387,9 @@ void fragment() {
 		_info_label_settings.font_color = Color(1.0, 0.6, 0.6)
 		_info_label_settings.outline_size = 4 if is_mobile else 2
 		_info_label_settings.outline_color = Color.BLACK
-	# Outline shader is applied on-demand (hover only) to avoid per-frame shader cost
-	# Connect mouse hover signals for outline
+	# v0.90.3 — default outline ON (black) so all enemies pop visually.
+	_ensure_outline_material()
+	# Connect mouse hover signals for outline (swaps color to red on hover)
 	mouse_entered.connect(_on_mouse_entered)
 	mouse_exited.connect(_on_mouse_exited)
 
@@ -480,18 +481,29 @@ func hide_selection() -> void:
 		hp_bar.visible = false
 		name_label.visible = false
 
+func _ensure_outline_material() -> void:
+	# v0.90.3 — every enemy gets a permanent BLACK outline by default so
+	# they read as drawn pixel-art instead of procedural-blob silhouettes.
+	# Hover swaps the color to red; mouse_exit restores black.
+	if sprite == null or _outline_shader == null:
+		return
+	if sprite.material == null:
+		var mat = ShaderMaterial.new()
+		mat.shader = _outline_shader
+		mat.set_shader_parameter("line_color", Color(0.05, 0.05, 0.08, 0.95))
+		mat.set_shader_parameter("enabled", true)
+		sprite.material = mat
+
 func _on_mouse_entered() -> void:
 	if not _is_dead and sprite and _outline_shader:
-		if not sprite.material:
-			var mat = ShaderMaterial.new()
-			mat.shader = _outline_shader
-			mat.set_shader_parameter("line_color", Color(1.0, 0.3, 0.3, 0.85))
-			sprite.material = mat
+		_ensure_outline_material()
+		sprite.material.set_shader_parameter("line_color", Color(1.0, 0.3, 0.3, 0.95))
 		sprite.material.set_shader_parameter("enabled", true)
 
 func _on_mouse_exited() -> void:
-	if sprite:
-		sprite.material = null
+	if sprite and sprite.material != null:
+		sprite.material.set_shader_parameter("line_color", Color(0.05, 0.05, 0.08, 0.95))
+		sprite.material.set_shader_parameter("enabled", true)
 
 func show_info() -> void:
 	if _is_dead:

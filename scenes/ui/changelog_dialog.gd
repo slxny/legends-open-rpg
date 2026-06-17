@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.90.2"
+const GAME_VERSION := "v0.90.3"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.90.3",
+		"title": "Visual identity — every character now has a permanent BLACK PIXEL OUTLINE",
+		"date": "2026-06-17",
+		"entries": [
+			"All enemies AND the player now render with a hard 1-px black outline by default. The whole cast suddenly reads as drawn pixel-art instead of bare procedural blobs sitting on the ground.",
+			"Hover still highlights an enemy in red (line color swap, no longer adds/removes material). Player longpress targeting still flashes green.",
+			"Internal: enemy.gd _ensure_outline_material called in _ready; uses existing _outline_shader (alpha-edge dilation) with line_color = (0.05/0.05/0.08/0.95) and enabled=true. _on_mouse_entered/_exited swap color, not material. player.tscn ShaderMaterial outline_color (0.05/0.05/0.08), enabled=true. _set_longpress_outline now keeps enabled=true permanently and swaps outline_color between black and green.",
+		]
+	},
 	{
 		"version": "v0.90.2",
 		"title": "Combat depth — SURPRISE SLAM TELEGRAPHS on every melee enemy (22% per swing)",

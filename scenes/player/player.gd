@@ -3760,9 +3760,15 @@ func _toggle_hero_stats_panel() -> void:
 		panels[0].toggle()
 
 func _set_longpress_outline(on: bool) -> void:
+	# v0.90.3 — base outline (black) is always on. Longpress swaps to bright
+	# green to signal the targeting state. Don't disable; just shift color.
 	var mat = sprite.material as ShaderMaterial
 	if mat:
-		mat.set_shader_parameter("enabled", on)
+		mat.set_shader_parameter("enabled", true)
+		if on:
+			mat.set_shader_parameter("outline_color", Color(0.2, 1.0, 0.3, 1.0))
+		else:
+			mat.set_shader_parameter("outline_color", Color(0.05, 0.05, 0.08, 1.0))
 
 func _get_player_screen_pos() -> Vector2:
 	var canvas_transform = get_viewport().get_canvas_transform()

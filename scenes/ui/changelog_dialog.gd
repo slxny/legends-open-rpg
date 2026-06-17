@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.90.0"
+const GAME_VERSION := "v0.90.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.90.1",
+		"title": "Pacing — enemies have ~65% prior HP (fights resolve in ~half the swings)",
+		"date": "2026-06-16",
+		"entries": [
+			"Enemy max HP scaling reduced from 30 + level×15 to 20 + level×10. A level-1 enemy goes from 45 HP to 30 HP; a level-5 enemy from 105 → 70.",
+			"Fights now feel SNAPPY — basic attacks visibly chew through enemies instead of plinking them. Combined with the v0.90.0 charged-slash buff, you actually feel powerful.",
+			"Player damage, elite multiplier, and boss scaling are UNCHANGED — only baseline scaling shifted. Game balance preserved at higher levels.",
+			"Internal: scenes/enemies/enemy.gd setup() formula. Elite/boss/mini-boss multipliers still stack on top of the new lower baseline.",
+		]
+	},
 	{
 		"version": "v0.90.0",
 		"title": "CHARGED SLASH REWORK — snappier, 2× damage, crowd-clearing knockback",

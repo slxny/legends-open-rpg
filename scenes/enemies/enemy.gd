@@ -394,7 +394,10 @@ func initialize(config: Dictionary) -> void:
 	# Use stats_level for attribute scaling (dampened when boosted above natural range)
 	# while enemy_level is the display level shown to the player
 	var sl = config.get("stats_level", enemy_level)
-	stats.max_hp = 30 + sl * 15
+	# v0.90.1 — global pacing pass: enemies have ~65% of prior HP so swings
+	# actually feel like they're chewing through bodies. Player damage and
+	# elite scaling are unchanged.
+	stats.max_hp = 20 + sl * 10
 	stats.current_hp = stats.max_hp
 	stats.strength = 5 + sl * 2
 	stats.agility = 3 + sl

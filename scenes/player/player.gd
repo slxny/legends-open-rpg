@@ -167,7 +167,7 @@ var _bleed_particle_pool: Array[CPUParticles2D] = []
 const BLEED_PARTICLE_POOL_MAX: int = 5
 const CHARGE_GRACE: float = 0.15  # Hold this long before suppressing basic attacks
 const TAP_RESOLVE_TIME: float = 0.18  # 180ms buffer — more forgiving for multi-tap specials
-const CHARGE_THRESHOLD: float = 1.5   # Hold 1.5s for charged slash
+const CHARGE_THRESHOLD: float = 0.8   # Hold 0.8s for charged slash (snappier ready)
 
 # Screen shake state (procedural, no tween)
 var _shake_intensity: float = 0.0
@@ -1749,9 +1749,9 @@ func _execute_charged_slash(attack_dir: Vector2) -> void:
 	var dir = attack_dir
 	var perp = Vector2(-dir.y, dir.x)
 	var base_pos = sprite.position
-	var dmg_mult := 1.6
-	var slash_range := stats.attack_range * 3.5  # 3.5x normal attack range
-	var slash_width := 30.0  # Half-width of the slash corridor
+	var dmg_mult := 3.0  # Heavy finisher: ~2x what it was
+	var slash_range := stats.attack_range * 3.8  # 3.8x normal attack range
+	var slash_width := 55.0  # Much wider corridor — sweeps a real lane through the crowd
 
 	# Snapshot targets along the entire slash path BEFORE the animation plays.
 	# Query ALL enemies in the world, not just _enemies_in_range (AttackArea is too small).
@@ -1884,14 +1884,28 @@ func _execute_charged_slash(attack_dir: Vector2) -> void:
 			event.ability_multiplier = dmg_mult
 			var _result = CombatManager.resolve_hit(event, stats.get_stats_dict(), enemy.get_stats_dict(), true)
 			if is_instance_valid(enemy):
-				enemy.apply_knockback(dir, 140.0)
+				enemy.apply_knockback(dir, 360.0)  # Massive shove — clears space.
 				_spawn_impact_vfx(enemy.global_position, _result.was_crit)
 			hit_count += 1
 		if hit_count > 0:
-			_do_screen_shake(10.0)
+			_do_screen_shake(18.0)  # Big finisher shake
 			_do_hit_freeze(true)
+			# Phase 5.x — radial shockwave VFX from impact midpoint.
+			var shock_pos: Vector2 = start_pos + dir * (slash_range * 0.6)
+			var shock = _get_pooled_vfx()
+			shock.texture = _tex_slash_arc
+			shock.global_position = shock_pos
+			shock.rotation = 0.0
+			shock.scale = Vector2(1.0, 1.0)
+			shock.modulate = Color(1.6, 1.3, 0.5, 0.9)
+			_get_world_node().add_child(shock)
+			var st = shock.create_tween()
+			st.set_parallel(true)
+			st.tween_property(shock, "scale", Vector2(7.0, 7.0), 0.35).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+			st.tween_property(shock, "modulate:a", 0.0, 0.35)
+			st.chain().tween_callback(_recycle_vfx.bind(shock))
 		else:
-			_do_screen_shake(5.0)
+			_do_screen_shake(7.0)
 		AudioManager.play_sfx("charge_release")
 		_spawn_effect_label("CHARGED SLASH!", Color(1.0, 0.9, 0.3))
 	)

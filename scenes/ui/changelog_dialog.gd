@@ -9,9 +9,22 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.89.9"
+const GAME_VERSION := "v0.90.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.90.0",
+		"title": "CHARGED SLASH REWORK — snappier, 2× damage, crowd-clearing knockback",
+		"date": "2026-06-16",
+		"entries": [
+			"Hold attack: charge is now READY IN 0.8 SECONDS (was 1.5 s). You can actually use the heavy as a combat option, not a slow setup move.",
+			"Damage 1.6× → 3.0×. Charged slash is now a real finisher that can one-shot weak enemies and chunk elites.",
+			"Slash corridor 30 → 55 px wide and 3.5× → 3.8× range — the sweep clears a real lane through a crowd instead of threading the needle.",
+			"Knockback shove 140 → 360. Enemies get launched, opening space and resetting positioning. Combine with dodge to disengage from packs.",
+			"Impact: 18-strength screen shake (was 10), plus a new GOLDEN SHOCKWAVE ring that expands 7× over 350 ms from the slash midpoint.",
+			"Internal: scenes/player/player.gd CHARGE_THRESHOLD 1.5→0.8; _execute_charged_slash dmg_mult 1.6→3.0; slash_width 30→55; slash_range 3.5×→3.8×; apply_knockback strength 140→360; _do_screen_shake 10→18 (5→7 on whiff); shock VFX uses _tex_slash_arc scaled to 7× with golden modulate (1.6/1.3/0.5/0.9) fading over 350 ms.",
+		]
+	},
 	{
 		"version": "v0.89.9",
 		"title": "Combat feel — CAMERA ZOOM-OUT PUNCH on player damage (recoil weight)",

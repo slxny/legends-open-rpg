@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.90.4"
+const GAME_VERSION := "v0.90.5"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.90.5",
+		"title": "New verb — Q-key SHOCKWAVE PULSE (panic-button AOE knockback)",
+		"date": "2026-06-17",
+		"entries": [
+			"Press Q (or controller button 3) for a SHOCKWAVE PULSE: a 220 px radial blast that damages and HARD-KNOCKBACKS every nearby enemy (force 420) while granting 0.45 s of i-frames so you can escape a pile-on.",
+			"Cooldown: 6 seconds. Cyan ring VFX expands from the player; 'SHOCKWAVE' floating text confirms the cast. Mid-cooldown press shows remaining seconds as a hint.",
+			"This is a real new combat verb — the answer to 'I'm surrounded and dodge isn't enough.' Combine with charged slash for crowd resets and with kill chains for clutch escapes.",
+			"Internal: project.godot adds 'shockwave' action (Q / joypad 3). player.gd Input.is_action_just_pressed branch calls _try_shockwave_pulse: respects 6s cooldown, sets _shockwave_iframes_until_usec, spawns cyan _tex_slash_arc ring tween (scale to RADIUS/32 over 300 ms then fade), iterates _nearby_enemies for HitEvent resolve + apply_knockback. take_damage skips early if Time.get_ticks_usec() < _shockwave_iframes_until_usec, popping 'ABSORBED!' text.",
+		]
+	},
 	{
 		"version": "v0.90.4",
 		"title": "World mood — global WARM TWILIGHT TINT + floating golden motes",

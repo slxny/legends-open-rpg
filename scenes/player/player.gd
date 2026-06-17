@@ -543,6 +543,12 @@ func _physics_process(delta: float) -> void:
 			# Brief flicker so the start of the dodge is readable.
 			sprite.modulate = Color(0.7, 0.9, 1.0, 0.9)
 
+	# v0.90.5 — Q-key SHOCKWAVE PULSE: panic-button radial knockback + AOE
+	# damage with brief i-frames. 6 s cooldown. New combat verb that gives
+	# the player a real answer to being surrounded.
+	if Input.is_action_just_pressed("shockwave"):
+		_try_shockwave_pulse()
+
 	# Phase 2.3 — while dodging, the dodge velocity overlay replaces input.
 	if _dodge != null and _dodge.is_active():
 		velocity = _dodge.get_velocity_overlay()
@@ -3637,6 +3643,70 @@ const _MAGNET_SPEED: float = 480.0
 var _damage_punch_base_zoom: Vector2 = Vector2.ZERO
 var _damage_punch_tween: Tween = null
 
+const _SHOCKWAVE_COOLDOWN_SEC: float = 6.0
+const _SHOCKWAVE_RADIUS: float = 220.0
+const _SHOCKWAVE_DMG_MULT: float = 1.4
+const _SHOCKWAVE_KNOCKBACK: float = 420.0
+const _SHOCKWAVE_IFRAMES_SEC: float = 0.45
+var _shockwave_ready_at_usec: int = 0
+var _shockwave_iframes_until_usec: int = 0
+
+func _try_shockwave_pulse() -> void:
+	if _is_dead or _is_attack_animating:
+		return
+	var now: int = Time.get_ticks_usec()
+	if now < _shockwave_ready_at_usec:
+		# Cooldown — brief floating text so the player knows it's not ready.
+		if _juice != null and _juice.has_method("_spawn_floating_text"):
+			var remain: float = float(_shockwave_ready_at_usec - now) / 1_000_000.0
+			_juice._spawn_floating_text(global_position + Vector2(0, -50), "%.1fs" % remain, Color(0.7, 0.7, 0.85), false)
+		return
+	_shockwave_ready_at_usec = now + int(_SHOCKWAVE_COOLDOWN_SEC * 1_000_000.0)
+	_shockwave_iframes_until_usec = now + int(_SHOCKWAVE_IFRAMES_SEC * 1_000_000.0)
+
+	# VFX — expanding cyan ring + central white burst.
+	var world := _get_world_node()
+	var ring := _get_pooled_vfx()
+	ring.texture = _tex_slash_arc
+	ring.global_position = global_position
+	ring.rotation = 0.0
+	ring.scale = Vector2(0.4, 0.4)
+	ring.modulate = Color(0.6, 1.4, 1.8, 0.95)
+	ring.z_index = 5
+	world.add_child(ring)
+	var rt := ring.create_tween()
+	rt.set_parallel(true)
+	rt.tween_property(ring, "scale", Vector2(_SHOCKWAVE_RADIUS / 32.0, _SHOCKWAVE_RADIUS / 32.0), 0.30).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	rt.tween_property(ring, "modulate:a", 0.0, 0.30)
+	rt.chain().tween_callback(_recycle_vfx.bind(ring))
+
+	# Damage + knockback all enemies in range.
+	var r_sq: float = _SHOCKWAVE_RADIUS * _SHOCKWAVE_RADIUS
+	var hit_count: int = 0
+	for enemy in _nearby_enemies:
+		if not is_instance_valid(enemy) or enemy.get("_is_dead") or not enemy.has_method("take_damage"):
+			continue
+		if global_position.distance_squared_to(enemy.global_position) > r_sq:
+			continue
+		var dir: Vector2 = (enemy.global_position - global_position).normalized()
+		if dir == Vector2.ZERO:
+			dir = _facing
+		var event = HitEventCls.new()
+		event.attacker = self
+		event.victim = enemy
+		event.direction = dir
+		event.attack_id = &"shockwave"
+		event.ability_multiplier = _SHOCKWAVE_DMG_MULT
+		CombatManager.resolve_hit(event, stats.get_stats_dict(), enemy.get_stats_dict(), true)
+		if is_instance_valid(enemy) and enemy.has_method("apply_knockback"):
+			enemy.apply_knockback(dir, _SHOCKWAVE_KNOCKBACK)
+		hit_count += 1
+
+	_do_screen_shake(14.0)
+	AudioManager.play_sfx("charge_release")
+	if _juice != null and _juice.has_method("_spawn_floating_text"):
+		_juice._spawn_floating_text(global_position + Vector2(0, -50), "SHOCKWAVE", Color(0.7, 1.3, 1.7), true)
+
 func _do_damage_camera_punch(amount: int) -> void:
 	if camera == null:
 		return
@@ -3810,6 +3880,11 @@ func take_damage(amount: int, is_crit: bool = false) -> void:
 		return  # Can't take damage while dead
 	if is_on_heal_beacon:
 		return  # Immune while standing on heal beacon
+	# v0.90.5 — shockwave pulse grants short i-frames.
+	if Time.get_ticks_usec() < _shockwave_iframes_until_usec:
+		if _juice != null and _juice.has_method("_spawn_floating_text"):
+			_juice._spawn_floating_text(global_position + Vector2(randf_range(-6, 6), -52), "ABSORBED!", Color(0.6, 1.4, 1.7), false)
+		return
 	# Phase 2.3 — dodge absorption. on_incoming_hit returns true while
 	# i-frames are active. Also emits perfect_dodge_executed if the hit
 	# landed in the perfect window (subscribed by Phase 2.5 reward).

@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.90.3"
+const GAME_VERSION := "v0.90.4"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.90.4",
+		"title": "World mood — global WARM TWILIGHT TINT + floating golden motes",
+		"date": "2026-06-17",
+		"entries": [
+			"The entire world now passes through a warm twilight color grade (red 1.04 / green 0.97 / blue 0.85 multiply). Pure-white sprites read as soft cream; greens look warmer; cool blues shift toward dusk. Transforms the painterly mood without touching a single sprite.",
+			"80 golden ambient MOTES (fireflies / sun dust) now drift slowly across the world plane at all times. Subtle but instantly says 'living world'.",
+			"Internal: scenes/world/world.gd _install_ambient_grade creates a CanvasModulate child with color (1.04, 0.97, 0.85). _install_ambient_motes creates a GPUParticles2D — amount 80, lifetime 7s, preprocess 5s, box emission 3000×2000, drifting up-right at 10–25 px/s, scale 0.6–1.6, warm modulate (1.5/1.25/0.7/0.55), z_index 50 so they layer over the ground but below UI. Both nodes are guarded with has_node checks so re-entering world doesn't duplicate.",
+		]
+	},
 	{
 		"version": "v0.90.3",
 		"title": "Visual identity — every character now has a permanent BLACK PIXEL OUTLINE",

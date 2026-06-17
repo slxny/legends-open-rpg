@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.90.1"
+const GAME_VERSION := "v0.90.2"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.90.2",
+		"title": "Combat depth — SURPRISE SLAM TELEGRAPHS on every melee enemy (22% per swing)",
+		"date": "2026-06-17",
+		"entries": [
+			"Goblins, bandits, skeletons, spiders, dark mages, and scorpions can now ROLL INTO A SLAM ATTACK at windup time — a big radial red telegraph + AOE damage instead of a regular swing. ~22% chance per swing.",
+			"Adds a real spacing/dodge decision to every encounter: if you see the red ring expand, get out of it or eat heavy damage. Rolling out opens a free crit window on the recovering enemy.",
+			"Rats (triple-stab), wolves (charge), and trolls/ogres/golems (always slam) keep their identities.",
+			"Internal: enemy.gd new _pattern_override field. _maybe_roll_pattern_override called at top of _begin_attack_windup with 22% gate; bails for rat/wolf/troll/ogre/golem. _end_attack_windup clears the override so each swing rolls fresh. Existing slam telegraph + _resolve_slam_strike pipeline reused — no new VFX needed.",
+		]
+	},
 	{
 		"version": "v0.90.1",
 		"title": "Pacing — enemies have ~65% prior HP (fights resolve in ~half the swings)",

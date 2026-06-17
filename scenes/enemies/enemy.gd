@@ -158,7 +158,11 @@ func _is_in_vulnerability_window() -> bool:
 var _stabs_remaining: int = 0
 var _slam_telegraph: Sprite2D = null
 
+var _pattern_override: StringName = &""
+
 func _get_attack_pattern() -> StringName:
+	if _pattern_override != &"":
+		return _pattern_override
 	if sprite_type == "rat":
 		return &"triple_stab"
 	if sprite_type == "troll" or sprite_type == "ogre" or sprite_type == "ancient_golem":
@@ -166,6 +170,22 @@ func _get_attack_pattern() -> StringName:
 	if sprite_type == "wolf":
 		return &"charge"
 	return &"standard"
+
+# v0.90.2 — at windup time, give standard-pattern medium/heavy enemies a chance
+# to surprise-roll into a SLAM (telegraphed radial AOE). Adds a real
+# spacing/dodge decision to every encounter, not just troll/ogre fights.
+# Rats and wolves keep their identities; goblins/bandits/skeletons/spiders/
+# dark_mage/scorpion can roll into a slam.
+func _maybe_roll_pattern_override() -> void:
+	_pattern_override = &""
+	if sprite_type == "rat" or sprite_type == "wolf":
+		return
+	if sprite_type == "troll" or sprite_type == "ogre" or sprite_type == "ancient_golem":
+		return  # already always-slam
+	# 22% chance per attack — frequent enough you'll see it within a fight,
+	# rare enough that it stays a surprise beat.
+	if randf() < 0.22:
+		_pattern_override = &"slam"
 
 const _CHARGE_SPEED: float = 320.0
 const _CHARGE_DAMAGE_MULT: float = 1.30
@@ -4162,6 +4182,9 @@ func _get_telegraph_severity_color() -> Color:
 func _begin_attack_windup() -> void:
 	if _is_dead or not is_instance_valid(sprite):
 		return
+	# v0.90.2 — roll for surprise slam telegraph BEFORE other windup logic
+	# so _get_attack_pattern() reflects it for all downstream branches.
+	_maybe_roll_pattern_override()
 	# Kill any leftover wind-up tween.
 	if _windup_tween != null and _windup_tween.is_valid():
 		_windup_tween.kill()
@@ -4211,6 +4234,8 @@ func _begin_attack_windup() -> void:
 # Striking phase: snap forward, normal colour. _end_attack_windup runs
 # even if the strike misses (range check fails), so visuals always reset.
 func _end_attack_windup() -> void:
+	# v0.90.2 — pattern override expires with the swing it was rolled for.
+	_pattern_override = &""
 	if not is_instance_valid(sprite):
 		return
 	if _windup_tween != null and _windup_tween.is_valid():

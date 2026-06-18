@@ -138,10 +138,18 @@ func _on_hit_resolved(result: Resource) -> void:
 	# Pick the loudest single label for this hit.
 	var label: String = ""
 	var color: Color = Color(1.0, 0.85, 0.3)
+	# v0.90.7 — positional hits take priority over generic crit labels.
+	var positional: StringName = StringName(result.get_meta("positional_tag", ""))
 	# Lethal kill — always celebrate.
 	if was_lethal:
 		label = "KILL!"
 		color = Color(1.5, 0.3, 0.3)
+	elif positional == &"back":
+		label = "FROM BEHIND!"
+		color = Color(1.7, 0.4, 1.4)
+	elif positional == &"flank":
+		label = "FLANKED!"
+		color = Color(1.5, 0.9, 0.3)
 	elif was_crit:
 		# Crit on a finisher reads as a slow-mo blow.
 		if attack_id == &"swing_c" or attack_id == &"branch_slam" or attack_id == &"charged_slash":

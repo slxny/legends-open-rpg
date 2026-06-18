@@ -101,14 +101,43 @@ func resolve_hit(event: Resource, attacker_stats: Dictionary, defender_stats: Di
 				var consumed = StringName(status_comp.consume_first_tier(consume_tier, event.attack_id))
 				if consumed != &"":
 					consume_mult = float(timing_lookup.get("consume_damage_mult"))
-	var calc := calculate_damage(attacker_stats, defender_stats, ability_mult * consume_mult)
+	# v0.90.7 — POSITIONAL HIT system. Attacking an enemy from behind forces a
+	# crit + 50% damage and shows "FROM BEHIND!". Side flank applies mild
+	# exposed bonus (+25%). Frontal is baseline.
+	var positional_mult: float = 1.0
+	var positional_tag: StringName = &""
+	var force_back_crit: bool = false
+	var atk_node: Node = event.get("attacker") as Node
+	var vic_node: Node = event.get("victim") as Node
+	if atk_node is Node2D and vic_node is Node2D:
+		var a2d: Node2D = atk_node
+		var v2d: Node2D = vic_node
+		var vic_sprite: Node = v2d.get_node_or_null("Sprite")
+		if vic_sprite != null and "flip_h" in vic_sprite:
+			var v_forward: Vector2 = Vector2(-1, 0) if bool(vic_sprite.get("flip_h")) else Vector2(1, 0)
+			var to_atk: Vector2 = a2d.global_position - v2d.global_position
+			if to_atk.length_squared() > 1.0:
+				var dot: float = v_forward.dot(to_atk.normalized())
+				if dot < -0.35:
+					positional_mult = 1.5
+					positional_tag = &"back"
+					force_back_crit = true
+				elif absf(dot) < 0.35:
+					positional_mult = 1.25
+					positional_tag = &"flank"
+
+	var calc := calculate_damage(attacker_stats, defender_stats, ability_mult * consume_mult * positional_mult)
 	var damage: int = calc["damage"]
 	var rolled_crit: bool = calc["is_crit"]
-	var forced_crit: bool = bool(event.get("force_crit"))
+	var forced_crit: bool = bool(event.get("force_crit")) or force_back_crit
 	var is_crit: bool = rolled_crit or forced_crit
 
 	if forced_crit and not rolled_crit:
 		damage = int(damage * 2.0)
+
+	# Surface positional tag on the result so juice layer can pop a label.
+	if positional_tag != &"":
+		result.set_meta("positional_tag", positional_tag)
 
 	result.damage_dealt = damage
 	result.was_crit = is_crit

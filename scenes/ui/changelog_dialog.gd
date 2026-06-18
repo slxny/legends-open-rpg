@@ -9,9 +9,21 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.90.6"
+const GAME_VERSION := "v0.90.7"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.90.7",
+		"title": "Combat REVAMP — POSITIONAL HITS (back attacks guarantee crit + 50%)",
+		"date": "2026-06-18",
+		"entries": [
+			"Every hit now checks WHERE you struck the enemy from. Combat is no longer 'face them and mash'.",
+			"FROM BEHIND (forward dot < -0.35): forced crit + 1.5× damage. Magenta 'FROM BEHIND!' popup. Use dodge-through to swing around to the rear for huge swings.",
+			"FLANK (forward dot abs < 0.35): +1.25× damage. Yellow 'FLANKED!' popup. Side-stepping pays off.",
+			"FRONTAL: baseline. The lazy option is now the weak option.",
+			"Internal: combat_manager.gd resolve_hit computes v_forward from victim sprite.flip_h, dot with normalized to-attacker. Adjusts ability_multiplier by positional_mult; sets force_back_crit and result.set_meta('positional_tag', ...). combat_juice_layer.gd _on_hit_resolved checks positional tag before generic crit label.",
+		]
+	},
 	{
 		"version": "v0.90.6",
 		"title": "Visual REVAMP — full-screen CINEMATIC POST-PROCESS (vignette + grade + bloom)",

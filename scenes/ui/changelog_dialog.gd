@@ -9,9 +9,22 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.90.5"
+const GAME_VERSION := "v0.90.6"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.90.6",
+		"title": "Visual REVAMP — full-screen CINEMATIC POST-PROCESS (vignette + grade + bloom)",
+		"date": "2026-06-18",
+		"entries": [
+			"The entire game now passes through a SCREEN-SPACE POST-PROCESS shader. The look is completely different from anything before — this is the headline 'I notice it instantly' change you asked for.",
+			"VIGNETTE: 55%-strength corner darkening with soft falloff. Eyes naturally drawn to the action at screen center.",
+			"CONTRAST 1.18 + SATURATION 1.22 + BRIGHTNESS -0.04: shadows deepen, colors get richer, midtones gain punch.",
+			"SPLIT-TONE: cool blue shadows (0.88/0.92/1.05), warm cream highlights (1.08/1.02/0.88). Classic teal-and-orange cinema look.",
+			"SUBTLE BLOOM: bright pixels above 0.82 luminance leak light into neighbors. Sparks, fire, magic, sun all glow softly.",
+			"Internal: scenes/world/post_process.gdshader new canvas_item shader reading SCREEN_TEXTURE. _install_post_process creates CanvasLayer (layer=100) > BackBufferCopy > full-anchor ColorRect with shader material. v0.90.4's heavy warm tint was tamped down to (1.02, 0.99, 0.94) so it doesn't fight the new grading.",
+		]
+	},
 	{
 		"version": "v0.90.5",
 		"title": "New verb — Q-key SHOCKWAVE PULSE (panic-button AOE knockback)",

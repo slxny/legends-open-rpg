@@ -399,6 +399,19 @@ void fragment() {
 	_ensure_outline_material()
 	# v0.91.2 — modern pixel-art DROP SHADOW under every character.
 	_ensure_drop_shadow()
+	# v0.91.7 — per-instance chromatic variance. Every enemy of the same type
+	# now picks a slight tint shift so a group of 6 goblins doesn't look like
+	# 6 clones. Bypassed for mini-bosses (they have their own identity tint).
+	if not is_mini_boss:
+		var jitter_r: float = randf_range(0.88, 1.08)
+		var jitter_g: float = randf_range(0.90, 1.06)
+		var jitter_b: float = randf_range(0.85, 1.05)
+		_base_modulate = Color(jitter_r, jitter_g, jitter_b, 1.0)
+		if sprite != null:
+			sprite.modulate = _base_modulate
+	# v0.91.7 — gentle idle BREATHE: slight vertical scale pulse so enemies
+	# don't read as static cardboard cutouts when idling.
+	_start_enemy_idle_breathe()
 	# Connect mouse hover signals for outline (swaps color to red on hover)
 	mouse_entered.connect(_on_mouse_entered)
 	mouse_exited.connect(_on_mouse_exited)
@@ -490,6 +503,23 @@ func hide_selection() -> void:
 	if stats.current_hp >= stats.max_hp and current_state == State.IDLE:
 		hp_bar.visible = false
 		name_label.visible = false
+
+var _idle_breathe_tween: Tween = null
+
+func _start_enemy_idle_breathe() -> void:
+	if sprite == null:
+		return
+	if _idle_breathe_tween != null and _idle_breathe_tween.is_valid():
+		return
+	# Stagger phase so a whole pack doesn't pulse in unison.
+	var dur: float = randf_range(1.6, 2.4)
+	var bx: float = _base_scale.x
+	var by: float = _base_scale.y
+	var pulse_x: float = bx * 1.025
+	var pulse_y: float = by * 0.965
+	_idle_breathe_tween = create_tween().set_loops()
+	_idle_breathe_tween.tween_property(sprite, "scale", Vector2(pulse_x, pulse_y), dur).set_trans(Tween.TRANS_SINE)
+	_idle_breathe_tween.tween_property(sprite, "scale", _base_scale, dur).set_trans(Tween.TRANS_SINE)
 
 func _ensure_drop_shadow() -> void:
 	# v0.91.2 — mascara-thick black elliptical shadow disc baked under the

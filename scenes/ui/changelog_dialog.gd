@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.91.6"
+const GAME_VERSION := "v0.91.7"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.91.7",
+		"title": "Living enemies — chromatic VARIANCE + idle BREATHE on every enemy",
+		"date": "2026-06-19",
+		"entries": [
+			"Every non-mini-boss enemy now picks a slight per-instance tint at spawn (R 0.88–1.08, G 0.90–1.06, B 0.85–1.05). A pack of 6 goblins now looks like 6 different goblins, not 6 clones.",
+			"Every enemy IDLE-BREATHES: 1.6–2.4 s scale pulse (×1.025 / ×0.965), randomized phase so packs don't sync. Cardboard cutout problem solved.",
+			"Internal: enemy.gd _ready applies _base_modulate jitter (skipped for mini-bosses, which preserve their identity tint). _start_enemy_idle_breathe creates an infinite loop tween on sprite.scale around _base_scale.",
+		]
+	},
 	{
 		"version": "v0.91.6",
 		"title": "Painted world — chromatic VARIANCE on every foliage prop",

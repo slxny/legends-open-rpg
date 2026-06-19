@@ -503,6 +503,10 @@ func _generate_terrain_async() -> void:
 	# with high-contrast water curves and navigable structure between camps.
 	await _spawn_river_and_ponds(rng)
 	await _spawn_dirt_paths(rng)
+	# v0.92.2 — distant MOUNTAIN HORIZON silhouettes hugging the world edges.
+	# Replaces the visually-empty void at the map bounds with a sense of
+	# scale + depth. Layered, desaturated, low-saturation.
+	await _spawn_edge_horizon(rng)
 
 	# Phase 7 — destructible explosive barrels scattered around enemy
 	# camp areas. Hit them to chain damage; knock enemies into them.
@@ -680,6 +684,62 @@ func _spawn_dirt_paths(rng: RandomNumberGenerator) -> void:
 			add_child(p)
 			if i % 8 == 0:
 				await get_tree().process_frame
+
+
+func _spawn_edge_horizon(rng: RandomNumberGenerator) -> void:
+	# Mountain silhouettes hugging the world bounds (-6000/+6000 X, -4500/+4500 Y).
+	# Each mountain = 4–6 overlapping terrain_blob ellipses tinted blue-purple.
+	# Two parallax bands: a far-back haze layer and a closer dark-silhouette layer.
+	var blob_tex := SpriteGenerator.get_texture("terrain_blob")
+	if blob_tex == null:
+		return
+	# Top edge
+	var step: float = 320.0
+	for x in range(-5800, 5800 + int(step), int(step)):
+		_add_mountain(blob_tex, rng, Vector2(x + rng.randf_range(-90, 90), -4350), false)
+		_add_mountain(blob_tex, rng, Vector2(x + rng.randf_range(-110, 110), -4280), true)  # haze layer in front
+		await get_tree().process_frame
+	# Bottom edge
+	for x in range(-5800, 5800 + int(step), int(step)):
+		_add_mountain(blob_tex, rng, Vector2(x + rng.randf_range(-90, 90), 4350), false)
+		_add_mountain(blob_tex, rng, Vector2(x + rng.randf_range(-110, 110), 4280), true)
+		await get_tree().process_frame
+	# Left edge
+	for y in range(-4200, 4200 + int(step), int(step)):
+		_add_mountain(blob_tex, rng, Vector2(-5850, y + rng.randf_range(-90, 90)), false)
+		_add_mountain(blob_tex, rng, Vector2(-5780, y + rng.randf_range(-110, 110)), true)
+	# Right edge
+	for y in range(-4200, 4200 + int(step), int(step)):
+		_add_mountain(blob_tex, rng, Vector2(5850, y + rng.randf_range(-90, 90)), false)
+		_add_mountain(blob_tex, rng, Vector2(5780, y + rng.randf_range(-110, 110)), true)
+
+
+func _add_mountain(blob_tex: Texture2D, rng: RandomNumberGenerator, pos: Vector2, haze: bool) -> void:
+	# Each mountain is 4–6 stacked ellipses to fake a chunky silhouette.
+	var lumps: int = rng.randi_range(4, 6)
+	for i in range(lumps):
+		var s := Sprite2D.new()
+		s.texture = blob_tex
+		s.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		# Stack lumps with slight offsets so the silhouette has bumps.
+		var off := Vector2(
+			rng.randf_range(-220, 220),
+			rng.randf_range(-60, 60) - float(i) * 12.0  # higher lumps slightly above
+		)
+		s.position = pos + off
+		var width: float = rng.randf_range(7.0, 13.0)
+		var height: float = rng.randf_range(2.5, 4.5)
+		s.scale = Vector2(width, height)
+		s.rotation = rng.randf_range(-0.08, 0.08)
+		if haze:
+			# Closer / lighter / bluer haze layer.
+			s.modulate = Color(0.45, 0.52, 0.62, rng.randf_range(0.35, 0.5))
+			s.z_index = -6
+		else:
+			# Far / dark mountain silhouette.
+			s.modulate = Color(0.22, 0.26, 0.36, rng.randf_range(0.75, 0.92))
+			s.z_index = -7
+		add_child(s)
 
 
 func _add_creep_ground(center: Vector2, radius: float) -> void:

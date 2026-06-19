@@ -9,9 +9,21 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.92.1"
+const GAME_VERSION := "v0.92.2"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.92.2",
+		"title": "World horizon — distant MOUNTAIN SILHOUETTES at every map edge",
+		"date": "2026-06-19",
+		"entries": [
+			"The world bounds were visually empty (just 20-px-thick brown rect walls). Now they're hugged by a chunky mountain silhouette LINE with parallax depth.",
+			"Two layers per edge: dark BLUE-PURPLE silhouettes (0.22 / 0.26 / 0.36, alpha 0.75–0.92) at z=-7 for the FAR mountain band, lighter BLUE HAZE (0.45 / 0.52 / 0.62, alpha 0.35–0.5) at z=-6 layered slightly in front for atmospheric perspective.",
+			"Each mountain = 4–6 stacked terrain_blob ellipses with random offsets so silhouettes look chunky and natural. Top/bottom/left/right edges all wrapped.",
+			"Camera now reveals world EDGES instead of a void.",
+			"Internal: scenes/world/regions/havens_rest.gd _spawn_edge_horizon iterates 320-px spaced positions along all 4 edges. _add_mountain stacks 4–6 wide-and-short blob ellipses (scale x 7–13, y 2.5–4.5) with slight rotation jitter.",
+		]
+	},
 	{
 		"version": "v0.92.1",
 		"title": "MAP REDESIGN — winding river, ponds, and dirt paths break the flat-square world",

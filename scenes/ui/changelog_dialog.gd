@@ -9,9 +9,21 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.92.0"
+const GAME_VERSION := "v0.92.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.92.1",
+		"title": "MAP REDESIGN — winding river, ponds, and dirt paths break the flat-square world",
+		"date": "2026-06-19",
+		"entries": [
+			"A 120-segment WINDING RIVER now cuts diagonally across the world (top-left → bottom-right) with sinusoidal meander + per-step jitter. High-contrast blue interrupting the green flatness.",
+			"5 PONDS scattered around the map, each built from 8–12 overlapping water blobs for organic shape. Per-blob hue variance so water reads as natural, not solid blue.",
+			"4 DIRT PATHS radiate from town center outward in different directions — wandering organic trails (50–70 steps each, perpendicular jitter ±22 px) that give the world navigable structure.",
+			"Skips placement near town center (radius 600) and ponds skip if too close to camps.",
+			"Internal: scenes/world/regions/havens_rest.gd _spawn_river_and_ponds (terrain_blob tinted blue, alpha 0.80–0.96) and _spawn_dirt_paths (dirt_patch tinted warm brown, alpha 0.50–0.80). Both run in _generate_terrain_async right before barrels.",
+		]
+	},
 	{
 		"version": "v0.92.0",
 		"title": "Trees BRIGHTENED to match cheerful ground (no more black blobs)",

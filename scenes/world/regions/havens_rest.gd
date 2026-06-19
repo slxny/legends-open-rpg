@@ -499,6 +499,11 @@ func _generate_terrain_async() -> void:
 	_scatter_small_decor(rng, "flowers", 140, 0.7, 1.2, -7)
 	_scatter_small_decor(rng, "mushroom_cluster", 60, 0.7, 1.1, -7)
 
+	# v0.92.1 — RIVER + PONDS + DIRT PATHS. Breaks up the flat-rectangle map
+	# with high-contrast water curves and navigable structure between camps.
+	await _spawn_river_and_ponds(rng)
+	await _spawn_dirt_paths(rng)
+
 	# Phase 7 — destructible explosive barrels scattered around enemy
 	# camp areas. Hit them to chain damage; knock enemies into them.
 	_spawn_destructible_barrels(rng, 24)
@@ -586,6 +591,96 @@ func _scatter_small_decor(rng: RandomNumberGenerator, tex_name: String, count: i
 		if batch_local >= 80:
 			batch_local = 0
 			await get_tree().process_frame
+
+func _spawn_river_and_ponds(rng: RandomNumberGenerator) -> void:
+	# v0.92.1 — wavy river curve diagonally across the map + a few ponds.
+	# Implemented as a chain of overlapping blue terrain_blob sprites so the
+	# water curves and varies naturally instead of being a hard rect.
+	var blob_tex := SpriteGenerator.get_texture("terrain_blob")
+	if blob_tex == null:
+		return
+	# RIVER — wave from top-left to bottom-right, with perpendicular jitter.
+	var river_start := Vector2(-5400, -3600)
+	var river_end := Vector2(5400, 3600)
+	var seg: int = 120
+	for i in range(seg):
+		var t: float = float(i) / float(seg - 1)
+		var center: Vector2 = river_start.lerp(river_end, t)
+		# Sinusoidal meander + per-step random offset.
+		var meander: float = sin(t * TAU * 2.5) * 380.0 + rng.randf_range(-60, 60)
+		var perp := (river_end - river_start).normalized().rotated(PI * 0.5)
+		center += perp * meander
+		# Skip if near town center.
+		if center.length() < 600:
+			continue
+		_add_water_blob(blob_tex, rng, center, rng.randf_range(2.4, 4.2))
+		if i % 6 == 0:
+			await get_tree().process_frame
+	# PONDS — 5 isolated water bodies away from camps.
+	for _i in range(5):
+		var pos: Vector2 = Vector2(rng.randf_range(-5000, 5000), rng.randf_range(-3800, 3800))
+		if pos.length() < 1200:
+			continue
+		# Make each pond from 8–12 overlapping blobs for organic shape.
+		var count: int = rng.randi_range(8, 12)
+		for _j in range(count):
+			var off := Vector2(rng.randf_range(-160, 160), rng.randf_range(-110, 110))
+			_add_water_blob(blob_tex, rng, pos + off, rng.randf_range(1.8, 3.2))
+
+
+func _add_water_blob(blob_tex: Texture2D, rng: RandomNumberGenerator, pos: Vector2, size: float) -> void:
+	var b := Sprite2D.new()
+	b.texture = blob_tex
+	b.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	b.position = pos
+	b.scale = Vector2(size, size * rng.randf_range(0.6, 1.1))
+	b.rotation = rng.randf() * TAU
+	# Per-blob slight hue variation so the water isn't monotone.
+	var blue_r: float = rng.randf_range(0.18, 0.30)
+	var blue_g: float = rng.randf_range(0.40, 0.55)
+	var blue_b: float = rng.randf_range(0.62, 0.78)
+	b.modulate = Color(blue_r, blue_g, blue_b, rng.randf_range(0.80, 0.96))
+	b.z_index = -8  # Above ground (-10), below decorations (-7).
+	add_child(b)
+
+
+func _spawn_dirt_paths(rng: RandomNumberGenerator) -> void:
+	# v0.92.1 — a few winding dirt paths radiating out from the town toward
+	# the world edges. Reuses dirt_patch texture; very small patches placed
+	# tightly along the path so it reads as a continuous trail.
+	var dirt_tex := SpriteGenerator.get_texture("dirt_patch")
+	if dirt_tex == null:
+		return
+	# 4 directional paths from town center.
+	var directions: Array = [
+		Vector2(1, 0.3).normalized(),
+		Vector2(-0.7, 0.7).normalized(),
+		Vector2(-0.2, -1).normalized(),
+		Vector2(0.8, -0.6).normalized(),
+	]
+	for d in directions:
+		var pos := Vector2(0, 0) + d * 700  # Start outside town
+		var step: float = 65.0
+		var max_steps: int = rng.randi_range(50, 70)
+		var perp := d.rotated(PI * 0.5)
+		for i in range(max_steps):
+			# Random wander perpendicular for organic curve.
+			pos += d * step + perp * rng.randf_range(-22, 22)
+			var p := Sprite2D.new()
+			p.texture = dirt_tex
+			p.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			p.position = pos
+			var s: float = rng.randf_range(1.6, 2.4)
+			p.scale = Vector2(s, s * rng.randf_range(0.7, 1.1))
+			p.rotation = rng.randf() * TAU
+			# Warm dirt tint with variance.
+			var tr: float = rng.randf_range(0.78, 1.10)
+			p.modulate = Color(tr, tr * 0.85, tr * 0.55, rng.randf_range(0.50, 0.80))
+			p.z_index = -8
+			add_child(p)
+			if i % 8 == 0:
+				await get_tree().process_frame
+
 
 func _add_creep_ground(center: Vector2, radius: float) -> void:
 	# Multiple overlapping dark ground sprites to form organic creep shape

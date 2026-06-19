@@ -512,6 +512,9 @@ func _physics_process(delta: float) -> void:
 	# Phase 5.x — magnetize nearby gold/item drops toward player (Diablo-style).
 	_magnetize_nearby_drops(delta)
 
+	# v0.91.1 — stamina regen.
+	_tick_stamina(delta)
+
 	# Heal beacon immunity visual feedback — detect transitions
 	if is_on_heal_beacon and not _was_on_heal_beacon:
 		_start_immunity_vfx()
@@ -1219,7 +1222,16 @@ func _try_manual_attack() -> void:
 	if _is_attack_animating or _attack_cooldown > 0.0:
 		return
 
-	_attack_cooldown = 0.5 / stats.attack_speed
+	# v0.91.1 — stamina gate. Basic attacks cost STAMINA_COST. If exhausted,
+	# the swing still goes but it's slow and weak (and labelled).
+	_stamina_attack_was_exhausted = _stamina < STAMINA_COST
+	if _stamina_attack_was_exhausted:
+		_attack_cooldown = 0.85 / stats.attack_speed  # slow tired swing
+		if _juice != null and _juice.has_method("_spawn_floating_text"):
+			_juice._spawn_floating_text(global_position + Vector2(0, -52), "EXHAUSTED!", Color(0.9, 0.7, 0.6), false)
+	else:
+		_stamina = maxf(0.0, _stamina - STAMINA_COST)
+		_attack_cooldown = 0.5 / stats.attack_speed
 
 	# Determine attack direction: held keys/joystick > recent click/tap aim > mobile touch > velocity > facing
 	var input_raw = Vector2(
@@ -3195,7 +3207,9 @@ func _run_clocked_attack(timing: Resource, target: Node2D, dir: Vector2, ability
 	# Phase 2.13 — low-HP desperation adds +25% damage.
 	if _low_hp_active:
 		damage_mult *= _LOW_HP_DAMAGE_MULT
-	var captured_mult := ability_mult * damage_mult
+	# v0.91.1 — exhausted basic swings dock damage to 40%.
+	var stamina_mult: float = 0.4 if _stamina_attack_was_exhausted else 1.0
+	var captured_mult := ability_mult * damage_mult * stamina_mult
 	var captured_on_contact := on_contact
 	clock.progress_changed.connect(func(p: float) -> void:
 		if contact_fired[0]:
@@ -3642,6 +3656,20 @@ const _MAGNET_SPEED: float = 480.0
 
 var _damage_punch_base_zoom: Vector2 = Vector2.ZERO
 var _damage_punch_tween: Tween = null
+
+const STAMINA_MAX: float = 100.0
+const STAMINA_REGEN_PER_SEC: float = 26.0
+const STAMINA_COST: float = 18.0
+var _stamina: float = 100.0
+var _stamina_attack_was_exhausted: bool = false
+
+func _tick_stamina(delta: float) -> void:
+	if _stamina < STAMINA_MAX:
+		var regen: float = STAMINA_REGEN_PER_SEC
+		# Idle/dodging regen faster.
+		if velocity.length() < 30.0:
+			regen *= 1.5
+		_stamina = minf(STAMINA_MAX, _stamina + regen * delta)
 
 const _SHOCKWAVE_COOLDOWN_SEC: float = 6.0
 const _SHOCKWAVE_RADIUS: float = 220.0

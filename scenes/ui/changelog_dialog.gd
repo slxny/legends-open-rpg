@@ -9,9 +9,21 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.91.0"
+const GAME_VERSION := "v0.91.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.91.1",
+		"title": "Combat REVAMP — STAMINA SYSTEM (no more mindless attack-spam)",
+		"date": "2026-06-18",
+		"entries": [
+			"Basic attacks now COST STAMINA. STAMINA_MAX 100, STAMINA_COST 18 per swing. You can throw ~5 swings before running out.",
+			"Regen 26/s, +50% (idle bonus) when moving slower than 30 px/s. Stand back, breathe, swing.",
+			"EXHAUSTED swings still go off but they're 40% damage AND 70% slower (cooldown 0.85 s vs 0.5 s) and pop an 'EXHAUSTED!' label. Game tells you you mashed too much.",
+			"Together with v0.90.7 positional hits and v0.90.5 shockwave, combat is now a real cadence: position, swing, dodge, breathe, swing again — not spam.",
+			"Internal: scenes/player/player.gd STAMINA_MAX/REGEN/COST constants. _stamina tracked per-frame via _tick_stamina(delta) (regen ×1.5 when idle). _try_manual_attack checks _stamina < STAMINA_COST; on exhausted sets _stamina_attack_was_exhausted true + 0.85 s cooldown; otherwise docks stamina and uses 0.5 s. _run_clocked_attack multiplies captured_mult by 0.4 when exhausted.",
+		]
+	},
 	{
 		"version": "v0.91.0",
 		"title": "Combat readability — OFF-SCREEN ENEMY ARROWS pinned to screen edge",

@@ -4406,7 +4406,10 @@ func _gen_stone_floor() -> void:
 # ============================================================
 
 func _gen_ground_jungle() -> void:
-	var size = 512
+	# v0.91.3 — bumped 512 → 1024 to halve visible tiling on 12 000 px world
+	# (was repeating ~23× across the map → now ~12×). With the new 4.5×
+	# camera zoom, on-screen repeats become rare enough to read as "painted".
+	var size = 1024
 	var img = Image.create(size, size, false, Image.FORMAT_RGBA8)
 	# Base dark jungle green
 	img.fill(Color(0.06, 0.14, 0.04))
@@ -4416,7 +4419,8 @@ func _gen_ground_jungle() -> void:
 
 	# --- Large biome-scale patches for macro variation ---
 	# These create distinct zones so each 128px section looks different
-	for _i in range(40):
+	# v0.91.3 — counts scaled 4× since texture went 512→1024 (4× area).
+	for _i in range(160):
 		var cx = rng.randi_range(0, size - 1)
 		var cy = rng.randi_range(0, size - 1)
 		var rx = rng.randi_range(30, 100)
@@ -4456,7 +4460,7 @@ func _gen_ground_jungle() -> void:
 		_fill_ellipse(img, cx, cy, rx, ry, patch_color)
 
 	# --- Medium detail patches for mid-range texture ---
-	for _i in range(120):
+	for _i in range(480):
 		var cx = rng.randi_range(0, size - 1)
 		var cy = rng.randi_range(0, size - 1)
 		var rx = rng.randi_range(6, 25)
@@ -4482,7 +4486,7 @@ func _gen_ground_jungle() -> void:
 		_fill_ellipse(img, cx, cy, rx, ry, c)
 
 	# --- Small rocky/pebble clusters ---
-	for _i in range(30):
+	for _i in range(120):
 		var cx = rng.randi_range(0, size - 1)
 		var cy = rng.randi_range(0, size - 1)
 		var rx = rng.randi_range(2, 6)
@@ -4494,7 +4498,7 @@ func _gen_ground_jungle() -> void:
 		_fill_ellipse(img, cx, cy, rx, ry, c)
 
 	# --- Winding path-like trails (connect random points) ---
-	for _trail in range(5):
+	for _trail in range(20):
 		var px = rng.randf_range(0, size)
 		var py = rng.randf_range(0, size)
 		var trail_color = Color(
@@ -4511,7 +4515,7 @@ func _gen_ground_jungle() -> void:
 			_fill_ellipse(img, ix, iy, rng.randi_range(2, 5), rng.randi_range(1, 4), trail_color)
 
 	# Fine pixel noise for texture grain
-	for _i in range(3000):
+	for _i in range(12000):
 		var x = rng.randi_range(0, size - 1)
 		var y = rng.randi_range(0, size - 1)
 		var existing = img.get_pixel(x, y)
@@ -4522,7 +4526,7 @@ func _gen_ground_jungle() -> void:
 			clampf(existing.b + variation * 0.5, 0.01, 0.12)))
 
 	# Bright green specks (grass tips catching light)
-	for _i in range(400):
+	for _i in range(1600):
 		var x = rng.randi_range(0, size - 1)
 		var y = rng.randi_range(0, size - 1)
 		img.set_pixel(x, y, Color(
@@ -4531,7 +4535,7 @@ func _gen_ground_jungle() -> void:
 			rng.randf_range(0.06, 0.14)))
 
 	# Tiny dark shadow spots (root shadows, leaf litter)
-	for _i in range(150):
+	for _i in range(600):
 		var x = rng.randi_range(0, size - 2)
 		var y = rng.randi_range(0, size - 2)
 		var dark = Color(0.03, 0.06, 0.02)

@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.91.2"
+const GAME_VERSION := "v0.91.3"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.91.3",
+		"title": "Visual redesign — JUNGLE GROUND 4× detail (squares no longer obvious)",
+		"date": "2026-06-19",
+		"entries": [
+			"Ground texture upgraded from 512×512 → 1024×1024. On the 12 000 px world, the tile now repeats ~12× instead of ~23× — at the new 4.5× camera zoom, repeats become hard to spot.",
+			"All detail layers scaled 4× to preserve density on the bigger canvas: 40→160 macro patches, 120→480 medium patches, 30→120 pebbles, 5→20 winding trails, 3000→12000 noise pixels, 400→1600 grass specks, 150→600 shadow spots.",
+			"Combined with the painted blob overlay system, the ground now reads as hand-painted rather than tile-grid.",
+			"Internal: sprite_generator.gd _gen_ground_jungle size const 512→1024 and all loop counts scaled 4×. ImageTexture memory ~1MB → ~4MB (acceptable).",
+		]
+	},
 	{
 		"version": "v0.91.2",
 		"title": "Visual REDESIGN — modern pixel-art direction (Stardew / HLD / Eastward)",

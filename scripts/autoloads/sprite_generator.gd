@@ -3653,45 +3653,48 @@ func _gen_dungeon_stairwell() -> void:
 # ============================================================
 
 func _gen_tree_jungle() -> void:
+	# v0.92.0 — canopy brightened to match the new cheerful ground (v0.91.8).
+	# Previous values (0.04-0.10 R) read as black blobs on the bright meadow.
 	var img = Image.create(32, 48, false, Image.FORMAT_RGBA8)
 	img.fill(Color(0, 0, 0, 0))
 	# Shadow (isometric oval)
-	_fill_ellipse(img, 16, 45, 14, 3, Color(0, 0, 0, 0.3))
-	# Trunk with bark detail
-	_fill_rect(img, 13, 28, 6, 18, Color(0.25, 0.15, 0.08))
-	_fill_rect(img, 14, 30, 4, 14, Color(0.3, 0.2, 0.1))
-	_fill_rect(img, 15, 32, 2, 10, Color(0.35, 0.24, 0.12))  # Bark highlight
-	# Dark canopy base (SC:BW dark jungle)
-	_fill_ellipse(img, 16, 18, 15, 15, Color(0.04, 0.12, 0.03))
+	_fill_ellipse(img, 16, 45, 14, 3, Color(0, 0, 0, 0.35))
+	# Trunk with bark detail (warmer browns)
+	_fill_rect(img, 13, 28, 6, 18, Color(0.38, 0.24, 0.14))
+	_fill_rect(img, 14, 30, 4, 14, Color(0.46, 0.30, 0.18))
+	_fill_rect(img, 15, 32, 2, 10, Color(0.52, 0.34, 0.20))
+	# Canopy base — vivid mid green (was 0.04/0.12/0.03)
+	_fill_ellipse(img, 16, 18, 15, 15, Color(0.16, 0.36, 0.10))
 	# Canopy layers
-	_fill_ellipse(img, 12, 15, 11, 11, Color(0.06, 0.18, 0.04))
-	_fill_ellipse(img, 20, 13, 11, 11, Color(0.05, 0.16, 0.04))
-	_fill_ellipse(img, 16, 11, 13, 11, Color(0.08, 0.22, 0.06))
-	# Top canopy (lighter)
-	_fill_ellipse(img, 15, 9, 9, 7, Color(0.1, 0.28, 0.08))
+	_fill_ellipse(img, 12, 15, 11, 11, Color(0.20, 0.44, 0.12))
+	_fill_ellipse(img, 20, 13, 11, 11, Color(0.18, 0.42, 0.11))
+	_fill_ellipse(img, 16, 11, 13, 11, Color(0.24, 0.52, 0.14))
+	# Top canopy (lighter sun-touched leaves)
+	_fill_ellipse(img, 15, 9, 9, 7, Color(0.30, 0.60, 0.18))
 	# Highlights (dappled light)
-	_fill_rect(img, 11, 7, 4, 3, Color(0.14, 0.35, 0.1))
-	_fill_rect(img, 18, 11, 3, 3, Color(0.12, 0.32, 0.1))
-	_fill_rect(img, 14, 14, 2, 2, Color(0.16, 0.38, 0.12))
-	# Dark shadow areas in canopy
-	_fill_rect(img, 8, 16, 4, 4, Color(0.03, 0.08, 0.02))
-	_fill_rect(img, 20, 18, 3, 3, Color(0.03, 0.09, 0.02))
+	_fill_rect(img, 11, 7, 4, 3, Color(0.36, 0.68, 0.22))
+	_fill_rect(img, 18, 11, 3, 3, Color(0.34, 0.66, 0.20))
+	_fill_rect(img, 14, 14, 2, 2, Color(0.40, 0.72, 0.24))
+	# Inner-shadow pockets keep depth without going black.
+	_fill_rect(img, 8, 16, 4, 4, Color(0.10, 0.26, 0.07))
+	_fill_rect(img, 20, 18, 3, 3, Color(0.10, 0.26, 0.07))
 
 	textures["tree_jungle"] = ImageTexture.create_from_image(img)
 
 func _gen_tree_small() -> void:
 	var img = Image.create(20, 28, false, Image.FORMAT_RGBA8)
 	img.fill(Color(0, 0, 0, 0))
-	_fill_ellipse(img, 10, 26, 8, 2, Color(0, 0, 0, 0.25))
-	# Trunk
-	_fill_rect(img, 8, 18, 4, 9, Color(0.25, 0.16, 0.08))
-	_fill_rect(img, 9, 20, 2, 6, Color(0.3, 0.2, 0.1))
-	# Dark canopy
-	_fill_ellipse(img, 10, 12, 9, 10, Color(0.05, 0.16, 0.04))
-	_fill_ellipse(img, 10, 10, 8, 8, Color(0.08, 0.22, 0.06))
-	_fill_ellipse(img, 10, 8, 6, 6, Color(0.1, 0.28, 0.08))
-	# Highlight
-	_fill_rect(img, 8, 6, 3, 2, Color(0.14, 0.34, 0.1))
+	# v0.92.0 — canopy brightened to match new cheerful ground.
+	_fill_ellipse(img, 10, 26, 8, 2, Color(0, 0, 0, 0.3))
+	# Trunk warmer
+	_fill_rect(img, 8, 18, 4, 9, Color(0.38, 0.24, 0.14))
+	_fill_rect(img, 9, 20, 2, 6, Color(0.46, 0.30, 0.18))
+	# Bright canopy
+	_fill_ellipse(img, 10, 12, 9, 10, Color(0.18, 0.42, 0.11))
+	_fill_ellipse(img, 10, 10, 8, 8, Color(0.24, 0.52, 0.14))
+	_fill_ellipse(img, 10, 8, 6, 6, Color(0.30, 0.60, 0.18))
+	# Top highlight
+	_fill_rect(img, 8, 6, 3, 2, Color(0.36, 0.68, 0.22))
 
 	textures["tree_small"] = ImageTexture.create_from_image(img)
 
@@ -5247,11 +5250,11 @@ func _gen_tree_harvest_medium() -> void:
 	# Bark rings
 	_fill_rect(img, 13, 34, 6, 1, Color(0.3, 0.18, 0.08))
 	_fill_rect(img, 13, 38, 6, 1, Color(0.3, 0.18, 0.08))
-	# Full canopy — bright, lively greens
-	_fill_ellipse(img, 16, 18, 14, 14, Color(0.1, 0.3, 0.06))
-	_fill_ellipse(img, 12, 15, 10, 10, Color(0.15, 0.4, 0.1))
-	_fill_ellipse(img, 20, 14, 10, 10, Color(0.14, 0.38, 0.09))
-	_fill_ellipse(img, 16, 12, 12, 10, Color(0.2, 0.48, 0.13))
+	# v0.92.0 — canopy brightened for new ground palette.
+	_fill_ellipse(img, 16, 18, 14, 14, Color(0.20, 0.46, 0.13))
+	_fill_ellipse(img, 12, 15, 10, 10, Color(0.26, 0.55, 0.16))
+	_fill_ellipse(img, 20, 14, 10, 10, Color(0.24, 0.52, 0.14))
+	_fill_ellipse(img, 16, 12, 12, 10, Color(0.30, 0.62, 0.18))
 	# Top highlights
 	_fill_ellipse(img, 15, 9, 8, 6, Color(0.26, 0.56, 0.16))
 	_fill_rect(img, 10, 7, 5, 3, Color(0.32, 0.62, 0.2))
@@ -5282,13 +5285,13 @@ func _gen_tree_harvest_large() -> void:
 	# Branches visible above trunk
 	_fill_rect(img, 12, 34, 8, 3, Color(0.38, 0.24, 0.12))
 	_fill_rect(img, 28, 32, 8, 3, Color(0.38, 0.24, 0.12))
-	# Massive canopy — rich greens
-	_fill_ellipse(img, 24, 22, 22, 20, Color(0.08, 0.25, 0.05))
-	_fill_ellipse(img, 16, 18, 14, 14, Color(0.12, 0.34, 0.08))
-	_fill_ellipse(img, 32, 17, 14, 14, Color(0.11, 0.32, 0.07))
-	_fill_ellipse(img, 24, 14, 18, 14, Color(0.17, 0.42, 0.11))
-	_fill_ellipse(img, 20, 10, 12, 10, Color(0.22, 0.5, 0.14))
-	_fill_ellipse(img, 30, 12, 10, 8, Color(0.2, 0.48, 0.13))
+	# v0.92.0 — canopy brightened for new ground palette.
+	_fill_ellipse(img, 24, 22, 22, 20, Color(0.18, 0.40, 0.10))
+	_fill_ellipse(img, 16, 18, 14, 14, Color(0.22, 0.48, 0.13))
+	_fill_ellipse(img, 32, 17, 14, 14, Color(0.21, 0.46, 0.12))
+	_fill_ellipse(img, 24, 14, 18, 14, Color(0.27, 0.56, 0.16))
+	_fill_ellipse(img, 20, 10, 12, 10, Color(0.32, 0.62, 0.18))
+	_fill_ellipse(img, 30, 12, 10, 8, Color(0.30, 0.60, 0.17))
 	# Crown highlights
 	_fill_ellipse(img, 22, 8, 8, 5, Color(0.28, 0.58, 0.18))
 	_fill_rect(img, 14, 6, 6, 3, Color(0.34, 0.64, 0.22))

@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.91.9"
+const GAME_VERSION := "v0.92.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.92.0",
+		"title": "Trees BRIGHTENED to match cheerful ground (no more black blobs)",
+		"date": "2026-06-19",
+		"entries": [
+			"Previous tree canopies were tuned for the murky old ground (0.04–0.10 R range) — they read as black silhouettes against the new bright meadow. ALL tree palettes pushed brighter.",
+			"tree_jungle, tree_small, tree_harvest_medium, tree_harvest_large: canopies bumped from dark forest greens to vivid mid-greens (0.16–0.30 R, 0.36–0.62 G).",
+			"Trunks shifted to warmer browns (0.38/0.24/0.14 → was 0.25/0.16/0.08). Inner-shadow pockets kept at 0.10/0.26/0.07 for depth without going black.",
+			"Internal: sprite_generator.gd 4 tree generators updated. Shadows also slightly stronger (alpha 0.25 → 0.30–0.35) to compensate for brighter canopy/ground contrast.",
+		]
+	},
 	{
 		"version": "v0.91.9",
 		"title": "Town stone REDRAWN — rigid brick grid → organic painted patches",

@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.91.7"
+const GAME_VERSION := "v0.91.8"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.91.8",
+		"title": "Brighter world — JUNGLE GROUND palette pushed CHEERFUL (Stardew/HLD warm)",
+		"date": "2026-06-19",
+		"entries": [
+			"The ground was dark-jungle murk (R 0.06 / G 0.14 / B 0.04 base). Now it's sun-lit meadow (R 0.18 / G 0.34 / B 0.12 base) — ~2× brighter, more saturated, warmer.",
+			"All 5 patch palettes (dirt, shade, meadow, moss, sunlit grass) shifted to bright cheerful greens with warm dirt browns. The world reads as happy outdoors instead of swamp.",
+			"Fine noise clamps bumped (R 0.08–0.60, G 0.18–0.70, B 0.06–0.30) and grass-tip specks pushed brighter (R 0.32–0.48, G 0.58–0.78, B 0.18–0.28) so highlights still pop on the brighter base.",
+			"Internal: sprite_generator.gd _gen_ground_jungle base fill + 5 patch branches + noise clamp + bright speck loop. Texture regenerated at startup; ~1s extra boot for the larger 1024² texture.",
+		]
+	},
 	{
 		"version": "v0.91.7",
 		"title": "Living enemies — chromatic VARIANCE + idle BREATHE on every enemy",

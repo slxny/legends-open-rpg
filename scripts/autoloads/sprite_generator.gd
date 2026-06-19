@@ -4411,8 +4411,10 @@ func _gen_ground_jungle() -> void:
 	# camera zoom, on-screen repeats become rare enough to read as "painted".
 	var size = 1024
 	var img = Image.create(size, size, false, Image.FORMAT_RGBA8)
-	# Base dark jungle green
-	img.fill(Color(0.06, 0.14, 0.04))
+	# v0.91.8 — base jungle lifted from very-dark (0.06/0.14/0.04) to a
+	# brighter, more saturated meadow green so the world reads as cheerful
+	# Stardew/HLD-warm instead of murky.
+	img.fill(Color(0.18, 0.34, 0.12))
 
 	var rng = RandomNumberGenerator.new()
 	rng.seed = 42
@@ -4420,6 +4422,7 @@ func _gen_ground_jungle() -> void:
 	# --- Large biome-scale patches for macro variation ---
 	# These create distinct zones so each 128px section looks different
 	# v0.91.3 — counts scaled 4× since texture went 512→1024 (4× area).
+	# v0.91.8 — all patch palettes brightened ~2× and pushed slightly warmer.
 	for _i in range(160):
 		var cx = rng.randi_range(0, size - 1)
 		var cy = rng.randi_range(0, size - 1)
@@ -4428,35 +4431,35 @@ func _gen_ground_jungle() -> void:
 		var shade = rng.randf_range(0.0, 1.0)
 		var patch_color: Color
 		if shade < 0.2:
-			# Dirt/mud patch
+			# Warm dirt/mud patch
 			patch_color = Color(
-				rng.randf_range(0.12, 0.2),
-				rng.randf_range(0.08, 0.14),
-				rng.randf_range(0.03, 0.07))
+				rng.randf_range(0.32, 0.46),
+				rng.randf_range(0.22, 0.30),
+				rng.randf_range(0.10, 0.16))
 		elif shade < 0.4:
-			# Deep dark green (dense canopy shadow)
+			# Cool shaded grass
 			patch_color = Color(
-				rng.randf_range(0.03, 0.06),
-				rng.randf_range(0.08, 0.14),
-				rng.randf_range(0.02, 0.05))
+				rng.randf_range(0.10, 0.16),
+				rng.randf_range(0.24, 0.32),
+				rng.randf_range(0.08, 0.14))
 		elif shade < 0.6:
-			# Medium green (open clearing)
+			# Bright open meadow
 			patch_color = Color(
-				rng.randf_range(0.08, 0.14),
-				rng.randf_range(0.18, 0.28),
-				rng.randf_range(0.05, 0.1))
-		elif shade < 0.8:
-			# Mossy green-brown
-			patch_color = Color(
-				rng.randf_range(0.1, 0.16),
-				rng.randf_range(0.14, 0.2),
-				rng.randf_range(0.04, 0.08))
-		else:
-			# Lighter grass area
-			patch_color = Color(
-				rng.randf_range(0.1, 0.16),
 				rng.randf_range(0.22, 0.32),
-				rng.randf_range(0.06, 0.1))
+				rng.randf_range(0.44, 0.58),
+				rng.randf_range(0.14, 0.22))
+		elif shade < 0.8:
+			# Mossy yellow-green
+			patch_color = Color(
+				rng.randf_range(0.26, 0.36),
+				rng.randf_range(0.36, 0.46),
+				rng.randf_range(0.12, 0.18))
+		else:
+			# Sun-lit grass
+			patch_color = Color(
+				rng.randf_range(0.30, 0.42),
+				rng.randf_range(0.50, 0.64),
+				rng.randf_range(0.18, 0.26))
 		_fill_ellipse(img, cx, cy, rx, ry, patch_color)
 
 	# --- Medium detail patches for mid-range texture ---
@@ -4514,25 +4517,26 @@ func _gen_ground_jungle() -> void:
 			var iy = int(py) % size
 			_fill_ellipse(img, ix, iy, rng.randi_range(2, 5), rng.randi_range(1, 4), trail_color)
 
-	# Fine pixel noise for texture grain
+	# Fine pixel noise for texture grain (clamps bumped for brighter base)
 	for _i in range(12000):
 		var x = rng.randi_range(0, size - 1)
 		var y = rng.randi_range(0, size - 1)
 		var existing = img.get_pixel(x, y)
-		var variation = rng.randf_range(-0.03, 0.03)
+		var variation = rng.randf_range(-0.05, 0.05)
 		img.set_pixel(x, y, Color(
-			clampf(existing.r + variation, 0.02, 0.25),
-			clampf(existing.g + variation * 1.5, 0.06, 0.35),
-			clampf(existing.b + variation * 0.5, 0.01, 0.12)))
+			clampf(existing.r + variation, 0.08, 0.60),
+			clampf(existing.g + variation * 1.5, 0.18, 0.70),
+			clampf(existing.b + variation * 0.5, 0.06, 0.30)))
 
-	# Bright green specks (grass tips catching light)
+	# Bright green specks (grass tips catching light) — pushed brighter so
+	# they actually catch the eye on the new lighter base.
 	for _i in range(1600):
 		var x = rng.randi_range(0, size - 1)
 		var y = rng.randi_range(0, size - 1)
 		img.set_pixel(x, y, Color(
-			rng.randf_range(0.12, 0.22),
-			rng.randf_range(0.28, 0.42),
-			rng.randf_range(0.06, 0.14)))
+			rng.randf_range(0.32, 0.48),
+			rng.randf_range(0.58, 0.78),
+			rng.randf_range(0.18, 0.28)))
 
 	# Tiny dark shadow spots (root shadows, leaf litter)
 	for _i in range(600):

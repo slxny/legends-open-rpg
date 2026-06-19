@@ -573,7 +573,13 @@ func _scatter_small_decor(rng: RandomNumberGenerator, tex_name: String, count: i
 		var s: float = rng.randf_range(scale_min, scale_max)
 		spr.scale = Vector2(s, s)
 		spr.rotation = rng.randf_range(-0.15, 0.15)
-		spr.modulate.a = rng.randf_range(0.7, 1.0)
+		# v0.91.6 — per-decoration chromatic variance. Each tuft/flower picks
+		# a slight tint shift so the world reads as hand-painted instead of
+		# stamped-with-the-same-asset. Greens vary toward yellow/blue, alpha varies.
+		var tint_r: float = rng.randf_range(0.78, 1.18)
+		var tint_g: float = rng.randf_range(0.88, 1.12)
+		var tint_b: float = rng.randf_range(0.70, 1.10)
+		spr.modulate = Color(tint_r, tint_g, tint_b, rng.randf_range(0.7, 1.0))
 		spr.z_index = z
 		add_child(spr)
 		batch_local += 1

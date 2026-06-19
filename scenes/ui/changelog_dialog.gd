@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.91.5"
+const GAME_VERSION := "v0.91.6"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.91.6",
+		"title": "Painted world — chromatic VARIANCE on every foliage prop",
+		"date": "2026-06-19",
+		"entries": [
+			"Every grass tuft, tall grass, flower, mushroom cluster now picks a slight per-instance tint. R 0.78–1.18, G 0.88–1.12, B 0.70–1.10. Greens vary toward yellow / blue, alpha still 0.7–1.0.",
+			"Effect: the world reads as HAND-PAINTED instead of stamped-with-the-same-asset. Up close, every tuft is slightly different.",
+			"Internal: havens_rest.gd _scatter_small_decor now sets modulate via Color(tint_r, tint_g, tint_b, alpha). Same chromatic logic could be applied to dirt patches and large foliage later.",
+		]
+	},
 	{
 		"version": "v0.91.5",
 		"title": "Pixel-art lighting — TOP-LIGHT shading on every character (classic trick)",

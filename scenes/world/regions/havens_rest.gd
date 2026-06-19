@@ -507,6 +507,9 @@ func _generate_terrain_async() -> void:
 	# Replaces the visually-empty void at the map bounds with a sense of
 	# scale + depth. Layered, desaturated, low-saturation.
 	await _spawn_edge_horizon(rng)
+	# v0.92.3 — 10 LARGE ROCK OUTCROPPINGS scattered as landmarks. Breaks up
+	# the open meadow with chunky volumes the eye can navigate by.
+	await _spawn_rock_outcrops(rng)
 
 	# Phase 7 — destructible explosive barrels scattered around enemy
 	# camp areas. Hit them to chain damage; knock enemies into them.
@@ -684,6 +687,51 @@ func _spawn_dirt_paths(rng: RandomNumberGenerator) -> void:
 			add_child(p)
 			if i % 8 == 0:
 				await get_tree().process_frame
+
+
+func _spawn_rock_outcrops(rng: RandomNumberGenerator) -> void:
+	# v0.92.3 — chunky rock landmarks. Each cluster is 4–7 large rocks of
+	# slightly different sizes piled together with a soft cast shadow.
+	var rock_l := SpriteGenerator.get_texture("rock_large")
+	var rock_s := SpriteGenerator.get_texture("rock")
+	var blob := SpriteGenerator.get_texture("terrain_blob")
+	if rock_l == null:
+		return
+	var placed: int = 0
+	var tries: int = 0
+	while placed < 10 and tries < 80:
+		tries += 1
+		var center := Vector2(rng.randf_range(-5000, 5000), rng.randf_range(-3800, 3800))
+		if center.length() < 1200:
+			continue  # Keep away from town
+		# Soft shadow puddle under the cluster.
+		if blob != null:
+			var sh := Sprite2D.new()
+			sh.texture = blob
+			sh.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			sh.position = center + Vector2(rng.randf_range(-8, 8), 22)
+			sh.scale = Vector2(rng.randf_range(7.0, 10.0), rng.randf_range(3.0, 4.5))
+			sh.modulate = Color(0.0, 0.0, 0.05, 0.55)
+			sh.z_index = -6
+			add_child(sh)
+		var lumps: int = rng.randi_range(4, 7)
+		for i in range(lumps):
+			var spr := Sprite2D.new()
+			# Mix large/small rocks for chunkiness.
+			spr.texture = rock_l if (i == 0 or rng.randf() < 0.6) else rock_s
+			spr.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			var off := Vector2(rng.randf_range(-40, 40), rng.randf_range(-20, 20) - i * 4)
+			spr.position = center + off
+			var s: float = rng.randf_range(1.8, 3.2) if i == 0 else rng.randf_range(1.1, 2.2)
+			spr.scale = Vector2(s, s * rng.randf_range(0.85, 1.05))
+			spr.rotation = rng.randf_range(-0.25, 0.25)
+			# Per-rock tint variance: stone grey shifting warmer/cooler.
+			var t: float = rng.randf_range(0.85, 1.10)
+			spr.modulate = Color(t, t * 0.97, t * 0.92, 1.0)
+			spr.z_index = -5
+			add_child(spr)
+		placed += 1
+		await get_tree().process_frame
 
 
 func _spawn_edge_horizon(rng: RandomNumberGenerator) -> void:

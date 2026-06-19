@@ -9,9 +9,21 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.92.2"
+const GAME_VERSION := "v0.92.3"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.92.3",
+		"title": "10 ROCK OUTCROPPING landmarks — chunky volumes break the open meadow",
+		"date": "2026-06-19",
+		"entries": [
+			"10 chunky rock-outcropping landmarks scattered across the open meadow. Each is a cluster of 4–7 rocks (1 big + 3–6 smaller) piled with random offsets and rotations + a soft dark elliptical SHADOW PUDDLE underneath.",
+			"Per-rock chromatic variance (R/G/B × 0.85–1.10 with slight green/blue dampening) so no two clusters look the same.",
+			"Skips placement within 1200 px of town center.",
+			"Now the meadow has volumes the eye can latch onto and navigate by, instead of pure flatness.",
+			"Internal: scenes/world/regions/havens_rest.gd _spawn_rock_outcrops uses rock_large (main lump) + rock (fillers) + terrain_blob (shadow). 10 placement attempts with reject sampling, await per cluster.",
+		]
+	},
 	{
 		"version": "v0.92.2",
 		"title": "World horizon — distant MOUNTAIN SILHOUETTES at every map edge",

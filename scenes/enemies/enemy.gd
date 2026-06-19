@@ -3383,6 +3383,34 @@ func _update_hp_bar() -> void:
 		hp_bar.modulate = Color(2.0, 2.0, 2.0, prev_mod.a)
 		var t := hp_bar.create_tween()
 		t.tween_property(hp_bar, "modulate", prev_mod, 0.14).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	# v0.90.9 — sprite tint shifts toward bloodied as HP drops. Visible
+	# damage state without having to look at the HP bar.
+	_apply_hp_tint()
+
+func _apply_hp_tint() -> void:
+	if _is_dead or sprite == null:
+		return
+	if _captured_pristine_modulate == null:
+		# First-call capture: store whatever base color the enemy started with
+		# (mini-boss reddish tint, elite tints, plain WHITE, etc.).
+		_captured_pristine_modulate = _base_modulate
+		_last_set_base_modulate = _base_modulate
+	var hp_max: int = max(1, int(stats.max_hp))
+	var pct: float = clamp(float(stats.current_hp) / float(hp_max), 0.0, 1.0)
+	# Pristine = original color; bloodied = darker + redder.
+	var pristine: Color = _captured_pristine_modulate
+	var bloodied: Color = Color(pristine.r * 1.10, pristine.g * 0.55, pristine.b * 0.50, pristine.a)
+	# Below 33% HP, lerp fully toward bloodied. Between 33%–66% partial.
+	var lerp_t: float = 1.0 - smoothstep(0.33, 0.85, pct)
+	var new_base: Color = pristine.lerp(bloodied, lerp_t)
+	_base_modulate = new_base
+	# If no active flash tween is running, snap sprite to the new base.
+	if sprite.modulate.is_equal_approx(_last_set_base_modulate):
+		sprite.modulate = new_base
+	_last_set_base_modulate = new_base
+
+var _captured_pristine_modulate: Variant = null
+var _last_set_base_modulate: Color = Color.WHITE
 
 func get_stats_dict() -> Dictionary:
 	return stats.get_stats_dict()

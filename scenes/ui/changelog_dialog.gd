@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.90.8"
+const GAME_VERSION := "v0.90.9"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.90.9",
+		"title": "Visible enemy HP — sprites BLOODY UP as they take damage",
+		"date": "2026-06-18",
+		"entries": [
+			"Enemy sprite tint now SHIFTS toward a darker, redder 'bloodied' color as their HP drops. At full HP they look pristine; at 33% or below they look visibly hurt; below 10% they're a clear killing-blow target.",
+			"You don't need to read HP bars anymore — the silhouette tells you.",
+			"Internal: enemy.gd _apply_hp_tint called from _update_hp_bar. Captures pristine modulate on first call (preserves mini-boss reddish, elite, etc.). bloodied = pristine × (1.10, 0.55, 0.50, 1.0). lerp_t = 1 - smoothstep(0.33, 0.85, hp_pct). Snaps sprite.modulate to new base only when no hit-flash tween is active.",
+		]
+	},
 	{
 		"version": "v0.90.8",
 		"title": "Per-region IDENTITY — Haven's Rest looks GOLDEN, Crypt looks COLD-BLUE",

@@ -15,6 +15,9 @@ func _ready() -> void:
 	# v0.90.6 — cinematic post-process: vignette, contrast, saturation,
 	# split-tone (cool shadows / warm highlights), subtle bloom.
 	_install_post_process()
+	# v0.90.8 — apply default region preset (haven) at startup; _process polls
+	# every 0.5s and switches when the player crosses into another region.
+	_apply_post_process_preset("havens")
 
 func _install_ambient_grade() -> void:
 	# v0.90.6 — the heavy lifting moved to the post-process shader; this
@@ -27,6 +30,67 @@ func _install_ambient_grade() -> void:
 	add_child(cm)
 
 const _POST_PROCESS_SHADER := preload("res://scenes/world/post_process.gdshader")
+
+# v0.90.8 — per-region post-process presets. Each region applies its own
+# vignette / contrast / tint so worlds feel visually distinct.
+const _PRESET_HAVENS := {
+	"vignette_strength": 0.45,
+	"vignette_softness": 0.95,
+	"contrast": 1.14,
+	"saturation": 1.26,
+	"brightness": -0.02,
+	"shadow_tint": Color(0.92, 0.95, 1.0),
+	"highlight_tint": Color(1.12, 1.05, 0.85),
+	"bloom_threshold": 0.78,
+	"bloom_strength": 0.45,
+}
+const _PRESET_CRYPT := {
+	"vignette_strength": 0.78,
+	"vignette_softness": 0.72,
+	"contrast": 1.32,
+	"saturation": 0.85,
+	"brightness": -0.10,
+	"shadow_tint": Color(0.55, 0.65, 0.95),
+	"highlight_tint": Color(0.85, 0.95, 1.20),
+	"bloom_threshold": 0.65,
+	"bloom_strength": 0.65,
+}
+
+var _current_preset_name: String = ""
+var _region_poll_accum: float = 0.0
+
+func _process(delta: float) -> void:
+	_region_poll_accum += delta
+	if _region_poll_accum < 0.5:
+		return
+	_region_poll_accum = 0.0
+	_update_region_preset()
+
+func _update_region_preset() -> void:
+	var players := get_tree().get_nodes_in_group("player")
+	if players.is_empty():
+		return
+	var player: Node2D = players[0]
+	# Dungeon entrance is at y=15000 per world.tscn.
+	var want: String = "crypt" if player.global_position.y > 10000.0 else "havens"
+	if want == _current_preset_name:
+		return
+	_apply_post_process_preset(want)
+
+func _apply_post_process_preset(name: String) -> void:
+	var layer: CanvasLayer = get_node_or_null("PostProcessLayer") as CanvasLayer
+	if layer == null:
+		return
+	var rect: ColorRect = layer.get_node_or_null("PostProcessRect") as ColorRect
+	if rect == null or rect.material == null:
+		return
+	var preset: Dictionary = _PRESET_HAVENS
+	if name == "crypt":
+		preset = _PRESET_CRYPT
+	var mat: ShaderMaterial = rect.material
+	for key in preset.keys():
+		mat.set_shader_parameter(key, preset[key])
+	_current_preset_name = name
 
 func _install_post_process() -> void:
 	if has_node("PostProcessLayer"):

@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.90.7"
+const GAME_VERSION := "v0.90.8"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.90.8",
+		"title": "Per-region IDENTITY — Haven's Rest looks GOLDEN, Crypt looks COLD-BLUE",
+		"date": "2026-06-18",
+		"entries": [
+			"Each region now applies its own post-process preset. Walk between them and the world VISIBLY shifts mood.",
+			"HAVEN'S REST: soft vignette (0.45), saturation 1.26, warm cream highlights (1.12/1.05/0.85), cool-blue shadows (0.92/0.95/1.0), bright bloom thresh 0.78 strength 0.45 — golden afternoon.",
+			"DUNGEON CRYPT: heavy vignette (0.78), desaturated (0.85), brightness -0.10, navy shadows (0.55/0.65/0.95), violet highlights (0.85/0.95/1.20), bloom thresh 0.65 strength 0.65 — claustrophobic torch-lit dungeon.",
+			"Internal: world.gd _PRESET_HAVENS + _PRESET_CRYPT dictionaries. _process polls every 0.5 s; player.global_position.y > 10000 triggers crypt preset (dungeon entrance is at y=15000 per world.tscn). _apply_post_process_preset(name) walks the dict and calls mat.set_shader_parameter for each uniform.",
+		]
+	},
 	{
 		"version": "v0.90.7",
 		"title": "Combat REVAMP — POSITIONAL HITS (back attacks guarantee crit + 50%)",

@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.90.9"
+const GAME_VERSION := "v0.91.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.91.0",
+		"title": "Combat readability — OFF-SCREEN ENEMY ARROWS pinned to screen edge",
+		"date": "2026-06-18",
+		"entries": [
+			"Red arrows now pin to the screen edge pointing toward enemies within 900 px who are off-screen. You'll never get jumped from behind a corner without warning.",
+			"Arrows update every frame, recycled from a pool. Triangle Polygon2D, alpha 0.92, sits at layer 80 (below post-process, above world UI). Margin 38 px from edges.",
+			"Internal: scripts/components/edge_indicator_layer.gd new CanvasLayer. _process clamps player→enemy ray onto inner viewport rect via min(tx, ty) intersection math. Pool of up to 24 arrows reused frame-to-frame. world.gd _install_edge_indicators wires it up at world _ready.",
+		]
+	},
 	{
 		"version": "v0.90.9",
 		"title": "Visible enemy HP — sprites BLOODY UP as they take damage",

@@ -18,6 +18,17 @@ func _ready() -> void:
 	# v0.90.8 — apply default region preset (haven) at startup; _process polls
 	# every 0.5s and switches when the player crosses into another region.
 	_apply_post_process_preset("havens")
+	# v0.91.0 — off-screen enemy edge indicators.
+	_install_edge_indicators()
+
+const _EDGE_INDICATOR_SCRIPT := preload("res://scripts/components/edge_indicator_layer.gd")
+
+func _install_edge_indicators() -> void:
+	if has_node("EdgeIndicatorLayer"):
+		return
+	var layer = _EDGE_INDICATOR_SCRIPT.new()
+	layer.name = "EdgeIndicatorLayer"
+	add_child(layer)
 
 func _install_ambient_grade() -> void:
 	# v0.90.6 — the heavy lifting moved to the post-process shader; this

@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.91.8"
+const GAME_VERSION := "v0.91.9"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.91.9",
+		"title": "Town stone REDRAWN — rigid brick grid → organic painted patches",
+		"date": "2026-06-19",
+		"entries": [
+			"Town stone floor went from a hard 16-px brick grid to organic painted patches matching the new pixel-art direction. Size 256² → 512² (less visible tile repeat).",
+			"4 stone tones (sun-bleached, mossy, standard warm grey, cool shadow) brushed in via 80 macro patches + 240 pebble spots.",
+			"Hairline CRACKS (35 wandering 1-px dark lines), MOSS FLECKS (140 yellow-green dots), and 4000 pixel-grain noise for finish.",
+			"Internal: sprite_generator.gd _gen_ground_stone rewritten. Brick-grid loops removed.",
+		]
+	},
 	{
 		"version": "v0.91.8",
 		"title": "Brighter world — JUNGLE GROUND palette pushed CHEERFUL (Stardew/HLD warm)",

@@ -4595,72 +4595,77 @@ func _gen_ground_creep() -> void:
 	textures["ground_creep"] = ImageTexture.create_from_image(img)
 
 func _gen_ground_stone() -> void:
-	var size = 256
+	# v0.91.9 — town stone redrawn from rigid brick grid to organic painted
+	# patches. Base 256→512 for less visible tiling. Mossy warm stone.
+	var size = 512
 	var img = Image.create(size, size, false, Image.FORMAT_RGBA8)
-	# Stone floor for town area
-	img.fill(Color(0.28, 0.26, 0.22))
+	img.fill(Color(0.46, 0.42, 0.36))
 
 	var rng = RandomNumberGenerator.new()
 	rng.seed = 77
 
-	# Stone block grid lines (16px blocks, brick pattern)
-	for x in range(size):
-		for y_line in range(0, size, 16):
-			var existing = img.get_pixel(x, y_line)
-			img.set_pixel(x, y_line, existing.darkened(0.25))
-	for y in range(size):
-		var row = y / 16
-		var x_offset = 8 if row % 2 == 1 else 0
-		for x_line in range(0, size, 16):
-			var actual_x = (x_line + x_offset) % size
-			var existing = img.get_pixel(actual_x, y)
-			img.set_pixel(actual_x, y, existing.darkened(0.2))
-
-	# Per-brick color variation (each block gets a unique shade)
-	for by in range(0, size, 16):
-		for bx in range(0, size, 16):
-			var row = by / 16
-			var x_off = 8 if row % 2 == 1 else 0
-			var block_x = bx + x_off
-			var v = rng.randf_range(-0.06, 0.06)
-			var block_color = Color(0.28 + v, 0.26 + v * 0.8, 0.22 + v * 0.4)
-			for py in range(by + 1, min(by + 16, size)):
-				for px in range(block_x + 1, min(block_x + 16, size)):
-					var actual_px = px % size
-					var existing = img.get_pixel(actual_px, py)
-					img.set_pixel(actual_px, py, existing.lerp(block_color, 0.4))
-
-	# Weathering stains and cracks
-	for _i in range(40):
+	# Macro patches — large blob zones of varied warm stone tones.
+	for _i in range(80):
 		var cx = rng.randi_range(0, size - 1)
 		var cy = rng.randi_range(0, size - 1)
-		var rx = rng.randi_range(3, 10)
-		var ry = rng.randi_range(3, 10)
-		var stain = Color(
-			rng.randf_range(0.22, 0.32),
-			rng.randf_range(0.2, 0.28),
-			rng.randf_range(0.16, 0.24))
-		_fill_ellipse(img, cx, cy, rx, ry, stain)
+		var rx = rng.randi_range(20, 60)
+		var ry = rng.randi_range(18, 50)
+		var shade = rng.randf_range(0.0, 1.0)
+		var c: Color
+		if shade < 0.3:
+			# Bright sun-bleached stone
+			c = Color(rng.randf_range(0.55, 0.65), rng.randf_range(0.50, 0.60), rng.randf_range(0.42, 0.52))
+		elif shade < 0.55:
+			# Mossy stone (greener)
+			c = Color(rng.randf_range(0.38, 0.46), rng.randf_range(0.42, 0.50), rng.randf_range(0.28, 0.36))
+		elif shade < 0.8:
+			# Standard warm grey
+			c = Color(rng.randf_range(0.44, 0.52), rng.randf_range(0.40, 0.46), rng.randf_range(0.34, 0.40))
+		else:
+			# Cool shadow stone
+			c = Color(rng.randf_range(0.34, 0.40), rng.randf_range(0.32, 0.38), rng.randf_range(0.30, 0.36))
+		_fill_ellipse(img, cx, cy, rx, ry, c)
 
-	# Moss growing between some bricks (green tint in grout lines)
-	for _i in range(25):
+	# Smaller pebble / wear spots.
+	for _i in range(240):
+		var cx = rng.randi_range(0, size - 1)
+		var cy = rng.randi_range(0, size - 1)
+		var rx = rng.randi_range(2, 7)
+		var ry = rng.randi_range(2, 6)
+		var c = Color(rng.randf_range(0.50, 0.62), rng.randf_range(0.46, 0.56), rng.randf_range(0.38, 0.48))
+		_fill_ellipse(img, cx, cy, rx, ry, c)
+
+	# Hairline cracks — short dark wandering 1-px lines.
+	for _crack in range(35):
+		var px = rng.randf_range(0, size)
+		var py = rng.randf_range(0, size)
+		for _step in range(rng.randi_range(8, 28)):
+			px += rng.randf_range(-2.0, 2.0)
+			py += rng.randf_range(-2.0, 2.0)
+			var ix = int(fmod(px + size, size))
+			var iy = int(fmod(py + size, size))
+			var dark = img.get_pixel(ix, iy).darkened(0.45)
+			img.set_pixel(ix, iy, dark)
+
+	# Moss flecks — small yellow-green dots scattered.
+	for _i in range(140):
 		var x = rng.randi_range(0, size - 1)
-		var y_line = rng.randi_range(0, size / 16 - 1) * 16
-		for dx in range(rng.randi_range(3, 12)):
-			var px = (x + dx) % size
-			if y_line < size:
-				img.set_pixel(px, y_line, Color(0.15, 0.22, 0.1))
+		var y = rng.randi_range(0, size - 1)
+		img.set_pixel(x, y, Color(
+			rng.randf_range(0.30, 0.42),
+			rng.randf_range(0.46, 0.58),
+			rng.randf_range(0.18, 0.26)))
 
-	# Pixel noise for weathered look
-	for _i in range(800):
+	# Pixel grain noise.
+	for _i in range(4000):
 		var x = rng.randi_range(0, size - 1)
 		var y = rng.randi_range(0, size - 1)
 		var existing = img.get_pixel(x, y)
-		var v = rng.randf_range(-0.03, 0.03)
+		var v = rng.randf_range(-0.04, 0.04)
 		img.set_pixel(x, y, Color(
-			clampf(existing.r + v, 0.15, 0.4),
-			clampf(existing.g + v, 0.14, 0.38),
-			clampf(existing.b + v, 0.1, 0.34)))
+			clampf(existing.r + v, 0.25, 0.72),
+			clampf(existing.g + v, 0.22, 0.66),
+			clampf(existing.b + v, 0.20, 0.58)))
 
 	textures["ground_stone"] = ImageTexture.create_from_image(img)
 

@@ -355,9 +355,14 @@ func _ready() -> void:
 	# Outline shader (shared across all enemies, initialized once)
 	if not _outline_shader:
 		_outline_shader = Shader.new()
+		# v0.91.5 — outline shader now ALSO does top-light shading: brightens
+		# the top of the silhouette, darkens the bottom. Fake directional
+		# lighting consistent across every character without normal maps.
 		_outline_shader.code = "shader_type canvas_item;
 uniform bool enabled = false;
 uniform vec4 line_color : source_color = vec4(1.0, 0.3, 0.3, 0.85);
+uniform float top_lift = 0.22;
+uniform float bottom_dim = 0.14;
 void fragment() {
 	vec4 tex = texture(TEXTURE, UV);
 	if (enabled && tex.a < 0.1) {
@@ -377,7 +382,10 @@ void fragment() {
 			COLOR = tex;
 		}
 	} else {
-		COLOR = tex;
+		float lift = top_lift * (1.0 - UV.y);
+		float dim = bottom_dim * UV.y;
+		vec3 lit = tex.rgb + vec3(lift) - vec3(dim);
+		COLOR = vec4(clamp(lit, 0.0, 2.0), tex.a);
 	}
 }
 "

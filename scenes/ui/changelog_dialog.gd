@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.91.4"
+const GAME_VERSION := "v0.91.5"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.91.5",
+		"title": "Pixel-art lighting — TOP-LIGHT shading on every character (classic trick)",
+		"date": "2026-06-19",
+		"entries": [
+			"Every sprite (player + every enemy) now has fake directional lighting baked into its shader: top of the silhouette lifts +0.22, bottom dims -0.14. Characters suddenly look 3D-shaded even though they're flat.",
+			"Classic Stardew / HLD pixel-art trick — no normal maps required.",
+			"Internal: enemy.gd inline _outline_shader code adds top_lift / bottom_dim uniforms applied in the else branch (when not outline pixel). player/hero_outline.gdshader gets the same treatment. UV.y interpolates the lift/dim per fragment.",
+		]
+	},
 	{
 		"version": "v0.91.4",
 		"title": "World life — DRIFTING CLOUD SHADOWS slowly cross the ground",

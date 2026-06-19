@@ -389,6 +389,8 @@ void fragment() {
 		_info_label_settings.outline_color = Color.BLACK
 	# v0.90.3 — default outline ON (black) so all enemies pop visually.
 	_ensure_outline_material()
+	# v0.91.2 — modern pixel-art DROP SHADOW under every character.
+	_ensure_drop_shadow()
 	# Connect mouse hover signals for outline (swaps color to red on hover)
 	mouse_entered.connect(_on_mouse_entered)
 	mouse_exited.connect(_on_mouse_exited)
@@ -480,6 +482,33 @@ func hide_selection() -> void:
 	if stats.current_hp >= stats.max_hp and current_state == State.IDLE:
 		hp_bar.visible = false
 		name_label.visible = false
+
+func _ensure_drop_shadow() -> void:
+	# v0.91.2 — mascara-thick black elliptical shadow disc baked under the
+	# character so they read as grounded (Stardew/HLD-style). Uses the
+	# crystal_white texture as a simple disc; scaled wide-and-short and
+	# tinted near-pure-black with alpha. Width scales with token cost so
+	# heavies cast bigger shadows.
+	if has_node("DropShadow"):
+		return
+	var tex = SpriteGenerator.get_texture("crystal_white")
+	if tex == null:
+		return
+	var s := Sprite2D.new()
+	s.name = "DropShadow"
+	s.texture = tex
+	s.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	s.modulate = Color(0.0, 0.0, 0.0, 0.55)
+	var width: float = 1.6
+	if _get_token_cost() >= 3:
+		width = 2.3
+	elif _get_token_cost() >= 2:
+		width = 1.9
+	s.scale = Vector2(width, 0.55)
+	s.position = Vector2(0, 2)
+	s.z_index = -3
+	add_child(s)
+	move_child(s, 0)  # Render behind sprite.
 
 func _ensure_outline_material() -> void:
 	# v0.90.3 — every enemy gets a permanent BLACK outline by default so
@@ -3383,9 +3412,10 @@ func _update_hp_bar() -> void:
 		hp_bar.modulate = Color(2.0, 2.0, 2.0, prev_mod.a)
 		var t := hp_bar.create_tween()
 		t.tween_property(hp_bar, "modulate", prev_mod, 0.14).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	# v0.90.9 — sprite tint shifts toward bloodied as HP drops. Visible
-	# damage state without having to look at the HP bar.
-	_apply_hp_tint()
+	# v0.91.2 — HP-tint bloodying removed during visual revamp. The procedural
+	# tint shift fought the new modern-pixel-art direction; kept as no-op for
+	# now (HP bar remains the readability surface).
+	pass
 
 func _apply_hp_tint() -> void:
 	if _is_dead or sprite == null:

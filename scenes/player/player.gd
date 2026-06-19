@@ -270,6 +270,8 @@ func _ready() -> void:
 	hero_class = GameManager.current_hero_class
 	stats.initialize_from_hero(hero_class)
 	inventory.setup(stats)
+	# v0.91.2 — modern pixel-art drop shadow under the hero (Stardew/HLD feel).
+	_install_player_drop_shadow()
 
 	# Phase 1B.6a: attach trauma-model shake to the camera. Legacy
 	# procedural shake in _physics_process remains as a fallback if this
@@ -3656,6 +3658,23 @@ const _MAGNET_SPEED: float = 480.0
 
 var _damage_punch_base_zoom: Vector2 = Vector2.ZERO
 var _damage_punch_tween: Tween = null
+
+func _install_player_drop_shadow() -> void:
+	if has_node("DropShadow"):
+		return
+	var tex = SpriteGenerator.get_texture("crystal_white")
+	if tex == null:
+		return
+	var s := Sprite2D.new()
+	s.name = "DropShadow"
+	s.texture = tex
+	s.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	s.modulate = Color(0.0, 0.0, 0.0, 0.6)
+	s.scale = Vector2(1.85, 0.6)
+	s.position = Vector2(0, 0)
+	s.z_index = -3
+	add_child(s)
+	move_child(s, 0)
 
 const STAMINA_MAX: float = 100.0
 const STAMINA_REGEN_PER_SEC: float = 26.0

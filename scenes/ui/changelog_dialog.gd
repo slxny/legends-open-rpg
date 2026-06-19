@@ -9,9 +9,21 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.91.1"
+const GAME_VERSION := "v0.91.2"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.91.2",
+		"title": "Visual REDESIGN — modern pixel-art direction (Stardew / HLD / Eastward)",
+		"date": "2026-06-19",
+		"entries": [
+			"Stripped the recent visual layers that were stacking on top of an ugly base: post-process shader removed, golden motes removed, color-grade CanvasModulate removed, per-region post-process presets removed, enemy HP-tint bloodying removed. Combat changes (stamina, positional, shockwave, charged slash, HP rebalance, edge arrows) all KEPT.",
+			"CAMERA ZOOM 3× → 4.5×. Sprites are now physically larger on screen — instantly reads as deliberate pixel art instead of tiny shapes.",
+			"DROP SHADOWS: every character (player + every enemy) now has a mascara-thick black elliptical shadow disc baked under them. Width scales with enemy weight class — heavies cast bigger shadows. Characters now feel GROUNDED on the world.",
+			"Kept the BLACK PIXEL OUTLINE (v0.90.3) — direction-correct for the new aesthetic.",
+			"Internal: scenes/world/world.gd cleaned to bare bones (only player_spawn + edge indicators). post_process.gdshader deleted. scenes/player/player.tscn Camera2D zoom 3→4.5. scenes/enemies/enemy.gd new _ensure_drop_shadow at _ready (Sprite2D using crystal_white texture, modulate (0/0/0/0.55), scale Vector2(1.6–2.3, 0.55), z_index -3, moved to first child). scenes/player/player.gd _install_player_drop_shadow at _ready (similar, scale 1.85×0.6, alpha 0.6).",
+		]
+	},
 	{
 		"version": "v0.91.1",
 		"title": "Combat REVAMP — STAMINA SYSTEM (no more mindless attack-spam)",

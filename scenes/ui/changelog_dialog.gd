@@ -9,9 +9,19 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.91.3"
+const GAME_VERSION := "v0.91.4"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.91.4",
+		"title": "World life — DRIFTING CLOUD SHADOWS slowly cross the ground",
+		"date": "2026-06-19",
+		"entries": [
+			"Five large, soft dark patches now slowly drift across the world map — cloud shadows. 38–62 second loops, varied directions, alpha 0.18 dark-blue modulate.",
+			"That Stardew 'the world is alive' feel without changing the ground texture.",
+			"Internal: world.gd _install_cloud_shadows creates 5 Sprite2D children (crystal_white tex), large stretched scale (35–60 × 20–38), z_index 6 (above ground, below characters), looping position tween with hard reset for seamless drift.",
+		]
+	},
 	{
 		"version": "v0.91.3",
 		"title": "Visual redesign — JUNGLE GROUND 4× detail (squares no longer obvious)",

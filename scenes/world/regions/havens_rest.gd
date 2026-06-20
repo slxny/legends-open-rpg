@@ -662,17 +662,17 @@ func _spawn_dirt_paths(rng: RandomNumberGenerator) -> void:
 	if dirt_tex == null:
 		return
 	# 4 directional paths from town center.
-	var directions: Array = [
+	var directions: Array[Vector2] = [
 		Vector2(1, 0.3).normalized(),
 		Vector2(-0.7, 0.7).normalized(),
 		Vector2(-0.2, -1).normalized(),
 		Vector2(0.8, -0.6).normalized(),
 	]
-	for d in directions:
-		var pos := Vector2(0, 0) + d * 700  # Start outside town
+	for d: Vector2 in directions:
+		var pos: Vector2 = d * 700.0  # Start outside town
 		var step: float = 65.0
 		var max_steps: int = rng.randi_range(50, 70)
-		var perp := d.rotated(PI * 0.5)
+		var perp: Vector2 = d.rotated(PI * 0.5)
 		for i in range(max_steps):
 			# Random wander perpendicular for organic curve.
 			pos += d * step + perp * rng.randf_range(-22, 22)

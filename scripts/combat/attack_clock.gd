@@ -45,6 +45,13 @@ func start(tween: Tween, duration_sec: float, speed_scalar: float = 1.0, attack_
 	active = true
 	var effective_duration: float = max(0.0001, duration_sec / max(0.01, speed_scalar))
 	_tween = tween
+	# v0.92.9 — fix recurring "Lambda capture at index 2 was freed" spam in
+	# the runtime log. The tween's tween_method / finished closures capture
+	# this RefCounted implicitly; when the caller's local var goes out of
+	# scope nothing else holds the clock alive and Godot reports the freed
+	# capture. Pinning self on the tween's meta keeps the clock alive for
+	# the tween's lifetime and is released automatically when the tween dies.
+	_tween.set_meta("_attack_clock_pin", self)
 	var gen: int = _generation
 	# Inline closures capture `gen` and `self` so a stale tween cannot
 	# corrupt a newer clock state. The active-flag guard covers cancel.

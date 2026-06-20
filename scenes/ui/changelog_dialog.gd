@@ -9,9 +9,22 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.92.8"
+const GAME_VERSION := "v0.92.9"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.92.9",
+		"title": "Dark fantasy focal frame — torch vignette + drifting fog + deeper ambient",
+		"date": "2026-06-20",
+		"entries": [
+			"TORCH VIGNETTE: full-screen radial shader (post-process style on a CanvasLayer at layer 5, below HUD). Inner 18% UV radius reads as a warm-lit clearing; smoothstep ramp to 95% outer where the world goes deep navy and 78% darker. Per-frame focus_uv set from the player's screen position so the lit area follows you. Diablo-style 'spotlight on the action' focal frame, no actual Light2Ds required.",
+			"FOG BANDS: 4 wide low-alpha cool-blue ribbons drift slowly horizontally across the world (58–96 s loops, alpha 0.05–0.10, scale 180–260 × 8–18). Cumulative atmosphere — once you're moving you can SEE the world is alive.",
+			"BRUTAL AMBIENT pushed harder: CanvasModulate 0.92/0.86/0.74 → 0.72/0.70/0.66. World base sits in real twilight territory now; halos, hits and torch vignette pop against it.",
+			"ATTACK CLOCK lifetime fix: `attack_clock.gd:58` was spamming 'Lambda capture at index 2 was freed' on every clocked attack — the RefCounted clock was being GC'd while the tween closure still referenced it. Now pinned via `tween.set_meta('_attack_clock_pin', self)` for the tween's lifetime.",
+			"havens_rest.gd:672 parse error fixed (untyped Array loop var inferred Vector2 arithmetic). Game now boots cleanly through MCP run.",
+			"Internal: new scenes/world/torch_vignette.gdshader (canvas_item, SCREEN_UV distance from focus_uv with aspect correction, smoothstep fall-off, warm torch_color additive at centre). world.gd _install_torch_vignette (CanvasLayer + ColorRect + ShaderMaterial), _install_fog_bands, _install_brutal_ambient_grade tightened, _process driver for focus_uv.",
+		]
+	},
 	{
 		"version": "v0.92.8",
 		"title": "Brutal hits — 4× sparks + blood gibs + bigger rings + harder shake",

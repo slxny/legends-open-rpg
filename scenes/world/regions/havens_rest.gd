@@ -510,6 +510,9 @@ func _generate_terrain_async() -> void:
 	# v0.92.3 — 10 LARGE ROCK OUTCROPPINGS scattered as landmarks. Breaks up
 	# the open meadow with chunky volumes the eye can navigate by.
 	await _spawn_rock_outcrops(rng)
+	# v0.92.7 — BRUTAL HACK-AND-SLASH: BLOOD SPATTERS + SCORCH MARKS biased
+	# toward enemy camp positions. World looks lived-in and violent.
+	await _spawn_world_blood_and_scorch(rng)
 
 	# Phase 7 — destructible explosive barrels scattered around enemy
 	# camp areas. Hit them to chain damage; knock enemies into them.
@@ -687,6 +690,68 @@ func _spawn_dirt_paths(rng: RandomNumberGenerator) -> void:
 			add_child(p)
 			if i % 8 == 0:
 				await get_tree().process_frame
+
+
+func _spawn_world_blood_and_scorch(rng: RandomNumberGenerator) -> void:
+	# v0.92.7 — Dark blood patches + scorch marks scattered around the world
+	# with bias toward enemy camp positions. Visceral, brutal feel.
+	var blob_tex := SpriteGenerator.get_texture("terrain_blob")
+	if blob_tex == null:
+		return
+	# Find all camp nodes (RatSwarm*, GoblinCamp*, WolfCamp*, etc.) to bias placement.
+	var camp_positions: Array[Vector2] = []
+	for child in get_children():
+		if not (child is Node2D):
+			continue
+		var name_s := String(child.name)
+		if "Swarm" in name_s or "Camp" in name_s or "Hunters" in name_s or "Pack" in name_s:
+			camp_positions.append((child as Node2D).position)
+	# 90 blood spatters total: 60 near camps, 30 random.
+	for _i in range(60):
+		if camp_positions.is_empty():
+			break
+		var center: Vector2 = camp_positions[rng.randi() % camp_positions.size()]
+		var pos: Vector2 = center + Vector2(rng.randf_range(-280, 280), rng.randf_range(-260, 260))
+		_add_blood_blob(blob_tex, rng, pos)
+	for _i in range(30):
+		var pos: Vector2 = Vector2(rng.randf_range(-5500, 5500), rng.randf_range(-4000, 4000))
+		if pos.length() < 600:
+			continue
+		_add_blood_blob(blob_tex, rng, pos)
+	# 25 scorch marks (dark ash patches) scattered, biased near camps.
+	for _i in range(25):
+		var center: Vector2
+		if not camp_positions.is_empty() and rng.randf() < 0.7:
+			center = camp_positions[rng.randi() % camp_positions.size()] + Vector2(rng.randf_range(-380, 380), rng.randf_range(-340, 340))
+		else:
+			center = Vector2(rng.randf_range(-5500, 5500), rng.randf_range(-4000, 4000))
+		if center.length() < 700:
+			continue
+		var s := Sprite2D.new()
+		s.texture = blob_tex
+		s.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		s.position = center
+		s.scale = Vector2(rng.randf_range(2.0, 3.4), rng.randf_range(1.4, 2.4))
+		s.rotation = rng.randf() * TAU
+		s.modulate = Color(0.06, 0.06, 0.08, rng.randf_range(0.6, 0.85))
+		s.z_index = -9
+		add_child(s)
+		if _i % 6 == 0:
+			await get_tree().process_frame
+
+
+func _add_blood_blob(blob_tex: Texture2D, rng: RandomNumberGenerator, pos: Vector2) -> void:
+	var s := Sprite2D.new()
+	s.texture = blob_tex
+	s.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	s.position = pos
+	s.scale = Vector2(rng.randf_range(0.9, 2.2), rng.randf_range(0.6, 1.4))
+	s.rotation = rng.randf() * TAU
+	# Deep crimson with variance — varies dried/fresh.
+	var r: float = rng.randf_range(0.30, 0.50)
+	s.modulate = Color(r, rng.randf_range(0.03, 0.08), rng.randf_range(0.02, 0.07), rng.randf_range(0.62, 0.88))
+	s.z_index = -8
+	add_child(s)
 
 
 func _spawn_rock_outcrops(rng: RandomNumberGenerator) -> void:

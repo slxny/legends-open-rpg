@@ -4414,10 +4414,11 @@ func _gen_ground_jungle() -> void:
 	# camera zoom, on-screen repeats become rare enough to read as "painted".
 	var size = 1024
 	var img = Image.create(size, size, false, Image.FORMAT_RGBA8)
-	# v0.91.8 — base jungle lifted from very-dark (0.06/0.14/0.04) to a
-	# brighter, more saturated meadow green so the world reads as cheerful
-	# Stardew/HLD-warm instead of murky.
-	img.fill(Color(0.18, 0.34, 0.12))
+	# v0.92.7 — BRUTAL HACK-AND-SLASH PIVOT. Cheerful meadow base replaced
+	# with a deeper, more saturated DARK-FANTASY palette: warm-earth base
+	# with cool moss highlights and blood-soaked dirt patches. Goal is
+	# Diablo-IV / PoE vibe — bold contrast, never washed out.
+	img.fill(Color(0.22, 0.28, 0.14))
 
 	var rng = RandomNumberGenerator.new()
 	rng.seed = 42
@@ -4433,36 +4434,36 @@ func _gen_ground_jungle() -> void:
 		var ry = rng.randi_range(25, 80)
 		var shade = rng.randf_range(0.0, 1.0)
 		var patch_color: Color
-		if shade < 0.2:
-			# Warm dirt/mud patch
+		if shade < 0.18:
+			# Bloody dirt — dark earth with red-brown.
 			patch_color = Color(
-				rng.randf_range(0.32, 0.46),
-				rng.randf_range(0.22, 0.30),
+				rng.randf_range(0.32, 0.42),
+				rng.randf_range(0.16, 0.22),
+				rng.randf_range(0.10, 0.14))
+		elif shade < 0.32:
+			# Deep cool shadow grass.
+			patch_color = Color(
+				rng.randf_range(0.08, 0.14),
+				rng.randf_range(0.18, 0.24),
+				rng.randf_range(0.07, 0.12))
+		elif shade < 0.55:
+			# Saturated dark moss.
+			patch_color = Color(
+				rng.randf_range(0.14, 0.22),
+				rng.randf_range(0.30, 0.42),
 				rng.randf_range(0.10, 0.16))
-		elif shade < 0.4:
-			# Cool shaded grass
+		elif shade < 0.78:
+			# Mid earth-yellow.
 			patch_color = Color(
-				rng.randf_range(0.10, 0.16),
-				rng.randf_range(0.24, 0.32),
-				rng.randf_range(0.08, 0.14))
-		elif shade < 0.6:
-			# Bright open meadow
-			patch_color = Color(
-				rng.randf_range(0.22, 0.32),
-				rng.randf_range(0.44, 0.58),
-				rng.randf_range(0.14, 0.22))
-		elif shade < 0.8:
-			# Mossy yellow-green
-			patch_color = Color(
-				rng.randf_range(0.26, 0.36),
-				rng.randf_range(0.36, 0.46),
+				rng.randf_range(0.28, 0.36),
+				rng.randf_range(0.28, 0.36),
 				rng.randf_range(0.12, 0.18))
 		else:
-			# Sun-lit grass
+			# Sun-touched grass (still desaturated — no cartoon green).
 			patch_color = Color(
-				rng.randf_range(0.30, 0.42),
-				rng.randf_range(0.50, 0.64),
-				rng.randf_range(0.18, 0.26))
+				rng.randf_range(0.24, 0.32),
+				rng.randf_range(0.40, 0.52),
+				rng.randf_range(0.14, 0.22))
 		_fill_ellipse(img, cx, cy, rx, ry, patch_color)
 
 	# --- Medium detail patches for mid-range texture ---
@@ -4549,6 +4550,40 @@ func _gen_ground_jungle() -> void:
 		img.set_pixel(x, y, dark)
 		img.set_pixel(x + 1, y, dark)
 		img.set_pixel(x, y + 1, dark)
+
+	# v0.92.7 — BLOOD-SOAKED SPATTERS baked into the ground. 35 patches of
+	# crimson/dark-red ellipses scattered across the texture. Sells the
+	# violent history of the place.
+	for _i in range(35):
+		var cx = rng.randi_range(0, size - 1)
+		var cy = rng.randi_range(0, size - 1)
+		var rx = rng.randi_range(4, 18)
+		var ry = rng.randi_range(3, 14)
+		var blood_color = Color(
+			rng.randf_range(0.28, 0.45),
+			rng.randf_range(0.06, 0.12),
+			rng.randf_range(0.04, 0.10))
+		_fill_ellipse(img, cx, cy, rx, ry, blood_color)
+		# Drip drops scattered around the main pool.
+		for _d in range(rng.randi_range(3, 8)):
+			var dx = cx + rng.randi_range(-rx * 2, rx * 2)
+			var dy = cy + rng.randi_range(-ry, ry * 3)  # mostly downward drips
+			dx = clampi(dx, 0, size - 2)
+			dy = clampi(dy, 0, size - 2)
+			img.set_pixel(dx, dy, blood_color)
+			img.set_pixel(dx + 1, dy, blood_color)
+
+	# Deep ash + scorch patches for that battle-scarred feel.
+	for _i in range(18):
+		var cx = rng.randi_range(0, size - 1)
+		var cy = rng.randi_range(0, size - 1)
+		var rx = rng.randi_range(6, 22)
+		var ry = rng.randi_range(5, 18)
+		var ash_color = Color(
+			rng.randf_range(0.08, 0.14),
+			rng.randf_range(0.07, 0.11),
+			rng.randf_range(0.06, 0.10))
+		_fill_ellipse(img, cx, cy, rx, ry, ash_color)
 
 	textures["ground_jungle"] = ImageTexture.create_from_image(img)
 

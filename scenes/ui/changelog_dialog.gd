@@ -9,9 +9,21 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.92.6"
+const GAME_VERSION := "v0.92.7"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.92.7",
+		"title": "BRUTAL HACK-AND-SLASH PIVOT — dark fantasy ground + blood spatter everywhere",
+		"date": "2026-06-20",
+		"entries": [
+			"Cheerful Stardew meadow → DARK FANTASY ground. Base 0.18/0.34/0.12 → 0.22/0.28/0.14 (deeper warm-earth). All 5 patch palettes shifted toward bloody dirt, deep shadow grass, saturated dark moss, mid earth-yellow, sun-touched-but-desaturated grass. No more cartoon greens.",
+			"35 BLOOD-SOAKED SPATTERS baked into the ground texture (crimson ellipses with drip-drops). 18 SCORCH PATCHES (deep ash). Texture itself tells you violence happened here.",
+			"WORLD-LEVEL BLOOD: 90 dark crimson blood blobs scattered around the map biased to enemy camps (60 near camps, 30 random). 25 SCORCH MARKS (dark ash patches) layered with deep-black-blue modulate. The world looks lived-in by killers.",
+			"BRUTAL AMBIENT CanvasModulate (0.92/0.86/0.74) replaces the friendly warm tint — desaturates everything slightly so saturated VFX (halos, hits, sparks) pop against a moodier base.",
+			"Internal: sprite_generator.gd _gen_ground_jungle base + 5 patch palettes overhauled, two new pass loops (35 blood spatters + drip drops, 18 ash patches). havens_rest.gd _spawn_world_blood_and_scorch finds Swarm/Camp/Hunters/Pack node positions, biases placement near them. _add_blood_blob helper. world.gd _install_brutal_ambient_grade.",
+		]
+	},
 	{
 		"version": "v0.92.6",
 		"title": "Pleasant UI pass — rounded bars + glowing rim + pulse + warm panel",

@@ -15,6 +15,21 @@ func _ready() -> void:
 	# overlay: 5 soft dark patches sliding across the canvas in a loop. Adds
 	# the Stardew "world is alive" feel without changing the ground texture.
 	_install_cloud_shadows()
+	# v0.92.7 — BRUTAL ambient grade. Pushes the whole world toward a darker
+	# dark-fantasy register so the brutal hack-and-slash combat lands. Subtle
+	# desaturation + slight green-shadow / warm-highlight bias.
+	_install_brutal_ambient_grade()
+
+
+func _install_brutal_ambient_grade() -> void:
+	if has_node("BrutalAmbient"):
+		return
+	var cm := CanvasModulate.new()
+	cm.name = "BrutalAmbient"
+	# Multiply: red preserved, green slightly knocked, blue dimmed harder so
+	# the world sits in deep moss / earth tones without going gray.
+	cm.color = Color(0.92, 0.86, 0.74, 1.0)
+	add_child(cm)
 
 
 const _CLOUD_SHADOW_COUNT: int = 5

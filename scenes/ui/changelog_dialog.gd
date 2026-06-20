@@ -9,9 +9,22 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.92.5"
+const GAME_VERSION := "v0.92.6"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.92.6",
+		"title": "Pleasant UI pass — rounded bars + glowing rim + pulse + warm panel",
+		"date": "2026-06-20",
+		"entries": [
+			"SC BARS rewritten: rounded corners (6 px radius), vertical gradient fill (5-stripe pseudo-grad lightened top → darkened bottom), bright SHEEN strip on top 18%, quarter-tick marks at 25/50/75%, glowing OUTER RIM colored by bar type, low-HP PULSE (oscillates toward bright red below 30% HP).",
+			"BAR HEIGHTS bumped: HP 20→28 px, mana 20→26 px, XP 20→24 px. Bigger labels (font 0.65 × bar height instead of 0.6, min 11 instead of 9, white instead of 95% grey).",
+			"COLOR PALETTE punched: HP green 0.15/0.72/0.15 → 0.28/0.85/0.30; HP yellow 0.8/0.75/0.1 → 0.95/0.78/0.15; HP red 0.8/0.15/0.1 → 0.92/0.22/0.18; mana 0.2/0.35/0.85 → 0.30/0.55/1.00; XP 0.55/0.3/0.8 → 0.78/0.36/0.95.",
+			"BOTTOM PANEL: dark grey → warm leather (0.15/0.12/0.08), gold border-top (0.78/0.55/0.22) 3 px thick, rounded top corners (8 px), drop shadow.",
+			"TOP BAR LABELS: gold/wood/kills bumped 16/14 → 19/19/17 px, golden colors with hard black outline (4 px) for hack-and-slash readability.",
+			"Internal: scripts/ui/sc_bar.gd rewritten with _fill_rounded_rect / _fill_rounded_rect_clipped helpers (corner-circles + filler-rects composition since Godot 4 Control has no native rounded-rect). _process drives _pulse_t while low HP. hud.tscn StyleBoxFlat_panel: bg/border/corners/shadow. Bar custom_minimum_size Y bumped.",
+		]
+	},
 	{
 		"version": "v0.92.5",
 		"title": "More FUN — hero sparkle trail, enemy wobble, halo combat-flare",

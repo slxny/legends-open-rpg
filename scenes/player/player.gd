@@ -272,6 +272,9 @@ func _ready() -> void:
 	inventory.setup(stats)
 	# v0.91.2 — modern pixel-art drop shadow under the hero (Stardew/HLD feel).
 	_install_player_drop_shadow()
+	# v0.92.4 — warm HERO HALO under the player. Pulses faster than enemy
+	# halos so the hero reads as the chosen one in any crowd.
+	_install_player_halo()
 
 	# Phase 1B.6a: attach trauma-model shake to the camera. Legacy
 	# procedural shake in _physics_process remains as a fallback if this
@@ -3658,6 +3661,27 @@ const _MAGNET_SPEED: float = 480.0
 
 var _damage_punch_base_zoom: Vector2 = Vector2.ZERO
 var _damage_punch_tween: Tween = null
+
+func _install_player_halo() -> void:
+	if has_node("HeroHalo"):
+		return
+	var tex = SpriteGenerator.get_texture("crystal_white")
+	if tex == null:
+		return
+	var halo := Sprite2D.new()
+	halo.name = "HeroHalo"
+	halo.texture = tex
+	halo.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	halo.modulate = Color(1.5, 1.25, 0.55, 0.50)  # warm gold
+	halo.scale = Vector2(3.4, 2.2)
+	halo.position = Vector2(0, -8)
+	halo.z_index = -4
+	add_child(halo)
+	move_child(halo, 0)
+	var pulse_dur: float = 0.9
+	var t := halo.create_tween().set_loops()
+	t.tween_property(halo, "modulate:a", 0.62, pulse_dur).set_trans(Tween.TRANS_SINE)
+	t.tween_property(halo, "modulate:a", 0.38, pulse_dur).set_trans(Tween.TRANS_SINE)
 
 func _install_player_drop_shadow() -> void:
 	if has_node("DropShadow"):

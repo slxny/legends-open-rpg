@@ -355,27 +355,31 @@ func _ready() -> void:
 	# Outline shader (shared across all enemies, initialized once)
 	if not _outline_shader:
 		_outline_shader = Shader.new()
-		# v0.91.5 — outline shader now ALSO does top-light shading: brightens
-		# the top of the silhouette, darkens the bottom. Fake directional
-		# lighting consistent across every character without normal maps.
+		# v0.92.4 — THICKER outline (samples 2-pixel ring) + MUCH stronger
+		# top-light (top_lift 0.40, bottom_dim 0.26) for that pronounced
+		# Stardew/HLD pixel-art pop. Bonus: warm RIM at top-left edge for
+		# directional sun feel.
 		_outline_shader.code = "shader_type canvas_item;
 uniform bool enabled = false;
 uniform vec4 line_color : source_color = vec4(1.0, 0.3, 0.3, 0.85);
-uniform float top_lift = 0.22;
-uniform float bottom_dim = 0.14;
+uniform float top_lift = 0.40;
+uniform float bottom_dim = 0.26;
+uniform vec3 rim_color : source_color = vec3(1.10, 0.95, 0.65);
+uniform float rim_strength = 0.45;
 void fragment() {
 	vec4 tex = texture(TEXTURE, UV);
 	if (enabled && tex.a < 0.1) {
 		vec2 ps = TEXTURE_PIXEL_SIZE;
 		float a = 0.0;
-		a += texture(TEXTURE, UV + vec2(ps.x, 0.0)).a;
-		a += texture(TEXTURE, UV + vec2(-ps.x, 0.0)).a;
-		a += texture(TEXTURE, UV + vec2(0.0, ps.y)).a;
-		a += texture(TEXTURE, UV + vec2(0.0, -ps.y)).a;
-		a += texture(TEXTURE, UV + vec2(ps.x, ps.y)).a;
-		a += texture(TEXTURE, UV + vec2(-ps.x, ps.y)).a;
-		a += texture(TEXTURE, UV + vec2(ps.x, -ps.y)).a;
-		a += texture(TEXTURE, UV + vec2(-ps.x, -ps.y)).a;
+		// Thicker outline: 2-pixel ring, 8 + 8 samples.
+		for (int dx = -2; dx <= 2; dx++) {
+			for (int dy = -2; dy <= 2; dy++) {
+				if (dx == 0 && dy == 0) continue;
+				float dist_sq = float(dx * dx + dy * dy);
+				if (dist_sq > 5.0) continue;
+				a += texture(TEXTURE, UV + vec2(float(dx) * ps.x, float(dy) * ps.y)).a;
+			}
+		}
 		if (a > 0.0) {
 			COLOR = line_color;
 		} else {
@@ -385,6 +389,11 @@ void fragment() {
 		float lift = top_lift * (1.0 - UV.y);
 		float dim = bottom_dim * UV.y;
 		vec3 lit = tex.rgb + vec3(lift) - vec3(dim);
+		// Warm rim along the top edge — sun-touched highlight.
+		vec2 ps = TEXTURE_PIXEL_SIZE;
+		float above = texture(TEXTURE, UV + vec2(0.0, -ps.y * 2.0)).a;
+		float rim_mask = (1.0 - above) * step(UV.y, 0.32);
+		lit += rim_color * rim_mask * rim_strength;
 		COLOR = vec4(clamp(lit, 0.0, 2.0), tex.a);
 	}
 }
@@ -399,6 +408,10 @@ void fragment() {
 	_ensure_outline_material()
 	# v0.91.2 — modern pixel-art DROP SHADOW under every character.
 	_ensure_drop_shadow()
+	# v0.92.4 — TYPE-COLORED AMBIENT HALO under every enemy. Identity glow
+	# that pulses slowly. Makes every character feel like an entity with
+	# presence instead of a sprite sitting on the ground.
+	_ensure_type_halo()
 	# v0.91.7 — per-instance chromatic variance. Every enemy of the same type
 	# now picks a slight tint shift so a group of 6 goblins doesn't look like
 	# 6 clones. Bypassed for mini-bosses (they have their own identity tint).
@@ -505,18 +518,69 @@ func hide_selection() -> void:
 		name_label.visible = false
 
 var _idle_breathe_tween: Tween = null
+var _halo_tween: Tween = null
+
+func _halo_color() -> Color:
+	# Identity color per enemy type. Saturated, recognizable, fun.
+	if is_mini_boss:
+		return Color(1.8, 0.35, 0.25, 1.0)  # blazing crimson — boss energy
+	match sprite_type:
+		"rat": return Color(1.2, 0.4, 0.5, 1.0)         # dusty pink
+		"goblin": return Color(0.5, 1.6, 0.35, 1.0)     # acid green
+		"wolf": return Color(1.3, 0.85, 0.45, 1.0)      # warm umber
+		"skeleton": return Color(0.9, 1.3, 1.6, 1.0)    # icy blue-white
+		"spider": return Color(1.4, 0.55, 1.6, 1.0)     # toxic magenta
+		"bandit": return Color(1.5, 0.7, 0.3, 1.0)      # rusty orange
+		"troll": return Color(0.6, 1.3, 0.7, 1.0)       # mossy teal
+		"dark_mage": return Color(1.4, 0.4, 1.7, 1.0)   # arcane violet
+		"ogre": return Color(1.3, 0.6, 0.2, 1.0)        # ember
+		"scorpion": return Color(1.6, 0.9, 0.2, 1.0)    # venom gold
+	return Color(1.2, 1.0, 0.6, 1.0)  # default warm
+
+func _ensure_type_halo() -> void:
+	if has_node("TypeHalo"):
+		return
+	var tex = SpriteGenerator.get_texture("crystal_white")
+	if tex == null:
+		return
+	var halo := Sprite2D.new()
+	halo.name = "TypeHalo"
+	halo.texture = tex
+	halo.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	var c: Color = _halo_color()
+	c.a = 0.42
+	halo.modulate = c
+	# Halo size scales with enemy weight class.
+	var s_base: float = 2.6
+	if _get_token_cost() >= 3:
+		s_base = 3.6
+	elif _get_token_cost() >= 2:
+		s_base = 3.0
+	halo.scale = Vector2(s_base, s_base * 0.65)
+	halo.position = Vector2(0, 0)
+	halo.z_index = -4  # Below drop shadow (-3) so shadow stays solid on top.
+	add_child(halo)
+	move_child(halo, 0)
+	# Slow alpha pulse for life. Random phase per enemy so packs don't sync.
+	var pulse_dur: float = randf_range(1.3, 1.9)
+	var low_a: float = 0.30
+	var high_a: float = 0.55
+	_halo_tween = halo.create_tween().set_loops()
+	_halo_tween.tween_property(halo, "modulate:a", high_a, pulse_dur).set_trans(Tween.TRANS_SINE)
+	_halo_tween.tween_property(halo, "modulate:a", low_a, pulse_dur).set_trans(Tween.TRANS_SINE)
 
 func _start_enemy_idle_breathe() -> void:
 	if sprite == null:
 		return
 	if _idle_breathe_tween != null and _idle_breathe_tween.is_valid():
 		return
-	# Stagger phase so a whole pack doesn't pulse in unison.
+	# v0.92.4 — bumped pulse amplitude (was 1.025/0.965, now 1.05/0.94) so
+	# the breath is actually noticeable instead of subliminal.
 	var dur: float = randf_range(1.6, 2.4)
 	var bx: float = _base_scale.x
 	var by: float = _base_scale.y
-	var pulse_x: float = bx * 1.025
-	var pulse_y: float = by * 0.965
+	var pulse_x: float = bx * 1.05
+	var pulse_y: float = by * 0.94
 	_idle_breathe_tween = create_tween().set_loops()
 	_idle_breathe_tween.tween_property(sprite, "scale", Vector2(pulse_x, pulse_y), dur).set_trans(Tween.TRANS_SINE)
 	_idle_breathe_tween.tween_property(sprite, "scale", _base_scale, dur).set_trans(Tween.TRANS_SINE)

@@ -9,9 +9,24 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.92.3"
+const GAME_VERSION := "v0.92.4"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.92.4",
+		"title": "Character POP pass — type-colored halos, thicker outlines, warm rim, capped arrows",
+		"date": "2026-06-20",
+		"entries": [
+			"OFF-SCREEN ARROW SPAM FIX: edge_indicator_layer now only shows arrows for enemies in active CHASE / ATTACK state, capped to 5 simultaneous (closest first), detect radius tightened 900→720 px. No more red porcupine of every patrolling rat in the meadow.",
+			"TYPE-COLORED HALO under every enemy: identity glow that pulses slowly. Goblins acid-green, rats dusty pink, wolves warm umber, skeletons icy blue-white, spiders toxic magenta, bandits rusty orange, trolls mossy teal, dark mages arcane violet, ogres ember, scorpions venom gold, mini-bosses blazing crimson. Per-instance random pulse phase.",
+			"HERO HALO under player: warm gold (1.5 / 1.25 / 0.55), pulses faster than enemy halos (0.9 s vs 1.3–1.9 s) so the hero feels like the chosen one in any crowd.",
+			"THICKER OUTLINE: outline shader now samples a 2-pixel ring (≈12 samples) instead of single-pixel 8-neighborhood. Silhouettes pop way harder.",
+			"STRONGER TOP-LIGHT: top_lift 0.22→0.40, bottom_dim 0.14→0.26. Characters look much more dimensional.",
+			"WARM SUN RIM at the top edge of every sprite — bright cream highlight along the upper silhouette, faking directional sunlight.",
+			"PRONOUNCED IDLE BREATHE: pulse amplitude 1.025/0.965 → 1.05/0.94. Breaths are visible now, not subliminal.",
+			"Internal: edge_indicator_layer.gd state filter + closest-first sort + MAX_ACTIVE_ARROWS=5; DETECT_RADIUS_SQ 900²→720². enemy.gd _ensure_type_halo (color-by-sprite_type, z=-4 below shadow), _halo_color match. player.gd _install_player_halo (z=-4, warm gold). enemy.gd outline shader: 2-px sample loop + top_lift/bottom_dim/rim_color uniforms. hero_outline.gdshader: same upgrade with outline_width param preserved.",
+		]
+	},
 	{
 		"version": "v0.92.3",
 		"title": "10 ROCK OUTCROPPING landmarks — chunky volumes break the open meadow",

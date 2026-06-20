@@ -9,9 +9,21 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.93.3"
+const GAME_VERSION := "v0.93.4"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.93.4",
+		"title": "Living world — grass sway + canopy sway + ambient pollen + heal-beacon halo",
+		"date": "2026-06-20",
+		"entries": [
+			"GRASS SWAY: every grass tuft / tall grass / flower / mushroom now gently sways (±0.10 rad for grass, ±0.05 for flowers/mushrooms) on a 2.2–3.6 s sine cycle with phase + period randomised per instance. The meadow breathes.",
+			"CANOPY SWAY: each canopy bulb on the 3 giant scenic trees rotates ±0.045 rad around its base on a 3.0–4.4 s cycle. Trunk + roots stay anchored so the silhouette anchor reads as immovable.",
+			"AMBIENT POLLEN: 90-particle GPUParticles2D drifting up-east at 8–26 px/s across the whole playable area (14 000 × 10 000 px box at world origin). Warm cream-gold motes, 8.5 s lifetime, alpha-curve fade in/out.",
+			"HEAL BEACON aura: every heal beacon now spawns a soft pulsing CYAN halo (alpha 0.32 ↔ 0.62 on a 1.4 s cycle) and an 18-particle drifting mote field rising from its radius. The sacred-ground read is instant.",
+			"Internal: scenes/world/regions/havens_rest.gd _scatter_small_decor adds per-prop sway tween (TRANS_SINE). _add_giant_ancient_tree per-bulb sway tween. scenes/world/world.gd _install_ambient_pollen new GPUParticles2D node (z_index 8, visibility_rect 14k×10k). scenes/npcs/beacon.gd _install_heal_beacon_aura runs only for beacon_type=='heal'.",
+		]
+	},
 	{
 		"version": "v0.93.3",
 		"title": "LUSH FANTASY PIVOT — landmarks, atmospheric haze, painterly vignette, carved-wood HUD",

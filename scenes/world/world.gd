@@ -12,6 +12,10 @@ func _ready() -> void:
 	add_to_group("world")
 	_install_edge_indicators()
 	_install_cloud_shadows()
+	# v0.93.4 — slow drifting POLLEN motes across the playable area. Warm
+	# off-white sparks that catch sunlight and float upward + east. The
+	# world should feel alive even when the player stands still.
+	_install_ambient_pollen()
 	# v0.92.9 — coordinated DARK FANTASY pass:
 	# 1. Brutal-dark ambient (deeper than v0.92.7's 0.92/0.86/0.74).
 	# 2. Drifting fog-band ribbons across the world.
@@ -146,6 +150,52 @@ func _install_cloud_shadows() -> void:
 		var tw := s.create_tween().set_loops()
 		tw.tween_property(s, "position", start + drift_vec, drift_dur)
 		tw.tween_property(s, "position", start, 0.0)  # reset instantly to loop
+
+func _install_ambient_pollen() -> void:
+	if has_node("AmbientPollen"):
+		return
+	var tex = SpriteGenerator.get_texture("crystal_white")
+	if tex == null:
+		return
+	var p := GPUParticles2D.new()
+	p.name = "AmbientPollen"
+	p.amount = 90
+	p.lifetime = 8.5
+	p.preprocess = 5.0
+	p.explosiveness = 0.0
+	p.randomness = 1.0
+	p.fixed_fps = 30
+	# Wide box centered on origin so pollen covers everywhere the player will be.
+	p.visibility_rect = Rect2(-7000, -5000, 14000, 10000)
+	p.texture = tex
+	var pmat := ParticleProcessMaterial.new()
+	pmat.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+	pmat.emission_box_extents = Vector3(5500.0, 3800.0, 0.0)
+	# Drift slowly up-east — a soft breeze across the meadow.
+	pmat.direction = Vector3(0.85, -0.55, 0.0)
+	pmat.spread = 22.0
+	pmat.initial_velocity_min = 8.0
+	pmat.initial_velocity_max = 26.0
+	pmat.gravity = Vector3(2.0, -6.0, 0.0)
+	pmat.scale_min = 0.14
+	pmat.scale_max = 0.30
+	pmat.color = Color(1.45, 1.25, 0.75, 0.55)
+	pmat.angle_min = 0.0
+	pmat.angle_max = 360.0
+	pmat.angular_velocity_min = -40.0
+	pmat.angular_velocity_max = 40.0
+	# Fade in then out so pollen blinks into view rather than popping.
+	var curve := Curve.new()
+	curve.add_point(Vector2(0.0, 0.0))
+	curve.add_point(Vector2(0.22, 1.0))
+	curve.add_point(Vector2(1.0, 0.0))
+	var ctex := CurveTexture.new()
+	ctex.curve = curve
+	pmat.alpha_curve = ctex
+	p.process_material = pmat
+	p.z_index = 8
+	add_child(p)
+
 
 const _EDGE_INDICATOR_SCRIPT := preload("res://scripts/components/edge_indicator_layer.gd")
 

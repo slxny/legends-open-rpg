@@ -72,6 +72,67 @@ func _ready() -> void:
 		shape.shape.radius = beacon_radius
 	# Pre-compute squared range for distance-based heal check (generous margin)
 	_heal_range_sq = (beacon_radius + 20.0) * (beacon_radius + 20.0)
+	# v0.93.4 — presentation polish. Adds a pulsing halo + tiny drifting
+	# motes around heal beacons so they read as sacred restoration ground.
+	if beacon_type == "heal":
+		_install_heal_beacon_aura()
+
+
+func _install_heal_beacon_aura() -> void:
+	if has_node("HealAura"):
+		return
+	var aura_tex = SpriteGenerator.get_texture("crystal_white")
+	if aura_tex == null:
+		return
+	# Soft cyan halo under the existing visual.
+	var halo := Sprite2D.new()
+	halo.name = "HealAura"
+	halo.texture = aura_tex
+	halo.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	halo.modulate = Color(0.55, 1.25, 1.45, 0.42)
+	halo.scale = Vector2(beacon_radius * 0.08, beacon_radius * 0.06)
+	halo.z_index = -3
+	add_child(halo)
+	move_child(halo, 0)
+	var halo_tween := halo.create_tween().set_loops()
+	halo_tween.tween_property(halo, "modulate:a", 0.62, 1.4).set_trans(Tween.TRANS_SINE)
+	halo_tween.tween_property(halo, "modulate:a", 0.32, 1.4).set_trans(Tween.TRANS_SINE)
+	# Ambient drifting motes.
+	var p := GPUParticles2D.new()
+	p.name = "HealMotes"
+	p.amount = 18
+	p.lifetime = 3.4
+	p.preprocess = 1.0
+	p.explosiveness = 0.0
+	p.randomness = 1.0
+	p.fixed_fps = 30
+	p.visibility_rect = Rect2(-180, -180, 360, 360)
+	p.texture = aura_tex
+	var pmat := ParticleProcessMaterial.new()
+	pmat.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE
+	pmat.emission_sphere_radius = beacon_radius * 0.9
+	pmat.direction = Vector3(0, -1, 0)
+	pmat.spread = 28.0
+	pmat.initial_velocity_min = 8.0
+	pmat.initial_velocity_max = 24.0
+	pmat.gravity = Vector3(0, -10.0, 0)
+	pmat.scale_min = 0.15
+	pmat.scale_max = 0.32
+	pmat.color = Color(0.65, 1.30, 1.45, 0.85)
+	pmat.angle_min = 0.0
+	pmat.angle_max = 360.0
+	pmat.angular_velocity_min = -80.0
+	pmat.angular_velocity_max = 80.0
+	var curve := Curve.new()
+	curve.add_point(Vector2(0.0, 0.0))
+	curve.add_point(Vector2(0.20, 1.0))
+	curve.add_point(Vector2(1.0, 0.0))
+	var ctex := CurveTexture.new()
+	ctex.curve = curve
+	pmat.alpha_curve = ctex
+	p.process_material = pmat
+	p.z_index = 2
+	add_child(p)
 
 func _process(delta: float) -> void:
 	if beacon_label.is_empty():

@@ -595,7 +595,8 @@ func _scatter_small_decor(rng: RandomNumberGenerator, tex_name: String, count: i
 		spr.position = pos
 		var s: float = rng.randf_range(scale_min, scale_max)
 		spr.scale = Vector2(s, s)
-		spr.rotation = rng.randf_range(-0.15, 0.15)
+		var base_rot: float = rng.randf_range(-0.15, 0.15)
+		spr.rotation = base_rot
 		# v0.91.6 — per-decoration chromatic variance. Each tuft/flower picks
 		# a slight tint shift so the world reads as hand-painted instead of
 		# stamped-with-the-same-asset. Greens vary toward yellow/blue, alpha varies.
@@ -605,6 +606,17 @@ func _scatter_small_decor(rng: RandomNumberGenerator, tex_name: String, count: i
 		spr.modulate = Color(tint_r, tint_g, tint_b, rng.randf_range(0.7, 1.0))
 		spr.z_index = z
 		add_child(spr)
+		# v0.93.4 — gentle wind SWAY. Each prop rotates ±sway around its
+		# base rotation with a per-instance phase and period so the meadow
+		# never sways in unison. Tall grass + grass tufts get a stronger
+		# sway than flowers (which look unnatural rotating too much).
+		var sway_amount: float = 0.10
+		if tex_name == "flowers" or tex_name == "mushroom_cluster":
+			sway_amount = 0.05
+		var sway_period: float = rng.randf_range(2.2, 3.6)
+		var sw := spr.create_tween().set_loops()
+		sw.tween_property(spr, "rotation", base_rot + sway_amount, sway_period).set_trans(Tween.TRANS_SINE)
+		sw.tween_property(spr, "rotation", base_rot - sway_amount, sway_period).set_trans(Tween.TRANS_SINE)
 		batch_local += 1
 		if batch_local >= 80:
 			batch_local = 0
@@ -898,10 +910,18 @@ func _add_giant_ancient_tree(blob_tex: Texture2D, rng: RandomNumberGenerator, an
 		bulb.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		bulb.position = canopy_base + (b["off"] as Vector2)
 		bulb.scale = b["scale"] as Vector2
-		bulb.rotation = rng.randf_range(-0.05, 0.05)
+		var bulb_base_rot: float = rng.randf_range(-0.05, 0.05)
+		bulb.rotation = bulb_base_rot
 		bulb.modulate = b["color"] as Color
 		bulb.z_index = -4
 		add_child(bulb)
+		# v0.93.4 — gentle CANOPY SWAY per bulb. Phase + period randomised
+		# so the canopy never sways rigidly; trunk + roots stay anchored.
+		var sway_amount: float = 0.045
+		var sway_period: float = rng.randf_range(3.0, 4.4)
+		var ct := bulb.create_tween().set_loops()
+		ct.tween_property(bulb, "rotation", bulb_base_rot + sway_amount, sway_period).set_trans(Tween.TRANS_SINE)
+		ct.tween_property(bulb, "rotation", bulb_base_rot - sway_amount, sway_period).set_trans(Tween.TRANS_SINE)
 
 
 

@@ -9,9 +9,21 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.92.9"
+const GAME_VERSION := "v0.93.0"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.93.0",
+		"title": "Desktop HUD polish — framed top bar + warm-leather command card + minimap frame",
+		"date": "2026-06-20",
+		"entries": [
+			"TOP BAR FRAME: slim dark-leather Panel (0.10/0.08/0.05) sits BEHIND the gold/wood/kills labels with a 2-px gold bottom border (0.62/0.45/0.18) and drop shadow. The currencies now read as a header strip, not floating text.",
+			"COMMAND CARD buttons re-skinned at runtime with a warm-leather StyleBoxFlat set: normal (0.16/0.12/0.07 + gold 2-px border + shadow), hover (warmer bg + brighter border), pressed (peak warmth + bright gold border), disabled (deep-dim). Font colors graded for each state (cream / bright cream / pale gold / muted brown).",
+			"MINIMAP FRAME: transparent-fill Panel with 2-px gold border + 4-px corner radius around the minimap so it reads as a portrait, not a floating rectangle.",
+			"Mobile HUD path unchanged.",
+			"Internal: scenes/ui/hud.gd _apply_desktop_polish called from _ready when not mobile. Iterates command_grid children, applies four StyleBoxFlat duplicates + four font_color overrides per Button. Top-bar frame added as sibling before TopBar via move_child(frame, 0). Minimap frame added as child of minimap Control with mouse_filter=IGNORE.",
+		]
+	},
 	{
 		"version": "v0.92.9",
 		"title": "Dark fantasy focal frame — torch vignette + drifting fog + deeper ambient",

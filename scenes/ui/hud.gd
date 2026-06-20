@@ -66,7 +66,85 @@ func _ready() -> void:
 		_apply_mobile_layout()
 	else:
 		_add_desktop_menu_button()
+		_apply_desktop_polish()  # v0.93.0 — warm dark-fantasy HUD finish
 	_create_hint_panel()
+
+# v0.93.0 — desktop HUD polish: framed top bar + leathered command card buttons.
+# Builds runtime so we don't disturb the existing scene paths that hud.gd binds to.
+func _apply_desktop_polish() -> void:
+	# --- TOP BAR FRAME: slim warm-leather panel behind the gold/wood/kills row.
+	if not has_node("TopBarFrame") and top_bar != null:
+		var frame := Panel.new()
+		frame.name = "TopBarFrame"
+		frame.set_anchors_preset(Control.PRESET_TOP_WIDE)
+		frame.offset_left = 0
+		frame.offset_right = 0
+		frame.offset_top = 0
+		frame.offset_bottom = 38
+		frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = Color(0.10, 0.08, 0.05, 0.92)
+		sb.border_color = Color(0.62, 0.45, 0.18, 0.95)
+		sb.border_width_bottom = 2
+		sb.border_width_left = 0
+		sb.border_width_right = 0
+		sb.border_width_top = 0
+		sb.shadow_color = Color(0, 0, 0, 0.55)
+		sb.shadow_size = 6
+		sb.shadow_offset = Vector2(0, 3)
+		frame.add_theme_stylebox_override("panel", sb)
+		add_child(frame)
+		move_child(frame, 0)  # render BEHIND TopBar
+
+	# --- COMMAND CARD: warm-leather style for every button in the grid.
+	if command_grid != null:
+		var btn_normal := StyleBoxFlat.new()
+		btn_normal.bg_color = Color(0.16, 0.12, 0.07, 0.96)
+		btn_normal.border_color = Color(0.55, 0.40, 0.18, 0.85)
+		btn_normal.set_border_width_all(2)
+		btn_normal.set_corner_radius_all(6)
+		btn_normal.set_content_margin_all(2)
+		btn_normal.shadow_color = Color(0, 0, 0, 0.45)
+		btn_normal.shadow_size = 3
+		btn_normal.shadow_offset = Vector2(0, 2)
+		var btn_hover: StyleBoxFlat = btn_normal.duplicate()
+		btn_hover.bg_color = Color(0.24, 0.18, 0.09, 0.96)
+		btn_hover.border_color = Color(0.95, 0.70, 0.25, 1.0)
+		var btn_pressed: StyleBoxFlat = btn_normal.duplicate()
+		btn_pressed.bg_color = Color(0.32, 0.22, 0.08, 0.96)
+		btn_pressed.border_color = Color(1.0, 0.85, 0.35, 1.0)
+		var btn_disabled: StyleBoxFlat = btn_normal.duplicate()
+		btn_disabled.bg_color = Color(0.08, 0.07, 0.05, 0.80)
+		btn_disabled.border_color = Color(0.30, 0.24, 0.14, 0.70)
+		for c in command_grid.get_children():
+			if c is Button:
+				var b: Button = c
+				b.add_theme_stylebox_override("normal", btn_normal.duplicate())
+				b.add_theme_stylebox_override("hover", btn_hover.duplicate())
+				b.add_theme_stylebox_override("pressed", btn_pressed.duplicate())
+				b.add_theme_stylebox_override("disabled", btn_disabled.duplicate())
+				b.add_theme_font_size_override("font_size", 12)
+				b.add_theme_color_override("font_color", Color(0.95, 0.88, 0.62))
+				b.add_theme_color_override("font_hover_color", Color(1.0, 0.95, 0.70))
+				b.add_theme_color_override("font_pressed_color", Color(1.0, 1.0, 0.90))
+				b.add_theme_color_override("font_disabled_color", Color(0.45, 0.40, 0.30))
+		if command_label != null:
+			command_label.add_theme_font_size_override("font_size", 12)
+			command_label.add_theme_color_override("font_color", Color(0.85, 0.65, 0.25))
+
+	# --- MINIMAP frame.
+	if minimap != null and not minimap.has_node("MinimapFrame"):
+		var mf := Panel.new()
+		mf.name = "MinimapFrame"
+		mf.set_anchors_preset(Control.PRESET_FULL_RECT)
+		mf.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var msb := StyleBoxFlat.new()
+		msb.bg_color = Color(0.06, 0.04, 0.02, 0.0)  # transparent fill — frame only
+		msb.border_color = Color(0.62, 0.45, 0.18, 0.95)
+		msb.set_border_width_all(2)
+		msb.set_corner_radius_all(4)
+		mf.add_theme_stylebox_override("panel", msb)
+		minimap.add_child(mf)
 
 func _detect_mobile() -> void:
 	var vp_size = get_viewport().get_visible_rect().size

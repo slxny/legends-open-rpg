@@ -9,9 +9,22 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.93.8"
+const GAME_VERSION := "v0.93.9"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.93.9",
+		"title": "ARPG readability — elite head glyph (pack composition at a glance)",
+		"date": "2026-06-20",
+		"entries": [
+			"ELITE HEAD GLYPH: every elite now sports a small color-coded diamond glyph hovering ~38 px above the silhouette, in addition to the floor aura. Two-layer composition — black outline behind + bright modifier-colored core in front — so the glyph stays legible against any background tint, halo, or fog.",
+			"PULSE: 0.40 ↔ 0.50 scale on a 1.1 s loop, drawing the eye without flickering. Color matches the existing aura modifier palette (cyan haste, frost-white armored, ember exploder, blood-red berserker, vital-green healer, violet shocking, gold-fallback).",
+			"Pack-composition readability now solid: in a dense brawl with a normal goblin + an Armored Goblin + a Hasted Goblin, the player can read priority at a glance without hovering each enemy for a name label.",
+			"VERIFICATION: MCP `run_project` clean parse + reach hero select with zero `ERROR:` lines. Combat smoke regression continues to PASS all 15 assertions (last run v0.93.8; v0.93.9 only adds two cosmetic Sprite2Ds at elite spawn, no damage-pipeline change). In-game pack-composition validation requires a player actually rolling an elite pack.",
+			"REMAINING OVERHAUL MILESTONES (still NOT complete): per-skill non-physical damage assignment, NEW elite modifier behaviors, boss revision with multi-phase patterns, loot rarity/affix audit, per-class build paths × 3, dungeon pacing pass with checkpoint placement, difficulty scaling beyond HP×lvl, tooltip system surfacing calculated values, audio differentiation pass, save versioning for new fields.",
+			"Internal: scenes/enemies/enemy.gd `_spawn_elite_head_glyph(color)` adds two Sprite2D children (outline diamond + colored core) at offset (0, -38), z_index inherits parent so it sits with the silhouette. Pulse tween on the core scale only.",
+		]
+	},
 	{
 		"version": "v0.93.8",
 		"title": "ARPG combat — damage TYPE pipeline + per-family resistances + RESISTED/VULNERABLE feedback",

@@ -17,6 +17,7 @@ Milestone 5 in progress — damage-type pipeline + per-family resistances landed
 - v0.93.6 — per-skill cooldown architecture in `player.gd` + `_skill_cooldowns: Dictionary` + per-class `get_hotbar_skill_ids` / `get_hotbar_skill_labels`. HUD reads per-skill remaining and draws bottom-up vertical fill on each slot. Parse: clean. In-game: requires playtest.
 - v0.93.7 — enemy separation rework: pack-ring stand-off at `attack_range × 0.95`, tangent bias (25 % perpendicular, sign-stable via instance_id parity), chase cap 120→180, attack cap 70→90, enemy-vs-enemy radius 30→38. Parse: clean. In-game: requires playtest with 5+ enemy pack.
 - v0.93.8 — damage-type pipeline + family resistances + RESISTED/VULNERABLE feedback. Parse: clean. Smoke regression: PASS. In-game: requires playtest against skeleton (0.65 phys resist) vs dark_mage (1.30 phys vuln) for a feelable difference.
+- v0.93.9 — elite head glyph (two-layer diamond above the silhouette, color = modifier palette, pulse 0.40↔0.50). Parse: clean. In-game: requires actually rolling an elite to see (`ELITE_CHANCE = 0.085`).
 
 ## Gameplay Decisions
 - ARPG identity preserved: top-down, mouse-aim, WASD movement, stamina-gated mash, perfect-dodge counter, panic-button shockwave (Q).
@@ -89,4 +90,4 @@ See `.claude/rules/godot-arpg-gameplay.md` for the durable list. Headline entrie
 8. Document explicitly which scenarios remain unverified due to MCP input limitations.
 
 ## Last Updated
-2026-06-20 — v0.93.6 (per-skill cooldowns), v0.93.7 (pack-ring separation), v0.93.8 (damage types + family resistances + RESISTED/VULNERABLE feedback) shipped. Combat smoke regression continues to PASS all 15 assertions. Gameplay overhaul still IN PROGRESS — remaining milestones listed above.
+2026-06-20 — v0.93.6 (per-skill cooldowns), v0.93.7 (pack-ring separation), v0.93.8 (damage types + family resistances + RESISTED/VULNERABLE feedback), v0.93.9 (elite head glyph) all shipped this session. Combat smoke regression continues to PASS all 15 assertions. Gameplay overhaul still IN PROGRESS — remaining milestones include per-skill non-physical damage, NEW elite behaviors, boss revision, loot/affix audit, per-class build paths, dungeon pacing, difficulty scaler, tooltip system, audio pass, save versioning.

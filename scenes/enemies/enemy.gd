@@ -3958,6 +3958,9 @@ func _roll_elite_modifier() -> void:
 			# simplicity, we use a counter on take_damage.
 	# Visual aura.
 	_spawn_elite_aura(_get_elite_color())
+	# v0.93.9 — head GLYPH so elites are instantly readable in dense packs
+	# even when their floor aura blends with sprite halos.
+	_spawn_elite_head_glyph(_get_elite_color())
 	# Promote name with [E:Modifier] suffix.
 	if name_label != null:
 		var prefix := _get_elite_prefix()
@@ -3966,6 +3969,38 @@ func _roll_elite_modifier() -> void:
 	# Bump XP / gold reward for the extra effort.
 	xp_reward = int(float(xp_reward) * 1.5)
 	gold_reward = int(float(gold_reward) * 1.5)
+
+
+func _spawn_elite_head_glyph(color: Color) -> void:
+	# Small diamond sprite floating ~6 px above the head. Pulses slow and
+	# in sync with the floor aura so the silhouette + glyph read as one
+	# threat indicator. Solid (alpha 1) so it stays legible against any
+	# background.
+	var tex = SpriteGenerator.get_texture("crystal_white")
+	if tex == null:
+		return
+	var glyph := Sprite2D.new()
+	glyph.name = "EliteHeadGlyph"
+	glyph.texture = tex
+	glyph.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	# Stack two sprites: a dark outline circle behind, the colored core in front.
+	var bg := Sprite2D.new()
+	bg.texture = tex
+	bg.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	bg.modulate = Color(0.05, 0.04, 0.06, 0.95)
+	bg.scale = Vector2(0.55, 0.55)
+	bg.position = Vector2(0, -38)
+	bg.rotation = PI * 0.25  # diamond
+	add_child(bg)
+	glyph.modulate = Color(color.r, color.g, color.b, 1.0)
+	glyph.scale = Vector2(0.40, 0.40)
+	glyph.position = Vector2(0, -38)
+	glyph.rotation = PI * 0.25
+	add_child(glyph)
+	# Pulse so the eye latches.
+	var tw := glyph.create_tween().set_loops()
+	tw.tween_property(glyph, "scale", Vector2(0.50, 0.50), 0.55).set_trans(Tween.TRANS_SINE)
+	tw.tween_property(glyph, "scale", Vector2(0.40, 0.40), 0.55).set_trans(Tween.TRANS_SINE)
 
 
 func _get_elite_color() -> Color:

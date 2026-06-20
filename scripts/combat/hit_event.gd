@@ -24,6 +24,12 @@ var victim: Node
 @export var force_crit: bool = false
 @export var armor_break: bool = false
 @export var unblockable: bool = false
+# v0.93.8 — ARPG damage typing. Pool: physical / fire / frost / lightning /
+# poison / shadow / arcane. Defaults to physical so existing call sites
+# don't need to change. CombatManager.resolve_hit looks up the victim's
+# resistance via Enemy.get_resistance(damage_type) which returns a damage
+# multiplier (1.0 = neutral, <1.0 = resist, >1.0 = vulnerable, 0.0 = immune).
+@export var damage_type: StringName = &"physical"
 
 ## Optional overrides — null means CombatManager picks defaults by weight.
 @export var feedback_profile: Resource

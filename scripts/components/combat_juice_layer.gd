@@ -140,6 +140,11 @@ func _on_hit_resolved(result: Resource) -> void:
 	var color: Color = Color(1.0, 0.85, 0.3)
 	# v0.90.7 — positional hits take priority over generic crit labels.
 	var positional: StringName = StringName(result.get_meta("positional_tag", ""))
+	# v0.93.8 — damage-type resistance tag (set by CombatManager.resolve_hit
+	# when resist_mult <= 0.7 or >= 1.3). Reads as a secondary callout so it
+	# doesn't fight the positional or crit label; emitted as a separate small
+	# floating text right after the primary.
+	var resist_tag: StringName = StringName(result.get_meta("resist_tag", ""))
 	# Lethal kill — always celebrate.
 	if was_lethal:
 		label = "KILL!"
@@ -150,6 +155,12 @@ func _on_hit_resolved(result: Resource) -> void:
 	elif positional == &"flank":
 		label = "FLANKED!"
 		color = Color(1.5, 0.9, 0.3)
+	elif resist_tag == &"vulnerable":
+		label = "VULNERABLE!"
+		color = Color(1.6, 0.55, 1.45)
+	elif resist_tag == &"resisted":
+		label = "RESISTED"
+		color = Color(0.7, 0.85, 1.05)
 	elif was_crit:
 		# Crit on a finisher reads as a slow-mo blow.
 		if attack_id == &"swing_c" or attack_id == &"branch_slam" or attack_id == &"charged_slash":

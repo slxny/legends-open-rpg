@@ -126,7 +126,18 @@ func resolve_hit(event: Resource, attacker_stats: Dictionary, defender_stats: Di
 					positional_mult = 1.25
 					positional_tag = &"flank"
 
-	var calc := calculate_damage(attacker_stats, defender_stats, ability_mult * consume_mult * positional_mult)
+	# v0.93.8 — DAMAGE TYPE resistance multiplier. Defaults to 1.0 (neutral)
+	# if the victim doesn't implement get_resistance(damage_type) — that
+	# keeps existing enemies and props unchanged. Per-family resist tables
+	# live on Enemy.get_resistance.
+	var damage_type: StringName = StringName(event.get("damage_type"))
+	if damage_type == &"":
+		damage_type = &"physical"
+	var resist_mult: float = 1.0
+	if vic_node != null and vic_node.has_method("get_resistance"):
+		resist_mult = float(vic_node.get_resistance(damage_type))
+
+	var calc := calculate_damage(attacker_stats, defender_stats, ability_mult * consume_mult * positional_mult * resist_mult)
 	var damage: int = calc["damage"]
 	var rolled_crit: bool = calc["is_crit"]
 	var forced_crit: bool = bool(event.get("force_crit")) or force_back_crit
@@ -135,9 +146,15 @@ func resolve_hit(event: Resource, attacker_stats: Dictionary, defender_stats: Di
 	if forced_crit and not rolled_crit:
 		damage = int(damage * 2.0)
 
-	# Surface positional tag on the result so juice layer can pop a label.
+	# Surface positional + damage-type tags on the result so the juice layer
+	# / floating-text system can pop "RESISTED" / "VULNERABLE" labels.
 	if positional_tag != &"":
 		result.set_meta("positional_tag", positional_tag)
+	result.set_meta("damage_type", damage_type)
+	if resist_mult <= 0.7:
+		result.set_meta("resist_tag", &"resisted")
+	elif resist_mult >= 1.3:
+		result.set_meta("resist_tag", &"vulnerable")
 
 	result.damage_dealt = damage
 	result.was_crit = is_crit

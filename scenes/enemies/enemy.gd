@@ -160,6 +160,41 @@ var _slam_telegraph: Sprite2D = null
 
 var _pattern_override: StringName = &""
 
+# v0.93.8 — ARPG damage-type resistance table.
+# Returned value is a DAMAGE MULTIPLIER (1.0 neutral, <1.0 resists,
+# >1.0 vulnerable, 0.0 immune). Looked up by CombatManager.resolve_hit
+# via event.damage_type. Per-family flavour:
+#
+#  skeleton/crypt_knight/lich  — bone armour, brittle to frost
+#  ancient_golem               — heavy stone, very physical-tough, brittle frost
+#  troll/ogre                  — thick hide, physical resist, fire weak
+#  dark_mage                   — robe-only, soft to physical, shadow-resist
+#  spider/vampire_bat          — flammable
+#  flan                        — gelatinous, frost-resist, lightning-weak
+#  rat/goblin/wolf/bandit      — neutral
+#
+# Missing entries fall through to 1.0 so this table can grow without breaking.
+const _RESIST_TABLE: Dictionary = {
+	"skeleton":     { &"physical": 0.65, &"frost": 1.40, &"fire": 1.15 },
+	"crypt_knight": { &"physical": 0.70, &"frost": 1.35, &"shadow": 0.80 },
+	"lich":         { &"physical": 0.85, &"frost": 1.40, &"shadow": 0.60, &"arcane": 0.70 },
+	"ancient_golem":{ &"physical": 0.55, &"frost": 1.30, &"lightning": 1.20 },
+	"troll":        { &"physical": 0.85, &"fire": 1.35, &"frost": 1.15 },
+	"ogre":         { &"physical": 0.85, &"fire": 1.30 },
+	"dark_mage":    { &"physical": 1.30, &"shadow": 0.60, &"arcane": 0.65 },
+	"spider":       { &"fire": 1.45 },
+	"vampire_bat":  { &"fire": 1.40, &"shadow": 0.75 },
+	"flan":         { &"frost": 0.55, &"lightning": 1.45, &"poison": 0.65 },
+	"ghoul":        { &"physical": 1.10, &"shadow": 0.70 },
+}
+
+func get_resistance(damage_type: StringName) -> float:
+	var family: Dictionary = _RESIST_TABLE.get(sprite_type, {})
+	if family.is_empty():
+		return 1.0
+	return float(family.get(damage_type, 1.0))
+
+
 func _get_attack_pattern() -> StringName:
 	if _pattern_override != &"":
 		return _pattern_override

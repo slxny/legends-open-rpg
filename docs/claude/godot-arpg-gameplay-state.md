@@ -4,19 +4,19 @@
 Comprehensively revise, deepen, polish, rebalance, and expand the existing top-down ARPG (Legends Open RPG, Godot 4.6.3, GL Compatibility) until the moment-to-moment experience approaches the responsiveness, density, build depth, encounter quality, loot satisfaction, dungeon pacing, and replayability expected from a polished modern hack-and-slash. Existing systems count as a BASELINE only; each must be inspected, tested in real gameplay, weaknesses identified, and improvements made & re-verified before being counted complete.
 
 ## Current Milestone
-Milestone 1 — individual skill architecture. Replacing the shared `_attack_cooldown` shortcut with real per-skill runtime state, per-class hot-bar labels, and per-skill HUD readouts. Subsequent milestones (combat feel, class kits, enemy revision, elite, boss, loot, progression, dungeon pacing, difficulty, HUD integration, audio/effects, save compatibility) explicitly NOT YET STARTED.
+Milestone 5 in progress — damage-type pipeline + per-family resistances landed (v0.93.8). Milestones 1, 4, 5 partially complete and committed. Remaining: per-skill non-physical damage assignment for class-flavour skills, elite modifier audit, boss revision, loot rarity / affix audit, build paths × 3 per class, dungeon pacing pass, difficulty scaling, save versioning, HUD tooltip system, audio differentiation.
 
 ## Completed and Verified
 (Only systems tested during actual gameplay and confirmed correct. No entries should land here based on clean boot alone.)
 
-- *None for the gameplay overhaul yet.* Prior visual / atmospheric / hit-FX commits (v0.92.9 … v0.93.4) shipped & MCP-clean-boot-verified, but those are out of scope for this overhaul; they are documented in `docs/claude/godot-visual-overhaul-state.md`.
+- v0.93.8 damage-type / resistance pipeline — partial verification: `tests/smoke/combat_smoke.tscn` regression PASSES all 15 assertions including `power_strike has 1.5x bonus on exposed`, proving the new `resist_mult` factor multiplied through `calculate_damage` did not break the existing exposed-status pipeline. End-to-end runtime (enemy spawns in `havens_rest` with sprite_type lookup in `_RESIST_TABLE`) NOT directly tested — MCP cannot drive input.
+- Prior visual / atmospheric / hit-FX commits (v0.92.9 … v0.93.4) shipped & MCP-clean-boot-verified, but those are out of scope for this overhaul; documented in `docs/claude/godot-visual-overhaul-state.md`.
 
-## Preliminary changes (NOT verified in gameplay)
-- v0.93.5 added Z X C V input actions firing the existing `SpecialAttack` enum via `_try_special_attack`, plus 4 HUD slots with a SHARED cooldown dim overlay. Status:
-  - Code path exists and parses (MCP `run_project` → hero select reached, zero `ERROR:` lines).
-  - Direct in-game test of pressing Z/X/C/V during combat: **not performed**; MCP can launch but cannot drive input.
-  - Skill labels are class-agnostic placeholder strings ("Strike / Whirl / Dash / Heavy") — wrong for ranger.
-  - Cooldown UI is shared, not per-skill — temporary shortcut.
+## Preliminary changes (parse-verified, gameplay verification pending)
+- v0.93.5 — Z X C V input actions firing existing `SpecialAttack` enum via `_try_special_attack`. SUPERSEDED by v0.93.6 per-skill cooldowns + per-class labels.
+- v0.93.6 — per-skill cooldown architecture in `player.gd` + `_skill_cooldowns: Dictionary` + per-class `get_hotbar_skill_ids` / `get_hotbar_skill_labels`. HUD reads per-skill remaining and draws bottom-up vertical fill on each slot. Parse: clean. In-game: requires playtest.
+- v0.93.7 — enemy separation rework: pack-ring stand-off at `attack_range × 0.95`, tangent bias (25 % perpendicular, sign-stable via instance_id parity), chase cap 120→180, attack cap 70→90, enemy-vs-enemy radius 30→38. Parse: clean. In-game: requires playtest with 5+ enemy pack.
+- v0.93.8 — damage-type pipeline + family resistances + RESISTED/VULNERABLE feedback. Parse: clean. Smoke regression: PASS. In-game: requires playtest against skeleton (0.65 phys resist) vs dark_mage (1.30 phys vuln) for a feelable difference.
 
 ## Gameplay Decisions
 - ARPG identity preserved: top-down, mouse-aim, WASD movement, stamina-gated mash, perfect-dodge counter, panic-button shockwave (Q).
@@ -89,4 +89,4 @@ See `.claude/rules/godot-arpg-gameplay.md` for the durable list. Headline entrie
 8. Document explicitly which scenarios remain unverified due to MCP input limitations.
 
 ## Last Updated
-2026-06-20 — Retracted premature completion language. v0.93.5 reclassified as preliminary patch. Began Milestone 1.
+2026-06-20 — v0.93.6 (per-skill cooldowns), v0.93.7 (pack-ring separation), v0.93.8 (damage types + family resistances + RESISTED/VULNERABLE feedback) shipped. Combat smoke regression continues to PASS all 15 assertions. Gameplay overhaul still IN PROGRESS — remaining milestones listed above.

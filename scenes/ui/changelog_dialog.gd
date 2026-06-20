@@ -9,9 +9,29 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.93.7"
+const GAME_VERSION := "v0.93.8"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.93.8",
+		"title": "ARPG combat — damage TYPE pipeline + per-family resistances + RESISTED/VULNERABLE feedback",
+		"date": "2026-06-20",
+		"entries": [
+			"DAMAGE TYPE field plumbed end-to-end. `HitEvent.damage_type` (StringName, default `physical`) ships through `CombatManager.resolve_hit` and looks up `victim.get_resistance(damage_type)` for a damage multiplier (1.0 neutral, <1 resist, >1 vulnerable, 0 immune). Existing call sites untouched — the default keeps every current attack physical.",
+			"ENEMY FAMILY RESISTANCES (initial table — meaningful enough that families finally feel different to fight):",
+			"  • skeleton/crypt_knight/lich — bone armour (0.65–0.85 vs physical), brittle to frost (1.35–1.40), lich also takes more arcane / less shadow.",
+			"  • ancient_golem — 0.55 vs physical (very tough), brittle to frost (1.30), small bonus on lightning (1.20).",
+			"  • troll/ogre — thick hide (0.85 vs physical), flammable (1.30–1.35).",
+			"  • dark_mage — robe-only (1.30 vs physical), naturally resistant to shadow/arcane (0.60–0.65).",
+			"  • spider — 1.45 vs fire. vampire_bat — 1.40 vs fire, shadow-resist 0.75.",
+			"  • flan — frost-resist 0.55, lightning weak 1.45, poison weak 0.65.",
+			"  • ghoul — 1.10 vs physical, shadow-resist 0.70.",
+			"RESISTED / VULNERABLE TAGS: `CombatManager.resolve_hit` writes `result.set_meta(\"resist_tag\", ...)` when multiplier ≤ 0.7 or ≥ 1.3. The combat juice layer pops a 'RESISTED' (cool blue) or 'VULNERABLE!' (magenta) label as a secondary callout. Plumbed BELOW positional + lethal labels so it never fights the headline.",
+			"VERIFICATION: Godot MCP `run_project` confirms clean parse + reach hero select with zero `ERROR:` lines. Headless `tests/smoke/combat_smoke.tscn` regression PASSES all 15 assertions including `power_strike has 1.5x bonus on exposed` — the multiplier pipeline didn't break. In-game playthrough validation of resist/vuln pops not performed (MCP cannot drive input).",
+			"REMAINING OVERHAUL MILESTONES (still NOT complete, see `docs/claude/godot-arpg-gameplay-state.md`): per-skill damage-type assignment for non-physical skills, elite modifier audit, boss revision, loot rarity / affix audit, build paths × 3 per class, dungeon pacing pass, difficulty scaling, save versioning.",
+			"Internal: scripts/combat/hit_event.gd `damage_type` StringName export. scripts/autoloads/combat_manager.gd looks up resist_mult before `calculate_damage`. scenes/enemies/enemy.gd `_RESIST_TABLE` const + `get_resistance(damage_type)` method. scripts/components/combat_juice_layer.gd `_on_hit_resolved` reads `resist_tag` meta.",
+		]
+	},
 	{
 		"version": "v0.93.7",
 		"title": "ARPG combat — pack-ring separation around the player (no more pile)",

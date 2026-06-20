@@ -906,16 +906,28 @@ var _cached_sep_push: Vector2 = Vector2.ZERO
 var _sep_push_skip: int = 0  # Skip counter — recompute every 3rd frame
 
 func _get_separation_push(in_attack: bool = false) -> Vector2:
-	# Throttle: recompute every 3 physics frames, reuse cache otherwise
+	# v0.93.7 — quality of life: ARPG-style pack ring around the player
+	# instead of overlap pile.
+	#  * enemy-vs-enemy radius 30 -> 38 px (sprite is ~24 px wide, so 38 px
+	#    reads as one body-width gap and pulls clean separation up to
+	#    ~5 stacked goblins).
+	#  * player-stand-off bumped from 30 px square to attack_range x 0.95
+	#    so they form a clean melee ring at swing distance instead of
+	#    penetrating it.
+	#  * tangent bias rotates 25% of the player-push perpendicular so the
+	#    pack swirls around the player (Diablo / Last Epoch feel) rather
+	#    than all charging straight in.
+	#  * cap raised during chase to 180 so 5+ stacked enemies actually
+	#    spread; attack cap stays low to preserve hit windows.
+	#
+	# Throttle: recompute every 3 physics frames, reuse cache otherwise.
 	_sep_push_skip += 1
 	if _sep_push_skip < 3:
 		return _cached_sep_push
 	_sep_push_skip = 0
-	# Proximity-based soft separation — enemies repel each other without hard collisions
-	# Optimized: only check camp-mates (parent's children) instead of all enemies globally
 	var push = Vector2.ZERO
 	var pos = global_position
-	var check_radius: float = 30.0
+	var check_radius: float = 38.0
 	var check_radius_sq: float = check_radius * check_radius
 	var parent = get_parent()
 	if not parent:
@@ -929,24 +941,30 @@ func _get_separation_push(in_attack: bool = false) -> Vector2:
 		var diff = pos - other.global_position
 		var dist_sq = diff.length_squared()
 		if dist_sq < check_radius_sq and dist_sq > 0.1:
-			# Push strength falls off with distance; direction from diff/dist_sq
-			# is slightly biased toward closer enemies (intentional — stronger repel)
-			var strength = (1.0 - dist_sq / check_radius_sq) * 150.0
+			var strength = (1.0 - dist_sq / check_radius_sq) * 165.0
 			push += diff * (strength / check_radius)
-	# Push away from the player to prevent piling on top of them
+	# Player stand-off: push enemies out to roughly the swing-resolution
+	# ring so the pack reads as "around" the hero rather than "on top of".
 	if is_instance_valid(target):
 		var player_diff = pos - target.global_position
 		var player_dist_sq = player_diff.length_squared()
-		var player_push_radius_sq: float = 900.0  # 30.0 * 30.0
-		if player_dist_sq < player_push_radius_sq and player_dist_sq > 0.1:
-			var strength = (1.0 - player_dist_sq / player_push_radius_sq) * 200.0
-			push += player_diff * (strength / 30.0)
-	# Softer cap during attack so combat positioning isn't disrupted
-	var max_push = 70.0 if in_attack else 120.0
-	var max_push_sq = max_push * max_push
+		var stand_off: float = max(34.0, stats.attack_range * 0.95)
+		var stand_off_sq: float = stand_off * stand_off
+		if player_dist_sq < stand_off_sq and player_dist_sq > 0.1:
+			var strength = (1.0 - player_dist_sq / stand_off_sq) * 230.0
+			var radial: Vector2 = player_diff * (strength / stand_off)
+			# Tangent bias — rotate 25% of the radial push perpendicular so
+			# the pack arcs around the player instead of bouncing straight
+			# off. Sign is stable per enemy via instance id so individual
+			# enemies don't oscillate side to side.
+			var sign_pick: float = 1.0 if (get_instance_id() & 1) == 0 else -1.0
+			var tangent: Vector2 = radial.rotated(PI * 0.5 * sign_pick) * 0.25
+			push += radial + tangent
+	var max_push: float = 90.0 if in_attack else 180.0
+	var max_push_sq: float = max_push * max_push
 	var push_len_sq = push.length_squared()
 	if push_len_sq > max_push_sq:
-		push *= max_push / sqrt(push_len_sq)  # Only sqrt when actually clamping
+		push *= max_push / sqrt(push_len_sq)
 	_cached_sep_push = push
 	return push
 

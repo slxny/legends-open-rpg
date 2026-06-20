@@ -9,9 +9,23 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.93.6"
+const GAME_VERSION := "v0.93.7"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.93.7",
+		"title": "ARPG combat — pack-ring separation around the player (no more pile)",
+		"date": "2026-06-20",
+		"entries": [
+			"ENEMY-vs-ENEMY repel radius 30 → 38 px (sprite is ~24 px wide, so 38 reads as one body-width gap; clean separation up to ~5 stacked).",
+			"PLAYER STAND-OFF replaced fixed 30 px squared with stats.attack_range × 0.95. Enemies now form a clean melee ring at swing distance instead of penetrating it.",
+			"TANGENT BIAS: 25 % of the player-radial push is rotated perpendicular per enemy (sign stable via instance_id parity), so packs ARC around the player like Diablo / Last Epoch swarms instead of stacking on the front.",
+			"CHASE-time cap 120 → 180 so 5+ overlapping enemies actually spread out. Attack-time cap 70 → 90 (still tight enough that combat positioning isn't disrupted).",
+			"Strengths bumped: enemy-vs-enemy 150 → 165, player stand-off 200 → 230.",
+			"VERIFICATION STATUS: MCP `run_project` confirms clean parse + reach hero select with zero `ERROR:` lines. In-game pack-ring behaviour validation requires actual playtest — MCP cannot drive input. State file remains the source of truth; this is one more incremental milestone, not a final completion claim.",
+			"Internal: scenes/enemies/enemy.gd `_get_separation_push(in_attack)` rebuilt. Throttle (every 3rd physics frame) preserved. Camp-mates iteration preserved (no full-group scan). Sign-stable tangent prevents per-enemy oscillation between frames.",
+		]
+	},
 	{
 		"version": "v0.93.6",
 		"title": "ARPG combat — REAL per-skill cooldowns (replacing the v0.93.5 shared dim)",

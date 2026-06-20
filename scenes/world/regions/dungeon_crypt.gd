@@ -11,11 +11,96 @@ const CreepCampScene = preload("res://scenes/enemies/creep_camp.tscn")
 @onready var exit_beacon: Area2D = $ExitBeacon
 
 func _ready() -> void:
-	# Dark underground atmosphere
-	modulate = Color(0.6, 0.55, 0.7)
+	# v0.93.2 — DEEPER cold dungeon: bluer + darker than v0.92's 0.6/0.55/0.7.
+	modulate = Color(0.46, 0.46, 0.62)
 	_generate_terrain()
 	_generate_decorations()
 	_spawn_camps()
+	_spawn_dungeon_atmosphere()
+
+
+func _spawn_dungeon_atmosphere() -> void:
+	# v0.93.2 — atmospheric ambient pass for the crypt:
+	#   - 14 candle-pool glow sprites scattered across the floor (warm
+	#     orange pools that punch through the cold blue ambient).
+	#   - 3 cold fog ribbons drifting slowly horizontally across the room.
+	#   - Blood spatters baked around enemy camps.
+	#   - 10 cracked-bone debris piles for set dressing.
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 8675309
+	var blob_tex := SpriteGenerator.get_texture("crystal_white")
+	if blob_tex == null:
+		return
+
+	# Candle-glow pools — warm pulse against the cold ambient.
+	for _i in range(14):
+		var pos := Vector2(rng.randf_range(-900, 900), rng.randf_range(-900, 900))
+		var pool := Sprite2D.new()
+		pool.texture = blob_tex
+		pool.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		pool.position = pos
+		pool.scale = Vector2(rng.randf_range(2.6, 4.2), rng.randf_range(1.6, 2.6))
+		pool.rotation = rng.randf() * TAU
+		pool.modulate = Color(1.5, 0.85, 0.30, 0.55)
+		pool.z_index = -6
+		add_child(pool)
+		# Slow flicker.
+		var dur: float = rng.randf_range(1.1, 1.8)
+		var tw := pool.create_tween().set_loops()
+		tw.tween_property(pool, "modulate:a", 0.72, dur).set_trans(Tween.TRANS_SINE)
+		tw.tween_property(pool, "modulate:a", 0.38, dur).set_trans(Tween.TRANS_SINE)
+
+	# Cold drifting fog ribbons.
+	for i in range(3):
+		var fog := Sprite2D.new()
+		fog.texture = blob_tex
+		fog.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		fog.modulate = Color(0.55, 0.65, 0.95, rng.randf_range(0.05, 0.10))
+		fog.scale = Vector2(rng.randf_range(80.0, 120.0), rng.randf_range(6.0, 12.0))
+		fog.rotation = rng.randf_range(-0.04, 0.04)
+		fog.z_index = 7
+		var start_y: float = float(i) * 700.0 - 1000.0
+		fog.position = Vector2(-1400.0, start_y)
+		add_child(fog)
+		var dur: float = rng.randf_range(50.0, 80.0)
+		var tw := fog.create_tween().set_loops()
+		tw.tween_property(fog, "position", Vector2(1400.0, start_y + rng.randf_range(-40, 40)), dur)
+		tw.tween_property(fog, "position", fog.position, 0.0)
+
+	# Blood spatters near camps.
+	var camp_positions: Array[Vector2] = []
+	for child in get_children():
+		if child is Node2D and child.has_method("_spawn_enemies_staggered"):
+			camp_positions.append((child as Node2D).position)
+	for _i in range(48):
+		if camp_positions.is_empty():
+			break
+		var center: Vector2 = camp_positions[rng.randi() % camp_positions.size()]
+		var pos: Vector2 = center + Vector2(rng.randf_range(-160, 160), rng.randf_range(-150, 150))
+		var s := Sprite2D.new()
+		s.texture = blob_tex
+		s.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		s.position = pos
+		s.scale = Vector2(rng.randf_range(0.8, 1.7), rng.randf_range(0.5, 1.1))
+		s.rotation = rng.randf() * TAU
+		s.modulate = Color(rng.randf_range(0.30, 0.46), rng.randf_range(0.04, 0.10),
+			rng.randf_range(0.03, 0.07), rng.randf_range(0.70, 0.92))
+		s.z_index = -7
+		add_child(s)
+
+	# Cracked-bone debris piles — small near-white sprite clusters.
+	for _i in range(10):
+		var center: Vector2 = Vector2(rng.randf_range(-900, 900), rng.randf_range(-900, 900))
+		for _b in range(rng.randi_range(3, 5)):
+			var bone := Sprite2D.new()
+			bone.texture = blob_tex
+			bone.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			bone.position = center + Vector2(rng.randf_range(-22, 22), rng.randf_range(-18, 18))
+			bone.scale = Vector2(rng.randf_range(0.3, 0.55), rng.randf_range(0.10, 0.18))
+			bone.rotation = rng.randf() * TAU
+			bone.modulate = Color(0.86, 0.82, 0.72, 0.85)
+			bone.z_index = -6
+			add_child(bone)
 
 func setup_dungeon_minimap() -> void:
 	## Call this when the player enters the dungeon to switch the minimap.

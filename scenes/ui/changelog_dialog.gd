@@ -9,9 +9,22 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.93.1"
+const GAME_VERSION := "v0.93.2"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.93.2",
+		"title": "Dungeon Crypt atmosphere — cold ambient + candle pools + bones + blood",
+		"date": "2026-06-20",
+		"entries": [
+			"Crypt ambient modulate pushed DEEPER + cooler: 0.6/0.55/0.7 → 0.46/0.46/0.62. Whole dungeon reads as cold-stone twilight.",
+			"14 CANDLE-POOL GLOW sprites scattered on the floor (warm orange 1.5/0.85/0.30 at 0.55 alpha, scale 2.6–4.2 × 1.6–2.6). Each pool slow-flickers between 0.38 and 0.72 alpha on a 1.1–1.8 s loop. The cold dungeon now has visible warm safety pools.",
+			"3 COLD FOG RIBBONS drifting horizontally across the crypt (50–80 s loops, alpha 0.05–0.10, scale 80–120 × 6–12 in cool 0.55/0.65/0.95).",
+			"48 BLOOD SPATTER blobs scattered around enemy camp positions (dark crimson, alpha 0.70–0.92, varied scale + rotation).",
+			"10 CRACKED-BONE DEBRIS piles (3–5 bone shards per pile, near-white modulate 0.86/0.82/0.72 at 0.85 alpha) scattered across the dungeon for set dressing.",
+			"Internal: scenes/world/regions/dungeon_crypt.gd _spawn_dungeon_atmosphere called after camps spawn so it can find camp positions. Uses crystal_white texture for all fills (scale + rotation drives the silhouette). Z-indices: candle pools -6, fog 7, blood -7, bones -6.",
+		]
+	},
 	{
 		"version": "v0.93.1",
 		"title": "Menus — hero select atmosphere + pause backdrop + pop-in animation",

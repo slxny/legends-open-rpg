@@ -1218,6 +1218,21 @@ func _unhandled_input(event: InputEvent) -> void:
 		_tap_resolve_timer = TAP_RESOLVE_TIME  # Reset window on each new tap
 		_tap_resolved = false
 
+	# v0.93.5 — Hot-bar SKILL keys Z X C V dispatch the existing specials so
+	# the kit is discoverable without learning tap-direction combos. Class
+	# mapping mirrors the existing dispatcher pattern (ranger gets the bow
+	# specials, melee gets the strike specials).
+	if not _is_paralyzed:
+		var is_ranged: bool = hero_class == "shadow_ranger"
+		if event.is_action_pressed("skill_1"):
+			_try_special_attack(SpecialAttack.PIERCING_SHOT if is_ranged else SpecialAttack.POWER_STRIKE)
+		elif event.is_action_pressed("skill_2"):
+			_try_special_attack(SpecialAttack.ARROW_RAIN if is_ranged else SpecialAttack.WHIRLWIND)
+		elif event.is_action_pressed("skill_3"):
+			_try_special_attack(SpecialAttack.DASH_STRIKE)
+		elif event.is_action_pressed("skill_4"):
+			_try_special_attack(SpecialAttack.SNIPER_SHOT if is_ranged else SpecialAttack.CHARGED_SLASH)
+
 	# Potion slots
 	if event is InputEventKey and event.pressed:
 		match event.keycode:

@@ -26,3 +26,19 @@ automatically via preload — no need to update it separately.
 
 <!-- END GODOT VISUAL OVERHAUL -->
 
+<!-- BEGIN GODOT ARPG GAMEPLAY OVERHAUL -->
+
+## Godot ARPG Gameplay Overhaul
+
+- The project IS already a fast top-down loot-driven action RPG (Diablo / Torchlight family). The gameplay overhaul is an incremental gap-fill, not a conversion.
+- Use Godot MCP to run and validate every substantial gameplay change.
+- Combat must prioritize responsiveness, clear telegraphs, enemy density, build variety, loot excitement, and strong feedback.
+- Preserve unrelated project work and avoid destructive Git operations.
+- Do not claim a system is complete until it has been tested during actual gameplay.
+- Read `.claude/rules/godot-arpg-gameplay.md` before continuing gameplay work.
+- Read `docs/claude/godot-arpg-gameplay-state.md` before resuming the overhaul.
+- Update the gameplay state file after each verified milestone and before ending a session.
+
+<!-- END GODOT ARPG GAMEPLAY OVERHAUL -->
+
+

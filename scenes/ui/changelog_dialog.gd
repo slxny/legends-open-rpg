@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.93.4"
+const GAME_VERSION := "v0.93.5"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.93.5",
+		"title": "ARPG hot-bar — Z X C V skill keys + on-HUD skill bar with cooldown overlay",
+		"date": "2026-06-20",
+		"entries": [
+			"SKILL HOT-BAR: Z / X / C / V now directly fire the existing special attacks instead of requiring tap-direction combo discovery. Class mapping: Z = PIERCING SHOT (ranger) or POWER STRIKE (melee); X = ARROW RAIN or WHIRLWIND; C = DASH STRIKE; V = SNIPER SHOT or CHARGED SLASH. Tap-combo specials still work in parallel.",
+			"ON-HUD SKILL BAR: 4 carved-leather slots floating above the bottom panel showing each key letter + ability name + a dim cooldown overlay that lights up while the player is mid-swing or in attack cooldown. Mouse-passthrough so it doesn't block gameplay clicks.",
+			"Persistent project memory: CLAUDE.md gets a Godot ARPG Gameplay Overhaul marker. New `.claude/rules/godot-arpg-gameplay.md` documents existing systems so future sessions don't try to 'convert' what's already a working top-down ARPG. New `docs/claude/godot-arpg-gameplay-state.md` is the resumable gameplay ledger.",
+			"Internal: project.godot adds 4 input actions skill_1..skill_4 (physical keycodes 90/88/67/86). scenes/player/player.gd _input dispatches to existing SpecialAttack enum via _try_special_attack with the hero_class==shadow_ranger branch (mirrors the existing tap-combo dispatcher). scenes/ui/hud.gd _install_skill_bar builds HBoxContainer of 4 PanelContainer slots anchored CENTER_BOTTOM at -180px above the bottom panel. _process polls _player._attack_cooldown + _is_attack_animating to toggle ColorRect dim overlays.",
+		]
+	},
 	{
 		"version": "v0.93.4",
 		"title": "Living world — grass sway + canopy sway + ambient pollen + heal-beacon halo",

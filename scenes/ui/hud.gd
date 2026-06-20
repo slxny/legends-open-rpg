@@ -11,6 +11,13 @@ extends CanvasLayer
 
 # Bottom console panel refs
 @onready var bottom_panel: PanelContainer = $BottomPanel
+
+# v0.93.5 — Hot-bar skill slots. Built at runtime in _apply_desktop_polish.
+var _skill_bar: HBoxContainer = null
+var _skill_slots: Array[PanelContainer] = []
+var _skill_cooldown_overlays: Array[ColorRect] = []
+const _SKILL_BAR_LABELS: Array[String] = ["Z", "X", "C", "V"]
+const _SKILL_BAR_TITLES: Array[String] = ["Strike", "Whirl", "Dash", "Heavy"]
 @onready var bottom_hbox: HBoxContainer = $BottomPanel/HBox
 @onready var hp_bar: SCBar = $BottomPanel/HBox/UnitInfo/HPBar
 @onready var mana_bar: SCBar = $BottomPanel/HBox/UnitInfo/ManaBar
@@ -74,6 +81,94 @@ func _ready() -> void:
 # v0.93.3 — pushed harder toward fantasy carved-wood: layered top-bar frame
 # with two-tone border, gold-leaf inset, and matched ornamentation across
 # all HUD chrome.
+func _install_skill_bar() -> void:
+	if _skill_bar != null and is_instance_valid(_skill_bar):
+		return
+	# 4 carved-leather slots laid out horizontally, anchored centre-bottom
+	# just above the bottom panel.
+	var holder := HBoxContainer.new()
+	holder.name = "SkillBar"
+	holder.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	holder.offset_top = -180  # above the bottom panel (~115 tall + breathing room)
+	holder.offset_bottom = -130
+	holder.offset_left = -176  # 4 × 80 px + 3 × 8 separation = 344 total → half = 172
+	holder.offset_right = 176
+	holder.add_theme_constant_override("separation", 8)
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(holder)
+	_skill_bar = holder
+	_skill_slots.clear()
+	_skill_cooldown_overlays.clear()
+	for i in range(4):
+		var slot := PanelContainer.new()
+		slot.custom_minimum_size = Vector2(78, 78)
+		slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = Color(0.13, 0.10, 0.06, 0.94)
+		sb.border_color = Color(0.78, 0.55, 0.22, 0.95)
+		sb.set_border_width_all(3)
+		sb.set_corner_radius_all(10)
+		sb.shadow_color = Color(0, 0, 0, 0.65)
+		sb.shadow_size = 6
+		sb.shadow_offset = Vector2(0, 3)
+		slot.add_theme_stylebox_override("panel", sb)
+
+		var center := CenterContainer.new()
+		center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		slot.add_child(center)
+
+		var v := VBoxContainer.new()
+		v.add_theme_constant_override("separation", 0)
+		v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		center.add_child(v)
+
+		var title := Label.new()
+		title.text = _SKILL_BAR_TITLES[i]
+		title.add_theme_font_size_override("font_size", 12)
+		title.add_theme_color_override("font_color", Color(1.0, 0.85, 0.30))
+		title.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
+		title.add_theme_constant_override("outline_size", 3)
+		title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		v.add_child(title)
+
+		var key := Label.new()
+		key.text = _SKILL_BAR_LABELS[i]
+		key.add_theme_font_size_override("font_size", 26)
+		key.add_theme_color_override("font_color", Color(0.95, 0.92, 0.70))
+		key.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.90))
+		key.add_theme_constant_override("outline_size", 4)
+		key.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		v.add_child(key)
+
+		# Cooldown dim overlay — shown when player has shared attack cooldown.
+		var cd := ColorRect.new()
+		cd.color = Color(0, 0, 0, 0.55)
+		cd.set_anchors_preset(Control.PRESET_FULL_RECT)
+		cd.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		cd.visible = false
+		slot.add_child(cd)
+
+		holder.add_child(slot)
+		_skill_slots.append(slot)
+		_skill_cooldown_overlays.append(cd)
+
+
+func _process(_delta: float) -> void:
+	# v0.93.5 — drive the skill-bar cooldown dim from the shared player
+	# attack cooldown. Cheap: just toggles overlay visibility per slot.
+	if _skill_cooldown_overlays.is_empty():
+		return
+	if _player == null or not is_instance_valid(_player):
+		for o in _skill_cooldown_overlays:
+			if o != null:
+				o.visible = false
+		return
+	var on_cd: bool = bool(_player.get("_is_attack_animating")) or float(_player.get("_attack_cooldown")) > 0.0
+	for o in _skill_cooldown_overlays:
+		if o != null:
+			o.visible = on_cd
+
+
 func _apply_desktop_polish() -> void:
 	# --- TOP BAR FRAME: layered carved-wood panel behind the currency row.
 	if not has_node("TopBarFrame") and top_bar != null:
@@ -146,6 +241,10 @@ func _apply_desktop_polish() -> void:
 		if command_label != null:
 			command_label.add_theme_font_size_override("font_size", 12)
 			command_label.add_theme_color_override("font_color", Color(0.85, 0.65, 0.25))
+
+	# v0.93.5 — SKILL BAR row above the bottom panel showing 4 hot-bar
+	# slots (Z X C V). Each slot reads cooldown state from the player.
+	_install_skill_bar()
 
 	# --- MINIMAP frame.
 	if minimap != null and not minimap.has_node("MinimapFrame"):

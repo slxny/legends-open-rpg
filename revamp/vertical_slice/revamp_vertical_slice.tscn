@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://crv1slicemain"]
+
+[ext_resource type="Script" path="res://revamp/vertical_slice/revamp_vertical_slice.gd" id="1_root"]
+
+[node name="RevampVerticalSlice" type="Node2D"]
+script = ExtResource("1_root")

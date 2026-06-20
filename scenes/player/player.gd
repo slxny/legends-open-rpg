@@ -522,6 +522,9 @@ func _physics_process(delta: float) -> void:
 	# v0.91.1 — stamina regen.
 	_tick_stamina(delta)
 
+	# v0.93.6 — per-skill cooldown tick.
+	_tick_skill_cooldowns(delta)
+
 	# Heal beacon immunity visual feedback — detect transitions
 	if is_on_heal_beacon and not _was_on_heal_beacon:
 		_start_immunity_vfx()
@@ -1563,8 +1566,85 @@ func _stop_immunity_vfx() -> void:
 
 # --- Special Attack System ---
 
+# v0.93.6 — Per-skill cooldown architecture.
+#
+# `_attack_cooldown` (pre-existing) stays as the universal animation-spam
+# lock — any attack while another is mid-animation is rejected. That's
+# unchanged.
+#
+# `_skill_cooldowns` is the NEW per-skill recharge clock keyed by the
+# attack_id StringName. Cooldown durations are flat (do NOT scale with
+# attack_speed) so haste stacking can't trivialise the skill cycle. The
+# table mirrors typical ARPG cadence:
+#
+#   power_strike   4.0s   piercing_shot  4.0s
+#   dash_strike    5.0s   shadow_step    5.0s
+#   whirlwind      6.0s   arrow_rain     8.0s
+#   charged_slash  7.0s   sniper_shot    9.0s
+#
+# `_try_special_attack` checks the per-skill clock first, pops a "X.Xs"
+# floating label when blocked, and records the cooldown after dispatch.
+const _SKILL_COOLDOWN_TABLE: Dictionary = {
+	&"power_strike": 4.0,
+	&"whirlwind": 6.0,
+	&"charged_slash": 7.0,
+	&"dash_strike": 5.0,
+	&"piercing_shot": 4.0,
+	&"arrow_rain": 8.0,
+	&"sniper_shot": 9.0,
+	&"shadow_step": 5.0,
+}
+var _skill_cooldowns: Dictionary = {}  # StringName -> remaining seconds
+
+func _special_to_skill_id(special: int) -> StringName:
+	match special:
+		SpecialAttack.POWER_STRIKE: return &"power_strike"
+		SpecialAttack.WHIRLWIND: return &"whirlwind"
+		SpecialAttack.CHARGED_SLASH: return &"charged_slash"
+		SpecialAttack.DASH_STRIKE: return &"dash_strike"
+		SpecialAttack.PIERCING_SHOT: return &"piercing_shot"
+		SpecialAttack.ARROW_RAIN: return &"arrow_rain"
+		SpecialAttack.SNIPER_SHOT: return &"sniper_shot"
+		SpecialAttack.SHADOW_STEP: return &"shadow_step"
+	return &""
+
+func _tick_skill_cooldowns(delta: float) -> void:
+	for k in _skill_cooldowns.keys():
+		var v: float = float(_skill_cooldowns[k]) - delta
+		if v <= 0.0:
+			_skill_cooldowns.erase(k)
+		else:
+			_skill_cooldowns[k] = v
+
+func get_skill_cooldown(skill_id: StringName) -> float:
+	return float(_skill_cooldowns.get(skill_id, 0.0))
+
+func get_skill_max_cooldown(skill_id: StringName) -> float:
+	return float(_SKILL_COOLDOWN_TABLE.get(skill_id, 0.0))
+
+# Returns the 4 skill IDs bound to Z/X/C/V for the current hero class.
+func get_hotbar_skill_ids() -> Array[StringName]:
+	var ranged: bool = hero_class == "shadow_ranger"
+	if ranged:
+		return [&"piercing_shot", &"arrow_rain", &"dash_strike", &"sniper_shot"]
+	return [&"power_strike", &"whirlwind", &"dash_strike", &"charged_slash"]
+
+# Returns the 4 short display labels for the hot-bar slots.
+func get_hotbar_skill_labels() -> Array[String]:
+	var ranged: bool = hero_class == "shadow_ranger"
+	if ranged:
+		return ["Pierce", "Rain", "Dash", "Snipe"]
+	return ["Strike", "Whirl", "Dash", "Heavy"]
+
 func _try_special_attack(special: SpecialAttack) -> void:
 	if _is_attack_animating:
+		return
+	# v0.93.6 — per-skill cooldown gate.
+	var skill_id: StringName = _special_to_skill_id(special)
+	if skill_id != &"" and float(_skill_cooldowns.get(skill_id, 0.0)) > 0.0:
+		var remaining: float = float(_skill_cooldowns[skill_id])
+		if _juice != null and _juice.has_method("_spawn_floating_text"):
+			_juice._spawn_floating_text(global_position + Vector2(0, -50), "%.1fs" % remaining, Color(0.85, 0.85, 1.0), false)
 		return
 
 	var attack_dir = _get_aim_direction()
@@ -1589,6 +1669,12 @@ func _try_special_attack(special: SpecialAttack) -> void:
 			_execute_sniper_shot(attack_dir)
 		SpecialAttack.SHADOW_STEP:
 			_execute_shadow_step(attack_dir)
+
+	# Record per-skill cooldown AFTER dispatch so a failed/aborted execute
+	# doesn't lock the skill out. Animation lock (`_attack_cooldown`) is
+	# already set by the `_execute_*` function — we only stamp our clock.
+	if skill_id != &"" and _SKILL_COOLDOWN_TABLE.has(skill_id):
+		_skill_cooldowns[skill_id] = _SKILL_COOLDOWN_TABLE[skill_id]
 
 func _execute_power_strike(attack_dir: Vector2) -> void:
 	# Double-tap: AoE directional slam — lunge forward, hit up to 5 enemies

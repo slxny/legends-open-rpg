@@ -9,9 +9,23 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.93.5"
+const GAME_VERSION := "v0.93.6"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.93.6",
+		"title": "ARPG combat — REAL per-skill cooldowns (replacing the v0.93.5 shared dim)",
+		"date": "2026-06-20",
+		"entries": [
+			"PER-SKILL COOLDOWNS: each special attack now has its own independent recharge clock instead of sharing one global lock. Pressing whirlwind no longer blocks dash strike — the skill cycle is finally meaningful.",
+			"COOLDOWN TABLE (flat, does NOT scale with attack_speed so haste stacking can't trivialise rotation): power_strike 4.0 s, piercing_shot 4.0 s, dash_strike 5.0 s, shadow_step 5.0 s, whirlwind 6.0 s, charged_slash 7.0 s, arrow_rain 8.0 s, sniper_shot 9.0 s.",
+			"PER-CLASS HOT-BAR LABELS: the ranger now sees Pierce / Rain / Dash / Snipe; melee sees Strike / Whirl / Dash / Heavy. HUD pulls IDs + display labels from new player getters `get_hotbar_skill_ids()` + `get_hotbar_skill_labels()`.",
+			"PER-SKILL HUD OVERLAY: each slot's dark overlay now renders as a BOTTOM-UP VERTICAL FILL whose height = (remaining / max) × slot height. A '%.1f' seconds label appears in the centre while cooling. When all four are ready, the overlays drain to zero. While the player is mid-swing on something, ready slots dim 25 % so the bar still reads as 'not THIS instant'.",
+			"FEEDBACK ON BLOCKED CAST: pressing a still-cooling skill pops a 'X.Xs' floating text via the existing juice layer instead of silently ignoring the input.",
+			"VERIFICATION STATUS: Godot MCP `run_project` confirms clean parse + reach hero select with zero `ERROR:` lines. In-game per-skill behavior validation requires playing the build — MCP cannot drive input. `docs/claude/godot-arpg-gameplay-state.md` updated to reflect honest verification state and the broader gameplay-overhaul milestones that remain explicitly NOT YET COMPLETE (enemy revision, elite redesign, boss revision, loot / itemization audit, build paths, dungeon pacing, difficulty scaling, audio differentiation, save versioning).",
+			"Internal: player.gd `_SKILL_COOLDOWN_TABLE` const + `_skill_cooldowns: Dictionary` + `_special_to_skill_id()` + `_tick_skill_cooldowns(delta)` called from _physics_process. `_try_special_attack` gates on per-skill cooldown before dispatch + stamps the cooldown after. New public API: `get_skill_cooldown(id)`, `get_skill_max_cooldown(id)`, `get_hotbar_skill_ids()`, `get_hotbar_skill_labels()`. hud.gd `_install_skill_bar` records overlays + labels + title arrays. `_refresh_skill_bar_titles()` invoked from `setup(player)`. `_process(delta)` drives the per-slot fill height + remaining-seconds text from the player.",
+		]
+	},
 	{
 		"version": "v0.93.5",
 		"title": "ARPG hot-bar — Z X C V skill keys + on-HUD skill bar with cooldown overlay",

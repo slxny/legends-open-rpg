@@ -13,11 +13,18 @@ extends CanvasLayer
 @onready var bottom_panel: PanelContainer = $BottomPanel
 
 # v0.93.5 — Hot-bar skill slots. Built at runtime in _apply_desktop_polish.
+# v0.93.6 — labels are now class-aware (pulled from player). Cooldown overlay
+# is per-skill, rendered as a bottom-up vertical fill driven by
+# `1 - remaining/max` for each slot.
 var _skill_bar: HBoxContainer = null
 var _skill_slots: Array[PanelContainer] = []
 var _skill_cooldown_overlays: Array[ColorRect] = []
+var _skill_cooldown_labels: Array[Label] = []
+var _skill_title_labels: Array[Label] = []
+var _skill_bar_ids: Array[StringName] = []
 const _SKILL_BAR_LABELS: Array[String] = ["Z", "X", "C", "V"]
-const _SKILL_BAR_TITLES: Array[String] = ["Strike", "Whirl", "Dash", "Heavy"]
+const _SKILL_BAR_TITLES_FALLBACK: Array[String] = ["Strike", "Whirl", "Dash", "Heavy"]
+const _SKILL_SLOT_HEIGHT: float = 78.0
 @onready var bottom_hbox: HBoxContainer = $BottomPanel/HBox
 @onready var hp_bar: SCBar = $BottomPanel/HBox/UnitInfo/HPBar
 @onready var mana_bar: SCBar = $BottomPanel/HBox/UnitInfo/ManaBar
@@ -84,14 +91,13 @@ func _ready() -> void:
 func _install_skill_bar() -> void:
 	if _skill_bar != null and is_instance_valid(_skill_bar):
 		return
-	# 4 carved-leather slots laid out horizontally, anchored centre-bottom
-	# just above the bottom panel.
+	# 4 carved-leather slots anchored centre-bottom just above the bottom panel.
 	var holder := HBoxContainer.new()
 	holder.name = "SkillBar"
 	holder.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	holder.offset_top = -180  # above the bottom panel (~115 tall + breathing room)
+	holder.offset_top = -180
 	holder.offset_bottom = -130
-	holder.offset_left = -176  # 4 × 80 px + 3 × 8 separation = 344 total → half = 172
+	holder.offset_left = -176
 	holder.offset_right = 176
 	holder.add_theme_constant_override("separation", 8)
 	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -99,9 +105,11 @@ func _install_skill_bar() -> void:
 	_skill_bar = holder
 	_skill_slots.clear()
 	_skill_cooldown_overlays.clear()
+	_skill_cooldown_labels.clear()
+	_skill_title_labels.clear()
 	for i in range(4):
 		var slot := PanelContainer.new()
-		slot.custom_minimum_size = Vector2(78, 78)
+		slot.custom_minimum_size = Vector2(78, _SKILL_SLOT_HEIGHT)
 		slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var sb := StyleBoxFlat.new()
 		sb.bg_color = Color(0.13, 0.10, 0.06, 0.94)
@@ -123,7 +131,7 @@ func _install_skill_bar() -> void:
 		center.add_child(v)
 
 		var title := Label.new()
-		title.text = _SKILL_BAR_TITLES[i]
+		title.text = _SKILL_BAR_TITLES_FALLBACK[i]
 		title.add_theme_font_size_override("font_size", 12)
 		title.add_theme_color_override("font_color", Color(1.0, 0.85, 0.30))
 		title.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
@@ -140,33 +148,101 @@ func _install_skill_bar() -> void:
 		key.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		v.add_child(key)
 
-		# Cooldown dim overlay — shown when player has shared attack cooldown.
+		# v0.93.6 — per-skill cooldown overlay: bottom-anchored vertical fill.
+		# Resized each frame so the dark dim "drains" from full to empty as
+		# the skill recharges. Initial height 0 → invisible when ready.
 		var cd := ColorRect.new()
-		cd.color = Color(0, 0, 0, 0.55)
-		cd.set_anchors_preset(Control.PRESET_FULL_RECT)
+		cd.color = Color(0, 0, 0, 0.62)
+		cd.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+		cd.offset_left = 0
+		cd.offset_right = 0
+		cd.offset_top = 0
+		cd.offset_bottom = 0
 		cd.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		cd.visible = false
 		slot.add_child(cd)
+
+		var cd_label := Label.new()
+		cd_label.text = ""
+		cd_label.add_theme_font_size_override("font_size", 18)
+		cd_label.add_theme_color_override("font_color", Color(1.0, 1.0, 0.85))
+		cd_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.95))
+		cd_label.add_theme_constant_override("outline_size", 4)
+		cd_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		cd_label.set_anchors_preset(Control.PRESET_CENTER)
+		cd_label.position = Vector2(-16, -12)
+		cd_label.size = Vector2(32, 24)
+		cd_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		slot.add_child(cd_label)
 
 		holder.add_child(slot)
 		_skill_slots.append(slot)
 		_skill_cooldown_overlays.append(cd)
+		_skill_cooldown_labels.append(cd_label)
+		_skill_title_labels.append(title)
+
+
+func _refresh_skill_bar_titles() -> void:
+	# Pulls hot-bar IDs + display labels from the player and writes them
+	# into the slot title labels. Safe to call any time after setup(player).
+	if _player == null or not is_instance_valid(_player):
+		return
+	if not _player.has_method("get_hotbar_skill_ids"):
+		return
+	var ids = _player.get_hotbar_skill_ids()
+	var labels = _player.get_hotbar_skill_labels()
+	_skill_bar_ids.clear()
+	for i in range(min(4, ids.size())):
+		_skill_bar_ids.append(StringName(ids[i]))
+		if i < _skill_title_labels.size():
+			_skill_title_labels[i].text = String(labels[i]) if i < labels.size() else String(ids[i])
 
 
 func _process(_delta: float) -> void:
-	# v0.93.5 — drive the skill-bar cooldown dim from the shared player
-	# attack cooldown. Cheap: just toggles overlay visibility per slot.
+	# v0.93.6 — per-skill cooldown overlay driver. Pulls remaining seconds
+	# and max from the player; renders bottom-up vertical fill on each slot
+	# scaled by remaining/max. Shows numeric seconds text when on cooldown.
 	if _skill_cooldown_overlays.is_empty():
 		return
 	if _player == null or not is_instance_valid(_player):
 		for o in _skill_cooldown_overlays:
 			if o != null:
-				o.visible = false
+				o.size.y = 0.0
+		for lbl in _skill_cooldown_labels:
+			if lbl != null:
+				lbl.text = ""
 		return
-	var on_cd: bool = bool(_player.get("_is_attack_animating")) or float(_player.get("_attack_cooldown")) > 0.0
-	for o in _skill_cooldown_overlays:
-		if o != null:
-			o.visible = on_cd
+	# Resolve hot-bar IDs lazily (player hero_class is set after setup).
+	if _skill_bar_ids.is_empty() and _player.has_method("get_hotbar_skill_ids"):
+		_refresh_skill_bar_titles()
+	var animating: bool = bool(_player.get("_is_attack_animating"))
+	for i in range(_skill_cooldown_overlays.size()):
+		var overlay: ColorRect = _skill_cooldown_overlays[i]
+		var lbl: Label = _skill_cooldown_labels[i]
+		if overlay == null:
+			continue
+		var skill_id: StringName = _skill_bar_ids[i] if i < _skill_bar_ids.size() else &""
+		var remaining: float = 0.0
+		var maxcd: float = 1.0
+		if skill_id != &"" and _player.has_method("get_skill_cooldown"):
+			remaining = float(_player.get_skill_cooldown(skill_id))
+			maxcd = max(0.001, float(_player.get_skill_max_cooldown(skill_id)))
+		if remaining > 0.0:
+			var pct: float = clampf(remaining / maxcd, 0.0, 1.0)
+			overlay.size.y = _SKILL_SLOT_HEIGHT * pct
+			overlay.position.y = _SKILL_SLOT_HEIGHT - overlay.size.y
+			if lbl != null:
+				lbl.text = "%.1f" % remaining
+		elif animating:
+			# No per-skill cd but the player is mid-swing: light dim ~25% so
+			# the slot reads as "not ready right this instant".
+			overlay.size.y = _SKILL_SLOT_HEIGHT * 0.25
+			overlay.position.y = _SKILL_SLOT_HEIGHT - overlay.size.y
+			if lbl != null:
+				lbl.text = ""
+		else:
+			overlay.size.y = 0.0
+			if lbl != null:
+				lbl.text = ""
 
 
 func _apply_desktop_polish() -> void:
@@ -700,6 +776,9 @@ func _add_desktop_menu_button() -> void:
 func setup(player: Node2D) -> void:
 	_player = player
 	minimap.setup(player)
+	# v0.93.6 — bind skill-bar titles to the actual hero class so the
+	# ranger sees Pierce/Rain/Dash/Snipe instead of melee placeholders.
+	_refresh_skill_bar_titles()
 	var stats: StatsComponent = player.stats
 
 	stats.hp_changed.connect(_on_hp_changed)

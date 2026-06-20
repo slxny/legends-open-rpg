@@ -3550,23 +3550,24 @@ func _spawn_slash_vfx(direction: Vector2, radius: float, scale_mult: float) -> v
 	tween.tween_callback(_recycle_vfx.bind(slash))
 
 func _spawn_impact_vfx(pos: Vector2, is_crit: bool = false) -> void:
-	# Reduced spark count: 1 normal, 2 crit (was 2/4)
-	var spark_count = 2 if is_crit else 1
-	var spread = 28.0 if is_crit else 18.0
+	# v0.92.8 — BRUTAL hit VFX: 4× more sparks, double spread, blood gibs.
+	var spark_count: int = 8 if is_crit else 5
+	var spread: float = 60.0 if is_crit else 38.0
 	var world = _get_world_node()
 	for i in range(spark_count):
 		var spark = _get_pooled_vfx()
 		spark.texture = _tex_crystal_white
 		spark.global_position = pos
-		var sc = randf_range(0.3, 0.7) if not is_crit else randf_range(0.5, 1.0)
+		var sc: float = randf_range(0.6, 1.0) if not is_crit else randf_range(0.8, 1.4)
 		spark.scale = Vector2(sc, sc)
-		var r = randf_range(0.9, 1.0)
-		var g = randf_range(0.2, 0.5) if not is_crit else randf_range(0.6, 0.9)
-		spark.modulate = Color(r, g, 0.1, 1.0)
+		# Yellow-white hot sparks.
+		var r: float = randf_range(1.4, 1.7)
+		var g: float = randf_range(1.0, 1.4)
+		spark.modulate = Color(r, g, randf_range(0.20, 0.45), 1.0)
 		spark.z_index = 12
 		world.add_child(spark)
-		var dir = Vector2.from_angle(randf() * TAU) * randf_range(spread * 0.4, spread)
-		var dur = randf_range(0.12, 0.22)
+		var dir: Vector2 = Vector2.from_angle(randf() * TAU) * randf_range(spread * 0.45, spread)
+		var dur: float = randf_range(0.18, 0.32)
 		var tween = spark.create_tween()
 		tween.set_parallel(true)
 		tween.tween_property(spark, "global_position", pos + dir, dur)
@@ -3575,20 +3576,57 @@ func _spawn_impact_vfx(pos: Vector2, is_crit: bool = false) -> void:
 		tween.set_parallel(false)
 		tween.tween_callback(_recycle_vfx.bind(spark))
 
-	# Flash ring at impact centre
+	# BLOOD GIBS — dark crimson droplets that fly out, arc, and land.
+	var gib_count: int = 6 if is_crit else 4
+	for i in range(gib_count):
+		var gib = _get_pooled_vfx()
+		gib.texture = _tex_crystal_white
+		gib.global_position = pos
+		var gs: float = randf_range(0.35, 0.7)
+		gib.scale = Vector2(gs, gs)
+		gib.modulate = Color(randf_range(0.42, 0.62), randf_range(0.04, 0.10), randf_range(0.03, 0.08), 0.95)
+		gib.z_index = 11
+		world.add_child(gib)
+		var gdir: Vector2 = Vector2.from_angle(randf() * TAU) * randf_range(spread * 0.6, spread * 1.3)
+		var gdur: float = randf_range(0.28, 0.42)
+		var gt = gib.create_tween()
+		gt.set_parallel(true)
+		gt.tween_property(gib, "global_position", pos + gdir, gdur).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		gt.tween_property(gib, "modulate:a", 0.0, gdur)
+		gt.tween_property(gib, "scale", Vector2(gs * 0.5, gs * 0.5), gdur)
+		gt.set_parallel(false)
+		gt.tween_callback(_recycle_vfx.bind(gib))
+
+	# Flash ring at impact centre — bigger, more saturated.
 	var flash = _get_pooled_vfx()
 	flash.texture = _tex_selection_red
-	flash.modulate = Color(1.0, 0.9, 0.5, 0.9) if not is_crit else Color(1.0, 0.3, 0.1, 1.0)
-	flash.scale = Vector2(0.2, 0.2)
+	flash.modulate = Color(1.4, 1.1, 0.6, 0.95) if not is_crit else Color(1.6, 0.40, 0.15, 1.0)
+	flash.scale = Vector2(0.25, 0.25)
 	flash.z_index = 13
 	flash.global_position = pos
 	world.add_child(flash)
 	var ft = flash.create_tween()
 	ft.set_parallel(true)
-	ft.tween_property(flash, "scale", Vector2(1.2, 1.2) if not is_crit else Vector2(2.0, 2.0), 0.1)
-	ft.tween_property(flash, "modulate:a", 0.0, 0.12)
+	ft.tween_property(flash, "scale", Vector2(2.0, 2.0) if not is_crit else Vector2(3.4, 3.4), 0.13)
+	ft.tween_property(flash, "modulate:a", 0.0, 0.18)
 	ft.set_parallel(false)
 	ft.tween_callback(_recycle_vfx.bind(flash))
+
+	# Secondary IMPACT RING — slower expanding shockwave ring, crit only.
+	if is_crit:
+		var ring = _get_pooled_vfx()
+		ring.texture = _tex_slash_arc
+		ring.modulate = Color(1.7, 0.3, 0.15, 0.85)
+		ring.scale = Vector2(0.5, 0.5)
+		ring.z_index = 12
+		ring.global_position = pos
+		world.add_child(ring)
+		var rt = ring.create_tween()
+		rt.set_parallel(true)
+		rt.tween_property(ring, "scale", Vector2(2.8, 2.8), 0.30).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		rt.tween_property(ring, "modulate:a", 0.0, 0.30)
+		rt.set_parallel(false)
+		rt.tween_callback(_recycle_vfx.bind(ring))
 
 func _do_hit_freeze(is_crit: bool) -> void:
 	if _hit_freeze_active:
@@ -3604,12 +3642,10 @@ func _do_hit_freeze(is_crit: bool) -> void:
 
 func _do_screen_shake(intensity: float) -> void:
 	# Phase 1B.6a: route legacy raw-intensity calls through CameraShake2D.
-	# Map intensity (existing call sites pass 1.5–10.0) to trauma (0.0–1.0)
-	# via a tunable scalar so the felt response stays close to today while
-	# benefiting from the trauma² mapping (light hits stay light; heavy and
-	# crit hits feel proportionally heavier). 10.0 → ~0.83 trauma.
+	# v0.92.8 — BRUTAL pivot: scaling divisor 12 → 7 so every hit registers
+	# harder. Light hits now feel meaty; crits rattle the screen.
 	if _camera_shake != null and _camera_shake.has_method("add_trauma"):
-		var trauma_amount: float = clamp(intensity / 12.0, 0.0, 1.0)
+		var trauma_amount: float = clamp(intensity / 7.0, 0.0, 1.0)
 		_camera_shake.add_trauma(trauma_amount, _last_hit_direction)
 		# Clear the legacy random-offset path so the two systems don't fight.
 		_shake_intensity = 0.0

@@ -9,9 +9,22 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.92.7"
+const GAME_VERSION := "v0.92.8"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.92.8",
+		"title": "Brutal hits — 4× sparks + blood gibs + bigger rings + harder shake",
+		"date": "2026-06-20",
+		"entries": [
+			"SPARKS: 1→5 normal, 2→8 crit. Hot yellow-white colors (1.4–1.7 R, 1.0–1.4 G). Spread doubled (18→38 normal, 28→60 crit). Lifetimes 0.12–0.22 → 0.18–0.32 so the shower lingers.",
+			"BLOOD GIBS: 4 / 6 dark-crimson droplets fly out on every hit, arc with EASE_OUT_QUAD, shrink as they fade. Real visceral spray.",
+			"IMPACT FLASH RING: scale 1.2 / 2.0 → 2.0 / 3.4 (crit). Brighter saturated modulate (1.4/1.1/0.6 normal, 1.6/0.40/0.15 crit).",
+			"CRIT SHOCKWAVE RING: secondary expanding red ring on every crit (300 ms, scale 0.5→2.8 with EASE_OUT_CUBIC) using the slash_arc texture.",
+			"SCREEN SHAKE: trauma scaling divisor 12→7 so every hit registers ~70% harder. Light hits feel meaty, crits rattle.",
+			"Internal: scenes/player/player.gd _spawn_impact_vfx fully rewritten — spark/gib/flash/ring layers with brutal counts and timings. _do_screen_shake intensity divisor tightened.",
+		]
+	},
 	{
 		"version": "v0.92.7",
 		"title": "BRUTAL HACK-AND-SLASH PIVOT — dark fantasy ground + blood spatter everywhere",

@@ -513,6 +513,14 @@ func _generate_terrain_async() -> void:
 	# v0.92.7 — BRUTAL HACK-AND-SLASH: BLOOD SPATTERS + SCORCH MARKS biased
 	# toward enemy camp positions. World looks lived-in and violent.
 	await _spawn_world_blood_and_scorch(rng)
+	# v0.93.3 — SCENIC LANDMARKS: 3 enormous ancient trees + 1 floating
+	# ruined arch shrine. Painted-style composite sprites give the world
+	# memorable focal points visible from afar (lush fantasy direction).
+	await _spawn_scenic_landmarks(rng)
+	# v0.93.3 — ATMOSPHERIC HAZE bands hugging the world bounds. Soft
+	# gradient stripes that read as distant sky/mist behind the mountain
+	# horizon, giving the impression the world opens upward into space.
+	await _spawn_atmospheric_haze(rng)
 
 	# Phase 7 — destructible explosive barrels scattered around enemy
 	# camp areas. Hit them to chain damage; knock enemies into them.
@@ -706,20 +714,23 @@ func _spawn_world_blood_and_scorch(rng: RandomNumberGenerator) -> void:
 		var name_s := String(child.name)
 		if "Swarm" in name_s or "Camp" in name_s or "Hunters" in name_s or "Pack" in name_s:
 			camp_positions.append((child as Node2D).position)
-	# 90 blood spatters total: 60 near camps, 30 random.
-	for _i in range(60):
+	# v0.93.3 — lush fantasy pivot: keep some battlefield evidence near camps
+	# but cut total count + drop alpha so the world reads as a beautiful
+	# WILD place that occasionally shows the cost of violence, instead of a
+	# horror battlefield. 90 spatters -> 28 spatters; 25 scorches -> 10.
+	for _i in range(20):
 		if camp_positions.is_empty():
 			break
 		var center: Vector2 = camp_positions[rng.randi() % camp_positions.size()]
-		var pos: Vector2 = center + Vector2(rng.randf_range(-280, 280), rng.randf_range(-260, 260))
+		var pos: Vector2 = center + Vector2(rng.randf_range(-220, 220), rng.randf_range(-220, 220))
 		_add_blood_blob(blob_tex, rng, pos)
-	for _i in range(30):
+	for _i in range(8):
 		var pos: Vector2 = Vector2(rng.randf_range(-5500, 5500), rng.randf_range(-4000, 4000))
 		if pos.length() < 600:
 			continue
 		_add_blood_blob(blob_tex, rng, pos)
-	# 25 scorch marks (dark ash patches) scattered, biased near camps.
-	for _i in range(25):
+	# Scorch marks reduced.
+	for _i in range(10):
 		var center: Vector2
 		if not camp_positions.is_empty() and rng.randf() < 0.7:
 			center = camp_positions[rng.randi() % camp_positions.size()] + Vector2(rng.randf_range(-380, 380), rng.randf_range(-340, 340))
@@ -745,13 +756,213 @@ func _add_blood_blob(blob_tex: Texture2D, rng: RandomNumberGenerator, pos: Vecto
 	s.texture = blob_tex
 	s.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	s.position = pos
-	s.scale = Vector2(rng.randf_range(0.9, 2.2), rng.randf_range(0.6, 1.4))
+	s.scale = Vector2(rng.randf_range(0.7, 1.8), rng.randf_range(0.5, 1.1))
 	s.rotation = rng.randf() * TAU
-	# Deep crimson with variance — varies dried/fresh.
-	var r: float = rng.randf_range(0.30, 0.50)
-	s.modulate = Color(r, rng.randf_range(0.03, 0.08), rng.randf_range(0.02, 0.07), rng.randf_range(0.62, 0.88))
+	# v0.93.3 — softened alpha (was 0.62-0.88) so spatters read as old/dried
+	# accent rather than fresh-kill horror.
+	var r: float = rng.randf_range(0.28, 0.42)
+	s.modulate = Color(r, rng.randf_range(0.05, 0.10), rng.randf_range(0.04, 0.09), rng.randf_range(0.35, 0.55))
 	s.z_index = -8
 	add_child(s)
+
+
+func _spawn_atmospheric_haze(rng: RandomNumberGenerator) -> void:
+	# Soft 3-stripe gradient just inside each map edge so the horizon line
+	# reads as deep sky behind the mountain silhouettes rather than empty.
+	# Each stripe is a wide crystal_white sprite scaled flat.
+	var blob_tex := SpriteGenerator.get_texture("crystal_white")
+	if blob_tex == null:
+		return
+	# Top edge — warm horizon glow + cool sky behind it.
+	var top_warmth: Array = [
+		{ "y": -4280.0, "scale": Vector2(440.0, 16.0), "color": Color(1.30, 1.05, 0.70, 0.45) },
+		{ "y": -4200.0, "scale": Vector2(440.0, 22.0), "color": Color(0.95, 1.00, 1.15, 0.32) },
+		{ "y": -4120.0, "scale": Vector2(440.0, 28.0), "color": Color(0.70, 0.85, 1.10, 0.22) },
+	]
+	for d in top_warmth:
+		var h := Sprite2D.new()
+		h.texture = blob_tex
+		h.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		h.position = Vector2(rng.randf_range(-180, 180), d["y"] as float)
+		h.scale = d["scale"] as Vector2
+		h.modulate = d["color"] as Color
+		h.z_index = -7  # sits between mountains (-7) and far decor
+		add_child(h)
+	# Bottom edge — same idea, slightly cooler.
+	var bot_band: Array = [
+		{ "y":  4280.0, "scale": Vector2(440.0, 16.0), "color": Color(1.10, 0.95, 0.75, 0.40) },
+		{ "y":  4200.0, "scale": Vector2(440.0, 22.0), "color": Color(0.85, 0.95, 1.15, 0.30) },
+		{ "y":  4120.0, "scale": Vector2(440.0, 28.0), "color": Color(0.65, 0.82, 1.15, 0.20) },
+	]
+	for d in bot_band:
+		var h := Sprite2D.new()
+		h.texture = blob_tex
+		h.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		h.position = Vector2(rng.randf_range(-180, 180), d["y"] as float)
+		h.scale = d["scale"] as Vector2
+		h.modulate = d["color"] as Color
+		h.z_index = -7
+		add_child(h)
+	# Left + right edges — vertical haze.
+	for side_x in [-5820.0, 5820.0]:
+		for i in range(3):
+			var sh := Sprite2D.new()
+			sh.texture = blob_tex
+			sh.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			sh.position = Vector2(side_x + float(i) * (1.0 if side_x > 0.0 else -1.0) * 30.0, rng.randf_range(-200, 200))
+			sh.scale = Vector2(14.0 + float(i) * 6.0, 340.0)
+			sh.modulate = Color(0.75 + float(i) * 0.06, 0.85, 1.10, 0.28 - float(i) * 0.06)
+			sh.z_index = -7
+			add_child(sh)
+		await get_tree().process_frame
+
+
+func _spawn_scenic_landmarks(rng: RandomNumberGenerator) -> void:
+	# v0.93.3 — original painted-style fantasy landmarks.
+	# Each great tree = soft cast shadow + thick trunk + 3 stacked canopy
+	# bulbs + sun-touched highlight bulb. Each landmark sits at a
+	# hand-picked memorable map position visible from a distance.
+	var blob_tex := SpriteGenerator.get_texture("crystal_white")
+	if blob_tex == null:
+		return
+
+	# Three giant ancient trees at distinct, hand-picked landmark anchors.
+	var tree_anchors: Array[Vector2] = [
+		Vector2(-2400, -2800),    # Far NW — visible early on
+		Vector2(3100, -2600),     # Far NE  — counter-balance
+		Vector2(-600, 3000),      # South-central — bridges the lower half
+	]
+	for anchor: Vector2 in tree_anchors:
+		_add_giant_ancient_tree(blob_tex, rng, anchor)
+		await get_tree().process_frame
+
+	# One floating ruined arch shrine at a striking spot.
+	_add_floating_arch_shrine(blob_tex, rng, Vector2(1800, 1600))
+	await get_tree().process_frame
+
+
+func _add_giant_ancient_tree(blob_tex: Texture2D, rng: RandomNumberGenerator, anchor: Vector2) -> void:
+	# Cast shadow puddle.
+	var shadow := Sprite2D.new()
+	shadow.texture = blob_tex
+	shadow.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	shadow.position = anchor + Vector2(rng.randf_range(-10, 10), 130)
+	shadow.scale = Vector2(rng.randf_range(20.0, 28.0), rng.randf_range(7.0, 10.0))
+	shadow.modulate = Color(0.0, 0.0, 0.05, 0.62)
+	shadow.z_index = -6
+	add_child(shadow)
+
+	# Trunk — dark warm brown vertical "blob" with bark stripes via 2 stacked sprites.
+	var trunk_back := Sprite2D.new()
+	trunk_back.texture = blob_tex
+	trunk_back.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	trunk_back.position = anchor + Vector2(rng.randf_range(-6, 6), -20)
+	trunk_back.scale = Vector2(rng.randf_range(5.5, 7.0), rng.randf_range(13.0, 16.5))
+	trunk_back.modulate = Color(0.18, 0.12, 0.07, 0.95)
+	trunk_back.z_index = -5
+	add_child(trunk_back)
+	var trunk_mid := Sprite2D.new()
+	trunk_mid.texture = blob_tex
+	trunk_mid.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	trunk_mid.position = trunk_back.position + Vector2(2, -6)
+	trunk_mid.scale = trunk_back.scale * Vector2(0.74, 0.94)
+	trunk_mid.modulate = Color(0.30, 0.20, 0.11, 0.95)
+	trunk_mid.z_index = -5
+	add_child(trunk_mid)
+
+	# Root flares.
+	for i in range(3):
+		var rfx: float = -10.0 + float(i) * 10.0
+		var root := Sprite2D.new()
+		root.texture = blob_tex
+		root.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		root.position = anchor + Vector2(rfx * 4.0, 100.0)
+		root.scale = Vector2(rng.randf_range(3.5, 5.0), rng.randf_range(1.6, 2.5))
+		root.rotation = rng.randf_range(-0.3, 0.3)
+		root.modulate = Color(0.22, 0.15, 0.08, 0.85)
+		root.z_index = -5
+		add_child(root)
+
+	# Canopy: 3 stacked dark green bulbs + 1 sun-touched highlight bulb.
+	var canopy_base: Vector2 = anchor + Vector2(0, -180)
+	var bulbs: Array = [
+		{ "off": Vector2(-90, 20),  "scale": Vector2(15.0, 11.0), "color": Color(0.10, 0.28, 0.10, 0.94) },
+		{ "off": Vector2( 90, 30),  "scale": Vector2(15.0, 11.0), "color": Color(0.10, 0.30, 0.10, 0.94) },
+		{ "off": Vector2(  0, -10), "scale": Vector2(20.0, 14.0), "color": Color(0.14, 0.36, 0.12, 0.96) },
+		{ "off": Vector2(-30, -50), "scale": Vector2(11.0, 7.0),  "color": Color(0.30, 0.56, 0.20, 0.92) },  # sun-touched
+		{ "off": Vector2( 60, -40), "scale": Vector2(8.0, 6.0),   "color": Color(0.36, 0.62, 0.24, 0.85) },  # highlight
+	]
+	for b in bulbs:
+		var bulb := Sprite2D.new()
+		bulb.texture = blob_tex
+		bulb.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		bulb.position = canopy_base + (b["off"] as Vector2)
+		bulb.scale = b["scale"] as Vector2
+		bulb.rotation = rng.randf_range(-0.05, 0.05)
+		bulb.modulate = b["color"] as Color
+		bulb.z_index = -4
+		add_child(bulb)
+
+
+
+func _add_floating_arch_shrine(blob_tex: Texture2D, _rng: RandomNumberGenerator, anchor: Vector2) -> void:
+	# Cast shadow under the floating shrine.
+	var shadow := Sprite2D.new()
+	shadow.texture = blob_tex
+	shadow.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	shadow.position = anchor + Vector2(0, 110)
+	shadow.scale = Vector2(18.0, 5.5)
+	shadow.modulate = Color(0.0, 0.0, 0.05, 0.55)
+	shadow.z_index = -6
+	add_child(shadow)
+
+	# Three weathered stone pillars in an arc.
+	for i in range(3):
+		var t: float = float(i) / 2.0
+		var px: float = lerpf(-110.0, 110.0, t)
+		var py: float = -40.0 - sin(t * PI) * 28.0
+		var pillar := Sprite2D.new()
+		pillar.texture = blob_tex
+		pillar.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		pillar.position = anchor + Vector2(px, py)
+		pillar.scale = Vector2(3.0, 8.0)
+		pillar.modulate = Color(0.55, 0.52, 0.46, 0.95)
+		pillar.z_index = -3
+		add_child(pillar)
+		# Pillar top-cap.
+		var cap := Sprite2D.new()
+		cap.texture = blob_tex
+		cap.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		cap.position = pillar.position + Vector2(0, -40)
+		cap.scale = Vector2(4.5, 1.4)
+		cap.modulate = Color(0.62, 0.58, 0.52, 0.95)
+		cap.z_index = -3
+		add_child(cap)
+
+	# Cross-beams stitching the pillars into an arch.
+	for i in range(2):
+		var beam := Sprite2D.new()
+		beam.texture = blob_tex
+		beam.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		beam.position = anchor + Vector2(lerpf(-60.0, 60.0, float(i)), -85.0)
+		beam.scale = Vector2(7.0, 1.6)
+		beam.modulate = Color(0.50, 0.46, 0.40, 0.92)
+		beam.rotation = -0.06 + 0.12 * float(i)
+		beam.z_index = -3
+		add_child(beam)
+
+	# Pulsing magical glyph orb above the arch.
+	var orb := Sprite2D.new()
+	orb.texture = blob_tex
+	orb.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	orb.position = anchor + Vector2(0, -150)
+	orb.scale = Vector2(3.6, 3.6)
+	orb.modulate = Color(0.55, 1.20, 1.55, 0.70)
+	orb.z_index = -2
+	add_child(orb)
+	var orb_tween := orb.create_tween().set_loops()
+	orb_tween.tween_property(orb, "modulate:a", 0.92, 1.4).set_trans(Tween.TRANS_SINE)
+	orb_tween.tween_property(orb, "modulate:a", 0.55, 1.4).set_trans(Tween.TRANS_SINE)
 
 
 func _spawn_rock_outcrops(rng: RandomNumberGenerator) -> void:

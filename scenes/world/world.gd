@@ -49,10 +49,11 @@ func _install_brutal_ambient_grade() -> void:
 		return
 	var cm := CanvasModulate.new()
 	cm.name = "BrutalAmbient"
-	# v0.92.9 — pushed DEEPER (was 0.92/0.86/0.74). Slight cool-blue bias in
-	# the multiplier so the base of the world reads as moody twilight rather
-	# than washed-out daylight.
-	cm.color = Color(0.72, 0.70, 0.66, 1.0)
+	# v0.93.3 — LUSH FANTASY pivot. Lifted from brutal twilight (0.72) back
+	# to rich painterly afternoon: red preserved, slight warm-gold lift,
+	# blue gently knocked so highlights read as sun-touched. The torch
+	# vignette + per-character halos provide the focal contrast now.
+	cm.color = Color(1.02, 1.00, 0.88, 1.0)
 	add_child(cm)
 
 

@@ -71,8 +71,11 @@ func _ready() -> void:
 
 # v0.93.0 — desktop HUD polish: framed top bar + leathered command card buttons.
 # Builds runtime so we don't disturb the existing scene paths that hud.gd binds to.
+# v0.93.3 — pushed harder toward fantasy carved-wood: layered top-bar frame
+# with two-tone border, gold-leaf inset, and matched ornamentation across
+# all HUD chrome.
 func _apply_desktop_polish() -> void:
-	# --- TOP BAR FRAME: slim warm-leather panel behind the gold/wood/kills row.
+	# --- TOP BAR FRAME: layered carved-wood panel behind the currency row.
 	if not has_node("TopBarFrame") and top_bar != null:
 		var frame := Panel.new()
 		frame.name = "TopBarFrame"
@@ -80,21 +83,33 @@ func _apply_desktop_polish() -> void:
 		frame.offset_left = 0
 		frame.offset_right = 0
 		frame.offset_top = 0
-		frame.offset_bottom = 38
+		frame.offset_bottom = 42
 		frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		# Outer carved-wood stripe.
 		var sb := StyleBoxFlat.new()
-		sb.bg_color = Color(0.10, 0.08, 0.05, 0.92)
-		sb.border_color = Color(0.62, 0.45, 0.18, 0.95)
-		sb.border_width_bottom = 2
-		sb.border_width_left = 0
-		sb.border_width_right = 0
-		sb.border_width_top = 0
-		sb.shadow_color = Color(0, 0, 0, 0.55)
-		sb.shadow_size = 6
-		sb.shadow_offset = Vector2(0, 3)
+		sb.bg_color = Color(0.10, 0.07, 0.04, 0.95)
+		sb.border_color = Color(0.78, 0.55, 0.22, 1.0)
+		sb.border_width_bottom = 3
+		sb.shadow_color = Color(0, 0, 0, 0.70)
+		sb.shadow_size = 8
+		sb.shadow_offset = Vector2(0, 4)
 		frame.add_theme_stylebox_override("panel", sb)
 		add_child(frame)
-		move_child(frame, 0)  # render BEHIND TopBar
+		move_child(frame, 0)
+		# Inner gold-leaf hair-line — second Panel sitting on top for the
+		# delicate inset rule the eye reads as engraving.
+		var inset := Panel.new()
+		inset.name = "TopBarInset"
+		inset.set_anchors_preset(Control.PRESET_TOP_WIDE)
+		inset.offset_left = 0
+		inset.offset_right = 0
+		inset.offset_top = 38
+		inset.offset_bottom = 40
+		inset.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var sb_inset := StyleBoxFlat.new()
+		sb_inset.bg_color = Color(1.0, 0.85, 0.36, 0.55)
+		inset.add_theme_stylebox_override("panel", sb_inset)
+		add_child(inset)
 
 	# --- COMMAND CARD: warm-leather style for every button in the grid.
 	if command_grid != null:

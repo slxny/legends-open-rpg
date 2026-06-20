@@ -9,9 +9,23 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.93.2"
+const GAME_VERSION := "v0.93.3"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.93.3",
+		"title": "LUSH FANTASY PIVOT — landmarks, atmospheric haze, painterly vignette, carved-wood HUD",
+		"date": "2026-06-20",
+		"entries": [
+			"AMBIENT pivoted from brutal-dark (0.72/0.70/0.66) back to sun-touched painterly (1.02/1.00/0.88). The world lifts to a beautiful afternoon mood.",
+			"TORCH VIGNETTE softened: darkness 0.78 → 0.46, inner radius 0.18 → 0.30, edge tint shifted from deep navy (0.18/0.14/0.28) to atmospheric teal-blue dusk (0.20/0.26/0.36). Inner clearing now warm gold-cream instead of warm orange, so it reads as soft sun lighting your area instead of torch.",
+			"BLOOD SPATTER cut and softened: 90 → 28 total, alpha 0.62–0.88 → 0.35–0.55, modulate values dropped. Reads as dried trace rather than horror battlefield wallpaper.",
+			"SCENIC LANDMARKS (new): 3 enormous ancient trees at hand-picked anchors (NW, NE, S-central) — composite of cast-shadow puddle + thick dark trunk + 3 stacked canopy bulbs + 2 sun-touched highlight bulbs + 3 root flares. Plus 1 FLOATING RUINED ARCH SHRINE at (1800, 1600): cast shadow + 3 arc-positioned weathered pillars with top-caps + 2 angled cross-beams + a slow-pulsing cyan magical orb hovering above.",
+			"ATMOSPHERIC HAZE bands hugging every world edge: top/bottom/left/right. Three-stripe gradient per edge (warm horizon → soft sky → atmospheric blue). Mountain horizon silhouettes now sit against actual sky.",
+			"HUD CARVED-WOOD pass: bottom panel deeper bg (0.13/0.10/0.06) with thicker gold-leaf border (4-top + 2 side, color 0.86/0.62/0.24), 12-px corner radius, stronger 10-px drop shadow. Top bar gets a layered frame: outer carved-wood Panel with 3-px gold bottom border + drop shadow + a separate 2-px GOLD-LEAF INSET PANEL right below it for the etched second rule.",
+			"Internal: scenes/world/world.gd brutal ambient color flipped. scenes/world/torch_vignette.gdshader default uniforms re-tuned. scenes/world/regions/havens_rest.gd _spawn_scenic_landmarks + _add_giant_ancient_tree + _add_floating_arch_shrine + _spawn_atmospheric_haze. Blood blob counts + alpha reduced. scenes/ui/hud.gd _apply_desktop_polish adds inset gold-leaf rule. scenes/ui/hud.tscn bottom panel StyleBoxFlat upgraded.",
+		]
+	},
 	{
 		"version": "v0.93.2",
 		"title": "Dungeon Crypt atmosphere — cold ambient + candle pools + bones + blood",

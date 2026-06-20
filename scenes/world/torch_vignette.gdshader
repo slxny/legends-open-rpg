@@ -1,26 +1,20 @@
-// v0.92.9 — radial TORCH VIGNETTE around the player. Soft warm-orange glow
-// at the centre, hard fall-off to deep navy darkness at the screen edges.
-// Drawn full-screen on a CanvasLayer that tracks the player. Creates the
-// brutal hack-and-slash "lit clearing in a dark world" focal frame without
-// any actual Light2D setup.
+// v0.93.3 — softened from the brutal-dark torch into a painterly fantasy
+// vignette: warm sun-touched inner area, cool teal-haze corners, gentler
+// darkness (0.78 -> 0.46), wider inner (0.18 -> 0.30) so the playable
+// area sits in pleasant afternoon light.
 
 shader_type canvas_item;
 render_mode blend_mix;
 
-// World-space player position projected to screen UV (set every frame).
 uniform vec2 focus_uv = vec2(0.5, 0.5);
-// Inner bright radius in UV units (0..1). Centre of the lit clearing.
-uniform float inner_radius : hint_range(0.05, 0.6) = 0.18;
-// Outer fall-off radius. Past this, darkness multiplier is full.
-uniform float outer_radius : hint_range(0.2, 1.4) = 0.95;
-// How dark the corners get. 0 = no vignette, 1 = pure black corners.
-uniform float darkness : hint_range(0.0, 1.0) = 0.78;
-// Warm torch tint that LIFTS the inner area.
-uniform vec3 torch_color : source_color = vec3(1.35, 0.92, 0.55);
-// How much the torch tint adds at centre.
-uniform float torch_strength : hint_range(0.0, 1.0) = 0.35;
-// Cool deep navy that COOLS the dark corners.
-uniform vec3 night_color : source_color = vec3(0.18, 0.14, 0.28);
+uniform float inner_radius : hint_range(0.05, 0.7) = 0.30;
+uniform float outer_radius : hint_range(0.2, 1.4) = 1.05;
+uniform float darkness : hint_range(0.0, 1.0) = 0.46;
+// Warm sun tint that LIFTS the inner area (gold-cream).
+uniform vec3 torch_color : source_color = vec3(1.18, 1.05, 0.70);
+uniform float torch_strength : hint_range(0.0, 1.0) = 0.22;
+// Atmospheric cool haze for the edges (teal-blue dusk).
+uniform vec3 night_color : source_color = vec3(0.20, 0.26, 0.36);
 
 void fragment() {
 	// Aspect-corrected distance from focus.

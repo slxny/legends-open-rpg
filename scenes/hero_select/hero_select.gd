@@ -31,6 +31,86 @@ func _ready() -> void:
 	get_viewport().size_changed.connect(_on_viewport_resized)
 	# Cinematic fade-in from boot splash dark background
 	_start_title_fade_in()
+	# v0.93.1 — atmospheric layer behind the cards: ember particles +
+	# soft radial vignette + slow pulse on the gold title.
+	_install_atmosphere()
+
+
+const _TORCH_VIGNETTE_SHADER := preload("res://scenes/world/torch_vignette.gdshader")
+
+func _install_atmosphere() -> void:
+	# Drop a CanvasLayer at the very back containing a vignette ColorRect
+	# + a swarm of slow-rising ember sprites. Behind the existing
+	# Background ColorRect so we keep its solid dark base.
+	if has_node("Atmosphere"):
+		return
+	var layer := CanvasLayer.new()
+	layer.name = "Atmosphere"
+	layer.layer = -1  # behind everything
+	add_child(layer)
+
+	# Vignette via torch shader pinned at centre — gives gold-warm focus.
+	var vignette := ColorRect.new()
+	vignette.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var mat := ShaderMaterial.new()
+	mat.shader = _TORCH_VIGNETTE_SHADER
+	mat.set_shader_parameter("focus_uv", Vector2(0.5, 0.42))
+	mat.set_shader_parameter("inner_radius", 0.22)
+	mat.set_shader_parameter("outer_radius", 1.1)
+	mat.set_shader_parameter("darkness", 0.86)
+	mat.set_shader_parameter("torch_color", Color(1.45, 1.05, 0.55))
+	mat.set_shader_parameter("torch_strength", 0.30)
+	mat.set_shader_parameter("night_color", Color(0.08, 0.05, 0.10))
+	vignette.material = mat
+	layer.add_child(vignette)
+
+	# Ember particles drifting up — warm orange.
+	var p := GPUParticles2D.new()
+	p.name = "EmberDrift"
+	p.amount = 36
+	p.lifetime = 5.5
+	p.preprocess = 3.0
+	p.explosiveness = 0.0
+	p.randomness = 1.0
+	p.fixed_fps = 30
+	p.position = Vector2(0, 800)  # spawn band along the bottom
+	var vp_size: Vector2 = get_viewport().get_visible_rect().size
+	p.visibility_rect = Rect2(-vp_size.x, -vp_size.y, vp_size.x * 3.0, vp_size.y * 3.0)
+	var pmat := ParticleProcessMaterial.new()
+	pmat.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+	pmat.emission_box_extents = Vector3(vp_size.x * 0.6, 8.0, 0.0)
+	pmat.direction = Vector3(0.0, -1.0, 0.0)
+	pmat.spread = 14.0
+	pmat.initial_velocity_min = 30.0
+	pmat.initial_velocity_max = 80.0
+	pmat.gravity = Vector3(0, -12.0, 0)
+	pmat.scale_min = 0.18
+	pmat.scale_max = 0.42
+	pmat.color = Color(1.5, 0.85, 0.30, 0.90)
+	pmat.angle_min = 0.0
+	pmat.angle_max = 360.0
+	pmat.angular_velocity_min = -100.0
+	pmat.angular_velocity_max = 100.0
+	# Curve: fade in then out.
+	var curve := Curve.new()
+	curve.add_point(Vector2(0.0, 0.0))
+	curve.add_point(Vector2(0.18, 1.0))
+	curve.add_point(Vector2(1.0, 0.0))
+	var ctex := CurveTexture.new()
+	ctex.curve = curve
+	pmat.alpha_curve = ctex
+	p.process_material = pmat
+	var tex = SpriteGenerator.get_texture("crystal_white")
+	if tex != null:
+		p.texture = tex
+	layer.add_child(p)
+
+	# Slow pulse on the title.
+	if title_label != null:
+		var t := title_label.create_tween().set_loops()
+		t.tween_property(title_label, "modulate", Color(1.10, 0.95, 0.55, 1.0), 1.6).set_trans(Tween.TRANS_SINE)
+		t.tween_property(title_label, "modulate", Color(0.85, 0.72, 0.32, 1.0), 1.6).set_trans(Tween.TRANS_SINE)
 
 func _detect_mobile() -> void:
 	var vp_size = get_viewport().get_visible_rect().size

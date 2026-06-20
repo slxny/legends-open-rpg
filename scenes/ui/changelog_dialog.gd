@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.93.0"
+const GAME_VERSION := "v0.93.1"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.93.1",
+		"title": "Menus — hero select atmosphere + pause backdrop + pop-in animation",
+		"date": "2026-06-20",
+		"entries": [
+			"HERO SELECT atmosphere: torch-vignette CanvasLayer (layer=-1, behind cards) tuned for menu (focus_uv 0.5/0.42, inner 0.22, outer 1.10, darkness 0.86, warm cream-gold lift). 36 ember GPUParticles2D drifting up across the screen bottom band — warm orange (1.5/0.85/0.30), 5.5 s lifetime, scale 0.18–0.42, slow swirl. Title now slow-pulses between two warm gold values (1.6 s loop).",
+			"PAUSE MENU: dark 62%-alpha BACKDROP behind the panel so the gameplay scene dims when paused. Panel StyleBoxFlat overhauled: bg 0.10/0.08/0.05 / 0.97 alpha, gold 3-px border (0.82/0.60/0.22), 10-px corners, 14-px drop shadow with vertical offset.",
+			"PAUSE OPEN ANIMATION: backdrop fades in over 180 ms, panel pops from scale 0.92 → 1.0 (TRANS_BACK / EASE_OUT, 220 ms) while alpha lifts 0 → 1 (160 ms). Real arrival weight.",
+			"Internal: scenes/hero_select/hero_select.gd _install_atmosphere creates CanvasLayer (layer=-1) + ColorRect-with-torch-shader + GPUParticles2D-emit-box along bottom + title pulse tween. scenes/ui/pause_menu.tscn adds Backdrop ColorRect + revamped StyleBoxFlat. pause_menu.gd open() drives backdrop alpha-in + panel pop tween; close() hides backdrop with panel.",
+		]
+	},
 	{
 		"version": "v0.93.0",
 		"title": "Desktop HUD polish — framed top bar + warm-leather command card + minimap frame",

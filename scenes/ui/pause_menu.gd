@@ -4,6 +4,7 @@ extends CanvasLayer
 ## Pauses the game tree while open. Includes changelog, help, save/load, quit.
 
 @onready var panel: PanelContainer = $Panel
+@onready var backdrop: ColorRect = $Backdrop
 
 var _player: Node2D = null
 var _is_visible: bool = false
@@ -12,6 +13,8 @@ var _is_mobile: bool = false
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	panel.visible = false
+	if backdrop != null:
+		backdrop.visible = false
 
 func setup(player: Node2D) -> void:
 	_player = player
@@ -29,6 +32,20 @@ func open() -> void:
 	_detect_mobile()
 	_build_menu()
 	panel.visible = true
+	if backdrop != null:
+		backdrop.visible = true
+		backdrop.modulate.a = 0.0
+		var bt := backdrop.create_tween()
+		bt.tween_property(backdrop, "modulate:a", 1.0, 0.18).set_trans(Tween.TRANS_SINE)
+	# v0.93.1 — panel slide-in pop.
+	if panel != null:
+		panel.scale = Vector2(0.92, 0.92)
+		panel.modulate.a = 0.0
+		panel.pivot_offset = panel.size * 0.5
+		var pt := panel.create_tween()
+		pt.set_parallel(true)
+		pt.tween_property(panel, "scale", Vector2.ONE, 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		pt.tween_property(panel, "modulate:a", 1.0, 0.16)
 	get_tree().paused = true
 
 func close() -> void:
@@ -36,6 +53,8 @@ func close() -> void:
 		return
 	_is_visible = false
 	panel.visible = false
+	if backdrop != null:
+		backdrop.visible = false
 	get_tree().paused = false
 
 func _detect_mobile() -> void:

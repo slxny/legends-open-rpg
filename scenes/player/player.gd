@@ -275,6 +275,8 @@ func _ready() -> void:
 	# v0.92.4 — warm HERO HALO under the player. Pulses faster than enemy
 	# halos so the hero reads as the chosen one in any crowd.
 	_install_player_halo()
+	# v0.92.5 — gold SPARKLE TRAIL drifting upward from the hero.
+	_install_player_sparkles()
 
 	# Phase 1B.6a: attach trauma-model shake to the camera. Legacy
 	# procedural shake in _physics_process remains as a fallback if this
@@ -3661,6 +3663,51 @@ const _MAGNET_SPEED: float = 480.0
 
 var _damage_punch_base_zoom: Vector2 = Vector2.ZERO
 var _damage_punch_tween: Tween = null
+
+func _install_player_sparkles() -> void:
+	if has_node("HeroSparkles"):
+		return
+	var p := GPUParticles2D.new()
+	p.name = "HeroSparkles"
+	p.amount = 24
+	p.lifetime = 1.4
+	p.preprocess = 0.5
+	p.explosiveness = 0.0
+	p.randomness = 1.0
+	p.fixed_fps = 30
+	p.local_coords = false
+	p.visibility_rect = Rect2(-200, -200, 400, 400)
+	p.z_index = 8
+	p.position = Vector2(0, -10)
+	var mat := ParticleProcessMaterial.new()
+	mat.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE
+	mat.emission_sphere_radius = 14.0
+	mat.direction = Vector3(0, -1, 0)
+	mat.spread = 35.0
+	mat.initial_velocity_min = 10.0
+	mat.initial_velocity_max = 30.0
+	mat.gravity = Vector3(0, -8, 0)
+	mat.scale_min = 0.18
+	mat.scale_max = 0.45
+	mat.color = Color(1.55, 1.30, 0.55, 0.92)
+	mat.angle_min = 0.0
+	mat.angle_max = 360.0
+	mat.angular_velocity_min = -180.0
+	mat.angular_velocity_max = 180.0
+	# Alpha curve: fade out near death.
+	var alpha_curve := Curve.new()
+	alpha_curve.add_point(Vector2(0.0, 0.0))
+	alpha_curve.add_point(Vector2(0.25, 1.0))
+	alpha_curve.add_point(Vector2(1.0, 0.0))
+	var alpha_tex := CurveTexture.new()
+	alpha_tex.curve = alpha_curve
+	mat.alpha_curve = alpha_tex
+	p.process_material = mat
+	var tex = SpriteGenerator.get_texture("crystal_white")
+	if tex != null:
+		p.texture = tex
+	add_child(p)
+
 
 func _install_player_halo() -> void:
 	if has_node("HeroHalo"):

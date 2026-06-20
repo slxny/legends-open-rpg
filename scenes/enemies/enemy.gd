@@ -518,7 +518,38 @@ func hide_selection() -> void:
 		name_label.visible = false
 
 var _idle_breathe_tween: Tween = null
+var _idle_wobble_tween: Tween = null
 var _halo_tween: Tween = null
+var _was_aggrod_last_tick: bool = false
+
+func _flare_type_halo() -> void:
+	# Bright punch when an enemy first notices the player. Halo briefly
+	# triples in alpha + scales up 1.5×, then settles back to the slow pulse.
+	var halo: Sprite2D = get_node_or_null("TypeHalo") as Sprite2D
+	if halo == null:
+		return
+	# Kill the slow pulse for a beat so it can flare cleanly.
+	if _halo_tween != null and _halo_tween.is_valid():
+		_halo_tween.kill()
+	var c: Color = _halo_color()
+	var base_scale_x: float = halo.scale.x
+	var base_scale_y: float = halo.scale.y
+	halo.modulate = Color(c.r, c.g, c.b, 0.95)
+	halo.scale = Vector2(base_scale_x * 1.6, base_scale_y * 1.6)
+	var flare := halo.create_tween()
+	flare.set_parallel(true)
+	flare.tween_property(halo, "scale", Vector2(base_scale_x, base_scale_y), 0.45).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	flare.tween_property(halo, "modulate:a", 0.45, 0.45)
+	flare.chain().tween_callback(_restart_halo_pulse.bind(halo, base_scale_x, base_scale_y))
+
+func _restart_halo_pulse(halo: Sprite2D, sx: float, sy: float) -> void:
+	if halo == null or not is_instance_valid(halo):
+		return
+	halo.scale = Vector2(sx, sy)
+	var pulse_dur: float = randf_range(1.3, 1.9)
+	_halo_tween = halo.create_tween().set_loops()
+	_halo_tween.tween_property(halo, "modulate:a", 0.55, pulse_dur).set_trans(Tween.TRANS_SINE)
+	_halo_tween.tween_property(halo, "modulate:a", 0.30, pulse_dur).set_trans(Tween.TRANS_SINE)
 
 func _halo_color() -> Color:
 	# Identity color per enemy type. Saturated, recognizable, fun.
@@ -584,6 +615,14 @@ func _start_enemy_idle_breathe() -> void:
 	_idle_breathe_tween = create_tween().set_loops()
 	_idle_breathe_tween.tween_property(sprite, "scale", Vector2(pulse_x, pulse_y), dur).set_trans(Tween.TRANS_SINE)
 	_idle_breathe_tween.tween_property(sprite, "scale", _base_scale, dur).set_trans(Tween.TRANS_SINE)
+	# v0.92.5 — side-to-side WOBBLE on top of breathe. Adds a Wildfrost
+	# bouncy feel to every enemy at rest. Wobble runs at a slightly
+	# different frequency so it doesn't sync with the breathe.
+	var wobble_dur: float = randf_range(1.1, 1.6)
+	var wobble_amount: float = 1.2  # pixels
+	_idle_wobble_tween = sprite.create_tween().set_loops()
+	_idle_wobble_tween.tween_property(sprite, "position:x", wobble_amount, wobble_dur).set_trans(Tween.TRANS_SINE)
+	_idle_wobble_tween.tween_property(sprite, "position:x", -wobble_amount, wobble_dur).set_trans(Tween.TRANS_SINE)
 
 func _ensure_drop_shadow() -> void:
 	# v0.91.2 — mascara-thick black elliptical shadow disc baked under the
@@ -683,6 +722,13 @@ func _get_zoom_compensation() -> float:
 func _physics_process(delta: float) -> void:
 	if _is_dead:
 		return
+
+	# v0.92.5 — detect aggro transition: if we just entered CHASE/ATTACK,
+	# flare the type halo. Visual feedback so the player feels every enemy
+	# notice them.
+	if (current_state == State.CHASE or current_state == State.ATTACK) and not _was_aggrod_last_tick:
+		_flare_type_halo()
+	_was_aggrod_last_tick = (current_state == State.CHASE or current_state == State.ATTACK)
 
 	# Phase 3.4b — Vampiric (healer) elite regen: ~4 HP/sec.
 	if _elite_modifier == &"healer" and stats.current_hp < stats.max_hp:

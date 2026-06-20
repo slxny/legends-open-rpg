@@ -9,9 +9,20 @@ extends CanvasLayer
 var _is_visible: bool = false
 var _is_mobile: bool = false
 
-const GAME_VERSION := "v0.92.4"
+const GAME_VERSION := "v0.92.5"
 
 const CHANGELOG: Array[Dictionary] = [
+	{
+		"version": "v0.92.5",
+		"title": "More FUN — hero sparkle trail, enemy wobble, halo combat-flare",
+		"date": "2026-06-20",
+		"entries": [
+			"HERO SPARKLE TRAIL: 24 gold sparkles continuously drift upward from the player. Warm gold (1.55/1.30/0.55), 1.4 s lifetime, alpha-curve fade in-out. Player suddenly reads as a magical hero, not just a sprite.",
+			"ENEMY IDLE WOBBLE: ±1.2 px side-to-side sway on top of breathe, 1.1–1.6 s per cycle, randomized per enemy. Stardew/Wildfrost bouncy resting feel.",
+			"HALO COMBAT-FLARE: the moment an enemy enters CHASE or ATTACK state, their type halo PUNCHES — scale ×1.6, alpha 0.95, fades back over 450 ms with EASE_OUT_CUBIC. You'll see EVERY enemy notice you light up.",
+			"Internal: enemy.gd _was_aggrod_last_tick tracked in _physics_process. _flare_type_halo kills the slow pulse, runs a punch tween, re-installs the pulse via _restart_halo_pulse callback. _start_enemy_idle_breathe now also creates _idle_wobble_tween on sprite.position:x. player.gd _install_player_sparkles: GPUParticles2D, amount 24, lifetime 1.4 s, EMISSION_SHAPE_SPHERE r=14, direction (0,-1,0), spread 35°, alpha curve in/out fade.",
+		]
+	},
 	{
 		"version": "v0.92.4",
 		"title": "Character POP pass — type-colored halos, thicker outlines, warm rim, capped arrows",
